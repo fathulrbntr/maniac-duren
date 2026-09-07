@@ -744,14 +744,14 @@ button {
 
 .gallery-swiper {
   width: calc(100% - 40px);
-  max-width: 1180px;
+  max-width: 980px;
 
   margin: 65px auto 0;
 
   padding-top: 30px;
   padding-bottom: 70px;
 
-  overflow: visible;
+  overflow: hidden;
 }
 
 .gallery-swiper .swiper-wrapper {
@@ -870,7 +870,7 @@ footer p {
 
   .gallery-swiper {
     width: calc(100% - 24px);
-    max-width: 860px;
+    max-width: 680px;
   }
 
 
