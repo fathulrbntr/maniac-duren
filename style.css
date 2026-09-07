@@ -1439,3 +1439,53 @@ footer p {
     aspect-ratio: 9 / 15.2;
   }
 }
+
+
+/* =========================
+   TIKTOK LINK-ARRAY EMBED
+========================= */
+
+.tiktok-embed-card {
+  display: flex;
+  flex-direction: column;
+  background: #111;
+}
+
+.tiktok-player {
+  display: block;
+  width: 100%;
+  aspect-ratio: 9 / 16;
+  border: 0;
+  background: #111;
+}
+
+.tiktok-open-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 12px 16px;
+  background: var(--white);
+  color: var(--black);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.tiktok-open-link:hover {
+  color: var(--green);
+}
+
+.tiktok-empty {
+  grid-column: 1 / -1;
+  width: 100%;
+  padding: 28px;
+  border-radius: 18px;
+  background: rgba(17, 17, 17, 0.05);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.tiktok-empty code {
+  font-weight: 700;
+}

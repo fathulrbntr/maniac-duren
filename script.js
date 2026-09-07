@@ -102,6 +102,66 @@ branchElements.tabs.forEach((tab) => {
   tab.addEventListener("click", () => updateBranch(tab.dataset.branch));
 });
 
+
+/* =========================
+   TIKTOK VIDEOS
+   Cukup ganti 3 link di bawah ini.
+========================= */
+
+const tiktokVideos = [
+  "https://www.tiktok.com/@manicduren.lc/video/123456789",
+  "https://www.tiktok.com/@manicduren.lc/video/987654321",
+  "https://www.tiktok.com/@manicduren.lc/video/555555555"
+];
+
+function getTikTokVideoId(url) {
+  const match = String(url).match(/\/video\/(\d+)/);
+  return match ? match[1] : null;
+}
+
+function renderTikTokVideos() {
+  const feed = document.getElementById("tiktok-feed");
+  if (!feed) return;
+
+  const validVideos = tiktokVideos
+    .map((url) => ({ url, id: getTikTokVideoId(url) }))
+    .filter((video) => video.id)
+    .slice(0, 3);
+
+  feed.innerHTML = "";
+
+  if (!validVideos.length) {
+    feed.innerHTML = '<p class="tiktok-empty">Masukkan link video TikTok di <code>tiktokVideos</code> pada script.js.</p>';
+    return;
+  }
+
+  validVideos.forEach((video, index) => {
+    const card = document.createElement("article");
+    card.className = "social-card tiktok-embed-card";
+
+    const iframe = document.createElement("iframe");
+    iframe.className = "tiktok-player";
+    iframe.src = `https://www.tiktok.com/player/v1/${video.id}?autoplay=0&loop=0&controls=1&progress_bar=1&play_button=1&volume_control=1&fullscreen_button=1&timestamp=0&music_info=0&description=1&rel=0&native_context_menu=0`;
+    iframe.title = `TikTok Maniac Duren ${index + 1}`;
+    iframe.loading = "lazy";
+    iframe.allow = "fullscreen; autoplay; encrypted-media; picture-in-picture";
+    iframe.allowFullscreen = true;
+    iframe.referrerPolicy = "strict-origin-when-cross-origin";
+
+    const link = document.createElement("a");
+    link.className = "tiktok-open-link";
+    link.href = video.url;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.textContent = "Buka di TikTok ↗";
+
+    card.append(iframe, link);
+    feed.appendChild(card);
+  });
+}
+
+renderTikTokVideos();
+
 /* =========================
    GALLERY COVERFLOW
 ========================= */
