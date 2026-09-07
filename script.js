@@ -185,119 +185,44 @@ branchTabs.forEach((tab) => {
 
 /* =========================
    GALLERY COVERFLOW
-   STABLE RESIZE FIX
 ========================= */
 
-const gallerySwiperElement =
+const gallerySwiper =
   document.querySelector(".gallery-swiper");
 
-let gallerySwiperInstance = null;
-let galleryResizeTimer = null;
+if (
+  gallerySwiper &&
+  typeof Swiper !== "undefined"
+) {
 
+  new Swiper(".gallery-swiper", {
 
-function createGallerySwiper() {
+    effect: "coverflow",
 
-  if (
-    !gallerySwiperElement ||
-    typeof Swiper === "undefined"
-  ) {
-    return;
-  }
+    centeredSlides: true,
 
+    grabCursor: true,
 
-  /*
-    Saat ukuran window berubah besar/kecil, konfigurasi loop Swiper
-    dapat menyimpan kalkulasi lama. Karena itu instance dibuat ulang
-    agar semua ukuran, posisi dan loop dihitung dari viewport terbaru.
-  */
+    loop: true,
 
-  if (gallerySwiperInstance) {
+    slidesPerView: "auto",
 
-    gallerySwiperInstance.destroy(
-      true,
-      true
-    );
+    speed: 700,
 
-    gallerySwiperInstance = null;
+    coverflowEffect: {
+      rotate: 35,
+      stretch: 0,
+      depth: 180,
+      modifier: 1,
+      slideShadows: true
+    },
 
-  }
+    pagination: {
+      el: ".gallery-swiper .swiper-pagination",
+      clickable: true
+    }
 
-
-  gallerySwiperInstance =
-    new Swiper(gallerySwiperElement, {
-
-      effect: "coverflow",
-
-      centeredSlides: true,
-
-      grabCursor: true,
-
-      loop: true,
-
-      slidesPerView: "auto",
-
-      speed: 700,
-
-      updateOnWindowResize: true,
-
-      resizeObserver: true,
-
-      observer: true,
-
-      observeParents: true,
-
-      watchSlidesProgress: true,
-
-      roundLengths: true,
-
-      coverflowEffect: {
-        rotate: 35,
-        stretch: 0,
-        depth: 180,
-        modifier: 1,
-        slideShadows: true
-      },
-
-      pagination: {
-        el: ".gallery-swiper .swiper-pagination",
-        clickable: true
-      }
-
-    });
+  });
 
 }
-
-
-/* Initial load */
-createGallerySwiper();
-
-
-/*
-  FIX UTAMA:
-  Ketika window diperbesar atau diperkecil, tunggu resize selesai,
-  lalu rebuild Swiper. Ini mencegah coverflow/loop menggunakan
-  kalkulasi lebar lama.
-*/
-
-window.addEventListener(
-  "resize",
-  () => {
-
-    window.clearTimeout(
-      galleryResizeTimer
-    );
-
-
-    galleryResizeTimer =
-      window.setTimeout(
-        () => {
-
-          createGallerySwiper();
-
-        },
-        250
-      );
-
-  }
-);
 
