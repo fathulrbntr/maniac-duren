@@ -62,10 +62,16 @@ button {
 }
 
 .brand {
-  font-family: "Manrope", sans-serif;
-  font-size: 20px;
-  font-weight: 800;
-  letter-spacing: -1px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.brand-logo {
+  display: block;
+  width: auto;
+  height: 52px;
+  object-fit: contain;
 }
 
 .nav-menu {
@@ -831,6 +837,9 @@ footer p {
   .navbar {
     min-height: 72px;
   }
+  .brand-logo {
+  height: 44px;
+}
 
   .section {
     padding: 85px 20px;
