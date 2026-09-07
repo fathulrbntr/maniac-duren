@@ -1,56 +1,35 @@
-console.log("Maniac Duren website aktif");
+(() => {
+  "use strict";
 
+  /* =========================
+     MOBILE MENU
+  ========================= */
 
-/* =========================
-   MOBILE MENU
-========================= */
+  const menuToggle = document.querySelector(".menu-toggle");
+  const navMenu = document.querySelector(".nav-menu");
 
-const menuToggle =
-  document.querySelector(".menu-toggle");
+  if (menuToggle && navMenu) {
+    const closeMenu = () => {
+      navMenu.classList.remove("active");
+      menuToggle.setAttribute("aria-expanded", "false");
+    };
 
-const navMenu =
-  document.querySelector(".nav-menu");
-
-if (menuToggle && navMenu) {
-
-  menuToggle.addEventListener("click", () => {
-
-    const isOpen =
-      navMenu.classList.toggle("active");
-
-    menuToggle.setAttribute(
-      "aria-expanded",
-      String(isOpen)
-    );
-
-  });
-
-
-  document
-    .querySelectorAll(".nav-menu a")
-    .forEach((link) => {
-
-      link.addEventListener("click", () => {
-
-        navMenu.classList.remove("active");
-
-        menuToggle.setAttribute(
-          "aria-expanded",
-          "false"
-        );
-
-      });
-
+    menuToggle.addEventListener("click", () => {
+      const isOpen = navMenu.classList.toggle("active");
+      menuToggle.setAttribute("aria-expanded", String(isOpen));
     });
 
-}
+    navMenu.querySelectorAll("a").forEach((link) => {
+      link.addEventListener("click", closeMenu);
+    });
+  }
 
 
-/* =========================
-   BRANCH DATA
-========================= */
+  /* =========================
+     BRANCH DATA
+  ========================= */
 
-const branches = {
+  const branches = {
 
   jababeka: {
     name:
@@ -118,111 +97,105 @@ const branches = {
 };
 
 
-/* =========================
-   BRANCH SELECTOR
-========================= */
+  /* =========================
+     BRANCH SELECTOR
+  ========================= */
 
-const branchTabs =
-  document.querySelectorAll(".branch-tab");
+  const branchTabs = document.querySelectorAll(".branch-tab");
+  const branchName = document.getElementById("branch-name");
+  const branchAddress = document.getElementById("branch-address");
+  const branchMap = document.getElementById("branch-map");
+  const mapsButton = document.getElementById("maps-button");
 
-const branchName =
-  document.getElementById("branch-name");
+  branchTabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      const branch = branches[tab.dataset.branch];
 
-const branchAddress =
-  document.getElementById("branch-address");
+      if (!branch) return;
 
-const branchMap =
-  document.getElementById("branch-map");
+      if (branchName) branchName.textContent = branch.name;
+      if (branchAddress) branchAddress.textContent = branch.address;
+      if (branchMap) branchMap.src = branch.map;
+      if (mapsButton) mapsButton.href = branch.link;
 
-const mapsButton =
-  document.getElementById("maps-button");
-
-
-branchTabs.forEach((tab) => {
-
-  tab.addEventListener("click", () => {
-
-    const branch =
-      branches[tab.dataset.branch];
-
-    if (!branch) return;
+      branchTabs.forEach((item) => item.classList.remove("active"));
+      tab.classList.add("active");
+    });
+  });
 
 
-    if (branchName) {
-      branchName.textContent =
-        branch.name;
-    }
+  /* =========================
+     GALLERY COVERFLOW
+     Stable config:
+     - numeric slidesPerView (no "auto")
+     - bounded frame width in CSS
+     - exactly 1 side photo on desktop
+     - loop buffer for smoother infinite cycling
+  ========================= */
 
+  const galleryElement = document.querySelector(".gallery-swiper");
 
-    if (branchAddress) {
-      branchAddress.textContent =
-        branch.address;
-    }
+  if (galleryElement && typeof Swiper !== "undefined") {
+    const gallery = new Swiper(galleryElement, {
+      effect: "coverflow",
+      centeredSlides: true,
+      grabCursor: true,
+      loop: true,
+      loopAdditionalSlides: 3,
+      speed: 650,
+      roundLengths: true,
+      watchSlidesProgress: true,
+      updateOnWindowResize: true,
+      resizeObserver: true,
+      observer: false,
+      observeParents: false,
+      preventInteractionOnTransition: true,
 
+      pagination: {
+        el: ".gallery-swiper .swiper-pagination",
+        clickable: true
+      },
 
-    if (branchMap) {
-      branchMap.src =
-        branch.map;
-    }
+      coverflowEffect: {
+        rotate: 28,
+        stretch: 0,
+        depth: 135,
+        modifier: 1,
+        slideShadows: true
+      },
 
-
-    if (mapsButton) {
-      mapsButton.href =
-        branch.link;
-    }
-
-
-    branchTabs.forEach((item) => {
-      item.classList.remove("active");
+      breakpoints: {
+        0: {
+          slidesPerView: 1.35,
+          spaceBetween: 12
+        },
+        601: {
+          slidesPerView: 2.2,
+          spaceBetween: 16
+        },
+        901: {
+          slidesPerView: 3,
+          spaceBetween: 20
+        }
+      }
     });
 
+    /*
+      Swiper normally handles resize itself.
+      This lightweight refresh only runs after resizing settles,
+      avoiding repeated destroy/re-init and preventing stale geometry.
+    */
+    let resizeTimer = null;
 
-    tab.classList.add("active");
+    window.addEventListener("resize", () => {
+      window.clearTimeout(resizeTimer);
 
-  });
-
-});
-
-/* =========================
-   GALLERY COVERFLOW
-========================= */
-
-const gallerySwiper =
-  document.querySelector(".gallery-swiper");
-
-if (
-  gallerySwiper &&
-  typeof Swiper !== "undefined"
-) {
-
-  new Swiper(".gallery-swiper", {
-
-    effect: "coverflow",
-
-    centeredSlides: true,
-
-    grabCursor: true,
-
-    loop: true,
-
-    slidesPerView: "auto",
-
-    speed: 700,
-
-    coverflowEffect: {
-      rotate: 35,
-      stretch: 0,
-      depth: 180,
-      modifier: 1,
-      slideShadows: true
-    },
-
-    pagination: {
-      el: ".gallery-swiper .swiper-pagination",
-      clickable: true
-    }
-
-  });
-
-}
-
+      resizeTimer = window.setTimeout(() => {
+        gallery.updateSize();
+        gallery.updateSlides();
+        gallery.updateProgress();
+        gallery.updateSlidesClasses();
+      }, 180);
+    });
+  }
+})();

@@ -742,15 +742,16 @@ button {
   overflow: hidden;
 }
 
+.gallery-section .section-heading {
+  position: relative;
+  z-index: 2;
+}
+
 .gallery-swiper {
   width: calc(100% - 40px);
   max-width: 980px;
-
   margin: 65px auto 0;
-
-  padding-top: 30px;
-  padding-bottom: 70px;
-
+  padding: 30px 0 70px;
   overflow: hidden;
 }
 
@@ -759,22 +760,19 @@ button {
 }
 
 .gallery-swiper .swiper-slide {
-  width: 320px;
-  height: 430px;
-
+  aspect-ratio: 3 / 4;
+  height: auto;
   border-radius: 24px;
-
   overflow: hidden;
-
   background: var(--white);
-
-  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.15);
-
+  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.13);
+  backface-visibility: hidden;
+  transform-style: preserve-3d;
   transition: opacity 0.3s ease;
 }
 
 .gallery-swiper .swiper-slide:not(.swiper-slide-active) {
-  opacity: 0.55;
+  opacity: 0.62;
 }
 
 .gallery-swiper .swiper-slide-active {
@@ -783,10 +781,8 @@ button {
 
 .gallery-swiper .swiper-slide img {
   display: block;
-
   width: 100%;
   height: 100%;
-
   object-fit: cover;
 }
 
@@ -797,19 +793,15 @@ button {
 .gallery-swiper .swiper-pagination-bullet {
   width: 7px;
   height: 7px;
-
   background: var(--black);
-
   opacity: 0.25;
+  transition: width 0.25s ease, opacity 0.25s ease;
 }
 
 .gallery-swiper .swiper-pagination-bullet-active {
   width: 24px;
-
   border-radius: 100px;
-
   background: var(--green);
-
   opacity: 1;
 }
 
@@ -856,8 +848,7 @@ footer p {
 }
 
 /* =========================================================
-   MANIAC DUREN - RESPONSIVE / MOBILE
-   File ini dimuat SETELAH style.css
+   RESPONSIVE
 ========================================================= */
 
 
@@ -868,9 +859,11 @@ footer p {
 
 @media (max-width: 900px) {
 
+  /* GALLERY */
+
   .gallery-swiper {
-    width: calc(100% - 24px);
-    max-width: 680px;
+    width: calc(100% - 28px);
+    max-width: 760px;
   }
 
 
@@ -987,12 +980,6 @@ footer p {
 ========================= */
 
 @media (max-width: 600px) {
-
-  .gallery-swiper {
-    width: 100%;
-    max-width: 100%;
-  }
-
 
   /* NAVBAR */
 
@@ -1163,21 +1150,14 @@ footer p {
 
   /* GALLERY */
 
-  .gallery-section {
-    overflow: hidden;
-  }
-
   .gallery-swiper {
+    width: 100%;
+    max-width: 100%;
     margin-top: 40px;
-
-    padding-top: 20px;
-    padding-bottom: 55px;
+    padding: 20px 0 55px;
   }
 
   .gallery-swiper .swiper-slide {
-    width: 220px;
-    height: 300px;
-
     border-radius: 18px;
   }
 
