@@ -182,3 +182,47 @@ branchTabs.forEach((tab) => {
   });
 
 });
+
+/* =========================
+   GALLERY COVERFLOW
+========================= */
+
+const gallerySwiper =
+  document.querySelector(".gallery-swiper");
+
+if (
+  gallerySwiper &&
+  typeof Swiper !== "undefined"
+) {
+
+  new Swiper(".gallery-swiper", {
+
+    effect: "coverflow",
+
+    centeredSlides: true,
+
+    grabCursor: true,
+
+    loop: true,
+
+    slidesPerView: "auto",
+
+    speed: 700,
+
+    coverflowEffect: {
+      rotate: 35,
+      stretch: 0,
+      depth: 180,
+      modifier: 1,
+      slideShadows: true
+    },
+
+    pagination: {
+      el: ".gallery-swiper .swiper-pagination",
+      clickable: true
+    }
+
+  });
+
+}
+

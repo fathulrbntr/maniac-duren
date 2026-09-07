@@ -1,5 +1,9 @@
 @import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap");
 
+/* =========================
+   VARIABLES
+========================= */
+
 :root {
   --green: #146321;
   --green-dark: #0b3d15;
@@ -9,6 +13,11 @@
   --white: #ffffff;
   --border: rgba(17, 17, 17, 0.14);
 }
+
+
+/* =========================
+   RESET
+========================= */
 
 * {
   margin: 0;
@@ -27,6 +36,10 @@ body {
   overflow-x: hidden;
 }
 
+img {
+  max-width: 100%;
+}
+
 a {
   color: inherit;
   text-decoration: none;
@@ -35,6 +48,55 @@ a {
 button {
   font: inherit;
 }
+
+
+/* =========================
+   GLOBAL
+========================= */
+
+.section {
+  padding: 120px 5vw;
+}
+
+.section-heading {
+  max-width: 900px;
+}
+
+.section-heading h2 {
+  font-family: "Manrope", sans-serif;
+  font-size: clamp(50px, 7vw, 100px);
+  line-height: 0.95;
+  letter-spacing: -0.06em;
+}
+
+.section-heading h2 span {
+  color: var(--green);
+}
+
+
+/* =========================
+   BUTTON
+========================= */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 100px;
+
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.button-primary {
+  color: var(--black);
+}
+
+.button-secondary {
+  color: var(--black);
+}
+
 
 /* =========================
    NAVBAR
@@ -111,6 +173,7 @@ button {
   cursor: pointer;
 }
 
+
 /* =========================
    HERO
 ========================= */
@@ -134,13 +197,13 @@ button {
 }
 
 .hero h1 {
+  max-width: 850px;
+
   font-family: "Manrope", sans-serif;
   font-size: clamp(70px, 8.5vw, 135px);
   font-weight: 800;
   line-height: 0.8;
   letter-spacing: -0.075em;
-
-  max-width: 850px;
 }
 
 .hero h1 span {
@@ -161,17 +224,18 @@ button {
 .hero-actions {
   display: flex;
   gap: 12px;
+
   margin-top: 30px;
 }
 
 .hero-meta {
-  margin-top: 55px;
-
   display: flex;
   gap: 40px;
 
-  border-top: 1px solid var(--border);
+  margin-top: 55px;
   padding-top: 25px;
+
+  border-top: 1px solid var(--border);
 }
 
 .hero-meta div {
@@ -190,9 +254,9 @@ button {
 }
 
 .hero-visual {
-  min-height: 650px;
-
   position: relative;
+
+  min-height: 650px;
 
   display: flex;
   align-items: center;
@@ -200,14 +264,14 @@ button {
 }
 
 .hero-circle {
+  position: absolute;
+
   width: min(38vw, 520px);
   aspect-ratio: 1;
 
   border-radius: 50%;
 
   background: var(--green);
-
-  position: absolute;
 }
 
 .hero-durian {
@@ -218,19 +282,15 @@ button {
 
   object-fit: contain;
 
-  filter: drop-shadow(
-    0 40px 40px rgba(0, 0, 0, 0.25)
-  );
+  filter: drop-shadow(0 40px 40px rgba(0, 0, 0, 0.25));
 
   animation: floatingDurian 4s ease-in-out infinite;
 }
 
 .hero-price {
   position: absolute;
-
   right: 0;
   bottom: 90px;
-
   z-index: 5;
 
   width: 150px;
@@ -265,18 +325,16 @@ button {
 
 .hero-sticker {
   position: absolute;
-
   top: 120px;
   left: 0;
-
   z-index: 5;
 
-  background: var(--black);
-  color: var(--white);
+  padding: 18px 22px;
 
   border-radius: 100px;
 
-  padding: 18px 22px;
+  background: var(--black);
+  color: var(--white);
 
   font-size: 11px;
   line-height: 1.2;
@@ -297,62 +355,39 @@ button {
   }
 }
 
+
 /* =========================
    TICKER
 ========================= */
 
 .ticker {
+  padding: 22px 0;
+
   background: var(--green);
   color: var(--white);
 
   overflow: hidden;
-
-  padding: 22px 0;
 }
 
 .ticker-content {
+  min-width: 1000px;
+
   display: flex;
   justify-content: space-around;
 
-  min-width: 1000px;
-
   font-family: "Manrope", sans-serif;
   font-size: 18px;
-
   font-weight: 700;
 }
 
 .ticker-content span::after {
   content: "✦";
+
   margin-left: 50px;
 
   color: var(--lime);
 }
 
-/* =========================
-   GLOBAL SECTION
-========================= */
-
-.section {
-  padding: 120px 5vw;
-}
-
-.section-heading {
-  max-width: 900px;
-}
-
-.section-heading h2 {
-  font-family: "Manrope", sans-serif;
-  font-size: clamp(50px, 7vw, 100px);
-
-  line-height: 0.95;
-
-  letter-spacing: -0.06em;
-}
-
-.section-heading h2 span {
-  color: var(--green);
-}
 
 /* =========================
    PROMO
@@ -360,34 +395,31 @@ button {
 
 .promo-card {
   margin-top: 70px;
-
-  background: var(--green);
-
-  color: var(--white);
-
-  min-height: 400px;
-
   padding: 50px;
 
-  border-radius: 30px;
+  min-height: 400px;
 
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
+
+  border-radius: 30px;
+
+  background: var(--green);
+  color: var(--white);
 }
 
 .promo-label {
+  margin-bottom: 15px;
+
   font-size: 12px;
   letter-spacing: 0.14em;
   font-weight: 700;
-
-  margin-bottom: 15px;
 }
 
 .promo-card h3 {
   font-family: "Manrope", sans-serif;
   font-size: clamp(50px, 7vw, 110px);
-
   letter-spacing: -0.06em;
 }
 
@@ -407,22 +439,20 @@ button {
 .promo-price strong {
   font-family: "Manrope", sans-serif;
   font-size: clamp(50px, 7vw, 100px);
-
   line-height: 1;
 }
+
 
 /* =========================
    PRODUCT
 ========================= */
 
 .product-grid {
-  display: grid;
-
-  grid-template-columns: repeat(3, 1fr);
-
-  gap: 20px;
-
   margin-top: 60px;
+
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
 }
 
 .product-card {
@@ -437,6 +467,7 @@ button {
 
 .product-card:hover {
   transform: translateY(-10px);
+
   box-shadow: 0 25px 50px rgba(0, 0, 0, 0.08);
 }
 
@@ -444,6 +475,7 @@ button {
   position: relative;
 
   height: 380px;
+
   overflow: hidden;
 }
 
@@ -470,9 +502,9 @@ button {
 
   padding: 7px 11px;
 
-  background: rgba(255, 255, 255, 0.85);
-
   border-radius: 100px;
+
+  background: rgba(255, 255, 255, 0.85);
 
   font-size: 12px;
   font-weight: 700;
@@ -485,13 +517,11 @@ button {
 }
 
 .product-category {
-  font-size: 11px;
-
-  letter-spacing: 0.12em;
-
-  font-weight: 700;
-
   color: var(--green);
+
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  font-weight: 700;
 }
 
 .product-info h3 {
@@ -518,15 +548,14 @@ button {
   font-weight: 700;
 }
 
+
 /* =========================
    ABOUT
 ========================= */
 
 .about {
   display: grid;
-
   grid-template-columns: 0.35fr 1fr;
-
   gap: 60px;
 
   background: var(--black);
@@ -535,18 +564,14 @@ button {
 
 .about-number {
   font-size: 14px;
-
   opacity: 0.5;
 }
 
 .about-copy h2 {
   font-family: "Manrope", sans-serif;
-
   font-size: clamp(45px, 6vw, 90px);
-
-  letter-spacing: -0.06em;
-
   line-height: 1;
+  letter-spacing: -0.06em;
 }
 
 .about-copy h2 span {
@@ -564,8 +589,9 @@ button {
   opacity: 0.65;
 }
 
+
 /* =========================
-   MULTI BRANCH LOCATION
+   LOCATION
 ========================= */
 
 .location-section {
@@ -591,7 +617,6 @@ button {
 .branch-tabs {
   display: flex;
   flex-wrap: wrap;
-
   gap: 10px;
 
   margin-top: 45px;
@@ -602,7 +627,6 @@ button {
   padding: 13px 22px;
 
   border: 1px solid rgba(0, 0, 0, 0.15);
-
   border-radius: 100px;
 
   background: transparent;
@@ -621,16 +645,14 @@ button {
 
 .branch-tab.active {
   background: var(--green);
-  color: white;
+  color: var(--white);
 
   border-color: var(--green);
 }
 
 .location-content {
   display: grid;
-
   grid-template-columns: 0.65fr 1.35fr;
-
   gap: 30px;
 }
 
@@ -639,13 +661,13 @@ button {
 
   padding: 45px;
 
-  background: white;
-
-  border-radius: 28px;
-
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+
+  border-radius: 28px;
+
+  background: var(--white);
 }
 
 .branch-logo {
@@ -672,11 +694,8 @@ button {
   margin-top: 20px;
 
   font-family: "Manrope", sans-serif;
-
   font-size: clamp(35px, 4vw, 55px);
-
   line-height: 1;
-
   letter-spacing: -0.05em;
 }
 
@@ -714,20 +733,19 @@ button {
   border: 0;
 }
 
+
 /* =========================
    FOOTER
 ========================= */
 
 footer {
-  background: var(--green-dark);
-
-  color: var(--white);
-
   padding: 80px 5vw 30px;
 
   display: grid;
-
   gap: 50px;
+
+  background: var(--green-dark);
+  color: var(--white);
 }
 
 .footer-brand {
@@ -740,7 +758,6 @@ footer {
 
   width: 280px;
   max-width: 100%;
-
   height: auto;
 
   object-fit: contain;
@@ -748,7 +765,6 @@ footer {
 
 .footer-links {
   display: flex;
-
   gap: 30px;
 
   font-size: 14px;
@@ -756,15 +772,24 @@ footer {
 
 footer p {
   font-size: 12px;
-
   opacity: 0.5;
 }
 
+/* =========================================================
+   MANIAC DUREN - RESPONSIVE / MOBILE
+   File ini dimuat SETELAH style.css
+========================================================= */
+
+
 /* =========================
-   RESPONSIVE
+   TABLET / SMALL DESKTOP
+   <= 900px
 ========================= */
 
 @media (max-width: 900px) {
+
+  /* NAVBAR */
+
   .nav-menu,
   .nav-cta {
     display: none;
@@ -776,13 +801,11 @@ footer p {
 
   .nav-menu.active {
     position: absolute;
-
     top: 82px;
     left: 0;
     right: 0;
 
     display: flex;
-
     flex-direction: column;
 
     padding: 30px;
@@ -791,6 +814,9 @@ footer p {
 
     border-bottom: 1px solid var(--border);
   }
+
+
+  /* HERO */
 
   .hero {
     grid-template-columns: 0.95fr 1.05fr;
@@ -816,9 +842,11 @@ footer p {
     width: min(52vw, 460px);
   }
 
+
+  /* PROMO */
+
   .promo-card {
     flex-direction: column;
-
     align-items: flex-start;
 
     gap: 80px;
@@ -828,16 +856,30 @@ footer p {
     text-align: left;
   }
 
+
+  /* PRODUCT */
+
   .product-grid {
     grid-template-columns: 1fr;
   }
 
+
+  /* ABOUT */
+
   .about {
     grid-template-columns: 1fr;
   }
+
 }
 
+
+/* =========================
+   TABLET / LOCATION
+   <= 800px
+========================= */
+
 @media (max-width: 800px) {
+
   .location-content {
     grid-template-columns: 1fr;
   }
@@ -849,32 +891,47 @@ footer p {
   .map-wrap {
     height: 400px;
   }
+
 }
 
+
+/* =========================
+   MOBILE
+   <= 600px
+========================= */
+
 @media (max-width: 600px) {
+
+  /* NAVBAR */
+
   .navbar {
     min-height: 72px;
   }
+
   .brand-logo {
-  height: 44px;
-}
+    height: 44px;
+  }
+
+
+  /* GLOBAL */
 
   .section {
     padding: 85px 20px;
   }
 
+
+  /* HERO */
+
   .hero {
-    grid-template-columns: 0.92fr 1.08fr;
-
-    gap: 10px;
-
     min-height: 100vh;
+
+    grid-template-columns: 0.92fr 1.08fr;
+    align-items: center;
+    gap: 10px;
 
     padding:
       95px 14px
       45px;
-
-    align-items: center;
   }
 
   .hero-copy {
@@ -890,9 +947,7 @@ footer p {
 
   .hero h1 {
     font-size: clamp(34px, 10.5vw, 52px);
-
     line-height: 0.84;
-
     letter-spacing: -0.06em;
   }
 
@@ -907,9 +962,7 @@ footer p {
 
   .hero-actions {
     flex-direction: row;
-
     align-items: center;
-
     gap: 10px;
 
     margin-top: 18px;
@@ -918,17 +971,16 @@ footer p {
   .hero-actions .button {
     padding: 0;
 
+    border: none;
+
     background: transparent;
     color: var(--black);
-
-    border: none;
 
     font-size: 10px;
   }
 
   .hero-meta {
     margin-top: 28px;
-
     padding-top: 16px;
 
     gap: 15px;
@@ -956,7 +1008,6 @@ footer p {
 
   .hero-durian {
     width: 58vw;
-
     max-width: none;
   }
 
@@ -988,15 +1039,25 @@ footer p {
   .hero-price small {
     font-size: 8px;
   }
+
+
+  /* PROMO */
+
   .promo-card {
     padding: 30px;
 
     border-radius: 20px;
   }
 
+
+  /* PRODUCT */
+
   .product-image {
     height: 300px;
   }
+
+
+  /* FOOTER */
 
   footer {
     padding-left: 20px;
@@ -1004,6 +1065,7 @@ footer p {
   }
 
   .footer-logo {
-  width: 220px;
+    width: 220px;
   }
+
 }
