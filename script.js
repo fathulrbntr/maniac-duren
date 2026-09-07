@@ -7,7 +7,7 @@ console.log("Maniac Duren website aktif");
 const branches = {
 
   cikarang: {
-    name: "Maniac Duren Cikarang",
+    name: "Maniac Duren Jababeka",
 
     address:
       "Cikarang, Kabupaten Bekasi, Jawa Barat",
@@ -16,22 +16,20 @@ const branches = {
       "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3965.64899299478!2d107.17485607570174!3d-6.309759893679511!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e699b004552c909%3A0xd66bfe9f65d9050f!2sManiacduren_cikarang!5e0!3m2!1sid!2sid!4v1788804084667!5m2!1sid!2sid",
 
     link:
-      "https://maps.google.com/"
+      "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3965.64899299478!2d107.17485607570174!3d-6.309759893679511!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e699b004552c909%3A0xd66bfe9f65d9050f!2sManiacduren_cikarang!5e0!3m2!1sid!2sid!4v1788804084667!5m2!1sid!2sid",
   },
 
 
   depok: {
-    name: "Maniac Duren Depok",
+    name: "Maniac Duren Lippo",
 
     address:
       "Masukkan alamat cabang Depok",
 
     map:
-      "MASUKKAN_EMBED_MAP_DEPOK",
-
+        "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3965.4465132177124!2d107.14625387570193!3d-6.33616179365353!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e699b77cf6eb591%3A0x38797d3c3e8beebd!2sManiac%20Duren%20Lippo%20CIkarang!5e0!3m2!1sid!2sid!4v1788804725051!5m2!1sid!2sid"
     link:
-      "MASUKKAN_LINK_MAP_DEPOK"
-  },
+        "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3965.4465132177124!2d107.14625387570193!3d-6.33616179365353!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e699b77cf6eb591%3A0x38797d3c3e8beebd!2sManiac%20Duren%20Lippo%20CIkarang!5e0!3m2!1sid!2sid!4v1788804725051!5m2!1sid!2sid"  },
 
 
   bekasi: {
