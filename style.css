@@ -55,7 +55,7 @@ button {
 
   padding: 0 5vw;
 
-  background:#146321;
+  background: rgba(243, 240, 223, 0.32);
   backdrop-filter: blur(18px);
 
   border-bottom: 1px solid var(--border);
