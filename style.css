@@ -807,20 +807,34 @@ button {
 
 .gallery-swiper .swiper-pagination {
   bottom: 14px;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 7px;
 }
 
-.gallery-swiper .swiper-pagination-bullet {
+.gallery-swiper .gallery-bullet {
   width: 7px;
   height: 7px;
 
+  padding: 0;
+  border: 0;
+  border-radius: 100px;
+
   background: var(--black);
   opacity: 0.24;
+
+  cursor: pointer;
+
+  transition:
+    width 0.25s ease,
+    opacity 0.25s ease,
+    background 0.25s ease;
 }
 
-.gallery-swiper .swiper-pagination-bullet-active {
+.gallery-swiper .gallery-bullet.active {
   width: 24px;
-
-  border-radius: 100px;
 
   background: var(--green);
   opacity: 1;

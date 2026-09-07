@@ -185,27 +185,47 @@ branchTabs.forEach((tab) => {
 
 /* =========================
    GALLERY COVERFLOW
-   INFINITE + STABLE
+   MANUAL INFINITE LOOP
 ========================= */
 
-const gallerySwiper = document.querySelector(".gallery-swiper");
+const gallerySwiperEl = document.querySelector(".gallery-swiper");
 
-if (gallerySwiper && typeof Swiper !== "undefined") {
-  new Swiper(".gallery-swiper", {
+if (gallerySwiperEl && typeof Swiper !== "undefined") {
+  const wrapper = gallerySwiperEl.querySelector(".swiper-wrapper");
+  const originalSlides = Array.from(wrapper.children);
+  const originalCount = originalSlides.length;
+
+  /*
+    Swiper loop bawaan sengaja TIDAK digunakan.
+    Semua slide diduplikasi manual di kiri dan kanan.
+    Cara ini jauh lebih stabil untuk Coverflow 3D.
+  */
+
+  const prependFragment = document.createDocumentFragment();
+  const appendFragment = document.createDocumentFragment();
+
+  originalSlides.forEach((slide) => {
+    prependFragment.appendChild(slide.cloneNode(true));
+    appendFragment.appendChild(slide.cloneNode(true));
+  });
+
+  wrapper.prepend(prependFragment);
+  wrapper.append(appendFragment);
+
+  const startIndex = originalCount + Math.floor(originalCount / 2);
+
+  const gallerySwiper = new Swiper(gallerySwiperEl, {
     effect: "coverflow",
 
     centeredSlides: true,
     grabCursor: true,
 
-    /* Infinite tetap aktif */
-    loop: true,
+    /* Loop bawaan dimatikan supaya tidak ada recycle DOM. */
+    loop: false,
 
-    /* Tambahkan buffer slide agar loop tidak terlihat lompat */
-    loopAdditionalSlides: 15,
+    initialSlide: startIndex,
 
     speed: 650,
-
-    initialSlide: 7,
 
     watchSlidesProgress: true,
     roundLengths: true,
@@ -216,15 +236,17 @@ if (gallerySwiper && typeof Swiper !== "undefined") {
     resistance: true,
     resistanceRatio: 0.85,
 
-    pagination: {
-      el: ".gallery-swiper .swiper-pagination",
-      clickable: true,
-      dynamicBullets: true
+    coverflowEffect: {
+      rotate: 22,
+      stretch: 0,
+      depth: 105,
+      modifier: 1,
+      slideShadows: true
     },
 
     breakpoints: {
       0: {
-        slidesPerView: 1.5,
+        slidesPerView: 1.55,
         spaceBetween: 10,
 
         coverflowEffect: {
@@ -237,7 +259,7 @@ if (gallerySwiper && typeof Swiper !== "undefined") {
       },
 
       601: {
-        slidesPerView: 3,
+        slidesPerView: 3.4,
         spaceBetween: 14,
 
         coverflowEffect: {
@@ -250,7 +272,7 @@ if (gallerySwiper && typeof Swiper !== "undefined") {
       },
 
       901: {
-        slidesPerView: 5,
+        slidesPerView: 5.6,
         spaceBetween: 18,
 
         coverflowEffect: {
@@ -263,7 +285,7 @@ if (gallerySwiper && typeof Swiper !== "undefined") {
       },
 
       1400: {
-        slidesPerView: 7,
+        slidesPerView: 6.6,
         spaceBetween: 20,
 
         coverflowEffect: {
@@ -276,5 +298,63 @@ if (gallerySwiper && typeof Swiper !== "undefined") {
       }
     }
   });
+
+  /*
+    Infinite loop manual:
+    kalau masuk ke copy kiri / kanan, pindahkan diam-diam
+    ke slide asli yang ekuivalen tanpa animasi.
+  */
+  gallerySwiper.on("slideChangeTransitionEnd", () => {
+    const index = gallerySwiper.activeIndex;
+
+    if (index < originalCount) {
+      gallerySwiper.slideTo(index + originalCount, 0, false);
+      return;
+    }
+
+    if (index >= originalCount * 2) {
+      gallerySwiper.slideTo(index - originalCount, 0, false);
+    }
+  });
+
+  /*
+    Pagination custom hanya 15 titik,
+    bukan 45 titik dari hasil cloning.
+  */
+  const pagination = gallerySwiperEl.querySelector(".swiper-pagination");
+
+  if (pagination) {
+    pagination.innerHTML = "";
+
+    const bullets = [];
+
+    for (let i = 0; i < originalCount; i += 1) {
+      const bullet = document.createElement("button");
+
+      bullet.type = "button";
+      bullet.className = "gallery-bullet";
+      bullet.setAttribute("aria-label", `Buka gallery ${i + 1}`);
+
+      bullet.addEventListener("click", () => {
+        gallerySwiper.slideTo(originalCount + i);
+      });
+
+      pagination.appendChild(bullet);
+      bullets.push(bullet);
+    }
+
+    const updatePagination = () => {
+      const logicalIndex =
+        ((gallerySwiper.activeIndex - originalCount) % originalCount + originalCount) %
+        originalCount;
+
+      bullets.forEach((bullet, index) => {
+        bullet.classList.toggle("active", index === logicalIndex);
+      });
+    };
+
+    gallerySwiper.on("slideChange", updatePagination);
+    updatePagination();
+  }
 }
 
