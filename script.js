@@ -109,9 +109,9 @@ branchElements.tabs.forEach((tab) => {
 ========================= */
 
 const tiktokVideos = [
-  "https://www.tiktok.com/@manicduren.lc/video/123456789",
-  "https://www.tiktok.com/@manicduren.lc/video/987654321",
-  "https://www.tiktok.com/@manicduren.lc/video/555555555"
+  "https://www.tiktok.com/@maniacduren.lc/video/7679397078224620821?is_from_webapp=1&sender_device=pc&web_id=7681541648455714311",
+  "https://www.tiktok.com/@maniacduren.lc/video/7679680672352505095?is_from_webapp=1&sender_device=pc&web_id=7681541648455714311",
+  "https://www.tiktok.com/@maniacduren.lc/video/7682364639514004743?is_from_webapp=1&sender_device=pc&web_id=7681541648455714311"
 ];
 
 function getTikTokVideoId(url) {
