@@ -204,15 +204,16 @@ if (
     grabCursor: true,
 
     loop: true,
+    loopAdditionalSlides: 6,
 
     slidesPerView: "auto",
 
     speed: 700,
 
     coverflowEffect: {
-      rotate: 35,
-      stretch: 0,
-      depth: 180,
+      rotate: 28,
+      stretch: -55,
+      depth: 145,
       modifier: 1,
       slideShadows: true
     },
