@@ -648,14 +648,24 @@ button {
   align-items: flex-start;
 }
 
-.branch-label {
-  font-size: 11px;
+.branch-logo {
+  width: 150px;
+  height: 70px;
 
-  letter-spacing: 0.15em;
+  display: flex;
+  align-items: center;
+}
 
-  font-weight: 700;
+.branch-logo img {
+  display: block;
 
-  color: var(--green);
+  max-width: 100%;
+  max-height: 100%;
+
+  width: auto;
+  height: auto;
+
+  object-fit: contain;
 }
 
 .branch-info h3 {
