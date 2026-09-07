@@ -739,12 +739,27 @@ button {
 ========================= */
 
 .gallery-section {
+  width: 100%;
+  max-width: none;
+
+  padding-left: 0;
+  padding-right: 0;
+
   overflow: hidden;
 }
 
+.gallery-section .section-heading {
+  width: 100%;
+  padding-left: 5vw;
+  padding-right: 5vw;
+}
+
 .gallery-swiper {
-  width: min(100%, 980px);
-  margin: 60px auto 0;
+  width: 100vw;
+  max-width: none;
+
+  margin-top: 60px;
+  margin-left: calc(50% - 50vw);
 
   padding: 28px 0 68px;
 
@@ -862,17 +877,22 @@ footer p {
 
 @media (max-width: 900px) {
 
+  .gallery-section .section-heading {
+    padding-left: 5vw;
+    padding-right: 5vw;
+  }
+
   .gallery-swiper {
-    width: min(100%, 760px);
+    width: 100vw;
     margin-top: 48px;
+    margin-left: calc(50% - 50vw);
   }
 
   .gallery-swiper .swiper-slide {
     height: 350px;
   }
 
-
-  /* NAVBAR */
+/* NAVBAR */
 
   .nav-menu,
   .nav-cta {
@@ -986,10 +1006,21 @@ footer p {
 
 @media (max-width: 600px) {
 
+  .gallery-section {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .gallery-section .section-heading {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
   .gallery-swiper {
-    width: calc(100% + 28px);
+    width: 100vw;
+
     margin-top: 38px;
-    margin-left: -14px;
+    margin-left: calc(50% - 50vw);
 
     padding-bottom: 56px;
   }
@@ -999,8 +1030,7 @@ footer p {
     border-radius: 18px;
   }
 
-
-  /* NAVBAR */
+/* NAVBAR */
 
   .navbar {
     min-height: 72px;
