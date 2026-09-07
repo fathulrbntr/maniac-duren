@@ -759,8 +759,8 @@ button {
 }
 
 .gallery-swiper .swiper-slide {
-  width: 235px;
-  height: 315px;
+  width: 170px;
+  height: 230px;
 
   border-radius: 24px;
 
@@ -869,8 +869,8 @@ footer p {
 @media (max-width: 900px) {
 
   .gallery-swiper .swiper-slide {
-    width: 210px;
-    height: 285px;
+    width: 190px;
+    height: 255px;
   }
 
 
