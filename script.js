@@ -185,47 +185,28 @@ branchTabs.forEach((tab) => {
 
 /* =========================
    GALLERY COVERFLOW
-   MANUAL INFINITE LOOP
 ========================= */
 
-const gallerySwiperEl = document.querySelector(".gallery-swiper");
+const gallerySwiper = document.querySelector(".gallery-swiper");
 
-if (gallerySwiperEl && typeof Swiper !== "undefined") {
-  const wrapper = gallerySwiperEl.querySelector(".swiper-wrapper");
-  const originalSlides = Array.from(wrapper.children);
-  const originalCount = originalSlides.length;
-
-  /*
-    Swiper loop bawaan sengaja TIDAK digunakan.
-    Semua slide diduplikasi manual di kiri dan kanan.
-    Cara ini jauh lebih stabil untuk Coverflow 3D.
-  */
-
-  const prependFragment = document.createDocumentFragment();
-  const appendFragment = document.createDocumentFragment();
-
-  originalSlides.forEach((slide) => {
-    prependFragment.appendChild(slide.cloneNode(true));
-    appendFragment.appendChild(slide.cloneNode(true));
-  });
-
-  wrapper.prepend(prependFragment);
-  wrapper.append(appendFragment);
-
-  const startIndex = originalCount + Math.floor(originalCount / 2);
-
-  const gallerySwiper = new Swiper(gallerySwiperEl, {
+if (gallerySwiper && typeof Swiper !== "undefined") {
+  new Swiper(".gallery-swiper", {
     effect: "coverflow",
 
     centeredSlides: true,
     grabCursor: true,
-
-    /* Loop bawaan dimatikan supaya tidak ada recycle DOM. */
     loop: false,
 
-    initialSlide: startIndex,
-
     speed: 650,
+
+    /* Nonaktifkan loop DOM-recycling yang menyebabkan slide lompat/acak
+       saat drag dari kanan ke kiri pada coverflow desktop. */
+    rewind: false,
+    resistance: true,
+    resistanceRatio: 0.85,
+
+
+    initialSlide: 7,
 
     watchSlidesProgress: true,
     roundLengths: true,
@@ -233,15 +214,11 @@ if (gallerySwiperEl && typeof Swiper !== "undefined") {
     normalizeSlideIndex: true,
     preventInteractionOnTransition: true,
 
-    resistance: true,
-    resistanceRatio: 0.85,
 
-    coverflowEffect: {
-      rotate: 22,
-      stretch: 0,
-      depth: 105,
-      modifier: 1,
-      slideShadows: true
+    pagination: {
+      el: ".gallery-swiper .swiper-pagination",
+      clickable: true,
+      dynamicBullets: true
     },
 
     breakpoints: {
@@ -298,63 +275,5 @@ if (gallerySwiperEl && typeof Swiper !== "undefined") {
       }
     }
   });
-
-  /*
-    Infinite loop manual:
-    kalau masuk ke copy kiri / kanan, pindahkan diam-diam
-    ke slide asli yang ekuivalen tanpa animasi.
-  */
-  gallerySwiper.on("slideChangeTransitionEnd", () => {
-    const index = gallerySwiper.activeIndex;
-
-    if (index < originalCount) {
-      gallerySwiper.slideTo(index + originalCount, 0, false);
-      return;
-    }
-
-    if (index >= originalCount * 2) {
-      gallerySwiper.slideTo(index - originalCount, 0, false);
-    }
-  });
-
-  /*
-    Pagination custom hanya 15 titik,
-    bukan 45 titik dari hasil cloning.
-  */
-  const pagination = gallerySwiperEl.querySelector(".swiper-pagination");
-
-  if (pagination) {
-    pagination.innerHTML = "";
-
-    const bullets = [];
-
-    for (let i = 0; i < originalCount; i += 1) {
-      const bullet = document.createElement("button");
-
-      bullet.type = "button";
-      bullet.className = "gallery-bullet";
-      bullet.setAttribute("aria-label", `Buka gallery ${i + 1}`);
-
-      bullet.addEventListener("click", () => {
-        gallerySwiper.slideTo(originalCount + i);
-      });
-
-      pagination.appendChild(bullet);
-      bullets.push(bullet);
-    }
-
-    const updatePagination = () => {
-      const logicalIndex =
-        ((gallerySwiper.activeIndex - originalCount) % originalCount + originalCount) %
-        originalCount;
-
-      bullets.forEach((bullet, index) => {
-        bullet.classList.toggle("active", index === logicalIndex);
-      });
-    };
-
-    gallerySwiper.on("slideChange", updatePagination);
-    updatePagination();
-  }
 }
 
