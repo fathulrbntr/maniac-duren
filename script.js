@@ -198,62 +198,66 @@ if (gallerySwiper && typeof Swiper !== "undefined") {
     loop: true,
 
     speed: 650,
-    spaceBetween: 14,
+
+    initialSlide: 7,
 
     watchSlidesProgress: true,
     roundLengths: true,
 
-    /* Posisi awal selalu berada di tengah, bukan menumpuk di sisi kiri. */
-    initialSlide: 2,
-
-    coverflowEffect: {
-      rotate: 28,
-      stretch: 0,
-      depth: 135,
-      modifier: 1,
-      slideShadows: true
-    },
-
     pagination: {
       el: ".gallery-swiper .swiper-pagination",
-      clickable: true
+      clickable: true,
+      dynamicBullets: true
     },
 
     breakpoints: {
       0: {
-        slidesPerView: 1.28,
+        slidesPerView: 1.55,
         spaceBetween: 10,
 
         coverflowEffect: {
-          rotate: 20,
+          rotate: 18,
           stretch: 0,
-          depth: 95,
+          depth: 80,
           modifier: 1,
           slideShadows: true
         }
       },
 
       601: {
-        slidesPerView: 2.15,
-        spaceBetween: 12,
+        slidesPerView: 3.4,
+        spaceBetween: 14,
 
         coverflowEffect: {
-          rotate: 24,
+          rotate: 20,
           stretch: 0,
-          depth: 115,
+          depth: 90,
           modifier: 1,
           slideShadows: true
         }
       },
 
       901: {
-        slidesPerView: 3,
-        spaceBetween: 14,
+        slidesPerView: 5.6,
+        spaceBetween: 18,
 
         coverflowEffect: {
-          rotate: 28,
+          rotate: 22,
           stretch: 0,
-          depth: 135,
+          depth: 105,
+          modifier: 1,
+          slideShadows: true
+        }
+      },
+
+      1400: {
+        slidesPerView: 6.6,
+        spaceBetween: 20,
+
+        coverflowEffect: {
+          rotate: 24,
+          stretch: 0,
+          depth: 115,
           modifier: 1,
           slideShadows: true
         }
