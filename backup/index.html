@@ -16,8 +16,12 @@
 <body>
 
   <header class="navbar">
-    <a href="#home" class="brand">
-      MANIAC DUREN
+    <a href="#home" class="brand" aria-label="Maniac Duren - Home">
+      <img
+        src="assets/logo.png"
+        alt="Maniac Duren"
+        class="brand-logo"
+      >
     </a>
 
     <nav class="nav-menu">
@@ -32,11 +36,12 @@
       href="https://wa.me/628133331105?text=Halo%20Maniac%20Duren,%20saya%20mau%20pesan%20durian"
       class="nav-cta"
       target="_blank"
+      rel="noopener noreferrer"
     >
       Order Now
     </a>
 
-    <button class="menu-toggle" aria-label="Open Menu">
+    <button class="menu-toggle" type="button" aria-label="Open Menu" aria-expanded="false">
       ☰
     </button>
   </header>
@@ -63,8 +68,9 @@
 
     <div class="hero-actions">
       <a
-        href="https://wa.me/6280000000000"
+        href="https://wa.me/628133331105?text=Halo%20Maniac%20Duren,%20saya%20mau%20pesan%20durian"
         target="_blank"
+        rel="noopener noreferrer"
         class="button button-primary"
       >
         Pesan Sekarang
@@ -333,24 +339,28 @@
   <div class="branch-tabs">
 
     <button
+      type="button"
       class="branch-tab active"
       data-branch="jababeka">
       Jababeka
     </button>
 
     <button
+      type="button"
       class="branch-tab"
       data-branch="lippo">
       Lippo
     </button>
 
     <button
+      type="button"
       class="branch-tab"
       data-branch="bekasi">
       Harapan Indah
     </button>
 
     <button
+      type="button"
       class="branch-tab"
       data-branch="neo">
       The Hive Neo Patio
@@ -364,12 +374,15 @@
     <!-- INFORMASI CABANG -->
     <div class="branch-info">
 
-      <p class="branch-label">
-        MANIAC DUREN
-      </p>
-
+      <div class="branch-logo">
+        <img
+          src="assets/logo.png"
+          alt="Maniac Duren"
+        >
+      </div>
+      
       <h3 id="branch-name">
-        Maniac Duren Cikarang
+        Jababeka
       </h3>
 
       <p
@@ -413,14 +426,35 @@
 
   <footer>
 
-    <div class="footer-brand">
-      MANIAC DUREN
-    </div>
+      <div class="footer-brand">
+        <img
+          src="assets/logo.png"
+          alt="Maniac Duren"
+          class="footer-logo"
+        >
+      </div>
 
     <div class="footer-links">
-      <a href="#">Instagram</a>
-      <a href="#">TikTok</a>
-      <a href="#">WhatsApp</a>
+      <a
+        href="https://www.instagram.com/maniacduren"
+        target="_blank"
+        rel="noopener noreferrer">
+        Instagram
+      </a>
+
+      <a
+        href="https://www.tiktok.com/@maniacduren.lc"
+        target="_blank"
+        rel="noopener noreferrer">
+        TikTok
+      </a>
+
+      <a
+        href="https://wa.me/628133331105?text=Halo%20Maniac%20Duren,%20saya%20mau%20pesan%20durian"
+        target="_blank"
+        rel="noopener noreferrer">
+        WhatsApp
+      </a>
     </div>
 
     <p>

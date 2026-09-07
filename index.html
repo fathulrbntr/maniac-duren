@@ -1,21 +1,26 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <title>Maniac Duren</title>
   <meta
     name="description"
     content="Maniac Duren - Surganya Durian Monthong"
-  />
+  >
 
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="mobile.css">
 </head>
 
 <body>
 
+  <!-- =========================
+       NAVBAR
+  ========================== -->
   <header class="navbar">
+
     <a href="#home" class="brand" aria-label="Maniac Duren - Home">
       <img
         src="assets/logo.png"
@@ -24,7 +29,7 @@
       >
     </a>
 
-    <nav class="nav-menu">
+    <nav class="nav-menu" aria-label="Main navigation">
       <a href="#home">Home</a>
       <a href="#promo">Promo</a>
       <a href="#menu">Menu</a>
@@ -41,93 +46,108 @@
       Order Now
     </a>
 
-    <button class="menu-toggle" type="button" aria-label="Open Menu" aria-expanded="false">
+    <button
+      class="menu-toggle"
+      type="button"
+      aria-label="Open Menu"
+      aria-expanded="false"
+    >
       ☰
     </button>
+
   </header>
 
 
   <main>
 
-<section class="hero" id="home">
+    <!-- =========================
+         HERO
+    ========================== -->
+    <section class="hero" id="home">
 
-  <div class="hero-copy">
+      <div class="hero-copy">
 
-    <p class="eyebrow">DEPOT DURIAN PREMIUM</p>
+        <p class="eyebrow">DEPOT DURIAN PREMIUM</p>
 
-    <h1>
-      SURGANYA
-      <span>DURIAN</span>
-      MONTHONG
-    </h1>
+        <h1>
+          SURGANYA
+          <span>DURIAN</span>
+          MONTHONG
+        </h1>
 
-    <p class="hero-description">
-      Durian Monthong pilihan dengan daging tebal,
-      creamy, manis, dan fresh setiap hari.
-    </p>
+        <p class="hero-description">
+          Durian Monthong pilihan dengan daging tebal,
+          creamy, manis, dan fresh setiap hari.
+        </p>
 
-    <div class="hero-actions">
-      <a
-        href="https://wa.me/628133331105?text=Halo%20Maniac%20Duren,%20saya%20mau%20pesan%20durian"
-        target="_blank"
-        rel="noopener noreferrer"
-        class="button button-primary"
-      >
-        Pesan Sekarang
-      </a>
+        <div class="hero-actions">
 
-      <a href="#menu" class="button button-secondary">
-        Lihat Menu
-      </a>
-    </div>
+          <a
+            href="https://wa.me/628133331105?text=Halo%20Maniac%20Duren,%20saya%20mau%20pesan%20durian"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="button button-primary"
+          >
+            Pesan Sekarang
+          </a>
 
-    <div class="hero-meta">
-      <div>
-        <strong>Fresh</strong>
-        <span>Setiap Hari</span>
+          <a href="#menu" class="button button-secondary">
+            Lihat Menu
+          </a>
+
+        </div>
+
+        <div class="hero-meta">
+
+          <div>
+            <strong>Fresh</strong>
+            <span>Setiap Hari</span>
+          </div>
+
+          <div>
+            <strong>Premium</strong>
+            <span>Monthong Pilihan</span>
+          </div>
+
+          <div>
+            <strong>Fast</strong>
+            <span>Order via WhatsApp</span>
+          </div>
+
+        </div>
+
       </div>
 
-      <div>
-        <strong>Premium</strong>
-        <span>Monthong Pilihan</span>
+
+      <div class="hero-visual">
+
+        <div class="hero-circle"></div>
+
+        <img
+          src="assets/durian.png"
+          alt="Durian Monthong Maniac Duren"
+          class="hero-durian"
+        >
+
+        <div class="hero-price">
+          <span>Mulai dari</span>
+          <strong>49.999</strong>
+          <small>/KG</small>
+        </div>
+
+        <div class="hero-sticker">
+          MONTHONG<br>PREMIUM
+        </div>
+
       </div>
 
-      <div>
-        <strong>Fast</strong>
-        <span>Order via WhatsApp</span>
-      </div>
-    </div>
-
-  </div>
+    </section>
 
 
-  <div class="hero-visual">
-
-    <div class="hero-circle"></div>
-
-    <img
-      src="assets/durian.png"
-      alt="Durian Monthong Maniac Duren"
-      class="hero-durian"
-    >
-
-    <div class="hero-price">
-      <span>Mulai dari</span>
-      <strong>49.999</strong>
-      <small>/KG</small>
-    </div>
-
-    <div class="hero-sticker">
-      MONTHONG<br>PREMIUM
-    </div>
-
-  </div>
-
-</section>
-
-
+    <!-- =========================
+         TICKER
+    ========================== -->
     <section class="ticker">
-
       <div class="ticker-content">
         <span>FRESH</span>
         <span>CREAMY</span>
@@ -135,18 +155,17 @@
         <span>MONTHONG</span>
         <span>MANIAC DUREN</span>
       </div>
-
     </section>
 
 
-
+    <!-- =========================
+         PROMO
+    ========================== -->
     <section class="promo section" id="promo">
 
       <div class="section-heading">
 
-        <p class="eyebrow">
-          PROMO SPESIAL
-        </p>
+        <p class="eyebrow">PROMO SPESIAL</p>
 
         <h2>
           Durian Monthong
@@ -160,13 +179,9 @@
 
         <div>
 
-          <p class="promo-label">
-            LIMITED PROMO
-          </p>
+          <p class="promo-label">LIMITED PROMO</p>
 
-          <h3>
-            MONTHONG
-          </h3>
+          <h3>MONTHONG</h3>
 
           <p>
             Durian berkualitas dengan harga terbaik.
@@ -185,125 +200,99 @@
     </section>
 
 
+    <!-- =========================
+         MENU
+    ========================== -->
+    <section class="menu-section section" id="menu">
 
-<section class="menu-section section" id="menu">
+      <div class="section-heading">
 
-  <div class="section-heading">
-    <p class="eyebrow">OUR MENU</p>
+        <p class="eyebrow">OUR MENU</p>
 
-    <h2>
-      Pilih Durian
-      <span>Favoritmu.</span>
-    </h2>
-  </div>
+        <h2>
+          Pilih Durian
+          <span>Favoritmu.</span>
+        </h2>
 
-  <div class="product-grid">
-
-    <!-- PRODUCT 01 -->
-    <article class="product-card">
-
-      <div class="product-image">
-        <img
-          src="assets/monthong.png"
-          alt="Durian Monthong"
-        >
-        <span class="product-number">01</span>
       </div>
 
-      <div class="product-info">
-        <p class="product-category">
-          BEST SELLER
-        </p>
 
-        <h3>Durian Monthong</h3>
+      <div class="product-grid">
 
-        <p>
-          Daging tebal, creamy, manis dan legit.
-        </p>
+        <article class="product-card">
 
-        <a href="#">
-          Lihat Produk →
-        </a>
+          <div class="product-image">
+            <img
+              src="assets/monthong.png"
+              alt="Durian Monthong"
+            >
+            <span class="product-number">01</span>
+          </div>
+
+          <div class="product-info">
+            <p class="product-category">BEST SELLER</p>
+            <h3>Durian Monthong</h3>
+            <p>Daging tebal, creamy, manis dan legit.</p>
+            <a href="#">Lihat Produk →</a>
+          </div>
+
+        </article>
+
+
+        <article class="product-card">
+
+          <div class="product-image">
+            <img
+              src="assets/durian-kupas.png"
+              alt="Durian Kupas"
+            >
+            <span class="product-number">02</span>
+          </div>
+
+          <div class="product-info">
+            <p class="product-category">PREMIUM</p>
+            <h3>Durian Kupas</h3>
+            <p>Praktis, siap makan, tetap fresh.</p>
+            <a href="#">Lihat Produk →</a>
+          </div>
+
+        </article>
+
+
+        <article class="product-card">
+
+          <div class="product-image">
+            <img
+              src="assets/paket-durian.png"
+              alt="Paket Durian"
+            >
+            <span class="product-number">03</span>
+          </div>
+
+          <div class="product-info">
+            <p class="product-category">SHARE PACK</p>
+            <h3>Paket Durian</h3>
+            <p>Cocok untuk sharing bersama teman dan keluarga.</p>
+            <a href="#">Lihat Produk →</a>
+          </div>
+
+        </article>
+
       </div>
 
-    </article>
+    </section>
 
 
-    <!-- PRODUCT 02 -->
-    <article class="product-card">
-
-      <div class="product-image">
-        <img
-          src="assets/durian-kupas.png"
-          alt="Durian Kupas"
-        >
-        <span class="product-number">02</span>
-      </div>
-
-      <div class="product-info">
-        <p class="product-category">
-          PREMIUM
-        </p>
-
-        <h3>Durian Kupas</h3>
-
-        <p>
-          Praktis, siap makan, tetap fresh.
-        </p>
-
-        <a href="#">
-          Lihat Produk →
-        </a>
-      </div>
-
-    </article>
-
-
-    <!-- PRODUCT 03 -->
-    <article class="product-card">
-
-      <div class="product-image">
-        <img
-          src="assets/paket-durian.png"
-          alt="Paket Durian"
-        >
-        <span class="product-number">03</span>
-      </div>
-
-      <div class="product-info">
-        <p class="product-category">
-          SHARE PACK
-        </p>
-
-        <h3>Paket Durian</h3>
-
-        <p>
-          Cocok untuk sharing bersama teman dan keluarga.
-        </p>
-
-        <a href="#">
-          Lihat Produk →
-        </a>
-      </div>
-
-    </article>
-
-  </div>
-
-</section>
-
-
+    <!-- =========================
+         ABOUT
+    ========================== -->
     <section class="about section" id="about">
 
-      <div class="about-number">
-        01
-      </div>
+      <div class="about-number">01</div>
 
       <div class="about-copy">
 
-        <p class="eyebrow">
-          ABOUT MANIAC DUREN
-        </p>
+        <p class="eyebrow">ABOUT MANIAC DUREN</p>
 
         <h2>
           Bukan sekadar jual durian.
@@ -321,138 +310,138 @@
     </section>
 
 
+    <!-- =========================
+         LOCATION
+    ========================== -->
+    <section class="location-section section" id="location">
 
+      <div class="location-header">
 
+        <p class="eyebrow">VISIT US</p>
 
-<section class="location-section section" id="location">
+        <h2>
+          Temukan Maniac Duren
+          <span>terdekat.</span>
+        </h2>
 
-  <div class="location-header">
-    <p class="eyebrow">VISIT US</p>
-
-    <h2>
-      Temukan Maniac Duren
-      <span>terdekat.</span>
-    </h2>
-  </div>
-
-  <!-- PILIH CABANG -->
-  <div class="branch-tabs">
-
-    <button
-      type="button"
-      class="branch-tab active"
-      data-branch="jababeka">
-      Jababeka
-    </button>
-
-    <button
-      type="button"
-      class="branch-tab"
-      data-branch="lippo">
-      Lippo
-    </button>
-
-    <button
-      type="button"
-      class="branch-tab"
-      data-branch="bekasi">
-      Harapan Indah
-    </button>
-
-    <button
-      type="button"
-      class="branch-tab"
-      data-branch="neo">
-      The Hive Neo Patio
-    </button>
-
-  </div>
-
-
-  <div class="location-content">
-
-    <!-- INFORMASI CABANG -->
-    <div class="branch-info">
-
-      <div class="branch-logo">
-        <img
-          src="assets/logo.png"
-          alt="Maniac Duren"
-        >
       </div>
-      
-      <h3 id="branch-name">
-        Jababeka
-      </h3>
-
-      <p
-        class="location-address"
-        id="branch-address">
-        Cikarang, Kabupaten Bekasi, Jawa Barat
-      </p>
-
-      <a
-        id="maps-button"
-        href="https://maps.google.com/"
-        target="_blank"
-        rel="noopener noreferrer"
-        class="button button-primary">
-        Buka Google Maps →
-      </a>
-
-    </div>
 
 
-    <!-- GOOGLE MAPS -->
-    <div class="map-wrap">
+      <div class="branch-tabs">
 
-      <iframe
-        id="branch-map"
-        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3965.64899299478!2d107.17485607570174!3d-6.309759893679511!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e699b004552c909%3A0xd66bfe9f65d9050f!2sManiacduren_cikarang!5e0!3m2!1sid!2sid!4v1788804084667!5m2!1sid!2sid"
-        allowfullscreen=""
-        loading="lazy"
-        referrerpolicy="no-referrer-when-downgrade">
-      </iframe>
+        <button
+          type="button"
+          class="branch-tab active"
+          data-branch="jababeka"
+        >
+          Jababeka
+        </button>
 
-    </div>
+        <button
+          type="button"
+          class="branch-tab"
+          data-branch="lippo"
+        >
+          Lippo
+        </button>
 
-  </div>
+        <button
+          type="button"
+          class="branch-tab"
+          data-branch="bekasi"
+        >
+          Harapan Indah
+        </button>
 
-</section>
+        <button
+          type="button"
+          class="branch-tab"
+          data-branch="neo"
+        >
+          The Hive Neo Patio
+        </button>
+
+      </div>
+
+
+      <div class="location-content">
+
+        <div class="branch-info">
+
+          <div class="branch-logo">
+            <img
+              src="assets/logo.png"
+              alt="Maniac Duren"
+            >
+          </div>
+
+          <h3 id="branch-name">
+            Maniac Duren Cikarang
+          </h3>
+
+          <p
+            class="location-address"
+            id="branch-address"
+          >
+            Cikarang, Kabupaten Bekasi, Jawa Barat
+          </p>
+
+          <a
+            id="maps-button"
+            href="https://maps.app.goo.gl/g43DRz5TfeLvbmvRA"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="button button-primary"
+          >
+            Buka Google Maps →
+          </a>
+
+        </div>
+
+
+        <div class="map-wrap">
+
+          <iframe
+            id="branch-map"
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3965.64899299478!2d107.17485607570174!3d-6.309759893679511!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e699b004552c909%3A0xd66bfe9f65d9050f!2sManiacduren_cikarang!5e0!3m2!1sid!2sid!4v1788804084667!5m2!1sid!2sid"
+            allowfullscreen
+            loading="lazy"
+            referrerpolicy="no-referrer-when-downgrade"
+            title="Lokasi Maniac Duren"
+          >
+          </iframe>
+
+        </div>
+
+      </div>
+
+    </section>
 
   </main>
 
 
-
+  <!-- =========================
+       FOOTER
+  ========================== -->
   <footer>
 
-      <div class="footer-brand">
-        <img
-          src="assets/logo.png"
-          alt="Maniac Duren"
-          class="footer-logo"
-        >
-      </div>
+    <div class="footer-brand">
+      <img
+        src="assets/logo.png"
+        alt="Maniac Duren"
+        class="footer-logo"
+      >
+    </div>
 
     <div class="footer-links">
-      <a
-        href="https://www.instagram.com/maniacduren"
-        target="_blank"
-        rel="noopener noreferrer">
-        Instagram
-      </a>
-
-      <a
-        href="https://www.tiktok.com/@maniacduren.lc"
-        target="_blank"
-        rel="noopener noreferrer">
-        TikTok
-      </a>
+      <a href="#">Instagram</a>
+      <a href="#">TikTok</a>
 
       <a
         href="https://wa.me/628133331105?text=Halo%20Maniac%20Duren,%20saya%20mau%20pesan%20durian"
         target="_blank"
-        rel="noopener noreferrer">
+        rel="noopener noreferrer"
+      >
         WhatsApp
       </a>
     </div>

@@ -1,5 +1,6 @@
 console.log("Maniac Duren website aktif");
 
+
 /* =========================
    MOBILE MENU
 ========================= */
@@ -24,6 +25,7 @@ if (menuToggle && navMenu) {
 
   });
 
+
   document
     .querySelectorAll(".nav-menu a")
     .forEach((link) => {
@@ -45,13 +47,14 @@ if (menuToggle && navMenu) {
 
 
 /* =========================
-   MANIAC DUREN BRANCHES
+   BRANCH DATA
 ========================= */
 
 const branches = {
 
   jababeka: {
-    name: "Jababeka",
+    name:
+      "Maniac Duren Cikarang",
 
     address:
       "Cikarang, Kabupaten Bekasi, Jawa Barat",
@@ -63,8 +66,10 @@ const branches = {
       "https://maps.app.goo.gl/g43DRz5TfeLvbmvRA"
   },
 
+
   lippo: {
-    name: "Lippo Cikarang",
+    name:
+      "Maniac Duren Lippo Cikarang",
 
     address:
       "Cikarang, Kabupaten Bekasi, Jawa Barat",
@@ -76,8 +81,10 @@ const branches = {
       "https://maps.app.goo.gl/yGsXWvqrb73hcGEt7"
   },
 
+
   bekasi: {
-    name: "Harapan Indah",
+    name:
+      "Maniac Duren Harapan Indah",
 
     address:
       "Pusaka Rakyat, Kabupaten Bekasi, Jawa Barat",
@@ -89,8 +96,10 @@ const branches = {
       "https://maps.app.goo.gl/kuHqcwivMLR8pVXz8"
   },
 
+
   neo: {
-    name: "Depot Durian Neo Patio",
+    name:
+      "Depot Durian Neo Patio",
 
     address:
       "Cikarang, Kabupaten Bekasi, Jawa Barat",
@@ -98,7 +107,10 @@ const branches = {
     map:
       "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3965.3801705476203!2d107.14861859999999!3d-6.344788599999999!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e699bd5094cc5e7%3A0xe35180e85a9c3f3c!2sDepot%20Durian!5e0!3m2!1sid!2sid!4v1788806485087!5m2!1sid!2sid",
 
-    /* Link lama rusak; isi kembali dengan link Google Maps Neo Patio yang benar. */
+    /*
+      Link Google Maps Neo Patio sebelumnya rusak.
+      Isi dengan link share Google Maps yang benar saat sudah tersedia.
+    */
     link:
       "https://maps.google.com/"
   }
@@ -135,29 +147,35 @@ branchTabs.forEach((tab) => {
 
     if (!branch) return;
 
+
     if (branchName) {
       branchName.textContent =
         branch.name;
     }
+
 
     if (branchAddress) {
       branchAddress.textContent =
         branch.address;
     }
 
+
     if (branchMap) {
       branchMap.src =
         branch.map;
     }
+
 
     if (mapsButton) {
       mapsButton.href =
         branch.link;
     }
 
+
     branchTabs.forEach((item) => {
       item.classList.remove("active");
     });
+
 
     tab.classList.add("active");
 
