@@ -666,8 +666,6 @@ button {
   height: auto;
 
   object-fit: contain;
-
-  filter: drop-shadow(0 7px 8px rgba(0, 0, 0, 0.28));
 }
 
 .branch-info h3 {
