@@ -195,14 +195,25 @@ if (gallerySwiper && typeof Swiper !== "undefined") {
 
     centeredSlides: true,
     grabCursor: true,
-    loop: true,
+    loop: false,
 
     speed: 650,
+
+    /* Nonaktifkan loop DOM-recycling yang menyebabkan slide lompat/acak
+       saat drag dari kanan ke kiri pada coverflow desktop. */
+    rewind: false,
+    resistance: true,
+    resistanceRatio: 0.85,
+
 
     initialSlide: 7,
 
     watchSlidesProgress: true,
     roundLengths: true,
+
+    normalizeSlideIndex: true,
+    preventInteractionOnTransition: true,
+
 
     pagination: {
       el: ".gallery-swiper .swiper-pagination",
