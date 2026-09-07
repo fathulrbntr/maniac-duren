@@ -771,7 +771,8 @@ button {
 }
 
 .gallery-swiper .swiper-slide {
-  height: 420px;
+  aspect-ratio: 3 / 4;
+  height: auto;
 
   border-radius: 24px;
   overflow: hidden;
@@ -791,6 +792,7 @@ button {
   height: 100%;
 
   object-fit: cover;
+  object-position: center;
 }
 
 .gallery-swiper .swiper-slide:not(.swiper-slide-active) {
@@ -889,7 +891,8 @@ footer p {
   }
 
   .gallery-swiper .swiper-slide {
-    height: 350px;
+    aspect-ratio: 3 / 4;
+    height: auto;
   }
 
 /* NAVBAR */
@@ -1026,7 +1029,8 @@ footer p {
   }
 
   .gallery-swiper .swiper-slide {
-    height: 300px;
+    aspect-ratio: 3 / 4;
+    height: auto;
     border-radius: 18px;
   }
 
