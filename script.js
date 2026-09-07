@@ -187,93 +187,42 @@ branchTabs.forEach((tab) => {
    GALLERY COVERFLOW
 ========================= */
 
-const gallerySwiper = document.querySelector(".gallery-swiper");
+const gallerySwiper =
+  document.querySelector(".gallery-swiper");
 
-if (gallerySwiper && typeof Swiper !== "undefined") {
+if (
+  gallerySwiper &&
+  typeof Swiper !== "undefined"
+) {
+
   new Swiper(".gallery-swiper", {
+
     effect: "coverflow",
 
     centeredSlides: true,
+
     grabCursor: true,
-    loop: false,
 
-    speed: 650,
+    loop: true,
 
-    /* Nonaktifkan loop DOM-recycling yang menyebabkan slide lompat/acak
-       saat drag dari kanan ke kiri pada coverflow desktop. */
-    rewind: false,
-    resistance: true,
-    resistanceRatio: 0.85,
+    slidesPerView: "auto",
 
+    speed: 700,
 
-    initialSlide: 7,
-
-    watchSlidesProgress: true,
-    roundLengths: true,
-
-    normalizeSlideIndex: true,
-    preventInteractionOnTransition: true,
-
+    coverflowEffect: {
+      rotate: 35,
+      stretch: 0,
+      depth: 180,
+      modifier: 1,
+      slideShadows: true
+    },
 
     pagination: {
       el: ".gallery-swiper .swiper-pagination",
-      clickable: true,
-      dynamicBullets: true
-    },
-
-    breakpoints: {
-      0: {
-        slidesPerView: 1.55,
-        spaceBetween: 10,
-
-        coverflowEffect: {
-          rotate: 18,
-          stretch: 0,
-          depth: 80,
-          modifier: 1,
-          slideShadows: true
-        }
-      },
-
-      601: {
-        slidesPerView: 3.4,
-        spaceBetween: 14,
-
-        coverflowEffect: {
-          rotate: 20,
-          stretch: 0,
-          depth: 90,
-          modifier: 1,
-          slideShadows: true
-        }
-      },
-
-      901: {
-        slidesPerView: 5.6,
-        spaceBetween: 18,
-
-        coverflowEffect: {
-          rotate: 22,
-          stretch: 0,
-          depth: 105,
-          modifier: 1,
-          slideShadows: true
-        }
-      },
-
-      1400: {
-        slidesPerView: 6.6,
-        spaceBetween: 20,
-
-        coverflowEffect: {
-          rotate: 24,
-          stretch: 0,
-          depth: 115,
-          modifier: 1,
-          slideShadows: true
-        }
-      }
+      clickable: true
     }
+
   });
+
 }
 
