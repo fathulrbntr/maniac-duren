@@ -187,32 +187,29 @@ branchTabs.forEach((tab) => {
    GALLERY COVERFLOW
 ========================= */
 
-const gallerySwiper =
-  document.querySelector(".gallery-swiper");
+const gallerySwiper = document.querySelector(".gallery-swiper");
 
-if (
-  gallerySwiper &&
-  typeof Swiper !== "undefined"
-) {
-
+if (gallerySwiper && typeof Swiper !== "undefined") {
   new Swiper(".gallery-swiper", {
-
     effect: "coverflow",
 
     centeredSlides: true,
-
     grabCursor: true,
-
     loop: true,
 
-    slidesPerView: "auto",
+    speed: 650,
+    spaceBetween: 14,
 
-    speed: 700,
+    watchSlidesProgress: true,
+    roundLengths: true,
+
+    /* Posisi awal selalu berada di tengah, bukan menumpuk di sisi kiri. */
+    initialSlide: 2,
 
     coverflowEffect: {
-      rotate: 35,
+      rotate: 28,
       stretch: 0,
-      depth: 180,
+      depth: 135,
       modifier: 1,
       slideShadows: true
     },
@@ -220,9 +217,48 @@ if (
     pagination: {
       el: ".gallery-swiper .swiper-pagination",
       clickable: true
+    },
+
+    breakpoints: {
+      0: {
+        slidesPerView: 1.28,
+        spaceBetween: 10,
+
+        coverflowEffect: {
+          rotate: 20,
+          stretch: 0,
+          depth: 95,
+          modifier: 1,
+          slideShadows: true
+        }
+      },
+
+      601: {
+        slidesPerView: 2.15,
+        spaceBetween: 12,
+
+        coverflowEffect: {
+          rotate: 24,
+          stretch: 0,
+          depth: 115,
+          modifier: 1,
+          slideShadows: true
+        }
+      },
+
+      901: {
+        slidesPerView: 3,
+        spaceBetween: 14,
+
+        coverflowEffect: {
+          rotate: 28,
+          stretch: 0,
+          depth: 135,
+          modifier: 1,
+          slideShadows: true
+        }
+      }
     }
-
   });
-
 }
 
