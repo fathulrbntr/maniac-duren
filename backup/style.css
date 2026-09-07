@@ -735,6 +735,85 @@ button {
 
 
 /* =========================
+   GALLERY COVERFLOW
+========================= */
+
+.gallery-section {
+  overflow: hidden;
+}
+
+.gallery-swiper {
+  width: 100%;
+
+  margin-top: 65px;
+
+  padding-top: 30px;
+  padding-bottom: 70px;
+
+  overflow: visible;
+}
+
+.gallery-swiper .swiper-wrapper {
+  align-items: center;
+}
+
+.gallery-swiper .swiper-slide {
+  width: 320px;
+  height: 430px;
+
+  border-radius: 24px;
+
+  overflow: hidden;
+
+  background: var(--white);
+
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.15);
+
+  transition: opacity 0.3s ease;
+}
+
+.gallery-swiper .swiper-slide:not(.swiper-slide-active) {
+  opacity: 0.55;
+}
+
+.gallery-swiper .swiper-slide-active {
+  opacity: 1;
+}
+
+.gallery-swiper .swiper-slide img {
+  display: block;
+
+  width: 100%;
+  height: 100%;
+
+  object-fit: cover;
+}
+
+.gallery-swiper .swiper-pagination {
+  bottom: 15px;
+}
+
+.gallery-swiper .swiper-pagination-bullet {
+  width: 7px;
+  height: 7px;
+
+  background: var(--black);
+
+  opacity: 0.25;
+}
+
+.gallery-swiper .swiper-pagination-bullet-active {
+  width: 24px;
+
+  border-radius: 100px;
+
+  background: var(--green);
+
+  opacity: 1;
+}
+
+
+/* =========================
    FOOTER
 ========================= */
 
@@ -1066,6 +1145,27 @@ footer p {
 
   .footer-logo {
     width: 220px;
+  }
+
+
+  /* GALLERY */
+
+  .gallery-section {
+    overflow: hidden;
+  }
+
+  .gallery-swiper {
+    margin-top: 40px;
+
+    padding-top: 20px;
+    padding-bottom: 55px;
+  }
+
+  .gallery-swiper .swiper-slide {
+    width: 220px;
+    height: 300px;
+
+    border-radius: 18px;
   }
 
 }
