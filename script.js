@@ -1,35 +1,56 @@
-(() => {
-  "use strict";
+console.log("Maniac Duren website aktif");
 
-  /* =========================
-     MOBILE MENU
-  ========================= */
 
-  const menuToggle = document.querySelector(".menu-toggle");
-  const navMenu = document.querySelector(".nav-menu");
+/* =========================
+   MOBILE MENU
+========================= */
 
-  if (menuToggle && navMenu) {
-    const closeMenu = () => {
-      navMenu.classList.remove("active");
-      menuToggle.setAttribute("aria-expanded", "false");
-    };
+const menuToggle =
+  document.querySelector(".menu-toggle");
 
-    menuToggle.addEventListener("click", () => {
-      const isOpen = navMenu.classList.toggle("active");
-      menuToggle.setAttribute("aria-expanded", String(isOpen));
+const navMenu =
+  document.querySelector(".nav-menu");
+
+if (menuToggle && navMenu) {
+
+  menuToggle.addEventListener("click", () => {
+
+    const isOpen =
+      navMenu.classList.toggle("active");
+
+    menuToggle.setAttribute(
+      "aria-expanded",
+      String(isOpen)
+    );
+
+  });
+
+
+  document
+    .querySelectorAll(".nav-menu a")
+    .forEach((link) => {
+
+      link.addEventListener("click", () => {
+
+        navMenu.classList.remove("active");
+
+        menuToggle.setAttribute(
+          "aria-expanded",
+          "false"
+        );
+
+      });
+
     });
 
-    navMenu.querySelectorAll("a").forEach((link) => {
-      link.addEventListener("click", closeMenu);
-    });
-  }
+}
 
 
-  /* =========================
-     BRANCH DATA
-  ========================= */
+/* =========================
+   BRANCH DATA
+========================= */
 
-  const branches = {
+const branches = {
 
   jababeka: {
     name:
@@ -97,105 +118,147 @@
 };
 
 
-  /* =========================
-     BRANCH SELECTOR
-  ========================= */
+/* =========================
+   BRANCH SELECTOR
+========================= */
 
-  const branchTabs = document.querySelectorAll(".branch-tab");
-  const branchName = document.getElementById("branch-name");
-  const branchAddress = document.getElementById("branch-address");
-  const branchMap = document.getElementById("branch-map");
-  const mapsButton = document.getElementById("maps-button");
+const branchTabs =
+  document.querySelectorAll(".branch-tab");
 
-  branchTabs.forEach((tab) => {
-    tab.addEventListener("click", () => {
-      const branch = branches[tab.dataset.branch];
+const branchName =
+  document.getElementById("branch-name");
 
-      if (!branch) return;
+const branchAddress =
+  document.getElementById("branch-address");
 
-      if (branchName) branchName.textContent = branch.name;
-      if (branchAddress) branchAddress.textContent = branch.address;
-      if (branchMap) branchMap.src = branch.map;
-      if (mapsButton) mapsButton.href = branch.link;
+const branchMap =
+  document.getElementById("branch-map");
 
-      branchTabs.forEach((item) => item.classList.remove("active"));
-      tab.classList.add("active");
+const mapsButton =
+  document.getElementById("maps-button");
+
+
+branchTabs.forEach((tab) => {
+
+  tab.addEventListener("click", () => {
+
+    const branch =
+      branches[tab.dataset.branch];
+
+    if (!branch) return;
+
+
+    if (branchName) {
+      branchName.textContent =
+        branch.name;
+    }
+
+
+    if (branchAddress) {
+      branchAddress.textContent =
+        branch.address;
+    }
+
+
+    if (branchMap) {
+      branchMap.src =
+        branch.map;
+    }
+
+
+    if (mapsButton) {
+      mapsButton.href =
+        branch.link;
+    }
+
+
+    branchTabs.forEach((item) => {
+      item.classList.remove("active");
     });
+
+
+    tab.classList.add("active");
+
   });
 
+});
 
-  /* =========================
-     GALLERY COVERFLOW
-     Stable config:
-     - numeric slidesPerView (no "auto")
-     - bounded frame width in CSS
-     - exactly 1 side photo on desktop
-     - loop buffer for smoother infinite cycling
-  ========================= */
+/* =========================
+   GALLERY COVERFLOW
+========================= */
 
-  const galleryElement = document.querySelector(".gallery-swiper");
+const gallerySwiper = document.querySelector(".gallery-swiper");
 
-  if (galleryElement && typeof Swiper !== "undefined") {
-    const gallery = new Swiper(galleryElement, {
-      effect: "coverflow",
-      centeredSlides: true,
-      grabCursor: true,
-      loop: true,
-      loopAdditionalSlides: 3,
-      speed: 650,
-      roundLengths: true,
-      watchSlidesProgress: true,
-      updateOnWindowResize: true,
-      resizeObserver: true,
-      observer: false,
-      observeParents: false,
-      preventInteractionOnTransition: true,
+if (gallerySwiper && typeof Swiper !== "undefined") {
+  new Swiper(".gallery-swiper", {
+    effect: "coverflow",
 
-      pagination: {
-        el: ".gallery-swiper .swiper-pagination",
-        clickable: true
+    centeredSlides: true,
+    grabCursor: true,
+    loop: true,
+
+    speed: 650,
+    spaceBetween: 14,
+
+    watchSlidesProgress: true,
+    roundLengths: true,
+
+    /* Posisi awal selalu berada di tengah, bukan menumpuk di sisi kiri. */
+    initialSlide: 2,
+
+    coverflowEffect: {
+      rotate: 28,
+      stretch: 0,
+      depth: 135,
+      modifier: 1,
+      slideShadows: true
+    },
+
+    pagination: {
+      el: ".gallery-swiper .swiper-pagination",
+      clickable: true
+    },
+
+    breakpoints: {
+      0: {
+        slidesPerView: 1.28,
+        spaceBetween: 10,
+
+        coverflowEffect: {
+          rotate: 20,
+          stretch: 0,
+          depth: 95,
+          modifier: 1,
+          slideShadows: true
+        }
       },
 
-      coverflowEffect: {
-        rotate: 28,
-        stretch: 0,
-        depth: 135,
-        modifier: 1,
-        slideShadows: true
+      601: {
+        slidesPerView: 2.15,
+        spaceBetween: 12,
+
+        coverflowEffect: {
+          rotate: 24,
+          stretch: 0,
+          depth: 115,
+          modifier: 1,
+          slideShadows: true
+        }
       },
 
-      breakpoints: {
-        0: {
-          slidesPerView: 1.35,
-          spaceBetween: 12
-        },
-        601: {
-          slidesPerView: 2.2,
-          spaceBetween: 16
-        },
-        901: {
-          slidesPerView: 3,
-          spaceBetween: 20
+      901: {
+        slidesPerView: 3,
+        spaceBetween: 14,
+
+        coverflowEffect: {
+          rotate: 28,
+          stretch: 0,
+          depth: 135,
+          modifier: 1,
+          slideShadows: true
         }
       }
-    });
+    }
+  });
+}
 
-    /*
-      Swiper normally handles resize itself.
-      This lightweight refresh only runs after resizing settles,
-      avoiding repeated destroy/re-init and preventing stale geometry.
-    */
-    let resizeTimer = null;
-
-    window.addEventListener("resize", () => {
-      window.clearTimeout(resizeTimer);
-
-      resizeTimer = window.setTimeout(() => {
-        gallery.updateSize();
-        gallery.updateSlides();
-        gallery.updateProgress();
-        gallery.updateSlidesClasses();
-      }, 180);
-    });
-  }
-})();
