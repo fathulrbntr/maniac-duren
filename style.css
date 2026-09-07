@@ -731,13 +731,19 @@ footer {
 }
 
 .footer-brand {
-  font-family: "Manrope", sans-serif;
+  display: flex;
+  align-items: center;
+}
 
-  font-size: clamp(50px, 9vw, 140px);
+.footer-logo {
+  display: block;
 
-  letter-spacing: -0.07em;
+  width: 280px;
+  max-width: 100%;
 
-  font-weight: 800;
+  height: auto;
+
+  object-fit: contain;
 }
 
 .footer-links {
@@ -888,5 +894,9 @@ footer p {
   footer {
     padding-left: 20px;
     padding-right: 20px;
+  }
+
+  .footer-logo {
+  width: 220px;
   }
 }
