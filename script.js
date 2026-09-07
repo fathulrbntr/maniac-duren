@@ -51,7 +51,7 @@ if (menuToggle && navMenu) {
 const branches = {
 
   jababeka: {
-    name: "Maniac Duren Cikarang",
+    name: "Jababeka",
 
     address:
       "Cikarang, Kabupaten Bekasi, Jawa Barat",
@@ -64,7 +64,7 @@ const branches = {
   },
 
   lippo: {
-    name: "Maniac Duren Lippo Cikarang",
+    name: "Lippo Cikarang",
 
     address:
       "Cikarang, Kabupaten Bekasi, Jawa Barat",
@@ -77,7 +77,7 @@ const branches = {
   },
 
   bekasi: {
-    name: "Maniac Duren Harapan Indah",
+    name: "Harapan Indah",
 
     address:
       "Pusaka Rakyat, Kabupaten Bekasi, Jawa Barat",
