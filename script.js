@@ -185,6 +185,7 @@ branchTabs.forEach((tab) => {
 
 /* =========================
    GALLERY COVERFLOW
+   INFINITE + STABLE
 ========================= */
 
 const gallerySwiper = document.querySelector(".gallery-swiper");
@@ -195,16 +196,14 @@ if (gallerySwiper && typeof Swiper !== "undefined") {
 
     centeredSlides: true,
     grabCursor: true,
-    loop: false,
+
+    /* Infinite tetap aktif */
+    loop: true,
+
+    /* Tambahkan buffer slide agar loop tidak terlihat lompat */
+    loopAdditionalSlides: 15,
 
     speed: 650,
-
-    /* Nonaktifkan loop DOM-recycling yang menyebabkan slide lompat/acak
-       saat drag dari kanan ke kiri pada coverflow desktop. */
-    rewind: false,
-    resistance: true,
-    resistanceRatio: 0.85,
-
 
     initialSlide: 7,
 
@@ -214,6 +213,8 @@ if (gallerySwiper && typeof Swiper !== "undefined") {
     normalizeSlideIndex: true,
     preventInteractionOnTransition: true,
 
+    resistance: true,
+    resistanceRatio: 0.85,
 
     pagination: {
       el: ".gallery-swiper .swiper-pagination",
@@ -223,7 +224,7 @@ if (gallerySwiper && typeof Swiper !== "undefined") {
 
     breakpoints: {
       0: {
-        slidesPerView: 1.55,
+        slidesPerView: 1.5,
         spaceBetween: 10,
 
         coverflowEffect: {
@@ -236,7 +237,7 @@ if (gallerySwiper && typeof Swiper !== "undefined") {
       },
 
       601: {
-        slidesPerView: 3.4,
+        slidesPerView: 3,
         spaceBetween: 14,
 
         coverflowEffect: {
@@ -249,7 +250,7 @@ if (gallerySwiper && typeof Swiper !== "undefined") {
       },
 
       901: {
-        slidesPerView: 5.6,
+        slidesPerView: 5,
         spaceBetween: 18,
 
         coverflowEffect: {
@@ -262,7 +263,7 @@ if (gallerySwiper && typeof Swiper !== "undefined") {
       },
 
       1400: {
-        slidesPerView: 6.6,
+        slidesPerView: 7,
         spaceBetween: 20,
 
         coverflowEffect: {
