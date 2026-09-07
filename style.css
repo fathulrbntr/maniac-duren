@@ -743,10 +743,9 @@ button {
 }
 
 .gallery-swiper {
-  width: calc(100% - 40px);
-  max-width: 1180px;
+  width: 100%;
 
-  margin: 65px auto 0;
+  margin-top: 65px;
 
   padding-top: 30px;
   padding-bottom: 70px;
@@ -759,8 +758,8 @@ button {
 }
 
 .gallery-swiper .swiper-slide {
-  width: 170px;
-  height: 230px;
+  width: 320px;
+  height: 430px;
 
   border-radius: 24px;
 
@@ -867,18 +866,6 @@ footer p {
 ========================= */
 
 @media (max-width: 900px) {
-
-  .gallery-swiper .swiper-slide {
-    width: 190px;
-    height: 255px;
-  }
-
-
-  .gallery-swiper {
-    width: calc(100% - 24px);
-    max-width: 860px;
-  }
-
 
   /* NAVBAR */
 
@@ -993,12 +980,6 @@ footer p {
 ========================= */
 
 @media (max-width: 600px) {
-
-  .gallery-swiper {
-    width: 100%;
-    max-width: 100%;
-  }
-
 
   /* NAVBAR */
 
