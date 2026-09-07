@@ -105,37 +105,30 @@ button {
 
 .hero {
   min-height: 100vh;
-
   padding: 130px 5vw 70px;
 
   display: grid;
-  grid-template-columns: 1.1fr 0.9fr;
-
+  grid-template-columns: 1fr 1fr;
   align-items: center;
+  gap: 40px;
 
-  gap: 50px;
+  position: relative;
+  overflow: hidden;
 }
 
-.eyebrow {
-  font-size: 12px;
-  letter-spacing: 0.15em;
-  font-weight: 700;
-
-  margin-bottom: 22px;
+.hero-copy {
+  position: relative;
+  z-index: 2;
 }
 
 .hero h1 {
   font-family: "Manrope", sans-serif;
-
-  font-size: clamp(66px, 9vw, 145px);
-
-  line-height: 0.78;
-
-  letter-spacing: -0.07em;
-
+  font-size: clamp(70px, 8.5vw, 135px);
   font-weight: 800;
+  line-height: 0.8;
+  letter-spacing: -0.075em;
 
-  max-width: 900px;
+  max-width: 850px;
 }
 
 .hero h1 span {
@@ -143,115 +136,155 @@ button {
 }
 
 .hero-description {
-  max-width: 550px;
+  margin-top: 32px;
 
-  margin-top: 35px;
+  max-width: 530px;
 
   font-size: 18px;
   line-height: 1.6;
 
-  opacity: 0.72;
+  opacity: 0.7;
 }
 
 .hero-actions {
   display: flex;
-  gap: 14px;
-
-  margin-top: 34px;
+  gap: 12px;
+  margin-top: 30px;
 }
 
-.button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+.hero-meta {
+  margin-top: 55px;
 
-  padding: 16px 25px;
+  display: flex;
+  gap: 40px;
 
-  border-radius: 100px;
+  border-top: 1px solid var(--border);
+  padding-top: 25px;
+}
 
+.hero-meta div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hero-meta strong {
   font-size: 14px;
-  font-weight: 700;
-
-  transition: 0.25s ease;
 }
 
-.button:hover {
-  transform: translateY(-3px);
-}
-
-.button-primary {
-  background: var(--green);
-  color: var(--white);
-}
-
-.button-secondary {
-  border: 1px solid var(--black);
+.hero-meta span {
+  font-size: 12px;
+  opacity: 0.5;
 }
 
 .hero-visual {
+  min-height: 650px;
+
   position: relative;
-
-  display: flex;
-  justify-content: center;
-}
-
-.durian-placeholder {
-  width: min(38vw, 520px);
-  aspect-ratio: 1;
-
-  background: var(--green);
-
-  border-radius: 48% 52% 45% 55% / 55% 44% 56% 45%;
 
   display: flex;
   align-items: center;
   justify-content: center;
-
-  transform: rotate(-8deg);
-
-  box-shadow:
-    0 40px 100px rgba(20, 99, 33, 0.22);
 }
 
-.durian-placeholder span {
-  color: var(--cream);
-
-  font-family: "Manrope";
-  font-size: clamp(30px, 5vw, 70px);
-
-  font-weight: 800;
-
-  transform: rotate(8deg);
-}
-
-.hero-badge {
-  position: absolute;
-
-  bottom: 0;
-  left: 0;
-
-  width: 130px;
+.hero-circle {
+  width: min(38vw, 520px);
   aspect-ratio: 1;
 
-  background: var(--lime);
+  border-radius: 50%;
+
+  background: var(--green);
+
+  position: absolute;
+}
+
+.hero-durian {
+  position: relative;
+  z-index: 2;
+
+  width: min(46vw, 650px);
+
+  object-fit: contain;
+
+  filter: drop-shadow(
+    0 40px 40px rgba(0, 0, 0, 0.25)
+  );
+
+  animation: floatingDurian 4s ease-in-out infinite;
+}
+
+.hero-price {
+  position: absolute;
+
+  right: 0;
+  bottom: 90px;
+
+  z-index: 5;
+
+  width: 150px;
+  height: 150px;
 
   border-radius: 50%;
+
+  background: var(--lime);
 
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
 
-  text-align: center;
+  transform: rotate(8deg);
+}
 
-  transform: rotate(-12deg);
-
-  font-size: 13px;
+.hero-price span {
+  font-size: 11px;
   font-weight: 700;
 }
 
-.hero-badge strong {
-  font-size: 26px;
+.hero-price strong {
+  font-family: "Manrope";
+  font-size: 28px;
+  line-height: 1;
+}
+
+.hero-price small {
+  font-weight: 700;
+}
+
+.hero-sticker {
+  position: absolute;
+
+  top: 120px;
+  left: 0;
+
+  z-index: 5;
+
+  background: var(--black);
+  color: var(--white);
+
+  border-radius: 100px;
+
+  padding: 18px 22px;
+
+  font-size: 11px;
+  line-height: 1.2;
+  text-align: center;
+  font-weight: 700;
+
+  transform: rotate(-10deg);
+}
+
+@keyframes floatingDurian {
+
+  0%,
+  100% {
+    transform: translateY(0) rotate(-2deg);
+  }
+
+  50% {
+    transform: translateY(-18px) rotate(2deg);
+  }
+
 }
 
 .ticker {
@@ -683,4 +716,16 @@ footer p {
     padding-left: 20px;
     padding-right: 20px;
   }
+}
+/* =========================
+   PRODUCT HOVER EFFECT
+========================= */
+
+.product-card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.product-card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.08);
 }
