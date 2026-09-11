@@ -14,6 +14,39 @@
   document.querySelectorAll('[data-menu-type]').forEach(button=>{button.onclick=()=>{activeType=button.dataset.menuType;filterMenu();};});
   const el=(tag,cls,text)=>{const node=document.createElement(tag);node.className=cls;if(text!==undefined)node.textContent=text;return node;};
   const say=text=>{status.textContent=text;};
+  const detail=el('dialog','product-sheet');
+  detail.id='product-detail';detail.setAttribute('aria-labelledby','detail-title');
+  detail.innerHTML='<div class="sheet-top"><button type="button" class="sheet-handle" aria-label="Tutup detail produk"></button><button type="button" class="sheet-close" aria-label="Tutup">×</button></div><div class="sheet-content"><div class="sheet-image"></div><h2 id="detail-title"></h2><p class="sheet-description"></p><p class="sheet-price"></p></div><div class="sheet-footer"><button type="button" class="sheet-add">Tambah ke keranjang</button></div>';
+  document.body.append(detail);
+  let detailProduct=null,detailClosing=false;
+  function closeDetail(){
+    if(!detail.open||detailClosing)return;
+    detailClosing=true;detail.classList.add('is-closing');
+    const finish=()=>{clearTimeout(timer);detail.removeEventListener('animationend',ended);detail.close();detail.classList.remove('is-closing');detailClosing=false;};
+    const ended=event=>{if(event.target===detail&&event.animationName==='sheet-out')finish();};
+    const timer=setTimeout(finish,matchMedia('(prefers-reduced-motion: reduce)').matches?0:320);
+    detail.addEventListener('animationend',ended);
+  }
+  function openDetail(product){
+    if(detailClosing)return;detailProduct=product;
+    detail.querySelector('#detail-title').textContent=product.name;
+    detail.querySelector('.sheet-description').textContent=product.description||'';
+    detail.querySelector('.sheet-price').textContent=product.price===null?'Stok Habis':`${MenuLogic.money(product.price)} / ${product.unit}`;
+    const visual=detail.querySelector('.sheet-image'),source=cards.get(product.id).querySelector('.product-image img');visual.replaceChildren();
+    if(source){const img=source.cloneNode();img.loading='eager';img.onerror=()=>visual.replaceChildren(el('span','',product.name));visual.append(img);}else visual.append(el('span','',product.name));
+    const add=detail.querySelector('.sheet-add'),qty=cart.find(line=>line.id===product.id)?.qty||0;
+    add.disabled=product.price===null||qty>=99;add.textContent=product.price===null?'Stok Habis':qty>=99?'Maksimal 99 per produk':'Tambah ke keranjang';
+    if(!detail.open)detail.showModal();
+  }
+  detail.querySelector('.sheet-add').onclick=()=>{if(detailClosing||!detailProduct)return;change(detailProduct,1);closeDetail();};
+  detail.querySelectorAll('.sheet-close,.sheet-handle').forEach(button=>button.onclick=closeDetail);
+  detail.addEventListener('cancel',event=>{event.preventDefault();closeDetail();});
+  detail.addEventListener('click',event=>{if(event.target===detail){const r=detail.getBoundingClientRect();if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)closeDetail();}});
+  let dragStart=null;
+  const handle=detail.querySelector('.sheet-top');
+  handle.addEventListener('pointerdown',event=>{dragStart={x:event.clientX,y:event.clientY};handle.setPointerCapture(event.pointerId);});
+  handle.addEventListener('pointerup',event=>{if(dragStart&&event.clientY-dragStart.y>60&&Math.abs(event.clientX-dragStart.x)<100)closeDetail();dragStart=null;});
+  handle.addEventListener('pointercancel',()=>{dragStart=null;});
   function save(){try{localStorage.setItem(key,JSON.stringify(cart));}catch{say('Keranjang tersimpan hanya selama halaman ini terbuka.');}}
   function openCart(){if(!dialog.open)dialog.showModal();}
   document.querySelector('#open-cart').onclick=openCart;
@@ -63,7 +96,8 @@
       const card=el('article',`product-card${product.price===null?' sold-out':''}`);card.id=product.id;const info=el('div','product-info');info.append(el('h3','',product.name),el('p','product-description',product.description||''));if(product.price!==null)info.append(el('p','menu-price',`${MenuLogic.money(product.price)} / ${product.unit}`));
       const visual=el('div','product-image');
       if(typeof product.image==='string'&&/^(https?:\/\/|\/(?!\/)|data:image\/(png|jpeg|webp);base64,)/i.test(product.image)){const img=el('img','');img.src=product.image;img.alt=product.name;img.loading='lazy';img.onerror=()=>visual.replaceChildren(el('span','',product.name));visual.append(img);}else visual.textContent=product.name;
-      card.append(info,visual,el('div','product-bottom'));groups.get(group).append(card);cards.set(product.id,card);
+      const detailButton=el('button','product-detail-trigger');detailButton.type='button';detailButton.setAttribute('aria-label',`Lihat detail ${product.name}`);detailButton.setAttribute('aria-haspopup','dialog');detailButton.setAttribute('aria-controls','product-detail');detailButton.onclick=()=>openDetail(product);
+      card.append(info,visual,detailButton,el('div','product-bottom'));groups.get(group).append(card);cards.set(product.id,card);
     });
     if(!products.length)catalog.append(el('p','','Menu sedang diperbarui.'));
     try{cart=MenuLogic.reconcile(JSON.parse(localStorage.getItem(key)||'[]'),products);}catch{cart=[];}save();refresh();
