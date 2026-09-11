@@ -2,7 +2,7 @@
 const KEY = 'maniac-duren-menu-draft-v1';
 const form = document.querySelector('#product-form');
 const status = document.querySelector('#status');
-const fields = ['name','category','price','description','image','unit','group','menuType'];
+const fields = ['name','category','price','description','image','unit','menuType'];
 let activeType = 'durian';
 document.querySelectorAll('[data-menu-type]').forEach(button=>{button.onclick=()=>{activeType=button.dataset.menuType;if(!editing)form.elements.menuType.value=activeType;render();};});
 let items = [], editing = null, ready = false;
@@ -15,6 +15,7 @@ function validate(data) {
     if (!item || typeof item.name !== 'string' || !item.name.trim()) throw new Error('Setiap produk harus memiliki nama.');
     const clean = {};
     fields.filter(key => key !== 'price').forEach(key => { if (item[key] != null && typeof item[key] !== 'string') throw new Error('Format data produk tidak sesuai.'); clean[key] = (item[key] || '').trim(); });
+    if (typeof item.group === 'string') clean.group = item.group.trim();
     clean.menuType = MenuLogic.menuType(item.menuType);
     clean.price = MenuLogic.price(item.price);
     clean.unit = ['porsi','kg','paket','box','buah'].includes(clean.unit) ? clean.unit : 'porsi';
@@ -66,6 +67,7 @@ form.addEventListener('submit', event => {
   event.preventDefault(); if (!ready) return;
   try {
     const entry = Object.fromEntries(fields.map(key => [key, form.elements[key].value.trim()])); entry.id = editing || crypto.randomUUID();
+    if (editing) entry.group = items.find(item => item.id === editing)?.group;
     const cleaned = validate([entry])[0];
     if (editing) items = items.map(item => item.id === editing ? cleaned : item); else { if (items.length >= 200) throw new Error('Maksimal 200 produk.'); items.push(cleaned); }
     activeType=cleaned.menuType; clearForm(); save();
