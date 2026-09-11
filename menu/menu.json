@@ -1,0 +1,26 @@
+[
+  {
+    "id": "monthong",
+    "name": "Durian Monthong",
+    "category": "BEST SELLER",
+    "description": "Daging tebal, creamy, manis dan legit.",
+    "price": "Mulai Rp75.000 / kg",
+    "image": "/assets/monthong.png"
+  },
+  {
+    "id": "durian-kupas",
+    "name": "Durian Kupas",
+    "category": "PREMIUM",
+    "description": "Praktis, siap makan, tetap fresh.",
+    "price": "Hubungi untuk harga",
+    "image": "/assets/durian-kupas.png"
+  },
+  {
+    "id": "paket-durian",
+    "name": "Paket Durian",
+    "category": "SHARE PACK",
+    "description": "Cocok untuk sharing bersama teman dan keluarga.",
+    "price": "Hubungi untuk harga",
+    "image": "/assets/paket-durian.png"
+  }
+]

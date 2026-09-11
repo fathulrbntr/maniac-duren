@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="id"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Kelola Menu — Maniac Duren</title><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/menu/admin.css"></head>
+<body><main class="manager">
+<header class="manager-head"><div><a href="/menu">← Lihat menu publik</a><h1>Kelola menu.</h1></div><button id="download" class="button button-primary">Unduh menu.json</button></header>
+<p class="notice">Perubahan tersimpan sebagai draf di browser ini. Untuk tampil ke semua pengunjung, unduh <strong>menu.json</strong>, ganti file tersebut di folder <strong>menu</strong> proyek, lalu lakukan deploy.</p>
+<p id="status" role="status" aria-live="polite">Memuat menu…</p>
+<div class="workspace"><section class="editor"><h2 id="form-title">Tambah produk</h2>
+<form id="product-form"><label>Nama produk<input name="name" required maxlength="100" placeholder="Contoh: Durian Monthong"></label>
+<label>Label kategori<input name="category" maxlength="40" placeholder="Contoh: BEST SELLER"></label>
+<label>Harga<input name="price" maxlength="80" placeholder="Contoh: Rp75.000 / kg"><small>Kosongkan jika harga perlu ditanyakan.</small></label>
+<label>Deskripsi<textarea name="description" rows="3" maxlength="500" placeholder="Ceritakan singkat produk ini"></textarea></label>
+<label>Foto produk<input name="image" placeholder="/assets/monthong.png atau https://…"><small>Gunakan lokasi foto di proyek atau tautan langsung gambar.</small></label>
+<label class="upload">Atau pilih foto<input type="file" id="photo" accept="image/png,image/jpeg,image/webp"><small>PNG, JPG, atau WebP, maksimal 2 MB. Foto ikut disimpan dalam file menu.</small></label>
+<img id="photo-preview" alt="Pratinjau foto produk" hidden>
+<div class="actions"><button type="submit" class="button button-primary" id="submit">Tambah menu</button><button type="button" class="button button-secondary" id="cancel" hidden>Batal edit</button></div>
+</form></section>
+<section class="inventory"><div class="list-head"><h2>Daftar menu <span id="count"></span></h2><label class="import">Impor JSON<input id="import" type="file" accept="application/json,.json"></label></div><div id="items"></div><button class="button button-secondary" id="reset">Muat ulang menu publik</button></section></div>
+</main><script src="/menu/admin.js"></script></body></html>
