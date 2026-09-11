@@ -2,7 +2,7 @@
 const KEY = 'maniac-duren-menu-draft-v1';
 const form = document.querySelector('#product-form');
 const status = document.querySelector('#status');
-const fields = ['name','category','price','description','image','unit','menuType'];
+const fields = ['name','category','price','description','image','unit','group','menuType'];
 let activeType = 'durian';
 document.querySelectorAll('[data-menu-type]').forEach(button=>{button.onclick=()=>{activeType=button.dataset.menuType;if(!editing)form.elements.menuType.value=activeType;render();};});
 let cartEnabled = true;
@@ -73,7 +73,6 @@ form.addEventListener('submit', event => {
   event.preventDefault(); if (!ready) return;
   try {
     const entry = Object.fromEntries(fields.map(key => [key, form.elements[key].value.trim()])); entry.id = editing || crypto.randomUUID();
-    if (editing) entry.group = items.find(item => item.id === editing)?.group;
     const cleaned = validate([entry])[0];
     if (editing) items = items.map(item => item.id === editing ? cleaned : item); else { if (items.length >= 200) throw new Error('Maksimal 200 produk.'); items.push(cleaned); }
     activeType=cleaned.menuType; clearForm(); save();
