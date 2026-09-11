@@ -81,7 +81,10 @@
     const list=document.querySelector('#cart-items');list.replaceChildren();if(!count)list.append(el('p','','Keranjang masih kosong. Tambahkan menu favoritmu.'));
     cart.forEach(line=>{
       const product=products.find(p=>p.id===line.id),row=el('article','cart-row'),top=el('div','cart-row-top'),info=el('div','');
-      info.append(el('h3','',product.name),el('span','line-price',`${line.qty} ${product.unit} · ${MenuLogic.money(product.price*line.qty)}`));top.append(info,quantity(product,'dialog'));
+      info.append(el('h3','',product.name),el('span','line-price',`${line.qty} ${product.unit} · ${MenuLogic.money(product.price*line.qty)}`));const thumb=el('div','cart-thumbnail'),source=cards.get(product.id)?.querySelector('.product-image img');
+      const fallback=()=>{thumb.replaceChildren(el('span','', 'Foto belum tersedia'));};
+      if(source){const img=source.cloneNode();img.alt='';img.loading='lazy';img.onerror=fallback;thumb.append(img);}else fallback();
+      info.classList.add('cart-product-info');top.append(thumb,info,quantity(product,'dialog'));
       const label=el('label','','Catatan produk'),input=el('textarea','');input.id=`note-${product.id}`;label.htmlFor=input.id;input.maxLength=300;input.rows=2;input.placeholder='Contoh: pilih yang manis';input.value=line.note||'';
       input.oninput=()=>{line.note=input.value;save();drawCard(product);};row.append(top,label,input);list.append(row);
     });
