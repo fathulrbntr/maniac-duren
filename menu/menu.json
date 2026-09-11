@@ -94,6 +94,146 @@
       "menuType": "durian",
       "price": null,
       "id": "14a81460-1990-443a-8581-59c95d33048c"
+    },
+    {
+      "name": "Ketan Durian Original",
+      "category": "",
+      "description": "Ketan pulen yang lembut disajikan dengan daging durian asli yang creamy dan manis alami, lalu dipadukan dengan saus santan gurih. Perpaduan rasa tradisional yang sederhana namun selalu memanjakan di setiap suapan.",
+      "image": "",
+      "unit": "porsi",
+      "menuType": "makanan",
+      "price": null,
+      "id": "67ab8591-5b02-488d-9f2a-57e71aa4387e"
+    },
+    {
+      "name": "Ketan Durian Keju",
+      "category": "",
+      "description": "Ketan pulen berpadu dengan daging durian asli yang creamy, disiram saus santan gurih, lalu ditaburi keju parut yang melimpah. Perpaduan rasa manis, gurih, dan legit yang lumer di setiap suapan.",
+      "image": "",
+      "unit": "porsi",
+      "menuType": "makanan",
+      "price": null,
+      "id": "e3aac79d-2379-489b-990e-6acf8a1cf853"
+    },
+    {
+      "name": "Ketan Pandan Durian Original",
+      "category": "Ketan Pandan Durian Original",
+      "description": "Ketan pandan yang pulen dan harum dipadukan dengan daging durian asli yang creamy serta saus santan gurih. Perpaduan aroma pandan dan manis alami durian menghadirkan cita rasa yang lembut, legit, dan memanjakan.",
+      "image": "",
+      "unit": "porsi",
+      "menuType": "makanan",
+      "price": null,
+      "id": "98e934b7-32bc-438f-98e9-c1058c445c33"
+    },
+    {
+      "name": "Ketan Pandan Durian Keju",
+      "category": "",
+      "description": "Ketan pandan yang harum dan pulen dipadukan dengan daging durian asli yang creamy, disiram saus santan gurih, lalu ditaburi keju melimpah. Perpaduan manis, gurih, dan aroma pandan yang membuat setiap suapan semakin istimewa.",
+      "image": "",
+      "unit": "porsi",
+      "menuType": "makanan",
+      "price": null,
+      "id": "b31c5989-1946-41d2-9897-38ba6efbe441"
+    },
+    {
+      "name": "Ketan Ube Durian Original",
+      "category": "",
+      "description": "Ketan ube yang lembut dengan cita rasa khas ubi ungu dipadukan dengan daging durian asli yang creamy dan saus santan gurih. Perpaduan manis, legit, dan aroma khas yang menghadirkan pengalaman rasa yang unik di setiap suapan.",
+      "image": "",
+      "unit": "porsi",
+      "menuType": "makanan",
+      "price": null,
+      "id": "64f3d02d-e77d-46d6-98cb-30ede5bf0c18"
+    },
+    {
+      "name": "Ketan Ube Durian Keju",
+      "category": "",
+      "description": "Ketan ube yang lembut dipadukan dengan daging durian asli yang creamy, disiram saus santan gurih, lalu ditaburi keju melimpah. Perpaduan rasa manis, gurih, dan legit dengan sentuhan khas ubi ungu yang bikin setiap suapan semakin istimewa.",
+      "image": "",
+      "unit": "porsi",
+      "menuType": "makanan",
+      "price": null,
+      "id": "fce768b4-2e60-4808-bc4c-5f7df3def99a"
+    },
+    {
+      "name": "Es Cendol Original",
+      "category": "",
+      "description": "Cendol kenyal, santan gurih, dan gula aren asli dalam satu gelas kesegaran yang manis dan autentik.",
+      "image": "",
+      "unit": "porsi",
+      "menuType": "minuman",
+      "price": null,
+      "id": "0d89d014-42b1-47a6-a7eb-3ad133dd6ddc"
+    },
+    {
+      "name": "Es Cendol Durian",
+      "category": "",
+      "description": "Cendol kenyal bertemu durian premium yang creamy, menciptakan kesegaran manis dan legit yang bikin ketagihan.",
+      "image": "",
+      "unit": "porsi",
+      "menuType": "minuman",
+      "price": null,
+      "id": "2c0e5a37-f4c6-4087-b6d1-48923503628d"
+    },
+    {
+      "name": "Es Cendol Nangka Durian",
+      "category": "",
+      "description": "Cendol kenyal, nangka harum, dan durian premium dalam satu gelas kesegaran yang manis, legit, dan creamy.",
+      "image": "",
+      "unit": "porsi",
+      "menuType": "minuman",
+      "price": null,
+      "id": "aa0b3b31-5b03-474f-8ab1-7952a1e5506f"
+    },
+    {
+      "name": "Es Dawet Original",
+      "category": "",
+      "description": "Manis gula aren, gurih santan, dan lembutnya dawet dalam satu gelas. Kesegaran tradisional yang tak pernah gagal memanjakan hari.",
+      "image": "",
+      "unit": "porsi",
+      "menuType": "minuman",
+      "price": null,
+      "id": "bd1102d1-0383-4279-ac89-951ad02a3522"
+    },
+    {
+      "name": "Es Dawet Durian",
+      "category": "",
+      "description": "Kesegaran dawet tradisional dengan topping durian premium yang creamy dan harum.",
+      "image": "",
+      "unit": "porsi",
+      "menuType": "minuman",
+      "price": null,
+      "id": "f59ee5b7-ebff-4fba-851e-62d9746ae6e4"
+    },
+    {
+      "name": "Es Dawet Ketan Durian",
+      "category": "",
+      "description": "Perpaduan dawet lembut, ketan pulen, santan gurih, gula aren asli, dan durian premium yang creamy dalam satu gelas.",
+      "image": "",
+      "unit": "porsi",
+      "menuType": "minuman",
+      "price": 33000,
+      "id": "611635d8-b3ca-4475-860b-642f7831aed7"
+    },
+    {
+      "name": "Es Teler Original",
+      "category": "",
+      "description": "Segarnya buah pilihan berpadu dengan susu creamy dan topping lezat, cocok dinikmati kapan saja.",
+      "image": "",
+      "unit": "porsi",
+      "menuType": "minuman",
+      "price": 25000,
+      "id": "ceb6fc4b-40b0-461a-aeac-f8a392e0d605"
+    },
+    {
+      "name": "Es Teler Durian",
+      "category": "",
+      "description": "Nikmati segarnya es teler dengan tambahan durian premium yang legit dan creamy. Sensasi istimewa untuk para pecinta durian.",
+      "image": "",
+      "unit": "porsi",
+      "menuType": "minuman",
+      "price": 30000,
+      "id": "3012a6f0-19ca-4b4b-96a2-88d0e7407810"
     }
   ]
 }
