@@ -2,7 +2,7 @@
 const KEY = 'maniac-duren-menu-draft-v1';
 const form = document.querySelector('#product-form');
 const status = document.querySelector('#status');
-const fields = ['name','category','price','description','image','unit'];
+const fields = ['name','category','price','description','image','unit','group'];
 let items = [], editing = null, ready = false;
 const say = message => { status.textContent = message; };
 const validImage = value => !value || /^(https?:\/\/|\/(?!\/)|data:image\/(png|jpeg|webp);base64,)/i.test(value);

@@ -13,9 +13,9 @@
   });}
   function reconcile(cart,products){
     if(!Array.isArray(cart))return [];const result=new Map();
-    cart.forEach(line=>{if(!line||!products.some(p=>p.id===line.id&&p.price!==null)||!Number.isInteger(line.qty)||line.qty<1)return;result.set(line.id,{id:line.id,qty:Math.min(99,(result.get(line.id)?.qty||0)+line.qty)});});return [...result.values()];
+    cart.forEach(line=>{if(!line||!products.some(p=>p.id===line.id&&p.price!==null)||!Number.isInteger(line.qty)||line.qty<1)return;result.set(line.id,{id:line.id,qty:Math.min(99,(result.get(line.id)?.qty||0)+line.qty),note:typeof line.note==='string'?line.note.slice(0,300):''});});return [...result.values()];
   }
   const total=(cart,products)=>cart.reduce((sum,line)=>sum+(products.find(p=>p.id===line.id)?.price||0)*line.qty,0);
-  function message(cart,products){return ['Halo Maniac Duren, saya ingin pesan:',...cart.map((line,i)=>{const p=products.find(p=>p.id===line.id);return `${i+1}. ${p.name} — ${line.qty} ${p.unit} × ${money(p.price)} = ${money(p.price*line.qty)}`;}),'',`Total: ${money(total(cart,products))}`,'Belum termasuk ongkir. Mohon konfirmasi stok, berat akhir (untuk kg), dan total pembayaran.'].join('\n');}
+  function message(cart,products){return ['Halo Maniac Duren, saya ingin pesan:',...cart.map((line,i)=>{const p=products.find(p=>p.id===line.id);return `${i+1}. ${p.name} — ${line.qty} ${p.unit} × ${money(p.price)} = ${money(p.price*line.qty)}${line.note ? '\n   Catatan: '+line.note : ''}`;}),'',`Total: ${money(total(cart,products))}`,'Belum termasuk ongkir. Mohon konfirmasi stok, berat akhir (untuk kg), dan total pembayaran.'].join('\n');}
   root.MenuLogic={price,money,migrate,reconcile,total,message};if(typeof module!=='undefined')module.exports=root.MenuLogic;
 })(globalThis);

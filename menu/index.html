@@ -66,16 +66,17 @@
 
 
       <p id="cart-status" role="status" aria-live="polite"></p>
-      <div class="product-grid" aria-busy="true"><p>Memuat menu…</p></div>
+      <div id="catalog" aria-busy="true"><p>Memuat menu…</p></div>
       <noscript>Aktifkan JavaScript untuk melihat menu dan menggunakan keranjang.</noscript>
-      <section class="cart-panel" aria-labelledby="cart-title">
-        <h2 id="cart-title">Keranjang <span id="cart-count">(0)</span></h2>
-        <div id="cart-items"><p>Keranjang masih kosong.</p></div>
-        <div class="cart-summary"><strong>Total: <span id="cart-total">Rp0</span></strong><button id="checkout" class="button button-primary" disabled>Pesan via WhatsApp</button></div>
-        <p class="menu-note">Harga belum termasuk ongkir. Jumlah dalam kg dihitung per 1 kg; berat akhir dan ketersediaan dikonfirmasi melalui WhatsApp.</p>
-      </section>
       <p class="menu-note">Konfirmasi harga dan ketersediaan melalui WhatsApp sebelum memesan.</p>
     </section></main>
+<div class="cart-dock" hidden><button id="open-cart" aria-haspopup="dialog" aria-controls="cart-dialog"><span><strong id="dock-count">0 item</strong><small>Maniac Duren · Lihat keranjang</small></span><strong id="dock-total">Rp0</strong><span aria-hidden="true">↗</span></button></div>
+<dialog id="cart-dialog" aria-labelledby="cart-title">
+  <header class="dialog-head"><div><h2 id="cart-title">Pesanan kamu</h2><p>Maniac Duren</p></div><button id="close-cart" class="icon-button" aria-label="Tutup keranjang">×</button></header>
+  <button id="add-more" class="more-button">+ Tambah menu</button>
+  <div id="cart-items"></div>
+  <div class="dialog-summary"><div><strong>Total harga</strong><strong id="cart-total">Rp0</strong></div><p>Belum termasuk ongkir. Berat akhir untuk satuan kg dan stok dikonfirmasi melalui WhatsApp.</p><button id="checkout" class="button button-primary" disabled>Pesan via WhatsApp</button></div>
+</dialog>
 <footer><a href="/" aria-label="Maniac Duren — Beranda"><img src="/assets/logo.png" alt="Maniac Duren" class="footer-logo"></a><p>© 2026 MANIAC DUREN</p></footer>
 <script src="/script.js"></script>
 <script src="/menu/logic.js"></script><script src="/menu/catalog.js"></script>
