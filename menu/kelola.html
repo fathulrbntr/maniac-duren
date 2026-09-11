@@ -14,9 +14,21 @@
 <label>Satuan<select name="unit"><option value="porsi">Porsi</option><option value="kg">Kg</option><option value="paket">Paket</option><option value="box">Box</option><option value="buah">Buah</option></select></label>
 <label>Deskripsi<textarea name="description" rows="3" maxlength="500" placeholder="Ceritakan singkat produk ini"></textarea></label>
 <label>Foto produk<input name="image" placeholder="/assets/monthong.png atau https://…"><small>Gunakan lokasi foto di proyek atau tautan langsung gambar.</small></label>
-<label class="upload">Atau pilih foto<input type="file" id="photo" accept="image/png,image/jpeg,image/webp"><small>PNG, JPG, atau WebP, maksimal 2 MB. Foto ikut disimpan dalam file menu.</small></label>
+<label class="upload">Atau pilih foto<input type="file" id="photo" accept="image/png,image/jpeg,image/webp"><small>PNG, JPG, atau WebP, maksimal 2 MB. Atur rasio dan posisi foto sebelum digunakan.</small></label>
 <img id="photo-preview" alt="Pratinjau foto produk" hidden>
 <div class="actions"><button type="submit" class="button button-primary" id="submit">Tambah menu</button><button type="button" class="button button-secondary" id="cancel" hidden>Batal edit</button></div>
 </form></section>
 <section class="inventory"><div class="list-head"><h2>Daftar menu <span id="count"></span></h2><label class="import">Impor JSON<input id="import" type="file" accept="application/json,.json"></label></div><div class="category-filters" role="group" aria-label="Kategori menu"><button type="button" data-menu-type="durian" aria-pressed="true">Durian</button><button type="button" data-menu-type="makanan" aria-pressed="false">Makanan</button><button type="button" data-menu-type="minuman" aria-pressed="false">Minuman</button></div><div id="items"></div><button class="button button-secondary" id="reset">Muat ulang menu publik</button></section></div>
-</main><script src="/menu/logic.js"></script><script src="/menu/admin.js"></script></body></html>
+</main>
+<dialog id="photo-editor" aria-labelledby="photo-editor-title">
+  <header class="photo-editor-header"><div><h2 id="photo-editor-title">Sesuaikan foto menu</h2><p>Pilih rasio, lalu geser foto untuk mengatur posisinya.</p></div><button type="button" id="photo-editor-close" aria-label="Tutup penyesuaian foto">×</button></header>
+  <div class="photo-editor-body">
+    <label>Rasio gambar<select id="photo-ratio"><option value="1">1:1 — Persegi</option><option value="1.3333333333333333">4:3 — Landscape</option><option value="0.75">3:4 — Portrait</option><option value="1.7777777777777777">16:9 — Lebar</option><option value="original">Rasio asli</option></select></label>
+    <div class="photo-crop-stage"><canvas id="photo-crop-canvas" width="800" height="800" role="img" aria-label="Pratinjau potongan foto; gunakan slider untuk mengatur posisi"></canvas></div>
+    <label class="photo-range">Zoom <output id="photo-zoom-value" for="photo-zoom">100%</output><input type="range" id="photo-zoom" min="1" max="3" step="0.01" value="1"></label>
+    <div class="photo-position"><label>Posisi horizontal<input type="range" id="photo-x" min="-1" max="1" step="0.01" value="0"></label><label>Posisi vertikal<input type="range" id="photo-y" min="-1" max="1" step="0.01" value="0"></label></div>
+    <p id="photo-editor-status" role="status" aria-live="polite"></p>
+  </div>
+  <footer class="photo-editor-actions"><button type="button" id="photo-reset" class="button button-secondary">Reset posisi</button><button type="button" id="photo-apply" class="button button-primary" disabled>Gunakan gambar</button></footer>
+</dialog>
+<script src="/menu/logic.js"></script><script src="/menu/admin.js"></script><script src="/menu/photo-editor.js"></script></body></html>

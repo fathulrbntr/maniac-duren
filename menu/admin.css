@@ -12,3 +12,23 @@ select{font:inherit;padding:12px;border:1px solid #aaa;border-radius:10px;backgr
 #cart-mode{min-width:30px;font-size:14px}
 @media(max-width:480px){.cart-setting{padding:16px;gap:10px}}
 @media(prefers-reduced-motion:reduce){.cart-switch span,.cart-switch span:after{transition:none}}
+
+/* Image ratio and position editor */
+#photo-editor{border:0;border-radius:22px;margin:auto;padding:0;width:min(640px,calc(100% - 24px));max-height:92dvh;color:#111;background:#fff;box-shadow:0 20px 80px #0004;overflow:hidden}
+#photo-editor[open]{display:flex;flex-direction:column}
+#photo-editor::backdrop{background:#0009}
+.photo-editor-header{padding:20px 24px;display:flex;align-items:flex-start;gap:16px;border-bottom:1px solid #eee;flex-shrink:0}
+.photo-editor-header h2{font-size:22px}.photo-editor-header p{font-size:14px;color:#555;line-height:1.5;margin-top:6px}
+#photo-editor-close{margin-left:auto;flex-shrink:0;width:40px;height:40px;border:0;border-radius:50%;background:#f1f3f1;color:#333;font-size:26px;cursor:pointer}
+.photo-editor-body{padding:20px 24px;overflow:auto;min-height:0;display:grid;gap:16px}
+.photo-crop-stage{display:flex;justify-content:center;align-items:center;background:#edf0ed;border:1px solid #dbe1db;border-radius:12px;padding:10px;min-height:100px;overflow:hidden}
+#photo-crop-canvas{display:block;max-width:100%;max-height:36dvh;width:auto;height:auto;touch-action:none;cursor:grab;background:#fff}
+#photo-crop-canvas:active{cursor:grabbing}
+.photo-position{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.photo-range{grid-template-columns:1fr auto}.photo-range input{grid-column:1/-1}
+#photo-editor input[type=range]{padding:0;width:100%;min-height:32px;accent-color:var(--green);cursor:pointer}
+#photo-editor-status{font-size:14px;line-height:1.5;color:#555;min-height:21px}
+.photo-editor-actions{display:flex;justify-content:space-between;gap:12px;padding:16px 24px max(16px,env(safe-area-inset-bottom));border-top:1px solid #eee;flex-shrink:0}
+.photo-editor-actions .button{min-height:44px;padding:12px 18px;font-size:14px}.photo-editor-actions .button:disabled{opacity:.5;cursor:wait}
+html:has(#photo-editor[open]){overflow:hidden}
+@media(max-width:420px){.photo-editor-header,.photo-editor-body{padding:16px}.photo-editor-actions{padding:16px;flex-wrap:wrap}.photo-editor-actions .button{flex:1}.photo-position{gap:10px}}

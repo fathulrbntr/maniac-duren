@@ -80,11 +80,6 @@ form.addEventListener('submit', event => {
 });
 document.querySelector('#cancel').onclick = clearForm;
 form.elements.image.addEventListener('input', preview);
-document.querySelector('#photo').addEventListener('change', async event => {
-  const file = event.target.files[0]; if (!file) return;
-  if (!['image/png','image/jpeg','image/webp'].includes(file.type) || file.size > 2 * 1024 * 1024) { say('Gunakan PNG, JPG, atau WebP maksimal 2 MB.'); event.target.value = ''; return; }
-  const reader = new FileReader(); reader.onload = () => { form.elements.image.value = reader.result; preview(); }; reader.onerror = () => say('Foto gagal dibaca. Pilih ulang foto.'); reader.readAsDataURL(file);
-});
 document.querySelector('#download').onclick = () => {
   if (!ready) return;
   const url = URL.createObjectURL(new Blob([JSON.stringify(snapshot(),null,2)], {type:'application/json'}));
