@@ -1,7 +1,17 @@
 'use strict';
 (async()=>{
   const catalog=document.querySelector('#catalog'),status=document.querySelector('#cart-status'),checkout=document.querySelector('#checkout'),dialog=document.querySelector('#cart-dialog'),dock=document.querySelector('.cart-dock');
-  const key='maniac-duren-cart-v1';let products=[],cart=[];const cards=new Map();
+  const key='maniac-duren-cart-v1';let products=[],cart=[];const cards=new Map();let activeType='durian';
+  function filterMenu(){
+    document.querySelectorAll('[data-menu-type]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.menuType===activeType)));
+    products.forEach(product=>{cards.get(product.id).hidden=product.menuType!==activeType;});
+    catalog.querySelectorAll('.menu-group').forEach(section=>{section.hidden=![...section.querySelectorAll('.product-card')].some(card=>!card.hidden);});
+    let empty=catalog.querySelector('.category-empty');
+    if(!empty){empty=el('p','category-empty');catalog.append(empty);}
+    empty.textContent=`Menu ${MenuLogic.types[activeType].toLowerCase()} belum tersedia.`;
+    empty.hidden=products.some(product=>product.menuType===activeType);
+  }
+  document.querySelectorAll('[data-menu-type]').forEach(button=>{button.onclick=()=>{activeType=button.dataset.menuType;filterMenu();};});
   const el=(tag,cls,text)=>{const node=document.createElement(tag);node.className=cls;if(text!==undefined)node.textContent=text;return node;};
   const say=text=>{status.textContent=text;};
   function save(){try{localStorage.setItem(key,JSON.stringify(cart));}catch{say('Keranjang tersimpan hanya selama halaman ini terbuka.');}}
@@ -45,10 +55,10 @@
   }
   try{
     const response=await fetch('/menu/menu.json',{cache:'no-cache'});if(!response.ok)throw Error('fetch');const data=await response.json();if(!Array.isArray(data))throw Error('data');const ids=new Set();
-    products=data.map(item=>{if(!item||typeof item.id!=='string'||!item.id||ids.has(item.id)||typeof item.name!=='string')throw Error('product');ids.add(item.id);return {...item,price:MenuLogic.price(item.price),unit:['kg','porsi','paket','box','buah'].includes(item.unit)?item.unit:'porsi'};});
+    products=data.map(item=>{if(!item||typeof item.id!=='string'||!item.id||ids.has(item.id)||typeof item.name!=='string')throw Error('product');ids.add(item.id);return {...item,menuType:MenuLogic.menuType(item.menuType),price:MenuLogic.price(item.price),unit:['kg','porsi','paket','box','buah'].includes(item.unit)?item.unit:'porsi'};});
     catalog.replaceChildren();const groups=new Map();
     products.forEach(product=>{
-      const group=typeof product.group==='string'&&product.group.trim()?product.group.trim():'Pilihan Durian';
+      const group=typeof product.group==='string'&&product.group.trim()?product.group.trim():'Pilihan '+MenuLogic.types[product.menuType];
       if(!groups.has(group)){const section=el('section','menu-group'),grid=el('div','product-grid');section.append(el('h2','',group),grid);catalog.append(section);groups.set(group,grid);}
       const card=el('article',`product-card${product.price===null?' sold-out':''}`);card.id=product.id;const info=el('div','product-info');info.append(el('h3','',product.name),el('p','product-description',product.description||''));if(product.price!==null)info.append(el('p','menu-price',`${MenuLogic.money(product.price)} / ${product.unit}`));
       const visual=el('div','product-image');
@@ -57,6 +67,8 @@
     });
     if(!products.length)catalog.append(el('p','','Menu sedang diperbarui.'));
     try{cart=MenuLogic.reconcile(JSON.parse(localStorage.getItem(key)||'[]'),products);}catch{cart=[];}save();refresh();
+    if(location.hash){try{const target=products.find(p=>p.id===decodeURIComponent(location.hash.slice(1)));if(target)activeType=target.menuType;}catch{}}
+    filterMenu();
     if(location.hash){try{document.getElementById(decodeURIComponent(location.hash.slice(1)))?.scrollIntoView();}catch{}}
   }catch{catalog.replaceChildren(el('p','','Menu belum dapat dimuat. Muat ulang halaman untuk mencoba kembali.'));checkout.disabled=true;}finally{catalog.setAttribute('aria-busy','false');}
   checkout.onclick=()=>{cart=MenuLogic.reconcile(cart,products);save();refresh();if(!cart.length)return;window.open('https://wa.me/628133331105?text='+encodeURIComponent(MenuLogic.message(cart,products)),'_blank','noopener,noreferrer');};

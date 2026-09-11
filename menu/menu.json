@@ -6,7 +6,8 @@
     "description": "Daging tebal, creamy, manis dan legit.",
     "price": 75000,
     "image": "/assets/monthong.png",
-    "unit": "kg"
+    "unit": "kg",
+    "menuType": "durian"
   },
   {
     "id": "durian-kupas",
@@ -15,7 +16,8 @@
     "description": "Praktis, siap makan, tetap fresh.",
     "price": null,
     "image": "/assets/durian-kupas.png",
-    "unit": "porsi"
+    "unit": "porsi",
+    "menuType": "durian"
   },
   {
     "id": "paket-durian",
@@ -24,6 +26,7 @@
     "description": "Cocok untuk sharing bersama teman dan keluarga.",
     "price": null,
     "image": "/assets/paket-durian.png",
-    "unit": "porsi"
+    "unit": "porsi",
+    "menuType": "durian"
   }
 ]

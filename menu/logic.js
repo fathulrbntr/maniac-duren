@@ -1,5 +1,7 @@
 'use strict';
 (function(root){
+  const types = {durian:'Durian',makanan:'Makanan',minuman:'Minuman'};
+  const menuType = value => Object.hasOwn(types,value) ? value : 'durian';
   function price(value){
     if(value==null||value==='')return null;
     if(typeof value!=='number'&&!(typeof value==='string'&&/^\d+$/.test(value)))throw Error('Harga harus angka Rupiah utuh atau kosong untuk Stok Habis.');
@@ -17,5 +19,5 @@
   }
   const total=(cart,products)=>cart.reduce((sum,line)=>sum+(products.find(p=>p.id===line.id)?.price||0)*line.qty,0);
   function message(cart,products){return ['Halo Maniac Duren, saya ingin pesan:',...cart.map((line,i)=>{const p=products.find(p=>p.id===line.id);return `${i+1}. ${p.name} — ${line.qty} ${p.unit} × ${money(p.price)} = ${money(p.price*line.qty)}${line.note ? '\n   Catatan: '+line.note : ''}`;}),'',`Total: ${money(total(cart,products))}`,'Belum termasuk ongkir. Mohon konfirmasi stok, berat akhir (untuk kg), dan total pembayaran.'].join('\n');}
-  root.MenuLogic={price,money,migrate,reconcile,total,message};if(typeof module!=='undefined')module.exports=root.MenuLogic;
+  root.MenuLogic={types,menuType,price,money,migrate,reconcile,total,message};if(typeof module!=='undefined')module.exports=root.MenuLogic;
 })(globalThis);

@@ -2,7 +2,9 @@
 const KEY = 'maniac-duren-menu-draft-v1';
 const form = document.querySelector('#product-form');
 const status = document.querySelector('#status');
-const fields = ['name','category','price','description','image','unit','group'];
+const fields = ['name','category','price','description','image','unit','group','menuType'];
+let activeType = 'durian';
+document.querySelectorAll('[data-menu-type]').forEach(button=>{button.onclick=()=>{activeType=button.dataset.menuType;if(!editing)form.elements.menuType.value=activeType;render();};});
 let items = [], editing = null, ready = false;
 const say = message => { status.textContent = message; };
 const validImage = value => !value || /^(https?:\/\/|\/(?!\/)|data:image\/(png|jpeg|webp);base64,)/i.test(value);
@@ -13,6 +15,7 @@ function validate(data) {
     if (!item || typeof item.name !== 'string' || !item.name.trim()) throw new Error('Setiap produk harus memiliki nama.');
     const clean = {};
     fields.filter(key => key !== 'price').forEach(key => { if (item[key] != null && typeof item[key] !== 'string') throw new Error('Format data produk tidak sesuai.'); clean[key] = (item[key] || '').trim(); });
+    clean.menuType = MenuLogic.menuType(item.menuType);
     clean.price = MenuLogic.price(item.price);
     clean.unit = ['porsi','kg','paket','box','buah'].includes(clean.unit) ? clean.unit : 'porsi';
     if (!validImage(clean.image)) throw new Error('Gunakan tautan foto http/https, lokasi /assets/, atau unggahan foto.');
@@ -26,7 +29,7 @@ function save() {
   render();
 }
 function clearForm() {
-  editing = null; form.reset(); document.querySelector('#form-title').textContent = 'Tambah produk';
+  editing = null; form.reset(); form.elements.menuType.value=activeType; document.querySelector('#form-title').textContent = 'Tambah produk';
   document.querySelector('#submit').textContent = 'Tambah menu'; document.querySelector('#cancel').hidden = true; preview();
 }
 function preview() {
@@ -36,8 +39,11 @@ function preview() {
 document.querySelector('#photo-preview').addEventListener('error', () => { document.querySelector('#photo-preview').hidden = true; say('Foto tidak dapat dimuat. Periksa lokasi atau tautan gambar.'); });
 function render() {
   const list = document.querySelector('#items'); list.replaceChildren(); document.querySelector('#count').textContent = `(${items.length})`;
-  if (!items.length) { const p = document.createElement('p'); p.textContent = 'Belum ada menu. Tambahkan produk pertama Anda.'; list.append(p); }
-  items.forEach(item => {
+  document.querySelectorAll('[data-menu-type]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.menuType===activeType)));
+  const visible=items.filter(item=>item.menuType===activeType);
+  document.querySelector('#count').textContent=`(${visible.length} / ${items.length})`;
+  if (!visible.length) { const p = document.createElement('p'); p.textContent = `Belum ada menu ${MenuLogic.types[activeType].toLowerCase()}. Tambahkan produk pertama Anda.`; list.append(p); }
+  visible.forEach(item => {
     const row = document.createElement('article'); row.className = 'item';
     const image = document.createElement('img'); image.alt = item.name; if (item.image) image.src = item.image;
     image.addEventListener('error', () => { image.hidden = true; });
@@ -62,7 +68,7 @@ form.addEventListener('submit', event => {
     const entry = Object.fromEntries(fields.map(key => [key, form.elements[key].value.trim()])); entry.id = editing || crypto.randomUUID();
     const cleaned = validate([entry])[0];
     if (editing) items = items.map(item => item.id === editing ? cleaned : item); else { if (items.length >= 200) throw new Error('Maksimal 200 produk.'); items.push(cleaned); }
-    clearForm(); save();
+    activeType=cleaned.menuType; clearForm(); save();
   } catch(error) { say(error.message); }
 });
 document.querySelector('#cancel').onclick = clearForm;

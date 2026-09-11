@@ -1,0 +1,8 @@
+/* Shared category controls for the catalog and manager. */
+.category-filters{display:flex;flex-wrap:wrap;gap:10px;margin:20px 0 24px}
+.category-filters button{min-height:44px;flex:0 1 auto;padding:10px 24px;border:1px solid var(--green);border-radius:30px;background:#fff;color:var(--green);font:600 16px/1.4 'DM Sans',sans-serif;cursor:pointer}
+.category-filters button[aria-pressed="true"]{background:var(--green);color:#fff}
+.category-filters button:hover{box-shadow:0 0 0 2px #14632122}
+.category-filters button:focus-visible{outline:3px solid var(--green);outline-offset:3px}
+.category-empty{padding:28px 20px;background:#f5f7f5;border:1px dashed #c8d8cb;border-radius:16px;color:#555;font-size:16px;line-height:1.6}
+@media(max-width:480px){.category-filters{gap:8px}.category-filters button{flex:1;padding:10px 12px;font-size:14px}}
