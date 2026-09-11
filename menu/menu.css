@@ -1,0 +1,25 @@
+/* Styles scoped to the dedicated menu page. */
+.menu-page .navbar { background: rgba(243,240,223,.96); }
+.menu-page .nav-menu [aria-current="page"] { color: var(--green); text-decoration: underline; text-underline-offset: 7px; }
+.menu-page .menu-section { max-width: 1440px; margin: auto; padding-top: 130px; padding-bottom: 70px; }
+.menu-back { display: inline-block; margin-bottom: 32px; font-size: 14px; font-weight: 600; }
+.menu-page h1 { font-family: Manrope,sans-serif; font-size: clamp(40px,6vw,80px); line-height: 1.08; letter-spacing: -.05em; }
+.menu-page h1 span { color: var(--green); }
+.menu-page .product-grid { margin-top: 36px; }
+.menu-page .product-card { display: flex; flex-direction: column; min-width: 0; scroll-margin-top: 110px; }
+.menu-page .product-image { height: auto; aspect-ratio: 4/3; background: #e8edda; }
+.menu-page .product-image img { object-fit: contain; padding: 18px; }
+.menu-page .product-info { display: flex; flex-direction: column; flex: 1; padding: 24px; }
+.menu-page .product-category { font-size: 14px; opacity: 1; }
+.menu-page .product-info h3 { font-size: clamp(24px,2.3vw,30px); line-height: 1.2; }
+.menu-page .product-info p { opacity: 1; }
+.menu-page .product-info .menu-price { margin-top: auto; padding-top: 24px; font-size: 22px; font-weight: 700; color: var(--green-dark); }
+.menu-price small { font-size: 16px; font-weight: 500; }
+.menu-page .product-info .button { display: inline-flex; font-size: 16px; margin-top: 20px; text-align: center; }
+.menu-note { margin-top: 28px; font-size: 14px; line-height: 1.6; }
+.menu-page a:focus-visible,.menu-page button:focus-visible { outline: 3px solid var(--green); outline-offset: 5px; }
+.sr-only,.skip-link:not(:focus) { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.skip-link:focus { position: fixed; top: 10px; left: 10px; z-index: 2000; background: white; padding: 14px; }
+@media(max-width:900px) { .menu-page .product-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media(max-width:600px) { .menu-page .product-grid { grid-template-columns: minmax(0,1fr); gap: 24px; } .menu-page .menu-section { padding-top: 110px; } .menu-page .product-image { aspect-ratio: 4/3; } .menu-back { margin-bottom: 24px; } }
+@media(prefers-reduced-motion:reduce) { html { scroll-behavior: auto; } .menu-page *, .menu-page *::before,.menu-page *::after { transition: none !important; } .menu-page .product-card:hover,.menu-page .product-card:hover img { transform: none; } }
