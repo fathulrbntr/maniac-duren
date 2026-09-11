@@ -2,7 +2,7 @@
 const KEY = 'maniac-duren-menu-draft-v1';
 const form = document.querySelector('#product-form');
 const status = document.querySelector('#status');
-const fields = ['name','category','price','description','image'];
+const fields = ['name','category','price','description','image','unit'];
 let items = [], editing = null, ready = false;
 const say = message => { status.textContent = message; };
 const validImage = value => !value || /^(https?:\/\/|\/(?!\/)|data:image\/(png|jpeg|webp);base64,)/i.test(value);
@@ -12,7 +12,9 @@ function validate(data) {
   return data.map(item => {
     if (!item || typeof item.name !== 'string' || !item.name.trim()) throw new Error('Setiap produk harus memiliki nama.');
     const clean = {};
-    fields.forEach(key => { if (item[key] != null && typeof item[key] !== 'string') throw new Error('Format data produk tidak sesuai.'); clean[key] = (item[key] || '').trim(); });
+    fields.filter(key => key !== 'price').forEach(key => { if (item[key] != null && typeof item[key] !== 'string') throw new Error('Format data produk tidak sesuai.'); clean[key] = (item[key] || '').trim(); });
+    clean.price = MenuLogic.price(item.price);
+    clean.unit = ['porsi','kg','paket','box','buah'].includes(clean.unit) ? clean.unit : 'porsi';
     if (!validImage(clean.image)) throw new Error('Gunakan tautan foto http/https, lokasi /assets/, atau unggahan foto.');
     let id = typeof item.id === 'string' && /^[a-zA-Z0-9_-]+$/.test(item.id) ? item.id : crypto.randomUUID();
     if (ids.has(id)) id = crypto.randomUUID(); ids.add(id); clean.id = id; return clean;
@@ -40,12 +42,12 @@ function render() {
     const image = document.createElement('img'); image.alt = item.name; if (item.image) image.src = item.image;
     image.addEventListener('error', () => { image.hidden = true; });
     const info = document.createElement('div'); const name = document.createElement('h3'); name.textContent = item.name;
-    const price = document.createElement('p'); price.textContent = item.price || 'Hubungi untuk harga';
+    const price = document.createElement('p'); price.textContent = item.price === null ? 'Stok Habis' : MenuLogic.money(item.price) + ' / ' + item.unit;
     const actions = document.createElement('div'); actions.className = 'actions';
     const edit = document.createElement('button'); edit.textContent = 'Edit'; edit.setAttribute('aria-label', `Edit ${item.name}`);
     edit.onclick = () => {
       if (editing && !confirm('Ganti produk yang sedang diedit? Isian yang belum disimpan akan dibuang.')) return;
-      editing = item.id; fields.forEach(key => { form.elements[key].value = item[key]; });
+      editing = item.id; fields.forEach(key => { form.elements[key].value = item[key] ?? ''; });
       document.querySelector('#photo').value = ''; document.querySelector('#form-title').textContent = 'Edit produk';
       document.querySelector('#submit').textContent = 'Simpan perubahan'; document.querySelector('#cancel').hidden = false; preview(); form.elements.name.focus();
     };
@@ -95,7 +97,7 @@ document.querySelector('#reset').onclick = async () => {
     let draft = null;
     try { draft = localStorage.getItem(KEY); } catch { /* Storage may be disabled. */ }
     if (draft) {
-      try { items = validate(JSON.parse(draft)); say('Draf browser dimuat. Perubahan belum dipublikasikan.'); }
+      try { items = validate(MenuLogic.migrate(JSON.parse(draft))); say('Draf browser dimuat. Perubahan belum dipublikasikan.'); }
       catch { items = await published(); say('Draf lama tidak valid. Menu publik dimuat.'); }
     } else { items = await published(); say('Menu publik dimuat. Siap menambah atau mengedit produk.'); }
     ready = true; render();

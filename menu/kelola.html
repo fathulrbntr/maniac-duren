@@ -7,7 +7,8 @@
 <div class="workspace"><section class="editor"><h2 id="form-title">Tambah produk</h2>
 <form id="product-form"><label>Nama produk<input name="name" required maxlength="100" placeholder="Contoh: Durian Monthong"></label>
 <label>Label kategori<input name="category" maxlength="40" placeholder="Contoh: BEST SELLER"></label>
-<label>Harga<input name="price" maxlength="80" placeholder="Contoh: Rp75.000 / kg"><small>Kosongkan jika harga perlu ditanyakan.</small></label>
+<label>Harga<input name="price" type="number" inputmode="numeric" min="0" max="1000000000" step="1" placeholder="Contoh: 75000"><small>Masukkan angka Rupiah tanpa titik atau teks. Kosong = Stok Habis.</small></label>
+<label>Satuan<select name="unit"><option value="porsi">Porsi</option><option value="kg">Kg</option><option value="paket">Paket</option><option value="box">Box</option><option value="buah">Buah</option></select></label>
 <label>Deskripsi<textarea name="description" rows="3" maxlength="500" placeholder="Ceritakan singkat produk ini"></textarea></label>
 <label>Foto produk<input name="image" placeholder="/assets/monthong.png atau https://…"><small>Gunakan lokasi foto di proyek atau tautan langsung gambar.</small></label>
 <label class="upload">Atau pilih foto<input type="file" id="photo" accept="image/png,image/jpeg,image/webp"><small>PNG, JPG, atau WebP, maksimal 2 MB. Foto ikut disimpan dalam file menu.</small></label>
@@ -15,4 +16,4 @@
 <div class="actions"><button type="submit" class="button button-primary" id="submit">Tambah menu</button><button type="button" class="button button-secondary" id="cancel" hidden>Batal edit</button></div>
 </form></section>
 <section class="inventory"><div class="list-head"><h2>Daftar menu <span id="count"></span></h2><label class="import">Impor JSON<input id="import" type="file" accept="application/json,.json"></label></div><div id="items"></div><button class="button button-secondary" id="reset">Muat ulang menu publik</button></section></div>
-</main><script src="/menu/admin.js"></script></body></html>
+</main><script src="/menu/logic.js"></script><script src="/menu/admin.js"></script></body></html>

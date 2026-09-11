@@ -65,76 +65,19 @@
       </div>
 
 
-      <div class="product-grid">
-
-        <article class="product-card" id="monthong">
-
-          <div class="product-image">
-            <img
-              src="/assets/monthong.png"
-              alt="Durian Monthong"
-            >
-            <span class="product-number">01</span>
-          </div>
-
-          <div class="product-info">
-            <p class="product-category">BEST SELLER</p>
-            <h3>Durian Monthong</h3>
-            <p>Daging tebal, creamy, manis dan legit.</p>
-            <p class="menu-price">Mulai Rp75.000 <small>/ kg</small></p>
-            <a class="button button-primary" href="https://wa.me/628133331105?text=Halo%20Maniac%20Duren%2C%20saya%20ingin%20pesan%20Durian%20Monthong.%20Boleh%20info%20harga%20dan%20stok%20saat%20ini%3F" target="_blank" rel="noopener noreferrer">Pesan via WhatsApp<span class="sr-only"> — Durian Monthong</span></a>
-          </div>
-
-        </article>
-
-
-        <article class="product-card" id="durian-kupas">
-
-          <div class="product-image">
-            <img
-              src="/assets/durian-kupas.png"
-              alt="Durian Kupas"
-            >
-            <span class="product-number">02</span>
-          </div>
-
-          <div class="product-info">
-            <p class="product-category">PREMIUM</p>
-            <h3>Durian Kupas</h3>
-            <p>Praktis, siap makan, tetap fresh.</p>
-            <p class="menu-price">Hubungi untuk harga</p>
-            <a class="button button-primary" href="https://wa.me/628133331105?text=Halo%20Maniac%20Duren%2C%20saya%20ingin%20pesan%20Durian%20Kupas.%20Boleh%20info%20harga%20dan%20stok%20saat%20ini%3F" target="_blank" rel="noopener noreferrer">Pesan via WhatsApp<span class="sr-only"> — Durian Kupas</span></a>
-          </div>
-
-        </article>
-
-
-        <article class="product-card" id="paket-durian">
-
-          <div class="product-image">
-            <img
-              src="/assets/paket-durian.png"
-              alt="Paket Durian"
-            >
-            <span class="product-number">03</span>
-          </div>
-
-          <div class="product-info">
-            <p class="product-category">SHARE PACK</p>
-            <h3>Paket Durian</h3>
-            <p>Cocok untuk sharing bersama teman dan keluarga.</p>
-            <p class="menu-price">Hubungi untuk harga</p>
-            <a class="button button-primary" href="https://wa.me/628133331105?text=Halo%20Maniac%20Duren%2C%20saya%20ingin%20pesan%20Paket%20Durian.%20Boleh%20info%20harga%20dan%20stok%20saat%20ini%3F" target="_blank" rel="noopener noreferrer">Pesan via WhatsApp<span class="sr-only"> — Paket Durian</span></a>
-          </div>
-
-        </article>
-
-      </div>
-
-    <p class="menu-note">Konfirmasi harga dan ketersediaan melalui WhatsApp sebelum memesan.</p>
+      <p id="cart-status" role="status" aria-live="polite"></p>
+      <div class="product-grid" aria-busy="true"><p>Memuat menu…</p></div>
+      <noscript>Aktifkan JavaScript untuk melihat menu dan menggunakan keranjang.</noscript>
+      <section class="cart-panel" aria-labelledby="cart-title">
+        <h2 id="cart-title">Keranjang <span id="cart-count">(0)</span></h2>
+        <div id="cart-items"><p>Keranjang masih kosong.</p></div>
+        <div class="cart-summary"><strong>Total: <span id="cart-total">Rp0</span></strong><button id="checkout" class="button button-primary" disabled>Pesan via WhatsApp</button></div>
+        <p class="menu-note">Harga belum termasuk ongkir. Jumlah dalam kg dihitung per 1 kg; berat akhir dan ketersediaan dikonfirmasi melalui WhatsApp.</p>
+      </section>
+      <p class="menu-note">Konfirmasi harga dan ketersediaan melalui WhatsApp sebelum memesan.</p>
     </section></main>
 <footer><a href="/" aria-label="Maniac Duren — Beranda"><img src="/assets/logo.png" alt="Maniac Duren" class="footer-logo"></a><p>© 2026 MANIAC DUREN</p></footer>
 <script src="/script.js"></script>
-<script src="/menu/catalog.js"></script>
+<script src="/menu/logic.js"></script><script src="/menu/catalog.js"></script>
 </body>
 </html>
