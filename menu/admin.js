@@ -5,6 +5,11 @@ const status = document.querySelector('#status');
 const fields = ['name','category','price','description','image','unit','menuType'];
 let activeType = 'durian';
 document.querySelectorAll('[data-menu-type]').forEach(button=>{button.onclick=()=>{activeType=button.dataset.menuType;if(!editing)form.elements.menuType.value=activeType;render();};});
+let cartEnabled = true;
+const cartSwitch=document.querySelector('#cart-enabled');
+const snapshot=()=>({cartEnabled,products:items});
+function loadDocument(data){const parsed=MenuLogic.documentData(data);const validated=validate(MenuLogic.migrate(parsed.products));cartEnabled=parsed.cartEnabled;return validated;}
+cartSwitch.onchange=()=>{if(!ready)return;cartEnabled=cartSwitch.checked;save();};
 let items = [], editing = null, ready = false;
 const say = message => { status.textContent = message; };
 const validImage = value => !value || /^(https?:\/\/|\/(?!\/)|data:image\/(png|jpeg|webp);base64,)/i.test(value);
@@ -25,7 +30,7 @@ function validate(data) {
   });
 }
 function save() {
-  try { localStorage.setItem(KEY, JSON.stringify(items)); say('Draf tersimpan di browser. Unduh menu.json untuk memperbarui website.'); }
+  try { localStorage.setItem(KEY, JSON.stringify(snapshot())); say('Draf tersimpan di browser. Unduh menu.json untuk memperbarui website.'); }
   catch { say('Penyimpanan browser penuh/tidak tersedia. Draf hanya ada selama halaman ini terbuka. Unduh menu.json sekarang agar perubahan tidak hilang.'); }
   render();
 }
@@ -39,6 +44,7 @@ function preview() {
 }
 document.querySelector('#photo-preview').addEventListener('error', () => { document.querySelector('#photo-preview').hidden = true; say('Foto tidak dapat dimuat. Periksa lokasi atau tautan gambar.'); });
 function render() {
+  cartSwitch.checked=cartEnabled;cartSwitch.disabled=!ready;document.querySelector('#cart-mode').textContent=cartEnabled?'ON':'OFF';
   const list = document.querySelector('#items'); list.replaceChildren(); document.querySelector('#count').textContent = `(${items.length})`;
   document.querySelectorAll('[data-menu-type]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.menuType===activeType)));
   const visible=items.filter(item=>item.menuType===activeType);
@@ -82,7 +88,7 @@ document.querySelector('#photo').addEventListener('change', async event => {
 });
 document.querySelector('#download').onclick = () => {
   if (!ready) return;
-  const url = URL.createObjectURL(new Blob([JSON.stringify(items,null,2)], {type:'application/json'}));
+  const url = URL.createObjectURL(new Blob([JSON.stringify(snapshot(),null,2)], {type:'application/json'}));
   const link = document.createElement('a'); link.href = url; link.download = 'menu.json'; link.click(); setTimeout(() => URL.revokeObjectURL(url),1000);
   say('File menu.json diunduh. Ganti menu/menu.json di proyek, lalu deploy agar pengunjung melihat perubahan.');
 };
@@ -90,12 +96,13 @@ document.querySelector('#import').addEventListener('change', async event => {
   const file = event.target.files[0]; if (!file || !ready) return;
   try {
     if (file.size > 25 * 1024 * 1024) throw new Error('File terlalu besar. Maksimal 25 MB.');
-    const imported = validate(JSON.parse(await file.text()));
+    const parsed = MenuLogic.documentData(JSON.parse(await file.text()));
+    const imported = validate(MenuLogic.migrate(parsed.products));
     if (!confirm('Ganti seluruh draf dengan menu dari file ini?')) return;
-    items = imported; clearForm(); save();
+    items = imported; cartEnabled=parsed.cartEnabled; clearForm(); save();
   } catch(error) { say(`Impor gagal: ${error.message}`); } finally { event.target.value = ''; }
 });
-async function published() { const response = await fetch('/menu/menu.json',{cache:'no-cache'}); if (!response.ok) throw new Error('Gagal memuat menu publik.'); return validate(await response.json()); }
+async function published() { const response = await fetch('/menu/menu.json',{cache:'no-cache'}); if (!response.ok) throw new Error('Gagal memuat menu publik.'); return loadDocument(await response.json()); }
 document.querySelector('#reset').onclick = async () => {
   if (!confirm('Buang draf dan muat ulang menu yang sudah dipublikasikan?')) return;
   try { items = await published(); ready = true; clearForm(); save(); } catch(error) { say(error.message); }
@@ -105,7 +112,7 @@ document.querySelector('#reset').onclick = async () => {
     let draft = null;
     try { draft = localStorage.getItem(KEY); } catch { /* Storage may be disabled. */ }
     if (draft) {
-      try { items = validate(MenuLogic.migrate(JSON.parse(draft))); say('Draf browser dimuat. Perubahan belum dipublikasikan.'); }
+      try { items = loadDocument(JSON.parse(draft)); say('Draf browser dimuat. Perubahan belum dipublikasikan.'); }
       catch { items = await published(); say('Draf lama tidak valid. Menu publik dimuat.'); }
     } else { items = await published(); say('Menu publik dimuat. Siap menambah atau mengedit produk.'); }
     ready = true; render();

@@ -4,6 +4,7 @@
 <header class="manager-head"><div><a href="/menu">← Lihat menu publik</a><h1>Kelola menu.</h1></div><button id="download" class="button button-primary">Unduh menu.json</button></header>
 <p class="notice">Perubahan tersimpan sebagai draf di browser ini. Untuk tampil ke semua pengunjung, unduh <strong>menu.json</strong>, ganti file tersebut di folder <strong>menu</strong> proyek, lalu lakukan deploy.</p>
 <p id="status" role="status" aria-live="polite">Memuat menu…</p>
+<section class="cart-setting"><div><label for="cart-enabled">Sistem Keranjang</label><p id="cart-setting-help">ON: pelanggan dapat memesan. OFF: tombol produk menjadi Ready.</p></div><label class="cart-switch"><input id="cart-enabled" type="checkbox" role="switch" aria-label="Sistem Keranjang" aria-describedby="cart-setting-help" checked disabled><span aria-hidden="true"></span></label><strong id="cart-mode">ON</strong></section>
 <div class="workspace"><section class="editor"><h2 id="form-title">Tambah produk</h2>
 <form id="product-form"><label>Nama produk<input name="name" required maxlength="100" placeholder="Contoh: Durian Monthong"></label>
 <label>Kategori menu<select name="menuType"><option value="durian">Durian</option><option value="makanan">Makanan</option><option value="minuman">Minuman</option></select></label>
