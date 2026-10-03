@@ -29,8 +29,8 @@ export function saveProduct(s,p,editing=false){
  if(s.products.some(other=>other.id!==p.id&&other.sku.toLowerCase()===x.sku.toLowerCase()))throw Error('SKU sudah digunakan');
  if(editing){
   const old=productDefaults(s.products[index]);
-  const used=s.lots.some(l=>l.productId===p.id)||s.sales.some(sale=>sale.lines.some(l=>l.productId===p.id));
-  if(used&&(old.stockUnit!==x.stockUnit||old.itemType!==x.itemType))throw Error('Jenis dan satuan terkunci karena sudah ada riwayat stok/transaksi');
+  const used=(s.unitLots||[]).some(l=>l.productId===p.id)||(s.recipes||[]).some(r=>r.outputId===p.id||r.ingredients.some(l=>l.productId===p.id))||s.lots.some(l=>l.productId===p.id)||s.sales.some(sale=>sale.lines.some(l=>l.productId===p.id));
+  if(used&&(old.stockUnit!==x.stockUnit||old.itemType!==x.itemType))throw Error('Jenis dan satuan terkunci karena sudah dipakai dalam resep atau stok/transaksi');
   s.products[index]={...s.products[index],...x};
  }else s.products.push({id:p.id,...x});
 }
