@@ -1,4 +1,4 @@
-import {recipesPage,productionPage,unitStockPanel,bindProduction} from './production-ui.mjs?v=3';
+import {recipesPage,productionPage,unitStockPanel,bindProduction} from './production-ui.mjs?v=3.1';
 import {today,money,num,escape as e,id,emptyState,applyAction,saleRows,summarize,demoState} from './core.mjs?v=3';
 import {isLegacyStock} from './catalog.mjs?v=3';
 import {catalogPanel,productDialog} from './catalog-ui.mjs?v=3';
