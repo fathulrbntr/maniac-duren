@@ -1,14 +1,17 @@
-import {productionAction} from './production.mjs?v=3';
-import {saveProduct,isLegacyStock} from './catalog.mjs?v=3';
+import {deleteProduct,adjustProductStock} from './product-stock.mjs?v=4';
+import {productionAction} from './production.mjs?v=4';
+import {saveProduct,isLegacyStock} from './catalog.mjs?v=4';
 export const today=()=>new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Jakarta'});
 export const money=n=>new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:2}).format(n);
 export const num=n=>new Intl.NumberFormat('id-ID',{maximumFractionDigits:6}).format(n);
 export const escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-export const emptyState=()=>({stores:[],suppliers:[],products:[],lots:[],sales:[],movements:[],recipes:[],unitLots:[],productions:[]});
+export const emptyState=()=>({stores:[],suppliers:[],products:[],lots:[],sales:[],movements:[],recipes:[],unitLots:[],productions:[],stockAdjustments:[]});
 export const id=()=>crypto.randomUUID();
 function positive(x,label){const v=Number(x);if(!Number.isFinite(v)||v<=0)throw Error(`${label} harus lebih dari 0`);return v;}
 function validDate(d){if(!/^\d{4}-\d{2}-\d{2}$/.test(d)||new Date(d+'T00:00:00Z').toISOString().slice(0,10)!==d)throw Error('Tanggal tidak valid');}
 export function applyAction(input,action,payload){const s=structuredClone(input),p=structuredClone(payload);if(!p.id)throw Error('ID wajib');if(['recipe_save','unit_receipt','produce','production_void'].includes(action)){productionAction(s,action,p);return s;}if(action==='master'){if(!['stores','suppliers','products'].includes(p.kind))throw Error('Jenis master tidak valid');if(!p.name?.trim())throw Error('Nama wajib');if(s[p.kind].some(x=>x.id===p.id))return s;if(p.kind==='products')saveProduct(s,p);else s[p.kind].push({id:p.id,name:p.name.trim(),...masterDetails(p)});return s;}
+if(action==='product_save'){saveProduct(s,p,p.editing===true);adjustProductStock(s,p);return s;}
+if(action==='product_delete'){deleteProduct(s,p);return s;}
 if(action==='product_update'){saveProduct(s,p,true);return s;}
 if(action==='master_details'){if(!['stores','suppliers'].includes(p.kind))throw Error('Jenis master tidak valid');const row=s[p.kind].find(x=>x.id===p.id);if(!row)throw Error('Master tidak ditemukan');Object.assign(row,masterDetails(p));return s;}
 if(action==='receipt'){if(s.lots.some(x=>x.id===p.id))return s;validDate(p.date);for(const [a,b] of [['storeId','stores'],['supplierId','suppliers'],['productId','products']])if(!s[b].some(x=>x.id===p[a]))throw Error('Master belum terdaftar');if(!isLegacyStock(s.products.find(x=>x.id===p.productId)))throw Error('Operasional item ini belum aktif; saat ini hanya master produk');const kg=positive(p.kg,'Berat'),pieces=positive(p.pieces,'Butir');if(!Number.isInteger(pieces))throw Error('Butir harus bilangan bulat');s.lots.push({id:p.id,storeId:p.storeId,supplierId:p.supplierId,productId:p.productId,date:p.date,expiry:p.expiry||'',note:p.note||'',receivedKg:kg,receivedPieces:pieces,kg,pieces});return s;}

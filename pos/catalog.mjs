@@ -1,3 +1,4 @@
+import {productDetails} from './product-details.mjs?v=4';
 export const categories=['Buah','Dessert','Minuman','Olahan Duren'];
 export const itemTypes={direct:'Produk jual langsung',raw:'Bahan baku pembelian',prep:'Bahan produksi sendiri',recipe:'Menu dengan resep',finished:'Produk jadi hasil produksi'};
 export const stockUnits={kg_butir:'Kg + butir',g:'Gram',ml:'Mililiter',pcs:'Pcs',porsi:'Porsi'};
@@ -19,7 +20,7 @@ export function normalizeProduct(p){
  x.priceKg=isLegacyStock(x)?price(x.priceKg,'Harga/kg'):null;
  x.pricePiece=isLegacyStock(x)?price(x.pricePiece,'Harga/butir'):null;
  x.salePrice=!isMaterial(x)&&!isLegacyStock(x)?price(x.salePrice,'Harga jual'):null;
- return {name:x.name,sku:x.sku,category:x.category,itemType:x.itemType,stockUnit:x.stockUnit,priceKg:x.priceKg,pricePiece:x.pricePiece,salePrice:x.salePrice};
+ return {name:x.name,sku:x.sku,category:x.category,itemType:x.itemType,stockUnit:x.stockUnit,priceKg:x.priceKg,pricePiece:x.pricePiece,salePrice:x.salePrice,...productDetails(x)};
 }
 export function saveProduct(s,p,editing=false){
  const index=s.products.findIndex(x=>x.id===p.id);
