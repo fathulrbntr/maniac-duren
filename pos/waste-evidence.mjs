@@ -43,9 +43,10 @@ export function bindEvidence(form, keys = ["reject", "processed"]) {
     busy: () => pending.size > 0,
   };
 }
-export function evidenceButton(run) {
-  return run.hasEvidence || Object.values(run.evidence || {}).some(Boolean)
-    ? `<button type="button" class="small" data-waste-evidence="${e(run.id)}">Lihat bukti</button>`
+export function evidenceButton(run, key = "") {
+  const exists = key ? run.evidence?.[key] || (run.hasEvidence && key === "reject") : run.hasEvidence || Object.values(run.evidence || {}).some(Boolean);
+  return exists
+    ? `<button type="button" class="small" data-waste-evidence="${e(run.id)}" data-waste-evidence-key="${e(key)}">Lihat bukti</button>`
     : "";
 }
 export function bindEvidenceHistory(state, ctx) {
@@ -67,10 +68,12 @@ export function bindEvidenceHistory(state, ctx) {
             b.disabled = false;
           }
         }
+        const key = b.dataset.wasteEvidenceKey;
+        const visibleProofs = key ? { [key]: proofLabels[key] || key } : proofLabels;
         const d = ctx.modal(
           "Bukti foto waste",
           `<p>${e(run.sourceName)} · ${e(run.date)}</p><div class="waste-proof-grid">${Object.entries(
-            proofLabels,
+            visibleProofs,
           )
             .map(
               ([key, label]) =>

@@ -149,6 +149,7 @@ for (const mode of ["fresh", "upgrade"]) {
       kg: 10,
       pieces: 4,
       reason: "Sortasi",
+      processedBy: "Tester",
       evidence: { reject: photo, processed: photo },
       outputs: [
         { key: "durpas500", productId: half, qty: 4, lotId: id() },

@@ -605,6 +605,7 @@ begin
   if v_date is null or v_received is null or v_date<v_received or v_date>(now() at time zone 'Asia/Jakarta')::date then raise exception 'Tanggal waste harus sejak barang masuk sampai hari ini'; end if;
   if v_reason is null or length(v_reason) not between 1 and 300 then raise exception 'Alasan waste wajib, maksimal 300 karakter'; end if;
   if v_processor is null or length(v_processor) not between 1 and 100 then raise exception 'Nama pengolah wajib, maksimal 100 karakter'; end if;
+  if public.pos_waste_photo(payload->'evidence'->>'reject')='' then raise exception 'Foto reject sebelum diolah wajib diupload'; end if;
   select * into v_source from public.md_pos_lots where id=(payload->>'sourceLotId')::uuid and store_id=v_store and received_date=v_received for update;
   if not found then raise exception 'Pilih batch sesuai tanggal barang masuk dan store'; end if;
   select * into v_product from public.md_pos_products where id=v_source.product_id;
@@ -618,6 +619,7 @@ begin
    select x into v_line from jsonb_array_elements(payload->'outputs') x where x->>'key'=v_spec.key;
    if coalesce(v_line->>'qty','') !~ '^[0-9]+(\.[0-9]+)?$' then raise exception 'Jumlah hasil harus nonnegatif'; end if;
    if (v_line->>'qty')::numeric=0 then continue; end if;
+   if public.pos_waste_photo(payload->'evidence'->>v_spec.key)='' then raise exception 'Bukti foto wajib untuk %',v_spec.label; end if;
    v_qty:=public.pos_unit_qty(v_line->>'qty',v_spec.unit);
    select * into v_output from public.md_pos_products where id=(v_line->>'productId')::uuid;
    if not found or v_output.item_type not in ('direct','finished') or v_output.stock_unit<>v_spec.unit or v_output.id=any(v_seen) then raise exception 'Pilih produk hasil berbeda dengan satuan % untuk %',v_spec.unit,v_spec.label; end if;

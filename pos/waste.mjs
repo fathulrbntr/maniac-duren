@@ -39,6 +39,9 @@ export function wastePlan(s, p) {
     throw Error("Stok batch tidak cukup. Perbarui stok");
   if (!p.reason?.trim() || p.reason.trim().length > 300)
     throw Error("Alasan waste wajib, maksimal 300 karakter");
+  const evidence = p.evidence || {};
+  if (!photoValue(evidence.reject))
+    throw Error("Foto reject sebelum diolah wajib diupload");
   if (!Array.isArray(p.outputs) || p.outputs.length !== 3)
     throw Error("Isi tiga jenis hasil olahan");
   const seen = new Set(),
@@ -50,6 +53,8 @@ export function wastePlan(s, p) {
     const n = Number(line.qty);
     if (!Number.isFinite(n) || n < 0) throw Error("Hasil tidak boleh negatif");
     if (n === 0) continue;
+    if (!photoValue(evidence[spec.key]))
+      throw Error("Bukti foto wajib untuk " + spec.label);
     const qty = quantity(n, spec.unit),
       output = s.products.find((x) => x.id === line.productId);
     if (

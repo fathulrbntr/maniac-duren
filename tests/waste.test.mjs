@@ -52,6 +52,7 @@ for (const [id, storeId, supplierId, date] of [
     kg: 100,
     pieces: 40,
   });
+const photo = "data:image/png;base64,iVBORw0KGgo=";
 const p = {
   id: "w1",
   storeId: "a",
@@ -61,6 +62,13 @@ const p = {
   kg: 10,
   pieces: 4,
   reason: "Sortasi",
+  processedBy: "Tester",
+  evidence: {
+    reject: photo,
+    durpas500: photo,
+    durpas1000: photo,
+    coral: photo,
+  },
   outputs: [
     { key: "durpas500", productId: "half", qty: 4, lotId: "h" },
     { key: "durpas1000", productId: "one", qty: 2, lotId: "o" },
@@ -69,10 +77,9 @@ const p = {
 };
 const before = structuredClone(s);
 s = applyAction(s, "waste_process", p);
-const photo = "data:image/png;base64,iVBORw0KGgo=";
 const withEvidence = applyAction(before, "waste_process", {
   ...p,
-  evidence: { reject: photo, processed: photo },
+  evidence: { ...p.evidence, processed: photo },
 });
 assert.equal(withEvidence.wasteRuns[0].evidence.reject, photo);
 assert.equal(
