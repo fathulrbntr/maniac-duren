@@ -1,16 +1,18 @@
+> **Update 07:** Untuk proyek yang sudah aktif, gunakan `UPDATE.md`; jalankan hanya migration yang belum terpasang. `database/pos.sql` kini khusus instalasi baru dan mencakup update 01–07. Panduan alur terkini ada di `docs/ALUR-PENGGUNA.md`.
+
 # Maniac Duren POS
 
-Paket tambahan untuk website Maniac Duren yang sudah ada. Salin folder `pos`, `api`, dan `database` ke root proyek. Halaman customer, galeri, carousel dan `/menu` tidak perlu diubah. Paket tidak berisi pengganti `index.html`, `style.css`, atau `script.js` customer.
+Paket proyek lengkap berdasarkan ZIP yang dikirim. Website customer, galeri dan carousel dipertahankan. Untuk update database yang sudah aktif, ikuti `UPDATE.md`. Bagian instalasi di bawah ditujukan untuk database baru.
 
 ## Coba demo
 
-Di VS Code, buka `pos/index.html` dengan Live Server. Klik **Buka mode demo**. Jika membuka root proyek, kunjungi `/pos/`. Demo tidak membutuhkan akun/database. Contoh store Depok/Jakarta dan supplier A/B bukan data operasional. Data contoh disimpan hanya di browser yang digunakan; menutup lalu membuka lagi tidak menghapusnya. Reset lewat Master data.
+Di VS Code, buka `pos/index.html` dengan Live Server. Klik **Buka mode demo**. Jika membuka root proyek, kunjungi `/pos/`. Demo tidak membutuhkan akun/database. Contoh store Depok/Jakarta dan supplier A/B bukan data operasional. Data contoh disimpan hanya di browser yang digunakan; menutup lalu membuka lagi tidak menghapusnya. Reset tersedia di halaman Product pada mode demo.
 
 Dashboard: omzet hari ini, stok kg/butir, omzet per kg/per butir, kg yang dipakai untuk penjualan butir, grafik 7 hari dan transaksi terakhir.
 
 Kasir: pilih store, produk dan penerimaan asal supplier. Masukkan berat hasil timbang dan jumlah butir. Pilih cara jual KG/BUTIR dan harga satuannya. Simpan pembayaran Tunai/QRIS/Transfer; cetak struk. Pilihan pembayaran adalah pencatatan manual, bukan integrasi payment gateway.
 
-Stok: barang masuk, sisa tiap penerimaan, waste, pemakaian dapur dan transfer store. ID penerimaan dibuat otomatis sehingga dua pengiriman pada tanggal yang sama tetap terpisah. Transfer mempertahankan supplier dan referensi penerimaan asal.
+Stok: barang masuk, sisa tiap penerimaan, pemakaian dapur dan transfer store. Input waste ada di menu Waste & Olahan. ID penerimaan dibuat otomatis sehingga dua pengiriman pada tanggal yang sama tetap terpisah. Transfer mempertahankan supplier dan referensi penerimaan asal.
 
 Laporan: filter periode/store/supplier, omzet per kg/per butir, berat kg khusus jual per butir, detail transaksi, ekspor CSV. Transaksi dibatalkan dikeluarkan dari omzet dan stok dipulihkan; riwayat tetap ada.
 
@@ -19,7 +21,7 @@ Master: tambah store, supplier, produk dan harga jual awal. SKU produk unik. Har
 ## Aktifkan database bersama
 
 1. Gunakan proyek Supabase milik restoran.
-2. Jalankan `database/pos.sql` di SQL Editor. Script membuat tabel terpisah berawalan `md_pos_`. Script tidak mengubah tabel menu/customer. Tidak ada data contoh yang dimasukkan ke database.
+2. Jalankan `database/pos.sql` di SQL Editor. Script membuat tabel terpisah berawalan `md_pos_`. Script tidak mengubah tabel menu/customer. Tidak ada transaksi/stok contoh yang dimasukkan ke database; master Durpas 500 gr, Durpas 1 kg dan Coral disiapkan tanpa saldo.
 3. Buat akun email/password admin lewat Authentication. Nonaktifkan pendaftaran publik jika tidak diperlukan.
 4. Daftarkan akun admin dengan SQL berikut, ganti emailnya:
 
@@ -46,7 +48,7 @@ Gunakan publishable key (atau legacy anon key). Jangan menggunakan secret/servic
 { "source": "/pos", "destination": "/pos/index.html" }
 ```
 
-Jangan mengganti keseluruhan `vercel.json` hanya dengan potongan di atas. Folder `api` harus dilayani sebagai Vercel Functions; jika proyek memiliki build framework, sesuaikan lokasi route API dengan framework tersebut. Referensi proyek yang ditemukan adalah versi static 11 September 2026; gunakan paket tambahan ini pada checkout terbaru agar perubahan customer yang lebih baru tidak tertimpa.
+Jangan mengganti keseluruhan `vercel.json` hanya dengan potongan di atas. Folder `api` harus dilayani sebagai Vercel Functions; jika proyek memiliki build framework, sesuaikan lokasi route API dengan framework tersebut. Paket ini berasal dari ZIP proyek yang diaudit pada 4 Oktober 2026. Jika repository berubah setelah ZIP tersebut dibuat, bandingkan perubahan sebelum menyalin.
 
 7. Login. Tambahkan store, supplier, produk lalu catat stok awal sebagai penerimaan barang. Jangan memasukkan stok awal lagi sebagai pembelian kedua.
 8. Uji barang masuk, satu penjualan per kg, satu penjualan per butir, pembatalan dan transfer sebelum dipakai operasional. Cocokkan hasil dengan stok fisik.

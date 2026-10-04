@@ -1,13 +1,115 @@
-import {preparePhoto,photoValue} from './product-details.mjs?v=5.1';
-import {escape as e} from './core.mjs?v=5.1';
-export const proofLabels={reject:'Bukti Reject',processed:'Bukti Setelah Diolah'};
-export function evidenceValues(value={}){return {reject:photoValue(value?.reject),processed:photoValue(value?.processed)};}
-export function evidenceForm(){return `<fieldset class="waste-output"><legend>Bukti foto</legend><label class="field">Jenis bukti<select id="waste-proof-type"><option value="reject">Bukti Reject</option><option value="processed">Bukti Setelah Diolah</option></select></label><label class="field">Upload foto<input id="waste-proof-file" type="file" accept="image/jpeg,image/png,image/webp"></label><p class="muted">Opsional, satu foto per jenis. JPG/PNG/WebP dikompres otomatis hingga maksimal 2 MB per foto.</p><p id="waste-proof-status" role="status"></p><div class="waste-proof-grid" id="waste-proof-preview"></div></fieldset>`;}
-export function bindEvidence(form){
- const evidence={reject:'',processed:''},versions={reject:0,processed:0},pending=new Set();
- const draw=()=>{form.querySelector('#waste-proof-preview').innerHTML=Object.entries(proofLabels).map(([key,label])=>`<div><b>${label}</b>${evidence[key]?`<img src="${e(evidence[key])}" alt="${label}"><button type="button" data-remove-proof="${key}">Hapus foto</button>`:'<p class="muted">Belum ada foto.</p>'}</div>`).join('');form.querySelectorAll('[data-remove-proof]').forEach(b=>b.onclick=()=>{versions[b.dataset.removeProof]++;evidence[b.dataset.removeProof]='';draw();});};
- form.querySelector('#waste-proof-file').onchange=async ev=>{const file=ev.target.files[0];if(!file)return;const key=form.querySelector('#waste-proof-type').value,version=++versions[key],ticket={};pending.add(ticket);const status=form.querySelector('#waste-proof-status');status.textContent='Memproses '+proofLabels[key]+'…';try{const result=await preparePhoto(file);if(version===versions[key]){evidence[key]=result.photo;draw();status.textContent=proofLabels[key]+' siap disimpan · '+Math.ceil(result.bytes/1024)+' KB';}}catch(err){status.textContent=err.message;}finally{pending.delete(ticket);ev.target.value='';}};draw();
- return {values:()=>evidenceValues(evidence),busy:()=>pending.size>0};
+import { preparePhoto, photoValue } from "./product-details.mjs?v=7";
+import { escape as e } from "./core.mjs?v=7";
+export const proofLabels = {
+  reject: "Bukti Reject",
+  processed: "Bukti Setelah Diolah",
+};
+export function evidenceValues(value = {}) {
+  return {
+    reject: photoValue(value?.reject),
+    processed: photoValue(value?.processed),
+  };
 }
-export function evidenceButton(run){return run.evidence?.reject||run.evidence?.processed?`<button type="button" class="small" data-waste-evidence="${e(run.id)}">Lihat bukti</button>`:'';}
-export function bindEvidenceHistory(state,ctx){document.querySelectorAll('[data-waste-evidence]').forEach(b=>b.onclick=()=>{const run=(state.wasteRuns||[]).find(x=>x.id===b.dataset.wasteEvidence);if(!run)return;const d=ctx.modal('Bukti foto waste',`<p>${e(run.sourceName)} · ${e(run.date)}</p><div class="waste-proof-grid">${Object.entries(proofLabels).map(([key,label])=>`<div><h3>${label}</h3>${run.evidence?.[key]?`<img src="${e(run.evidence[key])}" alt="${label}">`:'<p>Belum ada foto.</p>'}</div>`).join('')}</div>`,'Tutup');d.classList.add('product-modal');d.querySelector('.modal-actions .close').hidden=true;d.querySelector('form').onsubmit=ev=>{ev.preventDefault();d.close();};});}
+export function evidenceForm() {
+  return `<fieldset class="waste-output"><legend>Bukti foto</legend><label class="field">Jenis bukti<select id="waste-proof-type"><option value="reject">Bukti Reject</option><option value="processed">Bukti Setelah Diolah</option></select></label><label class="field">Upload foto<input id="waste-proof-file" type="file" accept="image/jpeg,image/png,image/webp"></label><p class="muted">Opsional, satu foto per jenis. JPG/PNG/WebP dikompres otomatis hingga maksimal 2 MB per foto.</p><p id="waste-proof-status" role="status"></p><div class="waste-proof-grid" id="waste-proof-preview"></div></fieldset>`;
+}
+export function bindEvidence(form) {
+  const evidence = { reject: "", processed: "" },
+    versions = { reject: 0, processed: 0 },
+    pending = new Set();
+  const draw = () => {
+    form.querySelector("#waste-proof-preview").innerHTML = Object.entries(
+      proofLabels,
+    )
+      .map(
+        ([key, label]) =>
+          `<div><b>${label}</b>${evidence[key] ? `<img src="${e(evidence[key])}" alt="${label}"><button type="button" data-remove-proof="${key}">Hapus foto</button>` : '<p class="muted">Belum ada foto.</p>'}</div>`,
+      )
+      .join("");
+    form.querySelectorAll("[data-remove-proof]").forEach(
+      (b) =>
+        (b.onclick = () => {
+          versions[b.dataset.removeProof]++;
+          evidence[b.dataset.removeProof] = "";
+          draw();
+        }),
+    );
+  };
+  form.querySelector("#waste-proof-file").onchange = async (ev) => {
+    const file = ev.target.files[0];
+    if (!file) return;
+    const key = form.querySelector("#waste-proof-type").value,
+      version = ++versions[key],
+      ticket = {};
+    pending.add(ticket);
+    const status = form.querySelector("#waste-proof-status");
+    status.textContent = "Memproses " + proofLabels[key] + "…";
+    try {
+      const result = await preparePhoto(file);
+      if (version === versions[key]) {
+        evidence[key] = result.photo;
+        draw();
+        status.textContent =
+          proofLabels[key] +
+          " siap disimpan · " +
+          Math.ceil(result.bytes / 1024) +
+          " KB";
+      }
+    } catch (err) {
+      status.textContent = err.message;
+    } finally {
+      pending.delete(ticket);
+      ev.target.value = "";
+    }
+  };
+  draw();
+  return {
+    values: () => evidenceValues(evidence),
+    busy: () => pending.size > 0,
+  };
+}
+export function evidenceButton(run) {
+  return run.hasEvidence || run.evidence?.reject || run.evidence?.processed
+    ? `<button type="button" class="small" data-waste-evidence="${e(run.id)}">Lihat bukti</button>`
+    : "";
+}
+export function bindEvidenceHistory(state, ctx) {
+  document.querySelectorAll("[data-waste-evidence]").forEach(
+    (b) =>
+      (b.onclick = async () => {
+        const run = (state.wasteRuns || []).find(
+          (x) => x.id === b.dataset.wasteEvidence,
+        );
+        if (!run) return;
+        if (!run.evidence && ctx.loadEvidence) {
+          b.disabled = true;
+          try {
+            run.evidence = await ctx.loadEvidence(run.id);
+          } catch (error) {
+            ctx.toast(error.message);
+            return;
+          } finally {
+            b.disabled = false;
+          }
+        }
+        const d = ctx.modal(
+          "Bukti foto waste",
+          `<p>${e(run.sourceName)} · ${e(run.date)}</p><div class="waste-proof-grid">${Object.entries(
+            proofLabels,
+          )
+            .map(
+              ([key, label]) =>
+                `<div><h3>${label}</h3>${run.evidence?.[key] ? `<img src="${e(run.evidence[key])}" alt="${label}">` : "<p>Belum ada foto.</p>"}</div>`,
+            )
+            .join("")}</div>`,
+          "Tutup",
+        );
+        d.classList.add("product-modal");
+        d.querySelector(".modal-actions .close").hidden = true;
+        d.querySelector("form").onsubmit = (ev) => {
+          ev.preventDefault();
+          d.close();
+        };
+      }),
+  );
+}

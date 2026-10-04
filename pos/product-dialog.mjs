@@ -1,27 +1,252 @@
-import {categories,itemTypes,stockUnits,productDefaults,isLegacyStock,normalizeProduct} from './catalog.mjs?v=5.1';
-import {escape as e,id,num,money} from './core.mjs?v=5.1';
-import {preparePhoto} from './product-details.mjs?v=5.1';
-import {productStock,productUsed} from './product-stock.mjs?v=5.1';
-const options=(values,selected)=>Object.entries(values).map(([key,text])=>`<option value="${e(key)}" ${key===selected?'selected':''}>${e(text)}</option>`).join('');
-const field=(name,input)=>`<label class="field">${name}${input}</label>`;
-export function productDialog({product,state,store,modal,mutate,render,toast}){
- const editing=!!product,p=productDefaults(product||{}),productId=p.id||id(),locked=editing&&productUsed(state,p.id),adjustmentId=id();
- let photo=p.photo||'',photoBusy=false,photoSequence=0,saving=false;
- const d=modal(editing?'Edit produk / bahan':'Tambah produk / bahan',`
- <div class="product-photo-editor"><img id="photo-preview" alt="Pratinjau foto produk" ${photo?`src="${e(photo)}"`:'hidden'}><div>${field('Foto produk','<input id="photo-file" type="file" accept="image/jpeg,image/png,image/webp">')}<small>JPG, PNG, WebP. Otomatis diperkecil; hasil maksimal 2 MB.</small><p id="photo-status" role="status"></p><button type="button" id="remove-photo">Hapus foto</button></div></div>
- <div class="form-grid">${field('Nama Produk',`<input name="name" value="${e(p.name||'')}" required maxlength="100">`)}${field('Variant',`<input name="variant" value="${e(p.variant||'')}" maxlength="100" placeholder="Contoh: Original / Durian">`)}${field('SKU',`<input name="sku" value="${e(p.sku||'')}" required maxlength="40">`)}${field('Barcode',`<input name="barcode" value="${e(p.barcode||'')}" maxlength="80" placeholder="Ketik atau scan barcode">`)}${field('Jenis item',`<select name="itemType" ${locked?'disabled':''}>${options(itemTypes,p.itemType)}</select>`)}<div id="category-field">${field('Kategori jual',`<select name="category">${options(Object.fromEntries(categories.map(c=>[c,c])),p.category)}</select>`)}</div>${field('Satuan stok',`<select name="stockUnit" ${locked?'disabled':''}>${options(stockUnits,p.stockUnit)}</select>`)}${field('Harga Beli (Rp / satuan; durian per kg)',`<input name="buyPrice" type="number" min="0" max="1000000000000" step="any" value="${e(p.buyPrice??'')}" placeholder="Opsional">`)}</div>
- <p class="muted">${locked?'Jenis dan satuan terkunci karena sudah digunakan dalam stok atau resep.':'Gunakan gram untuk berat bahan dan ml untuk cairan.'} Harga beli adalah harga referensi; harga jual berlaku di semua store.</p><div id="catalog-prices" class="form-grid"></div>
- <fieldset class="product-stock-editor"><legend>Qty Stok · ${e(state.stores.find(x=>x.id===store)?.name||'Pilih store dahulu')}</legend><div id="current-stock"></div><label><input type="checkbox" name="adjustStock" ${store?'':'disabled'}> ${editing?'Sesuaikan stok fisik':'Isi stok awal'}</label><div id="stock-fields" hidden></div></fieldset>
- ${editing?`<details><summary>Riwayat penyesuaian stok</summary>${(state.stockAdjustments||[]).filter(a=>a.productId===p.id&&a.storeId===store).slice().reverse().map(a=>`<p>${e(a.date)} · ${e(a.reason)}<br><small>${e(JSON.stringify(a.before))} → ${e(JSON.stringify(a.after))}</small></p>`).join('')||'<p class="muted">Belum ada penyesuaian.</p>'}</details><button type="button" class="danger" id="delete-product">Hapus produk</button>`:''}`);
- d.classList.add('product-modal');const f=d.querySelector('form'),c=n=>f.elements.namedItem(n),error=message=>{d.querySelector('#form-error').textContent=message;};
- const prices={priceKg:p.priceKg??'',pricePiece:p.pricePiece??'',salePrice:p.salePrice??''};let baseline={},stockDual=false;
- function drawStock(){stockDual=c('stockUnit').value==='kg_butir';baseline=productStock(state,productId,store,stockDual);d.querySelector('#current-stock').textContent=stockDual?`${num(baseline.kg)} kg / ${num(baseline.pieces)} butir`:`${num(baseline.qty)} ${stockUnits[c('stockUnit').value]}`;d.querySelector('#stock-fields').innerHTML=`<div class="form-grid">${(stockDual?['kg','pieces']:['qty']).map(key=>field(key==='kg'?'Stok akhir (kg)':key==='pieces'?'Stok akhir (butir)':'Stok akhir ('+stockUnits[c('stockUnit').value]+')',`<input name="target_${key}" type="number" min="0" max="1000000000" step="${key==='pieces'||(!stockDual&&['pcs','porsi'].includes(c('stockUnit').value))?'1':'0.000001'}" value="${baseline[key]}">`)).join('')}${stockDual?field('Supplier untuk tambahan stok',`<select name="stockSupplier"><option value="">Pilih supplier</option>${options(Object.fromEntries(state.suppliers.map(x=>[x.id,x.name])),null)}</select>`):''}</div>${field('Alasan penyesuaian / stok awal','<input name="stockReason" maxlength="300" placeholder="Contoh: hasil hitung fisik">')}<p class="muted">Isi jumlah akhir setelah dihitung. Pengurangan dialokasikan dari batch tertua; penambahan menjadi batch baru tanggal hari ini.</p>`;toggleStock();}
- function toggleStock(){const enabled=c('adjustStock').checked;d.querySelector('#stock-fields').hidden=!enabled;d.querySelectorAll('#stock-fields input,#stock-fields select').forEach(el=>el.disabled=!enabled);d.querySelectorAll('#stock-fields input').forEach(el=>el.required=enabled);}
- function update(){for(const key of Object.keys(prices)){if(c(key))prices[key]=c(key).value;}const type=c('itemType').value,unit=c('stockUnit'),material=['raw','prep'].includes(type);d.querySelector('#category-field').hidden=material;c('category').disabled=material;const allowed=type==='recipe'?['porsi']:['kg','g','ml','pcs',...(type==='direct'&&c('category').value==='Buah'?['kg_butir']:[])];for(const option of unit.options)option.disabled=!allowed.includes(option.value);if(!allowed.includes(unit.value))unit.value=allowed[0];d.querySelector('#catalog-prices').innerHTML=(material?[]:unit.value==='kg_butir'?['priceKg','pricePiece']:['salePrice']).map(key=>field({priceKg:'Harga jual / kg (Rp)',pricePiece:'Harga jual / butir (Rp)',salePrice:'Harga jual / satuan (Rp)'}[key],`<input name="${key}" type="number" min="0.01" step="any" ${type==='finished'&&key==='salePrice'?'placeholder="Belum diisi"':'required'} value="${e(prices[key])}">`)).join('');drawStock();}
- c('itemType').onchange=update;c('stockUnit').onchange=update;c('category').onchange=()=>{if(locked&&p.stockUnit==='kg_butir'&&c('category').value!=='Buah'){c('category').value='Buah';toast('Durian dengan stok kg + butir tetap kategori Buah');}update();};c('adjustStock').onchange=toggleStock;update();
- const preview=()=>{const img=d.querySelector('#photo-preview');img.hidden=!photo;if(photo)img.src=photo;else img.removeAttribute('src');};
- d.querySelector('#photo-file').onchange=async ev=>{const file=ev.target.files[0];if(!file)return;const seq=++photoSequence;photoBusy=true;error('');d.querySelector('#photo-status').textContent='Memproses foto…';try{const result=await preparePhoto(file);if(seq!==photoSequence)return;photo=result.photo;preview();d.querySelector('#photo-status').textContent=`Siap disimpan · ${(result.bytes/1024).toFixed(0)} KB`;}catch(err){if(seq===photoSequence){error(err.message);d.querySelector('#photo-status').textContent='Foto baru gagal diproses; foto sebelumnya tetap digunakan.';}}finally{if(seq===photoSequence)photoBusy=false;}};
- d.querySelector('#remove-photo').onclick=()=>{photoSequence++;photoBusy=false;photo='';d.querySelector('#photo-file').value='';d.querySelector('#photo-status').textContent='Foto akan dihapus saat Simpan.';preview();};
- d.querySelector('#delete-product')?.addEventListener('click',()=>{if(saving)return;const confirm=modal('Hapus produk',`<p>Anda yakin untuk menghapus product?, tekan ya jika yakin.</p><p><b>${e(p.name)}</b></p>`,'Ya');confirm.querySelector('.modal-actions .close').textContent='Tidak';confirm.querySelector('form').onsubmit=async ev=>{ev.preventDefault();if(await mutate('product_delete',{id:p.id,confirmed:true})){confirm.close();d.close();render();toast('Produk dihapus');}};});
- f.onsubmit=async ev=>{ev.preventDefault();if(saving)return;if(photoBusy)return error('Tunggu sampai foto selesai diproses.');error('');try{const values=Object.fromEntries(new FormData(f));if(locked){values.itemType=p.itemType;values.stockUnit=p.stockUnit;}const payload={...normalizeProduct({...values,photo}),id:productId,kind:'products',editing};if(c('adjustStock').checked){const keys=stockDual?['kg','pieces']:['qty'];payload.stock={id:adjustmentId,storeId:store,expected:baseline,target:Object.fromEntries(keys.map(k=>[k,Number(c('target_'+k).value)])),reason:c('stockReason').value,supplierId:c('stockSupplier')?.value||null};}saving=true;if(await mutate('product_save',payload)){d.close();render();toast('Produk dan stok tersimpan');}}catch(err){error(err.message);}finally{saving=false;}};
+import {
+  categories,
+  itemTypes,
+  stockUnits,
+  productDefaults,
+  isLegacyStock,
+  normalizeProduct,
+} from "./catalog.mjs?v=7";
+import { escape as e, id, num, money } from "./core.mjs?v=7";
+import { preparePhoto } from "./product-details.mjs?v=7";
+import { productStock, productUsed } from "./product-stock.mjs?v=7";
+const options = (values, selected) =>
+  Object.entries(values)
+    .map(
+      ([key, text]) =>
+        `<option value="${e(key)}" ${key === selected ? "selected" : ""}>${e(text)}</option>`,
+    )
+    .join("");
+const field = (name, input) => `<label class="field">${name}${input}</label>`;
+export function productDialog({
+  product,
+  state,
+  store,
+  modal,
+  mutate,
+  render,
+  toast,
+}) {
+  const editing = !!product,
+    p = productDefaults(product || {}),
+    productId = p.id || id(),
+    locked = editing && productUsed(state, p.id),
+    adjustmentId = id();
+  let photo = p.photo || "",
+    photoBusy = false,
+    photoSequence = 0,
+    saving = false;
+  const d = modal(
+    editing ? "Edit produk / bahan" : "Tambah produk / bahan",
+    `
+ <div class="product-photo-editor"><img id="photo-preview" alt="Pratinjau foto produk" ${photo ? `src="${e(photo)}"` : "hidden"}><div>${field("Foto produk", '<input id="photo-file" type="file" accept="image/jpeg,image/png,image/webp">')}<small>JPG, PNG, WebP. Otomatis diperkecil; hasil maksimal 2 MB.</small><p id="photo-status" role="status"></p><button type="button" id="remove-photo">Hapus foto</button></div></div>
+ <div class="form-grid">${field("Nama Produk", `<input name="name" value="${e(p.name || "")}" required maxlength="100">`)}${field("Variant", `<input name="variant" value="${e(p.variant || "")}" maxlength="100" placeholder="Contoh: Original / Durian">`)}${field("SKU", `<input name="sku" value="${e(p.sku || "")}" required maxlength="40">`)}${field("Barcode", `<input name="barcode" value="${e(p.barcode || "")}" maxlength="80" placeholder="Ketik atau scan barcode">`)}${field("Jenis item", `<select name="itemType" ${locked ? "disabled" : ""}>${options(itemTypes, p.itemType)}</select>`)}<div id="category-field">${field("Kategori jual", `<select name="category">${options(Object.fromEntries(categories.map((c) => [c, c])), p.category)}</select>`)}</div>${field("Satuan stok", `<select name="stockUnit" ${locked ? "disabled" : ""}>${options(stockUnits, p.stockUnit)}</select>`)}${field("Harga Beli (Rp / satuan; durian per kg)", `<input name="buyPrice" type="number" min="0" max="1000000000000" step="any" value="${e(p.buyPrice ?? "")}" placeholder="Opsional">`)}</div>
+ <p class="muted">${locked ? "Jenis dan satuan terkunci karena sudah digunakan dalam stok atau resep." : "Gunakan gram untuk berat bahan dan ml untuk cairan."} Harga beli adalah harga referensi; harga jual berlaku di semua store.</p><div id="catalog-prices" class="form-grid"></div>
+ <fieldset class="product-stock-editor"><legend>Qty Stok · ${e(state.stores.find((x) => x.id === store)?.name || "Pilih store dahulu")}</legend><div id="current-stock"></div><label><input type="checkbox" name="adjustStock" ${store ? "" : "disabled"}> ${editing ? "Sesuaikan stok fisik" : "Isi stok awal"}</label><div id="stock-fields" hidden></div></fieldset>
+ ${
+   editing
+     ? `<details><summary>Riwayat penyesuaian stok</summary>${
+         (state.stockAdjustments || [])
+           .filter((a) => a.productId === p.id && a.storeId === store)
+           .slice()
+           .reverse()
+           .map(
+             (a) =>
+               `<p>${e(a.date)} · ${e(a.reason)}<br><small>${e(JSON.stringify(a.before))} → ${e(JSON.stringify(a.after))}</small></p>`,
+           )
+           .join("") || '<p class="muted">Belum ada penyesuaian.</p>'
+       }</details><button type="button" class="danger" id="delete-product">Hapus produk</button>`
+     : ""
+ }`,
+  );
+  d.classList.add("product-modal");
+  const f = d.querySelector("form"),
+    c = (n) => f.elements.namedItem(n),
+    error = (message) => {
+      d.querySelector("#form-error").textContent = message;
+    };
+  const prices = {
+    priceKg: p.priceKg ?? "",
+    pricePiece: p.pricePiece ?? "",
+    salePrice: p.salePrice ?? "",
+  };
+  let baseline = {},
+    stockDual = false;
+  function drawStock() {
+    stockDual = c("stockUnit").value === "kg_butir";
+    baseline = productStock(state, productId, store, stockDual);
+    d.querySelector("#current-stock").textContent = stockDual
+      ? `${num(baseline.kg)} kg / ${num(baseline.pieces)} butir`
+      : `${num(baseline.qty)} ${stockUnits[c("stockUnit").value]}`;
+    d.querySelector("#stock-fields").innerHTML =
+      `<div class="form-grid">${(stockDual ? ["kg", "pieces"] : ["qty"]).map((key) => field(key === "kg" ? "Stok akhir (kg)" : key === "pieces" ? "Stok akhir (butir)" : "Stok akhir (" + stockUnits[c("stockUnit").value] + ")", `<input name="target_${key}" type="number" min="0" max="1000000000" step="${key === "pieces" || (!stockDual && ["pcs", "porsi"].includes(c("stockUnit").value)) ? "1" : "0.000001"}" value="${baseline[key]}">`)).join("")}${stockDual ? field("Supplier untuk tambahan stok", `<select name="stockSupplier"><option value="">Pilih supplier</option>${options(Object.fromEntries(state.suppliers.map((x) => [x.id, x.name])), null)}</select>`) : ""}</div>${field("Alasan penyesuaian / stok awal", '<input name="stockReason" maxlength="300" placeholder="Contoh: hasil hitung fisik">')}<p class="muted">Isi jumlah akhir setelah dihitung. Pengurangan dialokasikan dari batch tertua; penambahan menjadi batch baru tanggal hari ini.</p>`;
+    toggleStock();
+  }
+  function toggleStock() {
+    const enabled = c("adjustStock").checked;
+    d.querySelector("#stock-fields").hidden = !enabled;
+    d.querySelectorAll("#stock-fields input,#stock-fields select").forEach(
+      (el) => (el.disabled = !enabled),
+    );
+    d.querySelectorAll("#stock-fields input").forEach(
+      (el) => (el.required = enabled),
+    );
+  }
+  function update() {
+    for (const key of Object.keys(prices)) {
+      if (c(key)) prices[key] = c(key).value;
+    }
+    const type = c("itemType").value,
+      unit = c("stockUnit"),
+      material = ["raw", "prep"].includes(type);
+    d.querySelector("#category-field").hidden = material;
+    c("category").disabled = material;
+    const allowed =
+      type === "recipe"
+        ? ["porsi"]
+        : [
+            "kg",
+            "g",
+            "ml",
+            "pcs",
+            ...(type === "direct" && c("category").value === "Buah"
+              ? ["kg_butir"]
+              : []),
+          ];
+    for (const option of unit.options)
+      option.disabled = !allowed.includes(option.value);
+    if (!allowed.includes(unit.value)) unit.value = allowed[0];
+    d.querySelector("#catalog-prices").innerHTML = (
+      material
+        ? []
+        : unit.value === "kg_butir"
+          ? ["priceKg", "pricePiece"]
+          : ["salePrice"]
+    )
+      .map((key) =>
+        field(
+          {
+            priceKg: "Harga jual / kg (Rp)",
+            pricePiece: "Harga jual / butir (Rp)",
+            salePrice: "Harga jual / satuan (Rp)",
+          }[key],
+          `<input name="${key}" type="number" min="0.01" step="any" ${type === "finished" && key === "salePrice" ? 'placeholder="Belum diisi"' : "required"} value="${e(prices[key])}">`,
+        ),
+      )
+      .join("");
+    drawStock();
+  }
+  c("itemType").onchange = update;
+  c("stockUnit").onchange = update;
+  c("category").onchange = () => {
+    if (
+      locked &&
+      p.stockUnit === "kg_butir" &&
+      c("category").value !== "Buah"
+    ) {
+      c("category").value = "Buah";
+      toast("Durian dengan stok kg + butir tetap kategori Buah");
+    }
+    update();
+  };
+  c("adjustStock").onchange = toggleStock;
+  update();
+  const preview = () => {
+    const img = d.querySelector("#photo-preview");
+    img.hidden = !photo;
+    if (photo) img.src = photo;
+    else img.removeAttribute("src");
+  };
+  d.querySelector("#photo-file").onchange = async (ev) => {
+    const file = ev.target.files[0];
+    if (!file) return;
+    const seq = ++photoSequence;
+    photoBusy = true;
+    error("");
+    d.querySelector("#photo-status").textContent = "Memproses foto…";
+    try {
+      const result = await preparePhoto(file);
+      if (seq !== photoSequence) return;
+      photo = result.photo;
+      preview();
+      d.querySelector("#photo-status").textContent =
+        `Siap disimpan · ${(result.bytes / 1024).toFixed(0)} KB`;
+    } catch (err) {
+      if (seq === photoSequence) {
+        error(err.message);
+        d.querySelector("#photo-status").textContent =
+          "Foto baru gagal diproses; foto sebelumnya tetap digunakan.";
+      }
+    } finally {
+      if (seq === photoSequence) photoBusy = false;
+    }
+  };
+  d.querySelector("#remove-photo").onclick = () => {
+    photoSequence++;
+    photoBusy = false;
+    photo = "";
+    d.querySelector("#photo-file").value = "";
+    d.querySelector("#photo-status").textContent =
+      "Foto akan dihapus saat Simpan.";
+    preview();
+  };
+  d.querySelector("#delete-product")?.addEventListener("click", () => {
+    if (saving) return;
+    const confirm = modal(
+      "Hapus produk",
+      `<p>Anda yakin untuk menghapus product?, tekan ya jika yakin.</p><p><b>${e(p.name)}</b></p>`,
+      "Ya",
+    );
+    confirm.querySelector(".modal-actions .close").textContent = "Tidak";
+    confirm.querySelector("form").onsubmit = async (ev) => {
+      ev.preventDefault();
+      if (await mutate("product_delete", { id: p.id, confirmed: true })) {
+        confirm.close();
+        d.close();
+        render();
+        toast("Produk dihapus");
+      }
+    };
+  });
+  f.onsubmit = async (ev) => {
+    ev.preventDefault();
+    if (saving) return;
+    if (photoBusy) return error("Tunggu sampai foto selesai diproses.");
+    error("");
+    try {
+      const values = Object.fromEntries(new FormData(f));
+      if (locked) {
+        values.itemType = p.itemType;
+        values.stockUnit = p.stockUnit;
+      }
+      const payload = {
+        ...normalizeProduct({ ...values, photo }),
+        id: productId,
+        kind: "products",
+        editing,
+      };
+      if (c("adjustStock").checked) {
+        const keys = stockDual ? ["kg", "pieces"] : ["qty"];
+        payload.stock = {
+          id: adjustmentId,
+          storeId: store,
+          expected: baseline,
+          target: Object.fromEntries(
+            keys.map((k) => [k, Number(c("target_" + k).value)]),
+          ),
+          reason: c("stockReason").value,
+          supplierId: c("stockSupplier")?.value || null,
+        };
+      }
+      saving = true;
+      if (await mutate("product_save", payload)) {
+        d.close();
+        render();
+        toast("Produk dan stok tersimpan");
+      }
+    } catch (err) {
+      error(err.message);
+    } finally {
+      saving = false;
+    }
+  };
 }
