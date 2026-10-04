@@ -1,8 +1,8 @@
-import {wastePage,bindWaste} from './waste-ui.mjs?v=5';
-import {recipesPage,productionPage,unitStockPanel,bindProduction} from './production-ui.mjs?v=5';
-import {today,money,num,escape as e,id,emptyState,applyAction,saleRows,summarize,demoState} from './core.mjs?v=5';
-import {isLegacyStock} from './catalog.mjs?v=5';
-import {catalogPanel,productDialog} from './catalog-ui.mjs?v=5';
+import {wastePage,bindWaste} from './waste-ui.mjs?v=5.1';
+import {recipesPage,productionPage,unitStockPanel,bindProduction} from './production-ui.mjs?v=5.1';
+import {today,money,num,escape as e,id,emptyState,applyAction,saleRows,summarize,demoState} from './core.mjs?v=5.1';
+import {isLegacyStock} from './catalog.mjs?v=5.1';
+import {catalogPanel,productDialog} from './catalog-ui.mjs?v=5.1';
 const catalogFilter={query:'',category:'',itemType:''};
 let state=emptyState(),mode='',config={},token='',refreshToken='',expires=0,view='dashboard',store='',cart=[],busy=false,lastSale=null;
 const app=document.querySelector('#app'), filter={from:today(),to:today(),store:'',supplier:''};

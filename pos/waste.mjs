@@ -1,5 +1,6 @@
-import {isLegacyStock} from './catalog.mjs?v=5';
-import {quantity} from './production.mjs?v=5';
+import {photoValue} from './product-details.mjs?v=5.1';
+import {isLegacyStock} from './catalog.mjs?v=5.1';
+import {quantity} from './production.mjs?v=5.1';
 export const wasteOutputs=[{key:'durpas500',label:'Durpas 500 gr',unit:'pcs',weight:.5},{key:'durpas1000',label:'Durpas 1 kg',unit:'pcs',weight:1},{key:'coral',label:'Coral',unit:'kg',weight:1}];
 const round=n=>Math.round(n*1e6)/1e6;
 const today=()=>new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Jakarta'});
@@ -24,7 +25,7 @@ export function wastePlan(s,p){
   seen.add(output.id);lotIds.add(line.lotId);outputs.push({key:spec.key,label:spec.label,productId:output.id,name:output.name,unit:spec.unit,qty,weightKg:round(qty*spec.weight),lotId:line.lotId,expiry:line.expiry||null});
  }
  const outputKg=round(outputs.reduce((sum,o)=>sum+o.weightKg,0));if(outputKg>kg)throw Error('Berat total hasil olahan melebihi berat durian yang diolah');
- return {sourceLotId:lot.id,sourceProductId:product.id,sourceName:product.name,supplierId:lot.supplierId,supplierName:s.suppliers.find(x=>x.id===lot.supplierId)?.name||'',receivedDate:lot.date,kg,pieces,outputKg,lossKg:round(kg-outputKg),outputs,reason:p.reason.trim()};
+ return {sourceLotId:lot.id,sourceProductId:product.id,sourceName:product.name,supplierId:lot.supplierId,supplierName:s.suppliers.find(x=>x.id===lot.supplierId)?.name||'',receivedDate:lot.date,kg,pieces,outputKg,lossKg:round(kg-outputKg),outputs,evidence:{reject:photoValue(p.evidence?.reject),processed:photoValue(p.evidence?.processed)},reason:p.reason.trim()};
 }
 export function wasteAction(s,action,p){
  s.wasteRuns??=[];s.unitLots??=[];

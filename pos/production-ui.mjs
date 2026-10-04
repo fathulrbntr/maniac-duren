@@ -1,5 +1,5 @@
-import {escape as e,num,today,id} from './core.mjs?v=5';
-import {scalar,inputTypes,outputTypes,unitLabel,recipeValues,productionPreview,stockQty} from './production.mjs?v=5';
+import {escape as e,num,today,id} from './core.mjs?v=5.1';
+import {scalar,inputTypes,outputTypes,unitLabel,recipeValues,productionPreview,stockQty} from './production.mjs?v=5.1';
 const field=(label,body)=>`<label class="field">${label}${body}</label>`;
 const opts=(items,selected)=>items.map(p=>`<option value="${e(p.id)}" ${p.id===selected?'selected':''}>${e(p.name)}</option>`).join('');
 const item=(s,key)=>s.products.find(p=>p.id===key);
