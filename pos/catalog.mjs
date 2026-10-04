@@ -1,7 +1,7 @@
-import {productDetails} from './product-details.mjs?v=4';
+import {productDetails} from './product-details.mjs?v=5';
 export const categories=['Buah','Dessert','Minuman','Olahan Duren'];
 export const itemTypes={direct:'Produk jual langsung',raw:'Bahan baku pembelian',prep:'Bahan produksi sendiri',recipe:'Menu dengan resep',finished:'Produk jadi hasil produksi'};
-export const stockUnits={kg_butir:'Kg + butir',g:'Gram',ml:'Mililiter',pcs:'Pcs',porsi:'Porsi'};
+export const stockUnits={kg_butir:'Kg + butir',kg:'Kilogram',g:'Gram',ml:'Mililiter',pcs:'Pcs',porsi:'Porsi'};
 export const isMaterial=p=>['raw','prep'].includes(p.itemType);
 export const productDefaults=p=>({category:'Buah',itemType:'direct',stockUnit:'kg_butir',salePrice:null,...p});
 export const isLegacyStock=p=>{const x=productDefaults(p);return x.itemType==='direct'&&x.stockUnit==='kg_butir';};

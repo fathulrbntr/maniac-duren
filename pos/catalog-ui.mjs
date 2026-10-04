@@ -1,5 +1,5 @@
-import {categories,itemTypes,stockUnits,productDefaults,isMaterial,isLegacyStock,normalizeProduct} from './catalog.mjs?v=4';
-import {escape as e,money,id} from './core.mjs?v=4';
+import {categories,itemTypes,stockUnits,productDefaults,isMaterial,isLegacyStock,normalizeProduct} from './catalog.mjs?v=5';
+import {escape as e,money,id} from './core.mjs?v=5';
 const choice=(values,selected)=>Object.entries(values).map(([key,label])=>`<option value="${e(key)}" ${key===selected?'selected':''}>${e(label)}</option>`).join('');
 const label=(text,input)=>`<div class="field"><label>${text}${input}</label></div>`;
 export function catalogPanel(products,filter={},state={},store=''){
@@ -11,4 +11,4 @@ export function catalogPanel(products,filter={},state={},store=''){
  <p class="muted">Qty Stok: stok fisik tercatat di ${e((state.stores||[]).find(x=>x.id===store)?.name||'store yang dipilih')}, termasuk batch kedaluwarsa. Harga jual mengikuti master produk dan berlaku sama di semua store.</p>
  <div class="table-wrap"><table class="catalog-table"><thead><tr><th>Foto</th><th>Nama Produk</th><th>Variant</th><th>SKU</th><th>Barcode</th><th>Qty Stok</th><th>Satuan</th><th>Harga Beli</th><th>Harga Jual di Toko</th><th>Action</th></tr></thead><tbody>${rows.map(p=>`<tr><td>${p.photo?`<img class="catalog-photo" src="${e(p.photo)}" alt="${e(p.name)}" loading="lazy">`:'<span class="catalog-photo" aria-label="Foto belum tersedia">—</span>'}</td><td><b>${e(p.name)}</b><small class="catalog-meta">${e(p.category||'Bahan')} · ${e(itemTypes[p.itemType])}</small></td><td>${e(p.variant||'—')}</td><td>${e(p.sku)}</td><td>${e(p.barcode||'—')}</td><td class="catalog-stock">${stock(p)}</td><td>${e(stockUnits[p.stockUnit])}</td><td>${p.buyPrice==null?'—':money(p.buyPrice)}${p.buyPrice==null?'':isLegacyStock(p)?' / kg':' / '+e(stockUnits[p.stockUnit])}</td><td>${isMaterial(p)?'Tidak dijual':isLegacyStock(p)?`${money(p.priceKg)} / kg<br>${money(p.pricePiece)} / butir`:`${money(p.salePrice)} / ${e(stockUnits[p.stockUnit])}`}</td><td><button class="small" data-edit-product="${e(p.id)}" aria-label="Edit ${e(p.name)}">Edit</button></td></tr>`).join('')||'<tr><td colspan="10" class="empty">Tidak ada item yang sesuai.</td></tr>'}</tbody></table></div><p class="muted catalog-note">Harga beli adalah harga referensi per satuan, belum perhitungan HPP. Variant adalah keterangan setiap SKU. Penjualan hasil produksi melalui kasir menyusul.</p></section>`;
 }
-export {productDialog} from './product-dialog.mjs?v=4';
+export {productDialog} from './product-dialog.mjs?v=5';

@@ -1,5 +1,5 @@
 const SCALE=1000000;
-export const unitLabel={g:'gram',ml:'ml',pcs:'pcs',porsi:'porsi'};
+export const unitLabel={kg:'kg',g:'gram',ml:'ml',pcs:'pcs',porsi:'porsi'};
 export const outputTypes=['prep','finished','recipe'];
 export const inputTypes=['raw','prep','direct','finished'];
 export const scalar=p=>!!p&&Object.hasOwn(unitLabel,p.stockUnit);
@@ -10,7 +10,7 @@ export function quantity(value,unit){
  return scaled/SCALE;
 }
 const plus=(a,b)=>(Math.round(a*SCALE)+Math.round(b*SCALE))/SCALE;
-const product=(s,id)=>{const p=s.products.find(x=>x.id===id);if(!scalar(p))throw Error('Pilih item bersatuan gram, ml, pcs atau porsi');return p;};
+const product=(s,id)=>{const p=s.products.find(x=>x.id===id);if(!scalar(p))throw Error('Pilih item bersatuan kg, gram, ml, pcs atau porsi');return p;};
 const date=d=>{if(!/^\d{4}-\d{2}-\d{2}$/.test(d)||Number.isNaN(Date.parse(d+'T00:00:00Z'))||new Date(d+'T00:00:00Z').toISOString().slice(0,10)!==d)throw Error('Tanggal tidak valid');};
 export function stockQty(s,productId,storeId,asOf){return(s.unitLots||[]).filter(l=>l.productId===productId&&l.storeId===storeId&&(!asOf||l.date<=asOf)&&(!asOf||!l.expiry||l.expiry>=asOf)).reduce((a,l)=>plus(a,l.qty),0);}
 export function recipeValues(s,p){

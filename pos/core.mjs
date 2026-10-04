@@ -1,15 +1,17 @@
-import {deleteProduct,adjustProductStock} from './product-stock.mjs?v=4';
-import {productionAction} from './production.mjs?v=4';
-import {saveProduct,isLegacyStock} from './catalog.mjs?v=4';
+import {wasteAction} from './waste.mjs?v=5';
+import {deleteProduct,adjustProductStock} from './product-stock.mjs?v=5';
+import {productionAction} from './production.mjs?v=5';
+import {saveProduct,isLegacyStock} from './catalog.mjs?v=5';
 export const today=()=>new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Jakarta'});
 export const money=n=>new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:2}).format(n);
 export const num=n=>new Intl.NumberFormat('id-ID',{maximumFractionDigits:6}).format(n);
 export const escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-export const emptyState=()=>({stores:[],suppliers:[],products:[],lots:[],sales:[],movements:[],recipes:[],unitLots:[],productions:[],stockAdjustments:[]});
+export const emptyState=()=>({stores:[],suppliers:[],products:[],lots:[],sales:[],movements:[],recipes:[],unitLots:[],productions:[],stockAdjustments:[],wasteRuns:[]});
 export const id=()=>crypto.randomUUID();
 function positive(x,label){const v=Number(x);if(!Number.isFinite(v)||v<=0)throw Error(`${label} harus lebih dari 0`);return v;}
 function validDate(d){if(!/^\d{4}-\d{2}-\d{2}$/.test(d)||new Date(d+'T00:00:00Z').toISOString().slice(0,10)!==d)throw Error('Tanggal tidak valid');}
 export function applyAction(input,action,payload){const s=structuredClone(input),p=structuredClone(payload);if(!p.id)throw Error('ID wajib');if(['recipe_save','unit_receipt','produce','production_void'].includes(action)){productionAction(s,action,p);return s;}if(action==='master'){if(!['stores','suppliers','products'].includes(p.kind))throw Error('Jenis master tidak valid');if(!p.name?.trim())throw Error('Nama wajib');if(s[p.kind].some(x=>x.id===p.id))return s;if(p.kind==='products')saveProduct(s,p);else s[p.kind].push({id:p.id,name:p.name.trim(),...masterDetails(p)});return s;}
+if(['waste_process','waste_void'].includes(action)){wasteAction(s,action,p);return s;}
 if(action==='product_save'){saveProduct(s,p,p.editing===true);adjustProductStock(s,p);return s;}
 if(action==='product_delete'){deleteProduct(s,p);return s;}
 if(action==='product_update'){saveProduct(s,p,true);return s;}
