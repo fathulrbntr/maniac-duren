@@ -1,4 +1,4 @@
-# Hasil audit — 4 Oktober 2026
+# Hasil audit — 5 Oktober 2026
 
 Acuan: ZIP full stack yang dikirim pengguna. Pemeriksaan mencakup kode website customer, katalog/menu, API konfigurasi, modul POS, SQL migration, dan alur stok. Pengujian yang dicantumkan di bawah dilakukan lokal; tidak mengakses akun Supabase/Vercel operasional.
 
@@ -11,6 +11,9 @@ Acuan: ZIP full stack yang dikirim pengguna. Pemeriksaan mencakup kode website c
 | Waste bisa dimasukkan dari dua form | Jalur input waste dipusatkan; riwayat lama dipertahankan |
 | Penerimaan bahan muncul terpisah dari penerimaan durian | Satu tombol Barang masuk dengan pilihan jenis barang |
 | Tanggal waste diketik tanpa panduan penerimaan | Pilihan tanggal berasal dari saldo batch store aktif |
+| Bagian hasil olahan terlalu panjang dan bukti foto terpisah | Tiga kartu ringkas menampilkan jumlah dan input foto per hasil |
+| Nama pengolah belum tercatat | Nama pengolah wajib tersimpan di snapshot waste |
+| Tanggal waste dapat diedit pengguna | Payload memakai tanggal hari ini dan input hanya-baca |
 | Form dapat ditinggalkan setelah diisi | Konfirmasi form transaksi/produksi/waste dan popup; filter pencarian tidak ikut memunculkan konfirmasi |
 | Simpan ulang setelah koneksi putus dapat membuat ID baru | Penyimpanan ID/payload retry per akun/tab, rekonsiliasi dengan riwayat, snapshot payload agar tidak berubah saat keranjang diedit |
 | Beberapa kontrol yang awalnya nonaktif bisa kembali aktif setelah simpan | Status disabled setiap kontrol dipulihkan sesuai keadaan awal |

@@ -1,11 +1,11 @@
-# Maniac Duren — hasil audit alur, update 07
+# Maniac Duren — hasil audit alur, update 08
 
 Website customer di `/`, menu di `/menu/`, POS di `/pos/`.
 Paket ini berdasarkan ZIP proyek yang dikirim, bukan versi website lama.
 
-**Database yang sudah sampai update 06:** jalankan hanya `database/007-flow-audit.sql` dengan nama query **update_07_flow_audit**. Setelah berhasil, deploy kode paket ini. Jangan menjalankan ulang migration 001–006 atau `pos.sql` pada database aktif.
+**Database yang sudah sampai update 06:** jalankan `database/007-flow-audit.sql` dengan nama query **update_07_flow_audit**, lalu `database/008-waste-output-proof.sql` dengan nama query **update_08_waste_output_proof**. Setelah keduanya berhasil, deploy kode paket ini. Jangan menjalankan ulang migration 001–006 atau `pos.sql` pada database aktif.
 
-**Database baru/kosong:** gunakan `database/pos.sql`, lalu ikuti pendaftaran staff dan konfigurasi di `POS-SETUP.md`. File ini sudah mencakup update 01–07. Jangan menjalankan migration lama lagi sesudahnya.
+**Database baru/kosong:** gunakan `database/pos.sql`, lalu ikuti pendaftaran staff dan konfigurasi di `POS-SETUP.md`. File ini sudah mencakup update 01–08. Jangan menjalankan migration lama lagi sesudahnya.
 
 - Panduan pemasangan: [UPDATE.md](UPDATE.md)
 - Alur singkat pengguna: [docs/ALUR-PENGGUNA.md](docs/ALUR-PENGGUNA.md)

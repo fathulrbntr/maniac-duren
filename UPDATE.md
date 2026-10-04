@@ -4,10 +4,11 @@
 
 1. Ekstrak paket dan salin isinya ke folder repository Maniac Duren yang Anda gunakan. Pertahankan konfigurasi lokal dan folder Git repository tersebut.
 2. Di Supabase SQL Editor, buat query bernama **update_07_flow_audit**. Tempel seluruh isi `database/007-flow-audit.sql`, lalu Run. Ini untuk database yang sudah menjalankan update 01–06.
-3. Setelah SQL berhasil, commit dan push perubahan kode ke repository Vercel yang sama. Migration mempertahankan tabel, transaksi, stok, dan foto yang sudah ada.
-4. Sesudah deployment selesai, muat ulang `/pos/` dan login. Cek store aktif, saldo stok, riwayat waste dan tombol Lihat bukti.
+3. Buat query berikutnya bernama **update_08_waste_output_proof**. Tempel seluruh isi `database/008-waste-output-proof.sql`, lalu Run. Update ini menambahkan nama pengolah dan bukti foto per hasil olahan.
+4. Setelah SQL berhasil, commit dan push perubahan kode ke repository Vercel yang sama. Migration mempertahankan tabel, transaksi, stok, dan foto yang sudah ada.
+5. Sesudah deployment selesai, muat ulang `/pos/` dan login. Cek store aktif, saldo stok, riwayat waste dan tombol Lihat bukti.
 
-**Jangan menjalankan `database/pos.sql` atau mengulang migration lama pada database aktif.** `pos.sql` khusus instalasi baru dan sudah memuat versi terbaru. Jika migration 06 belum pernah dijalankan, jalankan migration yang belum terpasang secara urut sebelum 07.
+**Jangan menjalankan `database/pos.sql` atau mengulang migration lama pada database aktif.** `pos.sql` khusus instalasi baru dan sudah memuat versi terbaru. Jika migration 06 belum pernah dijalankan, jalankan migration yang belum terpasang secara urut sebelum 07, lalu 08.
 
 ## Perubahan yang terlihat
 
@@ -15,6 +16,8 @@
 - `Create Product` dinamai **Produksi** untuk membedakannya dari tambah master produk.
 - Barang masuk berada di satu pintu: pilih durian utuh atau bahan/produk satuan.
 - Waste hanya dicatat di **Waste & Olahan**. Transfer/pemakaian tidak lagi menawarkan input waste kedua. Riwayat waste lama masih terlihat.
+- Hasil olahan ditampilkan sebagai tiga kartu ringkas: Durpas 500 gr, Durpas 1 kg, dan Coral. Masing-masing hanya meminta jumlah dan bukti foto.
+- Tanggal barang masuk memakai kalender. Tanggal waste otomatis mengikuti hari ini dan tidak dapat diedit. Nama pengolah wajib diisi.
 - Tanggal masuk waste dipilih dari penerimaan yang mempunyai saldo di store aktif.
 - Konfirmasi saat meninggalkan form berisi data, dan sebelum mencatat waste total tanpa hasil olahan.
 - Bukti waste diambil ketika dibuka; foto tidak dikirim ulang bersama seluruh stok pada setiap transaksi.

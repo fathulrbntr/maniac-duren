@@ -217,6 +217,9 @@ end $$;
 -- 007-flow-audit.sql
 -- Audit alur: jalankan setelah update 06.
 
+-- 008-waste-output-proof.sql
+-- Update 08: bukti foto per hasil olahan dan nama pengolah.
+
 -- Fungsi versi terakhir
 create or replace function public.pos_positive(value text) returns numeric language plpgsql immutable set search_path='' as $$
 begin
@@ -229,7 +232,7 @@ create or replace function public.pos_read() returns jsonb language plpgsql secu
 begin
  if auth.uid() is null or not exists(select 1 from public.md_pos_staff where user_id=auth.uid()) then raise exception 'Akun tidak memiliki akses POS'; end if;
  return jsonb_build_object(
- 'wasteRuns',coalesce((select jsonb_agg((snapshot-'evidence')||jsonb_build_object('id',id,'storeId',store_id,'sourceLotId',source_lot_id,'hasEvidence',(coalesce(snapshot->'evidence'->>'reject','')<>'' or coalesce(snapshot->'evidence'->>'processed','')<>''),'date',waste_date,'voided',voided,'voidReason',void_reason,'voidedAt',voided_at,'createdAt',created_at) order by created_at,id) from public.md_pos_waste_runs),'[]'::jsonb),
+ 'wasteRuns',coalesce((select jsonb_agg((snapshot-'evidence')||jsonb_build_object('id',id,'storeId',store_id,'sourceLotId',source_lot_id,'hasEvidence',(coalesce(snapshot->'evidence'->>'reject','')<>'' or coalesce(snapshot->'evidence'->>'processed','')<>'' or coalesce(snapshot->'evidence'->>'durpas500','')<>'' or coalesce(snapshot->'evidence'->>'durpas1000','')<>'' or coalesce(snapshot->'evidence'->>'coral','')<>''),'date',waste_date,'voided',voided,'voidReason',void_reason,'voidedAt',voided_at,'createdAt',created_at) order by created_at,id) from public.md_pos_waste_runs),'[]'::jsonb),
  'stockAdjustments',coalesce((select jsonb_agg(jsonb_build_object('id',id,'productId',product_id,'storeId',store_id,'date',adjustment_date,'reason',reason,'before',before_qty,'after',after_qty,'changes',changes) order by created_at,id) from public.md_pos_stock_adjustments),'[]'::jsonb),
  'recipes',coalesce((select jsonb_agg(jsonb_build_object('id',r.id,'name',r.name,'outputId',r.output_id,'yieldQty',r.yield_qty,'version',r.version,'ingredients',coalesce((select jsonb_agg(jsonb_build_object('productId',i.product_id,'qty',i.qty) order by i.product_id) from public.md_pos_recipe_items i where i.recipe_id=r.id),'[]'::jsonb)) order by r.name) from public.md_pos_recipes r),'[]'::jsonb),
  'unitLots',coalesce((select jsonb_agg(jsonb_build_object('id',id,'productId',product_id,'storeId',store_id,'unit',unit,'receivedQty',received_qty,'qty',qty,'date',received_date,'expiry',expiry,'kind',kind,'supplierId',supplier_id,'note',note) order by received_date,id) from public.md_pos_unit_lots),'[]'::jsonb),
@@ -590,17 +593,18 @@ end $$;
 
 create or replace function public.pos_waste_action(action text,payload jsonb) returns void language plpgsql set search_path='' as $$
 declare
- v_evidence jsonb;v_id uuid:=(payload->>'id')::uuid;v_store uuid;v_date date;v_received date;v_kg numeric;v_pieces numeric;v_reason text;
+ v_evidence jsonb;v_processor text;v_id uuid:=(payload->>'id')::uuid;v_store uuid;v_date date;v_received date;v_kg numeric;v_pieces numeric;v_reason text;
  v_source public.md_pos_lots%rowtype;v_product public.md_pos_products%rowtype;v_output public.md_pos_products%rowtype;
  v_run public.md_pos_waste_runs%rowtype;v_lot public.md_pos_unit_lots%rowtype;
  v_spec record;v_line jsonb;v_qty numeric;v_weight numeric;v_total numeric:=0;v_outputs jsonb:='[]';v_seen uuid[]:='{}';v_lot_ids uuid[]:='{}';v_lot_id uuid;v_expiry date;
 begin
  if action='waste_process' then
   if exists(select 1 from public.md_pos_waste_runs where id=v_id) then return; end if;
-  v_evidence:=jsonb_build_object('reject',public.pos_waste_photo(payload->'evidence'->>'reject'),'processed',public.pos_waste_photo(payload->'evidence'->>'processed'));
-  v_store:=(payload->>'storeId')::uuid;v_date:=(payload->>'date')::date;v_received:=(payload->>'receivedDate')::date;v_reason:=btrim(payload->>'reason');
+  v_evidence:=jsonb_build_object('reject',public.pos_waste_photo(payload->'evidence'->>'reject'),'processed',public.pos_waste_photo(payload->'evidence'->>'processed'),'durpas500',public.pos_waste_photo(payload->'evidence'->>'durpas500'),'durpas1000',public.pos_waste_photo(payload->'evidence'->>'durpas1000'),'coral',public.pos_waste_photo(payload->'evidence'->>'coral'));
+  v_store:=(payload->>'storeId')::uuid;v_date:=(payload->>'date')::date;v_received:=(payload->>'receivedDate')::date;v_reason:=btrim(payload->>'reason');v_processor:=btrim(payload->>'processedBy');
   if v_date is null or v_received is null or v_date<v_received or v_date>(now() at time zone 'Asia/Jakarta')::date then raise exception 'Tanggal waste harus sejak barang masuk sampai hari ini'; end if;
   if v_reason is null or length(v_reason) not between 1 and 300 then raise exception 'Alasan waste wajib, maksimal 300 karakter'; end if;
+  if v_processor is null or length(v_processor) not between 1 and 100 then raise exception 'Nama pengolah wajib, maksimal 100 karakter'; end if;
   select * into v_source from public.md_pos_lots where id=(payload->>'sourceLotId')::uuid and store_id=v_store and received_date=v_received for update;
   if not found then raise exception 'Pilih batch sesuai tanggal barang masuk dan store'; end if;
   select * into v_product from public.md_pos_products where id=v_source.product_id;
@@ -630,7 +634,7 @@ begin
    values((v_line->>'lotId')::uuid,(v_line->>'productId')::uuid,v_store,v_line->>'unit',(v_line->>'qty')::numeric,(v_line->>'qty')::numeric,v_date,nullif(v_line->>'expiry','')::date,'waste',v_source.supplier_id,'Hasil waste '||v_id::text,auth.uid());
   end loop;
   insert into public.md_pos_waste_runs(id,store_id,source_lot_id,waste_date,snapshot,created_by) values(v_id,v_store,v_source.id,v_date,
-   jsonb_build_object('sourceProductId',v_product.id,'sourceName',v_product.name,'supplierId',v_source.supplier_id,'supplierName',(select name from public.md_pos_suppliers where id=v_source.supplier_id),'receivedDate',v_received,'kg',v_kg,'pieces',v_pieces,'outputKg',v_total,'lossKg',v_kg-v_total,'outputs',v_outputs,'reason',v_reason,'evidence',v_evidence),auth.uid());
+   jsonb_build_object('sourceProductId',v_product.id,'sourceName',v_product.name,'supplierId',v_source.supplier_id,'supplierName',(select name from public.md_pos_suppliers where id=v_source.supplier_id),'receivedDate',v_received,'kg',v_kg,'pieces',v_pieces,'outputKg',v_total,'lossKg',v_kg-v_total,'outputs',v_outputs,'reason',v_reason,'processedBy',v_processor,'evidence',v_evidence),auth.uid());
  elsif action='waste_void' then
   select * into v_run from public.md_pos_waste_runs where id=(payload->>'wasteId')::uuid for update;
   if not found then raise exception 'Pencatatan waste tidak ditemukan'; end if;

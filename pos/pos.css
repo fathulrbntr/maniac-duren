@@ -437,6 +437,47 @@ input[type="number"] {
   grid-template-columns: 1fr 1fr;
   gap: 0 18px;
 }
+.waste-output-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+.waste-output-card {
+  min-width: 0;
+  margin: 0;
+  padding: 14px;
+}
+.waste-output-card legend {
+  font-weight: 700;
+}
+.waste-output-card .field {
+  margin-top: 10px;
+}
+.waste-output-card input[type="file"] {
+  padding: 8px;
+  font-size: 12px;
+}
+.waste-output-card small {
+  color: var(--muted);
+  line-height: 1.35;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+@media (max-width: 780px) {
+  .waste-output-grid {
+    grid-template-columns: 1fr;
+  }
+}
 .filters {
   display: flex;
   gap: 14px;

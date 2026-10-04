@@ -1,5 +1,5 @@
-UPDATE 07 — MULAI DARI README.md / UPDATE.md
-Database sudah sampai update 06: jalankan database/007-flow-audit.sql dengan nama query update_07_flow_audit, lalu deploy kode.
-Database baru: gunakan database/pos.sql yang sudah mencakup update 01–07. Jangan jalankan migration lama lagi setelah instalasi baru.
+UPDATE 08 — MULAI DARI README.md / UPDATE.md
+Database sudah sampai update 06: jalankan database/007-flow-audit.sql dengan nama query update_07_flow_audit, lalu database/008-waste-output-proof.sql dengan nama query update_08_waste_output_proof.
+Database baru: gunakan database/pos.sql yang sudah mencakup update 01–08. Jangan jalankan migration lama lagi setelah instalasi baru.
 Panduan alur: docs/ALUR-PENGGUNA.md
 Temuan dan pengujian: docs/HASIL-AUDIT.md

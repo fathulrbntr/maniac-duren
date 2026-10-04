@@ -21,6 +21,7 @@ export function wastePlan(s, p) {
   if (!s.stores.some((x) => x.id === p.storeId)) throw Error("Pilih store");
   validDate(p.date);
   validDate(p.receivedDate);
+  if (!p.processedBy?.trim() || p.processedBy.trim().length > 100) throw Error("Nama pengolah wajib, maksimal 100 karakter");
   if (p.date > today() || p.date < p.receivedDate)
     throw Error("Tanggal waste harus sejak barang masuk sampai hari ini");
   const lot = s.lots.find(
@@ -103,10 +104,8 @@ export function wastePlan(s, p) {
     outputKg,
     lossKg: round(kg - outputKg),
     outputs,
-    evidence: {
-      reject: photoValue(p.evidence?.reject),
-      processed: photoValue(p.evidence?.processed),
-    },
+    evidence: Object.fromEntries(["reject", "processed", "durpas500", "durpas1000", "coral"].map((key) => [key, photoValue(p.evidence?.[key])])),
+    processedBy: p.processedBy.trim(),
     reason: p.reason.trim(),
   };
 }
