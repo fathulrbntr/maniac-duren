@@ -6,8 +6,8 @@ README.md
 UPDATE.md
 UPDATE.txt
 api/pos-config.js
-database/007-flow-audit.sql
-database/archive/000-initial.sql
+database/sections/flow-audit.sql
+database/sections/base.sql
 database/pos.sql
 docs/ALUR-PENGGUNA.md
 docs/HASIL-AUDIT.md

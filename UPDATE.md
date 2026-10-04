@@ -1,14 +1,14 @@
-# Update 07 — alur ringkas dan audit stok
+# Pembaruan database — alur ringkas dan audit stok
 
 ## Cara memasang pada proyek yang sudah berjalan
 
 1. Ekstrak paket dan salin isinya ke folder repository Maniac Duren yang Anda gunakan. Pertahankan konfigurasi lokal dan folder Git repository tersebut.
-2. Di Supabase SQL Editor, buat query bernama **update_07_flow_audit**. Tempel seluruh isi `database/007-flow-audit.sql`, lalu Run. Ini untuk database yang sudah menjalankan update 01–06.
-3. Buat query berikutnya bernama **update_08_waste_output_proof**. Tempel seluruh isi `database/008-waste-output-proof.sql`, lalu Run. Update ini menambahkan nama pengolah dan bukti foto per hasil olahan.
+2. Untuk database baru, tempel seluruh isi `database/pos.sql` ke satu query Supabase lalu Run.
+3. Untuk database yang sudah aktif, jalankan hanya migration perubahan yang belum terpasang. Jangan menjalankan file di `database/sections/` satu per satu; file tersebut adalah sumber build.
 4. Setelah SQL berhasil, commit dan push perubahan kode ke repository Vercel yang sama. Migration mempertahankan tabel, transaksi, stok, dan foto yang sudah ada.
 5. Sesudah deployment selesai, muat ulang `/pos/` dan login. Cek store aktif, saldo stok, riwayat waste dan tombol Lihat bukti.
 
-**Jangan menjalankan `database/pos.sql` atau mengulang migration lama pada database aktif.** `pos.sql` khusus instalasi baru dan sudah memuat versi terbaru. Jika migration 06 belum pernah dijalankan, jalankan migration yang belum terpasang secara urut sebelum 07, lalu 08.
+**Jangan menjalankan `database/pos.sql` pada database aktif.** File itu khusus instalasi baru. Detail pengelompokan sumber SQL ada di [database/README.md](database/README.md).
 
 ## Perubahan yang terlihat
 

@@ -5,12 +5,18 @@ const base = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../database",
 );
+// Sumber instalasi baru disusun berdasarkan domain, bukan urutan nomor.
+// File di sections hanya bahan build; pengguna menjalankan database/pos.sql.
 const files = [
-  "archive/000-initial.sql",
-  ...fs
-    .readdirSync(base)
-    .filter((name) => /^\d{3}-.+\.sql$/.test(name))
-    .sort(),
+  "sections/base.sql",
+  "sections/master-contact.sql",
+  "sections/product-catalog.sql",
+  "sections/recipes-production.sql",
+  "sections/product-details.sql",
+  "sections/waste-processing.sql",
+  "sections/waste-evidence.sql",
+  "sections/flow-audit.sql",
+  "sections/waste-output-proof.sql",
 ];
 const functions = new Map(),
   permissions = new Set();
@@ -32,7 +38,11 @@ for (const name of files) {
     .replace(/^begin;\s*$/gm, "")
     .replace(/^commit;\s*$/gm, "")
     .replace(/^notify pgrst[^;]*;\s*$/gm, "");
-  schema += "\n-- " + name + "\n" + sql;
+  schema +=
+    "\n-- Bagian: " +
+    name.replace(/^sections\//, "").replace(/\.sql$/, "") +
+    "\n" +
+    sql;
 }
 const result =
   "-- GENERATED: node scripts/build-database.mjs\n-- Install baru saja. Database aktif: jalankan migration berikutnya, bukan file ini.\nbegin;\n" +

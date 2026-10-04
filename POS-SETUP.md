@@ -1,4 +1,4 @@
-> **Update 07:** Untuk proyek yang sudah aktif, gunakan `UPDATE.md`; jalankan hanya migration yang belum terpasang. `database/pos.sql` kini khusus instalasi baru dan mencakup update 01–07. Panduan alur terkini ada di `docs/ALUR-PENGGUNA.md`.
+> **Database:** untuk instalasi baru gunakan `database/pos.sql`. Bagian sumbernya berada di `database/sections/` dan tidak dijalankan satu per satu. Panduan alur terkini ada di `docs/ALUR-PENGGUNA.md`.
 
 # Maniac Duren POS
 

@@ -6,7 +6,7 @@ Acuan: ZIP full stack yang dikirim pengguna. Pemeriksaan mencakup kode website c
 
 | Temuan | Perbaikan |
 |---|---|
-| Instalasi `pos.sql` lama belum mencakup fitur terbaru | Bootstrap terbaru dibuat dari arsip awal + migration, menyertakan definisi fungsi terakhir; diuji instalasi baru dan upgrade |
+| Instalasi `pos.sql` lama belum mencakup fitur terbaru | Bootstrap terbaru dibangun dari bagian SQL bernama di `database/sections/`, menyertakan definisi fungsi terakhir; diuji instalasi baru dan upgrade |
 | Create Product mudah tertukar dengan tambah master produk | Menu dinamai Produksi, navigasi dibagi tiga kelompok |
 | Waste bisa dimasukkan dari dua form | Jalur input waste dipusatkan; riwayat lama dipertahankan |
 | Penerimaan bahan muncul terpisah dari penerimaan durian | Satu tombol Barang masuk dengan pilihan jenis barang |

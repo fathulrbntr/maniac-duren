@@ -4,10 +4,17 @@ import fs from "node:fs";
 import { randomUUID as id } from "node:crypto";
 import { PGlite } from "@electric-sql/pglite";
 const root = new URL("../database/", import.meta.url);
-const migrations = fs
-  .readdirSync(root)
-  .filter((x) => /^\d{3}-.+\.sql$/.test(x))
-  .sort();
+const sections = [
+  "sections/base.sql",
+  "sections/master-contact.sql",
+  "sections/product-catalog.sql",
+  "sections/recipes-production.sql",
+  "sections/product-details.sql",
+  "sections/waste-processing.sql",
+  "sections/waste-evidence.sql",
+  "sections/flow-audit.sql",
+  "sections/waste-output-proof.sql",
+];
 for (const mode of ["fresh", "upgrade"]) {
   const db = new PGlite();
   try {
@@ -16,7 +23,7 @@ for (const mode of ["fresh", "upgrade"]) {
     );
     for (const file of mode === "fresh"
       ? ["pos.sql"]
-      : ["archive/000-initial.sql", ...migrations])
+      : sections)
       await db.exec(fs.readFileSync(new URL(file, root), "utf8"));
     await assert.rejects(db.query("select public.pos_read()"), /akses POS/);
     const user = id(),

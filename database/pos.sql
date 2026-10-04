@@ -2,7 +2,7 @@
 -- Install baru saja. Database aktif: jalankan migration berikutnya, bukan file ini.
 begin;
 
--- archive/000-initial.sql
+-- Bagian: base
 -- Jalankan di SQL Editor Supabase. Tidak mengubah tabel menu/customer.
 
 create table if not exists public.md_pos_staff(user_id uuid primary key references auth.users(id) on delete cascade);
@@ -31,15 +31,15 @@ revoke all on public.md_pos_staff,public.md_pos_stores,public.md_pos_suppliers,p
 -- Setelah membuat akun email/password di Supabase Authentication, jalankan:
 -- insert into public.md_pos_staff(user_id) select id from auth.users where email='EMAIL_ADMIN_ANDA';
 
--- 001-master-contact.sql
--- Jalankan sekali untuk memperbarui POS yang sudah terpasang. Aman dijalankan ulang.
+-- Bagian: master-contact
+-- Bagian master kontak, store, dan supplier.
 
 alter table public.md_pos_stores add column if not exists location text not null default '';
 alter table public.md_pos_suppliers add column if not exists phone text not null default '';
 alter table public.md_pos_suppliers add column if not exists address text not null default '';
 
--- 002-product-catalog.sql
--- Update 02: master produk dan bahan. Aman dijalankan ulang.
+-- Bagian: product-catalog
+-- Bagian katalog produk, kategori, satuan, dan harga.
 
 alter table public.md_pos_stores add column if not exists location text not null default '';
 alter table public.md_pos_suppliers add column if not exists phone text not null default '';
@@ -66,8 +66,8 @@ do $$ begin
  end if;
 end $$;
 
--- 003-recipes-production.sql
--- Update 03: resep, stok bahan, dan produksi atomik.
+-- Bagian: recipes-production
+-- Bagian resep, stok bahan, dan produksi atomik.
 
 alter table public.md_pos_stores add column if not exists location text not null default '';
 alter table public.md_pos_suppliers add column if not exists phone text not null default '';
@@ -119,8 +119,8 @@ alter table public.md_pos_unit_lots enable row level security;
 alter table public.md_pos_productions enable row level security;
 revoke all on public.md_pos_recipes,public.md_pos_recipe_items,public.md_pos_unit_lots,public.md_pos_productions from public,anon,authenticated;
 
--- 004-product-details.sql
--- Update 04: jalankan setelah Update 03.
+-- Bagian: product-details
+-- Bagian detail produk dan penyesuaian stok.
 
 alter table public.md_pos_products add column if not exists variant text not null default '';
 alter table public.md_pos_products add column if not exists barcode text not null default '';
@@ -142,8 +142,8 @@ create table if not exists public.md_pos_stock_adjustments(
 alter table public.md_pos_stock_adjustments enable row level security;
 revoke all on public.md_pos_stock_adjustments from public,anon,authenticated;
 
--- 005-waste-processing.sql
--- Update 05: jalankan setelah Update 04.
+-- Bagian: waste-processing
+-- Bagian waste, olahan, dan validasi katalog.
 
 alter table public.md_pos_products drop constraint if exists md_pos_catalog_valid;
 do $$ begin
@@ -173,8 +173,8 @@ create index if not exists md_pos_waste_store_date on public.md_pos_waste_runs(s
 alter table public.md_pos_waste_runs enable row level security;
 revoke all on public.md_pos_waste_runs from public,anon,authenticated;
 
--- 006-waste-evidence.sql
--- Update 06: master hasil waste dan bukti foto. Memerlukan Update 05.
+-- Bagian: waste-evidence
+-- Bagian bukti foto dan riwayat waste.
 
 alter table public.md_pos_products drop constraint if exists md_pos_catalog_valid;
 do $$ begin
@@ -214,11 +214,11 @@ begin
  end loop;
 end $$;
 
--- 007-flow-audit.sql
--- Audit alur: jalankan setelah update 06.
+-- Bagian: flow-audit
+-- Bagian audit alur stok dan pembacaan riwayat.
 
--- 008-waste-output-proof.sql
--- Update 08: bukti foto per hasil olahan dan nama pengolah.
+-- Bagian: waste-output-proof
+-- Bagian bukti foto per hasil olahan dan nama pengolah.
 
 -- Fungsi versi terakhir
 create or replace function public.pos_positive(value text) returns numeric language plpgsql immutable set search_path='' as $$
