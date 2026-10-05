@@ -16,6 +16,7 @@ for(const install of ['fresh','upgrade']){
   await db.exec(fs.readFileSync('database/009-integrated-operations.sql','utf8'));
   await db.exec(fs.readFileSync('database/011-order-stock-kitchen.sql','utf8'));
   await db.exec(fs.readFileSync('database/012-pay-first-kitchen.sql','utf8'));
+ await db.exec(fs.readFileSync('database/013-kitchen-recipes-only.sql','utf8'));
  }else{
   await db.exec(sql);
   await db.query('insert into auth.users values($1,$2)',[owner,'owner@test.local']);

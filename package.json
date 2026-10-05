@@ -7,7 +7,7 @@
     "test:browser": "node tests/browser.mjs",
     "db:build": "node scripts/build-database.mjs",
     "test:operations": "node tests/operations.test.mjs",
-    "test:kitchen": "node tests/order-stock.test.mjs && node tests/kitchen-orders.test.mjs",
+    "test:kitchen": "node tests/order-stock.test.mjs && node tests/kitchen-orders.test.mjs && node tests/direct-orders.test.mjs",
     "test:kitchen:browser": "node tests/kitchen-browser.cjs"
   },
   "devDependencies": {

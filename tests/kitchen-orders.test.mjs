@@ -16,6 +16,7 @@ for(const install of ['fresh','upgrade']){
   await db.exec(fs.readFileSync('database/009-integrated-operations.sql','utf8'));
   await db.exec(fs.readFileSync('database/011-order-stock-kitchen.sql','utf8'));
   await db.exec(fs.readFileSync('database/012-pay-first-kitchen.sql','utf8'));
+ await db.exec(fs.readFileSync('database/013-kitchen-recipes-only.sql','utf8'));
  }else{
   await db.exec(sql);
   await db.query('insert into auth.users values($1,$2)',[owner,'owner@test.local']);
@@ -91,8 +92,10 @@ for(const install of ['fresh','upgrade']){
  assert((await read()).unitLots.find(l=>l.id===rlot).qty>0);
  await db.exec(fs.readFileSync('database/011-order-stock-kitchen.sql','utf8'));
   await db.exec(fs.readFileSync('database/012-pay-first-kitchen.sql','utf8'));
+ await db.exec(fs.readFileSync('database/013-kitchen-recipes-only.sql','utf8'));
  assert.equal((await read()).orderStockVersion,12);
  await db.exec(fs.readFileSync('database/012-pay-first-kitchen.sql','utf8'));
+ await db.exec(fs.readFileSync('database/013-kitchen-recipes-only.sql','utf8'));
  assert.equal((await read()).orders.find(o=>o.id===second).payment_status,'refunded');
  const cancel={id:id(),orderId:replacement,date,reason:'Salah buat',refundConfirmed:true};
  await mut('order_cancel',cancel);await mut('order_cancel',cancel);
@@ -105,7 +108,7 @@ for(const install of ['fresh','upgrade']){
  const legacy=id();await db.query("insert into public.md_pos_order_runs(id,store_id,business_date,status,lines,total) values($1,$2,$3,'queued','[]',100)",[legacy,store,date]);
  await assert.rejects(mut('order_start',{id:id(),orderId:legacy,date}),/belum lunas/);
  await mut('order_pay',{id:id(),orderId:legacy,date,paid:100,payment:'QRIS'});
- assert.equal((await read()).orders.find(o=>o.id===legacy).status,'queued');
+ assert.equal((await read()).orders.find(o=>o.id===legacy).status,'paid');
  assert.equal((await read()).orders.find(o=>o.id===legacy).payment_status,'paid');
  const unpaid=id();await db.query("insert into public.md_pos_order_runs(id,store_id,business_date,status,lines,total) values($1,$2,$3,'queued','[]',100)",[unpaid,store,date]);
  await mut('order_cancel',{id:id(),orderId:unpaid,date,reason:'Tidak jadi'});
