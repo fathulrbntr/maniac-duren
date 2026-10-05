@@ -1,3 +1,4 @@
+import {inventoryPanel,bindInventory} from "./inventory-ui.mjs?v=14";
 import {opsPages,opsPage,bindOps,clearOrderDraft} from './operations-ui.mjs?v=14';
 import {
   sections,
@@ -33,7 +34,8 @@ import {
   demoState,
 } from "./core.mjs?v=9";
 import { isLegacyStock } from "./catalog.mjs?v=9";
-import { catalogPanel, productDialog } from "./catalog-ui.mjs?v=9";
+import { catalogPanel, productDialog } from "./catalog-ui.mjs?v=14";
+const stockFilter = {};
 const catalogFilter = { query: "", category: "", itemType: "" };
 let stateRevision=0, polling=false, soundEnabled=false, audioContext;
 const seenKitchen=new Map();
@@ -231,7 +233,7 @@ function stat(label, value, note) {
   return `<div class="stat"><small>${label}</small><strong>${value}</strong><span>${note}</span></div>`;
 }
 function shell(body) {
-  return `<div class="shell"><aside class="sidebar"><div><div class="brand"><img src="logo.png" alt="Maniac Duren"></div><div class="brand-sub">OPERATIONS / POS</div></div><div class="sidebar-store"><label for="active-store">TOKO AKTIF</label><div class="store-select-wrap">${icon("stores")}<select id="active-store" aria-label="Toko aktif" title="${e(name("stores", store))}">${options("stores", store)}</select></div></div><nav class="nav" aria-label="Navigasi POS">${navigation(title, view, icon, state.access)}</nav><div class="sidebar-foot">${mode === "demo" ? "DATA CONTOH · DEMO" : "AKSES ADMIN"}<br>Fresh. Creamy. Berkualitas.<br><a href="/" target="_blank" rel="noopener">Website customer</a></div></aside><main><header class="topbar"><div><div class="breadcrumb">Maniac Duren / ${sections.find((section) => section.pages.includes(view))?.label || "Operasional"}</div><h1>${title[view]}</h1></div><div class="toolbar"><span class="tag ${mode === "demo" ? "demo" : ""}">${mode === "demo" ? "MODE DEMO" : "DATABASE AKTIF"}</span><button id="logout" class="small">Keluar</button></div></header>${body}<p class="page-foot">${mode === "demo" ? "Semua angka adalah data contoh." : "Stok dan penjualan tersimpan di database bersama."} Berat kg dicatat pada setiap penjualan, termasuk penjualan per butir.</p></main></div>`;
+  return `<div class="shell ${["products","stock"].includes(view)?"inventory-shell":""}"><aside class="sidebar"><div><div class="brand"><img src="logo.png" alt="Maniac Duren"></div><div class="brand-sub">OPERATIONS / POS</div></div><div class="sidebar-store"><label for="active-store">TOKO AKTIF</label><div class="store-select-wrap">${icon("stores")}<select id="active-store" aria-label="Toko aktif" title="${e(name("stores", store))}">${options("stores", store)}</select></div></div><nav class="nav" aria-label="Navigasi POS">${navigation(title, view, icon, state.access)}</nav><div class="sidebar-foot">${mode === "demo" ? "DATA CONTOH · DEMO" : "AKSES ADMIN"}<br>Fresh. Creamy. Berkualitas.<br><a href="/" target="_blank" rel="noopener">Website customer</a></div></aside><main><header class="topbar"><div><div class="breadcrumb">Maniac Duren / ${sections.find((section) => section.pages.includes(view))?.label || "Operasional"}</div><h1>${title[view]}</h1></div><div class="toolbar"><span class="tag ${mode === "demo" ? "demo" : ""}">${mode === "demo" ? "MODE DEMO" : "DATABASE AKTIF"}</span><button id="logout" class="small">Keluar</button></div></header>${body}<p class="page-foot">${mode === "demo" ? "Semua angka adalah data contoh." : "Stok dan penjualan tersimpan di database bersama."} Berat kg dicatat pada setiap penjualan, termasuk penjualan per butir.</p></main></div>`;
 }
 function dashboard() {
   const rows = saleRows(state, { from: today(), to: today(), store }),
@@ -300,9 +302,10 @@ function cashier() {
     '<div class="empty">Tambah produk dan barang masuk dahulu.</div>'
   }</div></section><aside class="panel receipt"><div class="header-row"><h3>Pesanan</h3><span class="tag">${cart.length} item</span></div>${cart.map((l, i) => `<div class="cart-item"><div class="cart-line"><b>${e(name("products", l.productId))}</b><button data-remove="${i}" aria-label="Hapus ${e(name("products", l.productId))}">×</button></div><div class="muted">${num(l.kg)} kg · ${l.pieces} butir · per ${l.unit === "KG" ? "kg" : "butir"}</div><div class="muted">${e(name("suppliers", l.supplierId))} · ${short(l.lotId)}</div><div style="text-align:right;margin-top:9px"><b>${money(l.total)}</b></div></div>`).join("") || '<div class="empty">Pilih produk untuk mulai.</div>'}<div class="total"><span>Total</span><span>${money(total)}</span></div><form id="checkout">${field("Tanggal penjualan", `<input type="date" name="date" value="${today()}" required>`)}${field("Metode pembayaran", '<select name="payment"><option>Tunai</option><option>QRIS</option><option>Transfer</option></select>')}${field("Nominal diterima (Rp)", `<input name="paid" type="number" min="${total}" step="any" value="${total || ""}" required>`)}<p class="muted" id="change">Kembalian ${money(0)}</p><button type="submit" class="primary full" ${cart.length ? "" : "disabled"}>Simpan transaksi</button></form></aside></div>`;
 }
-function stockPage() {
+function stockPage() {return inventoryPanel(state,store,stockFilter,"stock")+`<details class="inventory-history"><summary>Rincian penerimaan, asal barang & riwayat pergerakan</summary>${stockHistoryPage()}</details>`;}
+function stockHistoryPage() {
   const lots = state.lots.filter((l) => l.storeId === store);
-  return `<div class="intro"><div><h2>Stok ${e(name("stores", store))}</h2><div class="muted">Setiap penerimaan punya ID unik dan tanggal masuk.</div></div><div class="toolbar"><button id="movement" >Transfer / pemakaian</button><button class="primary" id="add-receipt">Barang masuk</button></div></div>${unitStockPanel(state, store)}<section class="panel">${inventoryTable(lots)}</section><section class="panel"><h3>Rincian asal barang</h3><div class="table-wrap"><table><thead><tr><th>ID / TANGGAL MASUK</th><th>PRODUK</th><th>SUPPLIER</th><th class="numeric">AWAL KG / BUTIR</th><th class="numeric">SISA KG / BUTIR</th><th>CATATAN</th></tr></thead><tbody>${lots.map((l) => `<tr><td><b>${short(l.id)}</b><small>${l.date}${l.sourceLotId ? " · transfer" : ""}</small></td><td>${e(name("products", l.productId))}</td><td>${e(name("suppliers", l.supplierId))}</td><td class="numeric">${num(l.receivedKg)} kg / ${l.receivedPieces}</td><td class="numeric"><b>${num(l.kg)} kg</b><small>${l.pieces} butir</small></td><td>${e(l.note || "—")}</td></tr>`).join("") || '<tr><td colspan="6" class="empty">Belum ada barang masuk.</td></tr>'}</tbody></table></div></section><section class="panel"><h3>Riwayat waste, pemakaian dapur & transfer</h3><div class="table-wrap"><table><thead><tr><th>TANGGAL</th><th>JENIS</th><th>PRODUK / SUPPLIER</th><th class="numeric">KG / BUTIR</th><th>CATATAN</th></tr></thead><tbody>${
+  return `${unitStockPanel(state, store)}<section class="panel">${inventoryTable(lots)}</section><section class="panel"><h3>Rincian asal barang</h3><div class="table-wrap"><table><thead><tr><th>ID / TANGGAL MASUK</th><th>PRODUK</th><th>SUPPLIER</th><th class="numeric">AWAL KG / BUTIR</th><th class="numeric">SISA KG / BUTIR</th><th>CATATAN</th></tr></thead><tbody>${lots.map((l) => `<tr><td><b>${short(l.id)}</b><small>${l.date}${l.sourceLotId ? " · transfer" : ""}</small></td><td>${e(name("products", l.productId))}</td><td>${e(name("suppliers", l.supplierId))}</td><td class="numeric">${num(l.receivedKg)} kg / ${l.receivedPieces}</td><td class="numeric"><b>${num(l.kg)} kg</b><small>${l.pieces} butir</small></td><td>${e(l.note || "—")}</td></tr>`).join("") || '<tr><td colspan="6" class="empty">Belum ada barang masuk.</td></tr>'}</tbody></table></div></section><section class="panel"><h3>Riwayat waste, pemakaian dapur & transfer</h3><div class="table-wrap"><table><thead><tr><th>TANGGAL</th><th>JENIS</th><th>PRODUK / SUPPLIER</th><th class="numeric">KG / BUTIR</th><th>CATATAN</th></tr></thead><tbody>${
     state.movements
       .filter((x) => x.storeId === store || x.toStoreId === store)
       .slice()
@@ -340,7 +343,7 @@ function reportPage() {
   }</section>`;
 }
 function productsPage() {
-  return `<div class="intro"><div><h2>Master Product</h2><p class="muted">Kelola produk, bahan, harga, foto, dan stok.</p></div>${mode === "demo" ? '<button id="reset-demo" class="danger">Reset data demo</button>' : ""}</div>${catalogPanel(state.products, catalogFilter, state, store)}`;
+  return catalogPanel(state.products,catalogFilter,state,store);
 }
 function directoryPage(kind) {
   const isStore = kind === "stores",
@@ -498,6 +501,7 @@ function render() {
     };
   }
   if (view === "stock") {
+    bindInventory(state,store,stockFilter,"stock",{modal});
     document.querySelector("#add-receipt").onclick = () => {
       const d = modal(
         "Barang masuk",
@@ -529,29 +533,7 @@ function render() {
     if (view === "products") {
       document.querySelector("#add-catalog-product").onclick = () =>
         productDialog({ state, store, modal, mutate, render, toast });
-      document.querySelectorAll("[data-edit-product]").forEach(
-        (b) =>
-          (b.onclick = () =>
-            productDialog({
-              product: state.products.find(
-                (p) => p.id === b.dataset.editProduct,
-              ),
-              state,
-              store,
-              modal,
-              mutate,
-              render,
-              toast,
-            })),
-      );
-      document.querySelector("#catalog-filter").onsubmit = (ev) => {
-        ev.preventDefault();
-        Object.assign(
-          catalogFilter,
-          Object.fromEntries(new FormData(ev.currentTarget)),
-        );
-        render();
-      };
+      bindInventory(state,store,catalogFilter,"products",{modal,edit:key=>productDialog({product:state.products.find(p=>p.id===key),state,store,modal,mutate,render,toast})});
     }
     document
       .querySelectorAll("[data-edit-kind]")
