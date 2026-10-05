@@ -64,13 +64,29 @@ const title = {
 };
 const paths = {
   dashboard: "M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z",
-  cashier: "M3 4h18v13H3z M7 21h10 M12 17v4",
-  stock: "M3 7l9-4 9 4-9 4z M3 7v10l9 4 9-4V7 M12 11v10",
+  orders: "M7 4H5v17l3-2 4 2 4-2 3 2V4h-2 M9 3h6v4H9z M8 11h8 M8 15h5",
+  cashier: "M4 3h16v13H4z M8 20h8 M12 16v4 M7 7h10 M7 11h4",
+  stock: "M3 7l9-4 9 4-9 4z M3 7v10l9 4 9-4V7 M12 11v10 M7 5l10 5",
+  sorting: "M4 5h10 M4 9h7 M4 13h4 M17 4v16 M13 16l4 4 4-4",
+  production: "M5 10h14v5a6 6 0 0 1-6 6h-2a6 6 0 0 1-6-6z M2 11h3 M19 11h3 M8 3v3 M12 2v4 M16 3v3",
+  waste: "M8 4l3-2 3 5 M11 2L6 10 M20 11l1 4-6 1 M21 15l-5-8 M11 21l-4-1 2-5 M7 20h9",
+  losses: "M3 5h18 M5 5l1 16h12l1-16 M9 5V2h6v3 M10 9v8 M14 9v8",
+  salesreport: "M5 3h14v18l-3-2-4 2-4-2-3 2z M8 7h8 M8 11h8 M8 15h3",
+  finance: "M3 6h18v14H3z M3 6l14-3v3 M15 11h6v5h-6z M17 13h1",
+  trace: "M5 3h10v6H5z M5 15h10v6H5z M10 9v6 M15 6h4v12h-4",
   reports: "M4 20V4 M4 20h17 M8 16v-5 M13 16V7 M18 16v-9",
+  employees: "M9 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8 M2 21v-3a6 6 0 0 1 12 0v3 M17 4a4 4 0 0 1 0 8 M18 15a5 5 0 0 1 4 5v1",
+  attendance: "M5 4h14v17H5z M8 2v4 M16 2v4 M5 9h14 M8 15l3 3 5-6",
+  guide: "M12 5c-3-2-7-2-10-1v16c3-1 7-1 10 1 3-2 7-2 10-1V4c-3-1-7-1-10 1z M12 5v16",
+  products: "M3 3h8l10 10-8 8L3 11z M7 7h.01",
+  recipes: "M4 3h13v18H4z M7 3v18 M10 7h4 M10 11h4 M10 15h3 M17 6h3v12h-3",
+  stores: "M3 9l2-6h14l2 6 M3 9v3a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0V9z M5 15v6h14v-6 M10 21v-5h4v5",
+  suppliers: "M2 5h12v12H2z M14 9h4l4 5v3h-8 M5 17a2 2 0 1 0 4 0 2 2 0 0 0-4 0 M16 17a2 2 0 1 0 4 0 2 2 0 0 0-4 0",
+  edit: "M14 4l6 6 M3 21l5-1L21 7l-5-5L3 15z",
   master: "M5 4h14v16H5z M8 8h8 M8 12h8 M8 16h5",
 };
 const icon = (k) =>
-  `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="${paths[k] || paths.master}"/></svg>`;
+  `<svg class="icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="${paths[k] || paths.master}"/></svg>`;
 const name = (kind, k) => state[kind].find((x) => x.id === k)?.name || "—";
 const short = (k) =>
   k.startsWith("demo") ? k.toUpperCase() : k.slice(0, 8).toUpperCase();
@@ -175,19 +191,7 @@ async function mutate(action, payload) {
   }
 }
 function login(message = "") {
-  app.innerHTML = `<div class="auth"><section class="auth-brand"><img src="logo.png" alt="Maniac Duren"><h1>Satu kasir.<br>Dua satuan stok.</h1><p>Penjualan per kilo atau per butir, stok setiap store, dan asal supplier dalam satu tempat.</p></section><section class="auth-form"><div><span class="tag">AREA ADMIN</span><h2 style="margin-top:20px">Masuk ke POS</h2><p class="muted">Kelola operasional Maniac Duren.</p>${config.configured ? "" : `<div class="notice">Database belum dihubungkan. Gunakan demo untuk mencoba alur kasir dan laporan dengan data contoh.</div>`}<form id="login-form">${field("Email admin", '<input name="email" type="email" required autocomplete="username" placeholder="Email yang terdaftar">')}${field("Password", '<input name="password" type="password" required autocomplete="current-password">')}<p class="error" id="login-error">${e(message)}</p><button class="primary full" type="submit" ${config.configured ? "" : "disabled"}>Masuk</button></form><div class="button-separator">ATAU COBA DENGAN DATA CONTOH</div><button class="full" id="demo-enter">Buka mode demo</button><p class="muted" style="margin-top:15px">Demo disimpan di browser ini. Data demo tidak masuk ke laporan operasional.</p><a class="muted" href="/">Kembali ke website customer</a></div></section></div>`;
-  document.querySelector("#demo-enter").onclick = () => {
-    mode = "demo";
-    setRetryScope("demo");
-    try {
-      state =
-        JSON.parse(localStorage.getItem("maniac-pos-demo-v1")) || demoState();
-    } catch {
-      state = demoState();
-    }
-    store = state.stores[0]?.id || "";
-    render();
-  };
+  app.innerHTML = `<div class="auth"><section class="auth-brand"><img src="logo.png" alt="Maniac Duren"><h1>Satu kasir.<br>Dua satuan stok.</h1><p>Penjualan per kilo atau per butir, stok setiap store, dan asal supplier dalam satu tempat.</p></section><section class="auth-form"><div><span class="tag">AREA ADMIN</span><h2 style="margin-top:20px">Masuk ke POS</h2><p class="muted">Kelola operasional Maniac Duren.</p>${config.configured ? "" : `<div class="notice">Database belum dihubungkan. Hubungi pengelola untuk mengaktifkan akses POS.</div>`}<form id="login-form">${field("Email admin", '<input name="email" type="email" required autocomplete="username" placeholder="Email yang terdaftar">')}${field("Password", '<input name="password" type="password" required autocomplete="current-password">')}<p class="error" id="login-error">${e(message)}</p><button class="primary full" type="submit" ${config.configured ? "" : "disabled"}>Masuk</button></form><a class="muted" href="/">Kembali ke website customer</a></div></section></div>`;
   document.querySelector("#login-form").onsubmit = async (ev) => {
     ev.preventDefault();
     const form = ev.currentTarget,
@@ -221,7 +225,7 @@ function stat(label, value, note) {
   return `<div class="stat"><small>${label}</small><strong>${value}</strong><span>${note}</span></div>`;
 }
 function shell(body) {
-  return `<div class="shell"><aside class="sidebar"><div><div class="brand"><img src="logo.png" alt="Maniac Duren"></div><div class="brand-sub">OPERATIONS / POS</div></div><nav class="nav" aria-label="Navigasi POS">${navigation(title, view, icon, state.access)}</nav><div class="sidebar-foot">${mode === "demo" ? "DATA CONTOH · DEMO" : "AKSES ADMIN"}<br>Fresh. Creamy. Berkualitas.<br><a href="/" target="_blank" rel="noopener">Website customer</a></div></aside><main><header class="topbar"><div><div class="breadcrumb">Maniac Duren / ${sections.find((section) => section.pages.includes(view))?.label || "Operasional"}</div><h1>${title[view]}</h1></div><div class="toolbar"><span class="tag ${mode === "demo" ? "demo" : ""}">${mode === "demo" ? "MODE DEMO" : "DATABASE AKTIF"}</span><select id="active-store" aria-label="Store aktif">${options("stores", store)}</select><button id="logout" class="small">Keluar</button></div></header>${body}<p class="page-foot">${mode === "demo" ? "Semua angka adalah data contoh." : "Stok dan penjualan tersimpan di database bersama."} Berat kg dicatat pada setiap penjualan, termasuk penjualan per butir.</p></main></div>`;
+  return `<div class="shell"><aside class="sidebar"><div><div class="brand"><img src="logo.png" alt="Maniac Duren"></div><div class="brand-sub">OPERATIONS / POS</div></div><div class="sidebar-store"><label for="active-store">TOKO AKTIF</label><div class="store-select-wrap">${icon("stores")}<select id="active-store" aria-label="Toko aktif" title="${e(name("stores", store))}">${options("stores", store)}</select></div></div><nav class="nav" aria-label="Navigasi POS">${navigation(title, view, icon, state.access)}</nav><div class="sidebar-foot">${mode === "demo" ? "DATA CONTOH · DEMO" : "AKSES ADMIN"}<br>Fresh. Creamy. Berkualitas.<br><a href="/" target="_blank" rel="noopener">Website customer</a></div></aside><main><header class="topbar"><div><div class="breadcrumb">Maniac Duren / ${sections.find((section) => section.pages.includes(view))?.label || "Operasional"}</div><h1>${title[view]}</h1></div><div class="toolbar"><span class="tag ${mode === "demo" ? "demo" : ""}">${mode === "demo" ? "MODE DEMO" : "DATABASE AKTIF"}</span><button id="logout" class="small">Keluar</button></div></header>${body}<p class="page-foot">${mode === "demo" ? "Semua angka adalah data contoh." : "Stok dan penjualan tersimpan di database bersama."} Berat kg dicatat pada setiap penjualan, termasuk penjualan per butir.</p></main></div>`;
 }
 function dashboard() {
   const rows = saleRows(state, { from: today(), to: today(), store }),
@@ -335,7 +339,7 @@ function productsPage() {
 function directoryPage(kind) {
   const isStore = kind === "stores",
     label = isStore ? "Store" : "Supplier";
-  return `<div class="intro"><div><h2>Master ${label}</h2><p class="muted">${isStore ? "Kelola daftar store dan lokasinya." : "Kelola supplier, nomor telepon, dan alamat."}</p></div><button class="primary" data-master="${kind}">Tambah ${label}</button></div><section class="panel"><div class="table-wrap"><table><thead><tr><th>NAMA</th>${isStore ? "<th>LOKASI</th>" : "<th>NOMOR TELEPON</th><th>ALAMAT</th>"}<th>ACTION</th></tr></thead><tbody>${state[kind].map((p) => `<tr><td><b>${e(p.name)}</b></td>${isStore ? `<td>${e(p.location || "—")}</td>` : `<td>${e(p.phone || "—")}</td><td>${e(p.address || "—")}</td>`}<td><button class="small" data-edit-kind="${kind}" data-edit-id="${e(p.id)}">Edit</button></td></tr>`).join("") || `<tr><td colspan="${isStore ? 3 : 4}" class="empty">Belum ada ${label.toLowerCase()}.</td></tr>`}</tbody></table></div></section>`;
+  return `<div class="intro"><div><h2>Master ${label}</h2><p class="muted">${isStore ? "Ubah nama toko dan lokasi melalui tombol Edit toko." : "Kelola supplier, nomor telepon, dan alamat."}</p></div><button class="primary" data-master="${kind}">Tambah ${label}</button></div><section class="panel"><div class="table-wrap"><table><thead><tr><th>NAMA</th>${isStore ? "<th>LOKASI</th>" : "<th>NOMOR TELEPON</th><th>ALAMAT</th>"}<th>ACTION</th></tr></thead><tbody>${state[kind].map((p) => `<tr><td><b>${e(p.name)}</b></td>${isStore ? `<td>${e(p.location || "—")}</td>` : `<td>${e(p.phone || "—")}</td><td>${e(p.address || "—")}</td>`}<td><button class="small" data-edit-kind="${kind}" data-edit-id="${e(p.id)}">${icon("edit")}${isStore ? "Edit toko" : "Edit"}</button></td></tr>`).join("") || `<tr><td colspan="${isStore ? 3 : 4}" class="empty">Belum ada ${label.toLowerCase()}.</td></tr>`}</tbody></table></div></section>`;
 }
 function render() {
   app.innerHTML = shell(
@@ -827,13 +831,16 @@ function masterDetailFields(kind, p = {}) {
 function editMasterDetails(kind, recordId) {
   const p = state[kind]?.find((x) => x.id === recordId);
   if (!p || !["stores", "suppliers"].includes(kind)) return;
-  const d = modal("Edit " + e(p.name), masterDetailFields(kind, p));
+  const editRequestId = id();
+  const d = modal(kind === "stores" ? "Edit toko" : "Edit " + e(p.name),
+    (kind === "stores" ? field("Nama toko", `<input name="name" required maxlength="100" value="${e(p.name)}" autocomplete="organization">`) : "") + masterDetailFields(kind, p));
   d.querySelector("form").onsubmit = async (ev) => {
     ev.preventDefault();
     if (
       await mutate("master_details", {
         ...Object.fromEntries(new FormData(ev.currentTarget)),
         id: recordId,
+        editRequestId,
         kind,
       })
     ) {

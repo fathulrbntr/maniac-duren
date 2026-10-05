@@ -912,3 +912,22 @@ summary {
 @media(max-width:1050px){.order-screen{grid-template-columns:minmax(0,1fr) 315px}.order-product-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}}
 @media(max-width:850px){.order-screen{grid-template-columns:1fr}.order-summary{position:static;max-height:none}.order-cart-items{max-height:360px}.order-product-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:560px){.order-catalog{padding:15px}.order-catalog-head{align-items:flex-start;flex-direction:column}.order-search{width:100%}.order-product-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.order-product-photo{height:100px}.order-product{padding:8px}.order-categories{margin-right:-4px}.order-summary{padding:16px}.order-line-editor .form-grid{grid-template-columns:1fr}}
+
+/* Store selector and distinctive menu icons */
+.sidebar { gap: 20px; }
+.sidebar-store { min-width: 0; }
+.sidebar-store label { display: block; color: #bbd0bf; font-size: 11px; font-weight: 700; letter-spacing: 1.2px; margin: 0 0 8px 3px; }
+.store-select-wrap { position: relative; }
+.store-select-wrap > .icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--dark); pointer-events: none; }
+#active-store { width: 100%; min-width: 0; max-width: 100%; padding: 12px 26px 12px 40px; border-radius: 12px; background-color: #fff; color: var(--ink); font-size: 14px; font-weight: 600; text-overflow: ellipsis; }
+.nav button { border-radius: 12px; gap: 10px; padding: 10px; transition: background .15s ease, color .15s ease; }
+.nav button > .icon { flex: 0 0 34px; width: 34px; height: 34px; padding: 6px; border-radius: 10px; background: #ffffff0d; }
+.nav button:hover { background: #ffffff14; color: #fff; }
+.nav button.active, .nav button.active:hover { background: var(--lime); color: var(--dark); }
+.nav button.active > .icon { background: #173e1814; }
+button[data-edit-kind] { display: inline-flex; align-items: center; gap: 7px; }
+.auth-form form { margin-bottom: 22px; }
+@media (max-width: 780px) {
+  .sidebar-store { max-width: 340px; width: 100%; }
+  .nav button > .icon { flex-basis: 30px; width: 30px; height: 30px; padding: 5px; }
+}

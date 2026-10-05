@@ -1,32 +1,12 @@
--- Bagian audit alur stok dan pembacaan riwayat.
+-- Database aktif versi 009: jalankan file ini sekali di Supabase SQL Editor.
+-- Memperbarui nama toko dengan ID yang sama; riwayat dan stok tetap terhubung.
 begin;
-create or replace function public.pos_waste_evidence(waste_id uuid) returns jsonb language plpgsql security definer set search_path='' as $$
-declare result jsonb;
-begin
- if auth.uid() is null or not exists(select 1 from public.md_pos_staff where user_id=auth.uid()) then raise exception 'Akun tidak memiliki akses POS'; end if;
- select coalesce(snapshot->'evidence','{}'::jsonb) into result from public.md_pos_waste_runs where id=waste_id;
- if not found then raise exception 'Pencatatan waste tidak ditemukan'; end if;
- return result;
+do $$ begin
+ if to_regprocedure('public.pos_mutate_v8(text,jsonb)') is null then
+  raise exception 'Jalankan upgrade 009 terlebih dahulu';
+ end if;
 end $$;
-revoke all on function public.pos_waste_evidence(uuid) from public,anon;
-grant execute on function public.pos_waste_evidence(uuid) to authenticated;
-create or replace function public.pos_read() returns jsonb language plpgsql security definer set search_path='' as $$
-begin
- if auth.uid() is null or not exists(select 1 from public.md_pos_staff where user_id=auth.uid()) then raise exception 'Akun tidak memiliki akses POS'; end if;
- return jsonb_build_object(
- 'wasteRuns',coalesce((select jsonb_agg((snapshot-'evidence')||jsonb_build_object('id',id,'storeId',store_id,'sourceLotId',source_lot_id,'hasEvidence',(coalesce(snapshot->'evidence'->>'reject','')<>'' or coalesce(snapshot->'evidence'->>'processed','')<>'' or coalesce(snapshot->'evidence'->>'durpas500','')<>'' or coalesce(snapshot->'evidence'->>'durpas1000','')<>'' or coalesce(snapshot->'evidence'->>'coral','')<>''),'date',waste_date,'voided',voided,'voidReason',void_reason,'voidedAt',voided_at,'createdAt',created_at) order by created_at,id) from public.md_pos_waste_runs),'[]'::jsonb),
- 'stockAdjustments',coalesce((select jsonb_agg(jsonb_build_object('id',id,'productId',product_id,'storeId',store_id,'date',adjustment_date,'reason',reason,'before',before_qty,'after',after_qty,'changes',changes) order by created_at,id) from public.md_pos_stock_adjustments),'[]'::jsonb),
- 'recipes',coalesce((select jsonb_agg(jsonb_build_object('id',r.id,'name',r.name,'outputId',r.output_id,'yieldQty',r.yield_qty,'version',r.version,'ingredients',coalesce((select jsonb_agg(jsonb_build_object('productId',i.product_id,'qty',i.qty) order by i.product_id) from public.md_pos_recipe_items i where i.recipe_id=r.id),'[]'::jsonb)) order by r.name) from public.md_pos_recipes r),'[]'::jsonb),
- 'unitLots',coalesce((select jsonb_agg(jsonb_build_object('id',id,'productId',product_id,'storeId',store_id,'unit',unit,'receivedQty',received_qty,'qty',qty,'date',received_date,'expiry',expiry,'kind',kind,'supplierId',supplier_id,'note',note) order by received_date,id) from public.md_pos_unit_lots),'[]'::jsonb),
- 'productions',coalesce((select jsonb_agg(snapshot||jsonb_build_object('id',id,'storeId',store_id,'recipeId',recipe_id,'outputId',output_id,'date',production_date,'voided',voided,'voidReason',void_reason) order by created_at,id) from public.md_pos_productions),'[]'::jsonb),
- 'stores',coalesce((select jsonb_agg(jsonb_build_object('id',id,'name',name,'location',location) order by name) from public.md_pos_stores),'[]'::jsonb),
- 'suppliers',coalesce((select jsonb_agg(jsonb_build_object('id',id,'name',name,'phone',phone,'address',address) order by name) from public.md_pos_suppliers),'[]'::jsonb),
- 'products',coalesce((select jsonb_agg(jsonb_build_object('id',id,'name',name,'sku',sku,'priceKg',price_kg,'pricePiece',price_piece,'category',category,'itemType',item_type,'stockUnit',stock_unit,'salePrice',sale_price,'variant',variant,'barcode',barcode,'buyPrice',buy_price,'photo',photo) order by name) from public.md_pos_products),'[]'::jsonb),
- 'lots',coalesce((select jsonb_agg(jsonb_build_object('id',id,'storeId',store_id,'supplierId',supplier_id,'productId',product_id,'date',received_date,'receivedKg',received_kg,'receivedPieces',received_pieces,'kg',kg,'pieces',pieces,'sourceLotId',source_lot_id,'note',note) order by created_at) from public.md_pos_lots),'[]'::jsonb),
- 'sales',coalesce((select jsonb_agg(jsonb_build_object('id',s.id,'date',s.sale_date,'storeId',s.store_id,'payment',s.payment,'paid',s.paid,'total',s.total,'change',s.change,'voided',s.voided,'voidReason',s.void_reason,'createdAt',s.created_at,'lines',coalesce((select jsonb_agg(jsonb_build_object('lotId',i.lot_id,'productId',i.product_id,'supplierId',i.supplier_id,'kg',i.kg,'pieces',i.pieces,'price',i.price,'unit',i.unit,'total',i.total) order by i.id) from public.md_pos_sale_items i where i.sale_id=s.id),'[]'::jsonb)) order by s.created_at) from public.md_pos_sales s),'[]'::jsonb),
- 'movements',coalesce((select jsonb_agg(jsonb_build_object('id',id,'lotId',lot_id,'storeId',store_id,'toStoreId',to_store_id,'supplierId',supplier_id,'productId',product_id,'date',movement_date,'kind',kind,'kg',kg,'pieces',pieces,'note',note) order by created_at) from public.md_pos_movements),'[]'::jsonb));
-end $$;
-create or replace function public.pos_mutate(action text,payload jsonb) returns jsonb language plpgsql security definer set search_path='' as $$
+create or replace function public.pos_mutate_v8(action text,payload jsonb) returns jsonb language plpgsql security definer set search_path='' as $$
 declare
  v_id uuid; v_store uuid; v_date date; v_lot public.md_pos_lots%rowtype; v_sale public.md_pos_sales%rowtype;
  v_line jsonb; v_kg numeric; v_pieces numeric; v_price numeric; v_total numeric:=0; v_paid numeric; v_kind text; v_name text; v_to uuid;
@@ -138,7 +118,6 @@ begin
  end if;
  return public.pos_read();
 end $$;
-revoke all on function public.pos_read(),public.pos_mutate(text,jsonb) from public,anon;
-grant execute on function public.pos_read(),public.pos_mutate(text,jsonb) to authenticated;
+revoke all on function public.pos_mutate_v8(text,jsonb) from public,anon,authenticated;
 notify pgrst, 'reload schema';
 commit;

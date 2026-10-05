@@ -289,7 +289,13 @@ begin
   perform public.pos_save_product(payload,true);
  elsif action='master_details' then
   case payload->>'kind'
-   when 'stores' then update public.md_pos_stores set location=btrim(coalesce(payload->>'location','')) where id=v_id;
+   when 'stores' then
+    if payload ? 'name' then
+     v_name:=btrim(payload->>'name');
+     if v_name is null or length(v_name) not between 1 and 100 then raise exception 'Nama toko wajib, maksimal 100 karakter'; end if;
+    end if;
+    update public.md_pos_stores set name=case when payload ? 'name' then v_name else name end,
+      location=btrim(coalesce(payload->>'location','')) where id=v_id;
    when 'suppliers' then update public.md_pos_suppliers set phone=btrim(coalesce(payload->>'phone','')),address=btrim(coalesce(payload->>'address','')) where id=v_id;
    else raise exception 'Jenis master tidak valid';
   end case;
