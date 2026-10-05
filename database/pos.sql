@@ -55,13 +55,15 @@ do $$ begin
  if not exists(select 1 from pg_constraint where conrelid='public.md_pos_products'::regclass and conname='md_pos_catalog_valid') then
   alter table public.md_pos_products add constraint md_pos_catalog_valid check (
    item_type in ('direct','raw','prep','recipe','finished')
-   and stock_unit in ('kg_butir','g','ml','pcs','porsi')
+   and stock_unit in ('kg_butir','kg','g','ml','pcs','porsi')
    and ((item_type in ('raw','prep') and category is null) or (item_type not in ('raw','prep') and category is not null and category in ('Buah','Dessert','Minuman','Olahan Duren')))
    and (stock_unit<>'kg_butir' or (item_type='direct' and category='Buah'))
    and ((item_type='recipe' and stock_unit='porsi') or (item_type<>'recipe' and stock_unit<>'porsi'))
    and ((stock_unit='kg_butir' and price_kg is not null and price_kg>0 and price_piece is not null and price_piece>0 and sale_price is null)
      or (stock_unit<>'kg_butir' and price_kg is null and price_piece is null and
-       ((item_type in ('raw','prep') and sale_price is null) or (item_type not in ('raw','prep') and sale_price is not null and sale_price>0))))
+       ((item_type in ('raw','prep') and sale_price is null)
+         or (item_type in ('recipe','direct') and sale_price is not null and sale_price>0)
+         or (item_type='finished' and (sale_price is null or sale_price>0)))))
   );
  end if;
 end $$;
@@ -83,13 +85,15 @@ do $$ begin
  if not exists(select 1 from pg_constraint where conrelid='public.md_pos_products'::regclass and conname='md_pos_catalog_valid') then
   alter table public.md_pos_products add constraint md_pos_catalog_valid check (
    item_type in ('direct','raw','prep','recipe','finished')
-   and stock_unit in ('kg_butir','g','ml','pcs','porsi')
+   and stock_unit in ('kg_butir','kg','g','ml','pcs','porsi')
    and ((item_type in ('raw','prep') and category is null) or (item_type not in ('raw','prep') and category is not null and category in ('Buah','Dessert','Minuman','Olahan Duren')))
    and (stock_unit<>'kg_butir' or (item_type='direct' and category='Buah'))
    and ((item_type='recipe' and stock_unit='porsi') or (item_type<>'recipe' and stock_unit<>'porsi'))
    and ((stock_unit='kg_butir' and price_kg is not null and price_kg>0 and price_piece is not null and price_piece>0 and sale_price is null)
      or (stock_unit<>'kg_butir' and price_kg is null and price_piece is null and
-       ((item_type in ('raw','prep') and sale_price is null) or (item_type not in ('raw','prep') and sale_price is not null and sale_price>0))))
+     ((item_type in ('raw','prep') and sale_price is null)
+       or (item_type in ('recipe','direct') and sale_price is not null and sale_price>0)
+       or (item_type='finished' and (sale_price is null or sale_price>0)))))
   );
  end if;
 end $$;
@@ -156,7 +160,9 @@ do $$ begin
    and ((item_type='recipe' and stock_unit='porsi') or (item_type<>'recipe' and stock_unit<>'porsi'))
    and ((stock_unit='kg_butir' and price_kg is not null and price_kg>0 and price_piece is not null and price_piece>0 and sale_price is null)
      or (stock_unit<>'kg_butir' and price_kg is null and price_piece is null and
-       ((item_type in ('raw','prep') and sale_price is null) or (item_type not in ('raw','prep') and sale_price is not null and sale_price>0))))
+       ((item_type in ('raw','prep') and sale_price is null)
+         or (item_type in ('recipe','direct') and sale_price is not null and sale_price>0)
+         or (item_type='finished' and (sale_price is null or sale_price>0)))))
   );
  end if;
 end $$;
@@ -187,7 +193,9 @@ do $$ begin
    and ((item_type='recipe' and stock_unit='porsi') or (item_type<>'recipe' and stock_unit<>'porsi'))
    and ((stock_unit='kg_butir' and price_kg is not null and price_kg>0 and price_piece is not null and price_piece>0 and sale_price is null)
      or (stock_unit<>'kg_butir' and price_kg is null and price_piece is null and
-       ((item_type in ('raw','prep') and sale_price is null) or (item_type='finished' and sale_price is null) or (item_type not in ('raw','prep') and sale_price is not null and sale_price>0))))
+       ((item_type in ('raw','prep') and sale_price is null)
+         or (item_type in ('recipe','direct') and sale_price is not null and sale_price>0)
+         or (item_type='finished' and (sale_price is null or sale_price>0)))))
   );
  end if;
 end $$;
