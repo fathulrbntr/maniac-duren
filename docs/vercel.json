@@ -1,9 +1,0 @@
-{
-  "redirects": [
-    {
-      "source": "/rejectreport",
-      "destination": "https://docs.google.com/forms/d/e/1FAIpQLSeju0UwrZD2Q9daJIN7if6GotCGq0fWhsFrxT3IpWsd9n_omg/viewform",
-      "permanent": false
-    }
-  ]
-}
