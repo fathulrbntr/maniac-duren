@@ -385,7 +385,7 @@ function render() {
     {
       ...Object.fromEntries(opsPages.map(key=>[key,()=>opsPage(key,state,store)])),
       dashboard,
-      recipes: () => recipesPage(state),
+      recipes: () => recipesPage(state, store),
       production: () => productionPage(state, store),
       cashier,
       stock: stockPage,

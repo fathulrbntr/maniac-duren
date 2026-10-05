@@ -28,22 +28,23 @@ const ingredientsText = (lines) =>
   lines
     .map((l) => `${e(l.name)}: ${num(l.qty)} ${e(unitLabel[l.unit] || l.unit)}`)
     .join("<br>");
-export function recipesPage(s) {
-  return `<div class="intro"><div><h2>Master Resep</h2><p class="muted">Takaran untuk satu kali resep. Bahan dipotong saat produksi disimpan.</p></div><button class="primary" id="new-recipe">Tambah resep</button></div><section class="panel"><div class="table-wrap"><table><thead><tr><th>RESEP</th><th>HASIL PER RESEP</th><th>BAHAN</th><th>AKSI</th></tr></thead><tbody>${(s.recipes || []).map((r) => `<tr><td><b>${e(r.name)}</b><small>Versi ${r.version}</small></td><td>${e(item(s, r.outputId)?.name)}<br>${num(r.yieldQty)} ${e(unitLabel[item(s, r.outputId)?.stockUnit])}</td><td>${ingredientsText(r.ingredients.map((l) => ({ ...l, name: item(s, l.productId)?.name, unit: item(s, l.productId)?.stockUnit })))}</td><td><button class="small" data-edit-recipe="${e(r.id)}">Edit</button></td></tr>`).join("") || '<tr><td colspan="4" class="empty">Daftarkan bahan dan hasil di Master data, lalu buat resep pertama.</td></tr>'}</tbody></table></div></section>`;
+const recipeState = (s, r, store) => {
+  const needs = r.ingredients.map((l) => {
+    const p = item(s, l.productId);
+    const available = store && p ? stockQty(s, p.id, store, today()) : 0;
+    return { name: p?.name || "Item dihapus", qty: Number(l.qty), available, unit: p?.stockUnit };
+  });
+  const missing = needs.find((l) => l.available < l.qty);
+  return { needs, missing };
+};
+export function recipesPage(s, store) {
+  const recipes = s.recipes || [];
+  const ready = recipes.filter((r) => !recipeState(s, r, store).missing).length;
+  return `<div class="intro recipe-workspace"><div><div class="eyebrow">PRODUKSI & STOK</div><h2>Master Resep</h2><p class="muted">Satu sumber takaran untuk produksi bahan siap pakai. Ketersediaan dihitung dari stok store aktif.</p></div><div class="intro-actions"><button data-view="stock">Lihat stok</button><button data-view="production">Produksi bahan</button><button class="primary" id="new-recipe">Tambah resep</button></div></div><div class="summary-grid"><div class="summary-card"><span>Total resep</span><b>${recipes.length}</b></div><div class="summary-card"><span>Siap diproduksi</span><b class="positive">${ready}</b></div><div class="summary-card"><span>Perlu bahan</span><b class="${recipes.length - ready ? "negative" : "positive"}">${recipes.length - ready}</b></div></div><section class="panel"><div class="toolbar"><input id="recipe-search" placeholder="Cari nama resep atau hasil..." autocomplete="off"><select id="recipe-status"><option value="all">Semua status</option><option value="ready">Siap diproduksi</option><option value="missing">Bahan kurang</option></select></div><div class="recipe-grid" id="recipe-cards">${recipes.map((r) => { const out = item(s, r.outputId), state = recipeState(s, r, store); return `<article class="recipe-card" data-recipe-card data-recipe-search="${e(`${r.name} ${out?.name || ""}`.toLowerCase())}" data-recipe-status="${state.missing ? "missing" : "ready"}"><div class="card-heading"><div><h3>${e(r.name)}</h3><small>Versi ${e(r.version)}</small></div><span class="status-pill ${state.missing ? "status-danger" : "status-success"}">${state.missing ? "Bahan kurang" : "Siap dibuat"}</span></div><div class="recipe-output"><span>Hasil per batch</span><b>${num(r.yieldQty)} ${e(unitLabel[out?.stockUnit] || out?.stockUnit || "")}</b><small>${e(out?.name || "Item tidak ditemukan")}</small></div><div class="recipe-ingredients">${ingredientsText(state.needs)}</div>${state.missing ? `<p class="muted">Kurang: <b class="negative">${e(state.missing.name)} (${num(state.missing.qty - state.missing.available)} ${e(unitLabel[state.missing.unit] || state.missing.unit || "")})</b></p>` : `<p class="muted">Semua bahan tersedia untuk minimal 1 batch.</p>`}<button class="small" data-edit-recipe="${e(r.id)}">Edit resep</button></article>`; }).join("") || '<div class="empty">Belum ada resep. Daftarkan bahan dan hasil produksi di Master data.</div>'}</div></section>`;
 }
 export function productionPage(s, store) {
-  return `<div class="intro"><div><h2>Produksi dari resep</h2><p class="muted">Buat bahan siap pakai sebelum ada pesanan. Menu dessert dibuat melalui Kasir & pesanan.</p></div><button id="refresh-production">Perbarui stok</button></div><section class="panel"><form id="production-form"><div class="form-grid">${field("Resep", `<select name="recipeId" required><option value="">Pilih resep</option>${opts((s.recipes || []).filter(r=>s.products.find(p=>p.id===r.outputId)?.itemType!=="recipe"))}</select>`)}${field("Tanggal produksi", `<input name="date" type="date" value="${today()}" required>`)}${field("Berapa kali resep dibuat?", '<input name="batches" type="number" min="1" max="10000" step="1" value="1" required>')}${field("Hasil aktual (sesuai satuan resep)", '<input name="actualQty" type="number" min="0.000001" step="any" required>')}${field("Kedaluwarsa hasil (opsional)", '<input name="expiry" type="date">')}${field("Catatan", '<input name="note" maxlength="300" placeholder="Contoh: produksi pagi">')}</div><div id="production-preview" aria-live="polite"><p class="muted">Pilih resep untuk melihat kebutuhan bahan.</p></div><p class="error" id="production-error"></p><button type="submit" class="primary" ${store ? "" : "disabled"}>Simpan produksi & potong bahan</button></form></section><p><button data-view="stock">Lihat / tambah stok bahan</button></p><section class="panel"><h3>Riwayat produksi store ini</h3><div class="table-wrap"><table><thead><tr><th>TANGGAL / RESEP</th><th>HASIL</th><th>BAHAN TERPAKAI</th><th>STATUS</th></tr></thead><tbody>${
-    (s.productions || [])
-      .filter((r) => r.storeId === store)
-      .slice()
-      .reverse()
-      .map(
-        (r) =>
-          `<tr><td>${e(r.date)}<br><b>${e(r.recipeName)}</b><small>${e(r.id.slice(0, 8))} · v${r.recipeVersion} · ${num(r.batches)} kali resep</small></td><td>${e(r.outputName)}<br><b>${num(r.actualQty)} ${e(unitLabel[r.unit])}</b><small>Target ${num(r.expectedQty)}</small></td><td>${ingredientsText(r.ingredients)}</td><td>${r.voided ? `Dibatalkan<br><small>${e(r.voidReason)}</small>` : `<button class="small danger" data-void-production="${e(r.id)}">Batalkan</button>`}</td></tr>`,
-      )
-      .join("") ||
-    '<tr><td colspan="4" class="empty">Belum ada produksi.</td></tr>'
-  }</tbody></table></div></section>`;
+  const rows = (s.productions || []).filter((r) => r.storeId === store).slice().reverse();
+  return `<div class="intro production-workspace"><div><div class="eyebrow">STOK BAHAN</div><h2>Produksi dari resep</h2><p class="muted">Potong bahan dan masukkan hasil produksi ke stok dalam satu transaksi.</p></div><div class="intro-actions"><button data-view="recipes">Master resep</button><button data-view="stock">Lihat stok</button><button id="refresh-production">Perbarui stok</button></div></div><div class="summary-grid"><div class="summary-card"><span>Total produksi</span><b>${rows.length}</b></div><div class="summary-card"><span>Produksi aktif</span><b class="positive">${rows.filter((r) => !r.voided).length}</b></div><div class="summary-card"><span>Dibatalkan</span><b>${rows.filter((r) => r.voided).length}</b></div></div><section class="production-layout"><section class="panel"><div class="section-heading"><div><h3>Catat produksi</h3><p class="muted">Stok bahan diperiksa otomatis sebelum disimpan.</p></div></div><form id="production-form"><div class="form-grid">${field("Resep", `<select name="recipeId" required><option value="">Pilih resep</option>${opts((s.recipes || []).filter(r=>s.products.find(p=>p.id===r.outputId)?.itemType!=="recipe"))}</select>`)}${field("Tanggal produksi", `<input name="date" type="date" value="${today()}" required>`)}${field("Berapa kali resep dibuat?", '<input name="batches" type="number" min="1" max="10000" step="1" value="1" required>')}${field("Hasil aktual (sesuai satuan resep)", '<input name="actualQty" type="number" min="0.000001" step="any" required>')}${field("Kedaluwarsa hasil (opsional)", '<input name="expiry" type="date">')}${field("Catatan", '<input name="note" maxlength="300" placeholder="Contoh: produksi pagi">')}</div><div id="production-preview" aria-live="polite"><p class="muted">Pilih resep untuk melihat kebutuhan bahan.</p></div><p class="error" id="production-error"></p><button type="submit" class="primary" ${store ? "" : "disabled"}>Simpan produksi & potong bahan</button></form></section><aside class="panel production-guide"><h3>Alur stok</h3><div class="flow-step"><b>1</b><span>Pilih resep dan jumlah batch.</span></div><div class="flow-step"><b>2</b><span>Sistem cek stok bahan layak pakai.</span></div><div class="flow-step"><b>3</b><span>Simpan: bahan berkurang, hasil masuk stok.</span></div><button data-view="stock">Tambah stok bahan</button></aside></section><section class="panel"><div class="section-heading"><div><h3>Riwayat produksi store ini</h3><p class="muted">Klik batal hanya untuk salah pencatatan sebelum hasil dipakai.</p></div><div class="toolbar compact"><input id="production-search" placeholder="Cari resep atau tanggal..." autocomplete="off"><select id="production-status"><option value="all">Semua status</option><option value="active">Aktif</option><option value="voided">Dibatalkan</option></select></div></div><div class="production-history" id="production-history">${rows.map((r) => `<article class="production-card" data-production-card data-production-search="${e(`${r.date} ${r.recipeName} ${r.outputName}`.toLowerCase())}" data-production-status="${r.voided ? "voided" : "active"}"><div class="card-heading"><div><h3>${e(r.recipeName)}</h3><small>${e(r.date)} · ${e(r.id.slice(0, 8))} · v${e(r.recipeVersion)} · ${num(r.batches)} batch</small></div><span class="status-pill ${r.voided ? "status-danger" : "status-success"}">${r.voided ? "Dibatalkan" : "Aktif"}</span></div><div class="production-result"><b>${num(r.actualQty)} ${e(unitLabel[r.unit])}</b><span>${e(r.outputName)}</span><small>Target ${num(r.expectedQty)}</small></div><div class="recipe-ingredients">${ingredientsText(r.ingredients)}</div>${r.voided ? `<p class="muted">${e(r.voidReason || "Tanpa alasan")}</p>` : `<button class="small danger" data-void-production="${e(r.id)}">Batalkan pencatatan</button>`}</article>`).join("") || '<div class="empty">Belum ada produksi di store ini.</div>'}</div></section>`;
 }
 export function unitStockPanel(s, store) {
   const lots = (s.unitLots || []).filter((l) => l.storeId === store);
@@ -213,6 +214,15 @@ export function bindProduction(view, s, store, ctx) {
     .querySelector("#unit-receipt")
     ?.addEventListener("click", () => receiptDialog(s, store, ctx));
   if (view === "recipes") {
+    const filterRecipes = () => {
+      const q = (document.querySelector("#recipe-search")?.value || "").toLowerCase().trim();
+      const status = document.querySelector("#recipe-status")?.value || "all";
+      document.querySelectorAll("[data-recipe-card]").forEach((card) => {
+        card.hidden = (q && !card.dataset.recipeSearch.includes(q)) || (status !== "all" && card.dataset.recipeStatus !== status);
+      });
+    };
+    document.querySelector("#recipe-search")?.addEventListener("input", filterRecipes);
+    document.querySelector("#recipe-status")?.addEventListener("change", filterRecipes);
     document.querySelector("#new-recipe").onclick = () => recipeDialog(s, ctx);
     document.querySelectorAll("[data-edit-recipe]").forEach(
       (b) =>
@@ -225,6 +235,15 @@ export function bindProduction(view, s, store, ctx) {
     );
   }
   if (view !== "production") return;
+  const filterProduction = () => {
+    const q = (document.querySelector("#production-search")?.value || "").toLowerCase().trim();
+    const status = document.querySelector("#production-status")?.value || "all";
+    document.querySelectorAll("[data-production-card]").forEach((card) => {
+      card.hidden = (q && !card.dataset.productionSearch.includes(q)) || (status !== "all" && card.dataset.productionStatus !== status);
+    });
+  };
+  document.querySelector("#production-search")?.addEventListener("input", filterProduction);
+  document.querySelector("#production-status")?.addEventListener("change", filterProduction);
   document.querySelector("#refresh-production").onclick = async () => {
     if (!mayLeave(false)) return;
     try {
