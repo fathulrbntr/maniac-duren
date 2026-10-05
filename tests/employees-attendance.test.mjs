@@ -11,7 +11,7 @@ const db=new PGlite();
 try{
 await db.exec("create role anon;create role authenticated;create role service_role;create schema auth;create table auth.users(id uuid primary key,email text);create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;");
 await db.exec(fs.readFileSync(process.env.POS_UPGRADE_BASE || 'database/pos.sql','utf8'));
-await db.exec(fs.readFileSync('database/016-employee-accounts.sql','utf8'));
+await db.exec(fs.readFileSync('database/sections/operations/employee-accounts.sql','utf8'));
 const owner=id(),staff=id(),store=id(),other=id();
 for(const u of [owner,staff])await db.query('insert into auth.users values($1,$2)',[u,u+'@test.local']);
 await db.query("insert into md_pos_employees(id,user_id,name,role) values($1,$1,'Owner','owner')",[owner]);
@@ -74,9 +74,9 @@ await as(staff);await assert.rejects(db.query('select pos_account_target($1)',[o
 // Old duplicate shifts survive as one first-in/last-out record, with private originals archived.
 await db.exec('drop index md_pos_attendance_one_day');
 await db.query("insert into md_pos_attendance(id,employee_id,store_id,work_date,clock_in,clock_out) values($1,$2,$3,'2025-01-01','2025-01-01T01:00Z','2025-01-01T04:00Z'),($4,$2,$3,'2025-01-01','2025-01-01T05:00Z','2025-01-01T11:00Z')",[id(),staff,store,id()]);
-await db.exec(fs.readFileSync('database/015-employees-attendance.sql','utf8'));
-await db.exec(fs.readFileSync('database/016-employee-accounts.sql','utf8'));
-await db.exec(fs.readFileSync('database/016-employee-accounts.sql','utf8'));
+await db.exec(fs.readFileSync('database/sections/operations/employees-attendance.sql','utf8'));
+await db.exec(fs.readFileSync('database/sections/operations/employee-accounts.sql','utf8'));
+await db.exec(fs.readFileSync('database/sections/operations/employee-accounts.sql','utf8'));
 const legacy=(await db.query("select * from md_pos_attendance where work_date='2025-01-01'")).rows;
 assert.equal(legacy.length,1);assert.equal(new Date(legacy[0].clock_in).getUTCHours(),1);assert.equal(new Date(legacy[0].clock_out).getUTCHours(),11);
 assert.equal((await db.query('select * from md_pos_attendance_legacy')).rows.length,2);

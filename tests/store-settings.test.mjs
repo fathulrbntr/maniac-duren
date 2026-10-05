@@ -7,7 +7,7 @@ const db = new PGlite();
 try {
   await db.exec("create role anon;create role authenticated;create role service_role;create schema auth;create table auth.users(id uuid primary key,email text);create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;");
   await db.exec(fs.readFileSync(process.env.POS_UPGRADE_BASE || 'database/pos.sql', 'utf8'));
-  const migration = fs.readFileSync('database/010-store-name.sql', 'utf8');
+  const migration = fs.readFileSync('database/sections/flow-audit.sql', 'utf8');
   await db.exec(migration);
   await db.exec(migration);
   const owner = id(), store = id(), cashier = id(), product = id(), supplier = id(), lot = id();

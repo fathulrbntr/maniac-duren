@@ -17,6 +17,12 @@ const files = [
   "sections/waste-evidence.sql",
   "sections/flow-audit.sql",
   "sections/waste-output-proof.sql",
+  "sections/operations/integrated-operations.sql",
+  "sections/operations/order-stock-kitchen.sql",
+  "sections/operations/pay-first-kitchen.sql",
+  "sections/operations/kitchen-recipes-only.sql",
+  "sections/operations/employees-attendance.sql",
+  "sections/operations/employee-accounts.sql",
 ];
 const functions = new Map(),
   permissions = new Set();
@@ -52,5 +58,5 @@ const result =
   "\n" +
   [...permissions].join("\n") +
   "\nnotify pgrst, 'reload schema';\ncommit;\n";
-fs.writeFileSync(path.join(base, "pos.sql"), (result + fs.readFileSync(path.join(base, "009-integrated-operations.sql"), "utf8") + fs.readFileSync(path.join(base, "011-order-stock-kitchen.sql"), "utf8") + fs.readFileSync(path.join(base, "012-pay-first-kitchen.sql"), "utf8") + fs.readFileSync(path.join(base, "013-kitchen-recipes-only.sql"), "utf8") + fs.readFileSync(path.join(base, "015-employees-attendance.sql"), "utf8") + fs.readFileSync(path.join(base, "016-employee-accounts.sql"), "utf8")).replace(/\n{3,}/g, "\n\n"));
+fs.writeFileSync(path.join(base, "pos.sql"), result.replace(/\n{3,}/g, "\n\n"));
 console.log(`Generated database/pos.sql (${functions.size} functions).`);

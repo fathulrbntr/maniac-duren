@@ -2,7 +2,7 @@
 
 # Maniac Duren POS
 
-Paket proyek lengkap berdasarkan ZIP yang dikirim. Website customer, galeri dan carousel dipertahankan. Untuk update database yang sudah aktif, ikuti `UPDATE.md`. Bagian instalasi di bawah ditujukan untuk database baru.
+Paket proyek lengkap Maniac Duren. Untuk database baru, gunakan `database/pos.sql`; untuk perubahan aplikasi aktif, backup database lalu jalankan build SQL terbaru sesuai prosedur Supabase.
 
 ## Coba demo
 

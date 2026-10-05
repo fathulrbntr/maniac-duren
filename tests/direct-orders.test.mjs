@@ -13,10 +13,10 @@ for(const install of ['fresh','upgrade']){
   await db.exec(sql.split('-- Upgrade setelah 008.')[0]);
   await db.query('insert into auth.users values($1,$2)',[owner,'owner@test.local']);
   await db.query('insert into public.md_pos_staff values($1)',[owner]);
-  await db.exec(fs.readFileSync('database/009-integrated-operations.sql','utf8'));
-  await db.exec(fs.readFileSync('database/011-order-stock-kitchen.sql','utf8'));
-  await db.exec(fs.readFileSync('database/012-pay-first-kitchen.sql','utf8'));
- await db.exec(fs.readFileSync('database/013-kitchen-recipes-only.sql','utf8'));
+  await db.exec(fs.readFileSync('database/sections/operations/integrated-operations.sql','utf8'));
+  await db.exec(fs.readFileSync('database/sections/operations/order-stock-kitchen.sql','utf8'));
+  await db.exec(fs.readFileSync('database/sections/operations/pay-first-kitchen.sql','utf8'));
+ await db.exec(fs.readFileSync('database/sections/operations/kitchen-recipes-only.sql','utf8'));
  }else{
   await db.exec(sql);
   await db.query('insert into auth.users values($1,$2)',[owner,'owner@test.local']);
