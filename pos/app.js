@@ -1,4 +1,4 @@
-import {opsPages,opsPage,bindOps,clearOrderDraft} from './operations-ui.mjs?v=9';
+import {opsPages,opsPage,bindOps,clearOrderDraft} from './operations-ui.mjs?v=10';
 import {
   sections,
   navigation,
