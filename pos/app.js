@@ -35,6 +35,31 @@ import {
 } from "./core.mjs?v=9";
 import { isLegacyStock } from "./catalog.mjs?v=9";
 import { catalogPanel, productDialog } from "./catalog-ui.mjs?v=14";
+const themeKey = "maniac-pos-theme";
+function themeButton(extraClass = "") {
+  return `<button type="button" class="small theme-toggle ${extraClass}" data-theme-toggle aria-label="Ganti tema"><svg class="theme-light-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></svg><svg class="theme-dark-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M20 15.5A9 9 0 0 1 8.5 4 9 9 0 1 0 20 15.5Z"/></svg><span data-theme-label></span></button>`;
+}
+function syncThemeControls() {
+  const dark = document.documentElement.dataset.theme === "dark";
+  document.querySelectorAll('[data-theme-toggle]').forEach(button => {
+    button.setAttribute('aria-label', dark ? 'Aktifkan mode light' : 'Aktifkan mode dark');
+    button.setAttribute('aria-pressed', String(dark));
+    button.querySelector('[data-theme-label]').textContent = dark ? 'Dark' : 'Light';
+  });
+}
+document.addEventListener('click', event => {
+  if (!event.target.closest('[data-theme-toggle]')) return;
+  const theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = theme;
+  try { localStorage.setItem(themeKey, theme); } catch { /* Theme still works when storage is unavailable. */ }
+  syncThemeControls();
+});
+window.addEventListener('storage', event => {
+  if (event.key === themeKey && ['light','dark'].includes(event.newValue)) {
+    document.documentElement.dataset.theme = event.newValue;
+    syncThemeControls();
+  }
+});
 const stockFilter = {};
 const catalogFilter = { query: "", category: "", itemType: "" };
 let stateRevision=0, polling=false, soundEnabled=false, audioContext;
@@ -199,7 +224,8 @@ async function mutate(action, payload) {
   }
 }
 function login(message = "") {
-  app.innerHTML = `<div class="auth"><section class="auth-brand"><img src="logo.png" alt="Maniac Duren"><h1>Satu kasir.<br>Dua satuan stok.</h1><p>Penjualan per kilo atau per butir, stok setiap store, dan asal supplier dalam satu tempat.</p></section><section class="auth-form"><div><span class="tag">AREA ADMIN</span><h2 style="margin-top:20px">Masuk ke POS</h2><p class="muted">Kelola operasional Maniac Duren.</p>${config.configured ? "" : `<div class="notice">Database belum dihubungkan. Hubungi pengelola untuk mengaktifkan akses POS.</div>`}<form id="login-form">${field("Email / username / nomor telepon", '<input name="identifier" required autocomplete="username" placeholder="Email, username, atau nomor telepon">')}${field("Password", '<input name="password" type="password" required autocomplete="current-password">')}<p class="error" id="login-error">${e(message)}</p><button class="primary full" type="submit" ${config.configured ? "" : "disabled"}>Masuk</button></form><a class="muted" href="/">Kembali ke website customer</a></div></section></div>`;
+  app.innerHTML = `<div class="auth">${themeButton("auth-theme")}<section class="auth-brand"><img src="logo.png" alt="Maniac Duren"><h1>Satu kasir.<br>Dua satuan stok.</h1><p>Penjualan per kilo atau per butir, stok setiap store, dan asal supplier dalam satu tempat.</p></section><section class="auth-form"><div><span class="tag">AREA ADMIN</span><h2 style="margin-top:20px">Masuk ke POS</h2><p class="muted">Kelola operasional Maniac Duren.</p>${config.configured ? "" : `<div class="notice">Database belum dihubungkan. Hubungi pengelola untuk mengaktifkan akses POS.</div>`}<form id="login-form">${field("Email / username / nomor telepon", '<input name="identifier" required autocomplete="username" placeholder="Email, username, atau nomor telepon">')}${field("Password", '<input name="password" type="password" required autocomplete="current-password">')}<p class="error" id="login-error">${e(message)}</p><button class="primary full" type="submit" ${config.configured ? "" : "disabled"}>Masuk</button></form><a class="muted" href="/">Kembali ke website customer</a></div></section></div>`;
+  syncThemeControls();
   document.querySelector("#login-form").onsubmit = async (ev) => {
     ev.preventDefault();
     const form = ev.currentTarget,
@@ -237,7 +263,7 @@ function stat(label, value, note) {
   return `<div class="stat"><small>${label}</small><strong>${value}</strong><span>${note}</span></div>`;
 }
 function shell(body) {
-  return `<div class="shell ${["products","stock"].includes(view)?"inventory-shell":""}"><aside class="sidebar"><div><div class="brand"><img src="logo.png" alt="Maniac Duren"></div><div class="brand-sub">OPERATIONS / POS</div></div><div class="sidebar-store"><label for="active-store">TOKO AKTIF</label><div class="store-select-wrap">${icon("stores")}<select id="active-store" aria-label="Toko aktif" title="${e(name("stores", store))}">${options("stores", store)}</select></div></div><nav class="nav" aria-label="Navigasi POS">${navigation(title, view, icon, state.access)}</nav><div class="sidebar-foot">${mode === "demo" ? "DATA CONTOH · DEMO" : "AKSES ADMIN"}<br>Fresh. Creamy. Berkualitas.<br><a href="/" target="_blank" rel="noopener">Website customer</a></div></aside><main><header class="topbar"><div><div class="breadcrumb">Maniac Duren / ${sections.find((section) => section.pages.includes(view))?.label || "Operasional"}</div><h1>${title[view]}</h1></div><div class="toolbar"><span class="tag ${mode === "demo" ? "demo" : ""}">${mode === "demo" ? "MODE DEMO" : "DATABASE AKTIF"}</span><button id="logout" class="small">Keluar</button></div></header>${body}<p class="page-foot">${mode === "demo" ? "Semua angka adalah data contoh." : "Stok dan penjualan tersimpan di database bersama."} Berat kg dicatat pada setiap penjualan, termasuk penjualan per butir.</p></main></div>`;
+  return `<div class="shell ${["products","stock"].includes(view)?"inventory-shell":""}"><aside class="sidebar"><div><div class="brand"><img src="logo.png" alt="Maniac Duren"></div><div class="brand-sub">OPERATIONS / POS</div></div><div class="sidebar-store"><label for="active-store">TOKO AKTIF</label><div class="store-select-wrap">${icon("stores")}<select id="active-store" aria-label="Toko aktif" title="${e(name("stores", store))}">${options("stores", store)}</select></div></div><nav class="nav" aria-label="Navigasi POS">${navigation(title, view, icon, state.access)}</nav><div class="sidebar-foot">${mode === "demo" ? "DATA CONTOH · DEMO" : "AKSES ADMIN"}<br>Fresh. Creamy. Berkualitas.<br><a href="/" target="_blank" rel="noopener">Website customer</a></div></aside><main><header class="topbar"><div><div class="breadcrumb">Maniac Duren / ${sections.find((section) => section.pages.includes(view))?.label || "Operasional"}</div><h1>${title[view]}</h1></div><div class="toolbar"><span class="tag ${mode === "demo" ? "demo" : ""}">${mode === "demo" ? "MODE DEMO" : "DATABASE AKTIF"}</span>${themeButton()}<button id="logout" class="small">Keluar</button></div></header>${body}<p class="page-foot">${mode === "demo" ? "Semua angka adalah data contoh." : "Stok dan penjualan tersimpan di database bersama."} Berat kg dicatat pada setiap penjualan, termasuk penjualan per butir.</p></main></div>`;
 }
 function dashboard() {
   const rows = saleRows(state, { from: today(), to: today(), store }),
@@ -370,6 +396,7 @@ function render() {
       suppliers: () => directoryPage("suppliers"),
     }[view](),
   );
+  syncThemeControls();
   document.querySelectorAll("[data-view]").forEach(
     (b) =>
       (b.onclick = () => {

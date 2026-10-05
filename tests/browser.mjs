@@ -27,13 +27,20 @@ try {
  failLogin=false;await page.locator('#login-form button').click();await page.locator('nav').waitFor();
  const nav=async view=>{await page.locator(`nav [data-view="${view}"]`).click();};
  const views=await page.locator('nav [data-view]').evaluateAll(bs=>bs.map(b=>b.dataset.view));
- for(const width of [1440,390]){await page.setViewportSize({width,height:1000});for(const view of views){await nav(view);assert(await page.locator('main h1').isVisible(),view);assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),view+' overflows '+width);}}
+ for(const theme of ['light','dark']) {
+  if(await page.evaluate(()=>document.documentElement.dataset.theme)!==theme)await page.locator('[data-theme-toggle]').click();
+  assert.equal(await page.evaluate(()=>localStorage.getItem('maniac-pos-theme')||document.documentElement.dataset.theme),theme);
+  for(const width of [1440,390]){await page.setViewportSize({width,height:1000});for(const view of views){await nav(view);assert(await page.locator('main h1').isVisible(),view);assert.notEqual(await page.locator('nav button.active').evaluate(el=>getComputedStyle(el).color),await page.locator('nav button.active').evaluate(el=>getComputedStyle(el).backgroundColor));assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),theme+' '+view+' overflows '+width);}}
+  await page.setViewportSize({width:1440,height:1000});
+  if(process.env.SCREENSHOT_DIR){fs.mkdirSync(process.env.SCREENSHOT_DIR,{recursive:true});for(const view of ['employees','orders','stock','kitchen','salesreport']){await nav(view);await page.locator('.brand img').evaluate(img=>img.decode().catch(()=>{}));await page.screenshot({path:path.join(process.env.SCREENSHOT_DIR,view+'-'+theme+'.png')});}}
+ }
  await nav('employees');await page.locator('[data-edit=owner]').click();assert(await page.locator('dialog [name=email]').isEditable()===false);assert(await page.locator('[data-profile]').isVisible());await page.locator('dialog .close').first().click();
  await page.locator('[data-password=owner]').click();await page.locator('dialog [name=password]').fill('replacement-password');await page.locator('dialog [type=submit]').click();await page.waitForFunction(()=>!document.querySelector('dialog[open]'));assert(saves.some(x=>x.action==='reset'&&x.employeeId==='owner'));
- await page.locator('[data-employee-new]').click();assert.equal(await page.locator('dialog [name=role]').inputValue(),'staff');await page.locator('dialog [name=name]').fill('New employee');await page.locator('dialog [name=username]').fill('new.employee');await page.locator('dialog [name=phone]').fill('081111111111');
+ await page.locator('[data-employee-new]').click();assert.equal(await page.locator('dialog [name=role]').inputValue(),'staff');await page.locator('dialog [name=name]').fill('New employee');await page.locator('dialog [name=username]').fill('new.employee');await page.evaluate(()=>document.querySelector('[data-theme-toggle]').click());assert.equal(await page.locator('dialog [name=username]').inputValue(),'new.employee');await page.locator('dialog [name=phone]').fill('081111111111');
  const png=Buffer.from(await page.evaluate(()=>{const canvas=document.createElement('canvas');canvas.width=20;canvas.height=20;canvas.getContext('2d').fillRect(0,0,20,20);return canvas.toDataURL('image/png').split(',')[1];}),'base64');
  await page.locator('[data-profile]').setInputFiles({name:'avatar.png',mimeType:'image/png',buffer:png});await page.locator('[data-profile-preview]').waitFor({state:'visible'});await page.locator('dialog [type=submit]').click();await page.waitForFunction(()=>!document.querySelector('dialog[open]'));assert(saves.some(x=>x.action==='employee_save'&&x.payload.username==='new.employee'&&x.payload.profilePhoto.startsWith('data:image/jpeg;')));
  assert.deepEqual(errors,[]);
+ const savedTheme=await page.evaluate(()=>document.documentElement.dataset.theme);await page.reload();await page.locator('#login-form').waitFor();assert.equal(await page.evaluate(()=>document.documentElement.dataset.theme),savedTheme);
  // Also render the public site and menu; all local scripts must load without exceptions.
  for(const url of ['/','/menu/','/menu/kelola.html']){await page.goto('https://test.invalid'+url);await page.waitForLoadState('load');assert(await page.locator('body').innerText());}
  assert.deepEqual(errors,[]);
