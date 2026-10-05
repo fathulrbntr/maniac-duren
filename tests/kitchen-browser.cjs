@@ -13,7 +13,7 @@ const {chromium}=require('playwright');
  async function setup(email){const page=await browser.newPage({viewport:{width:1440,height:950}});page.on('pageerror',e=>errors.push(e.message));
  await page.route('**/*',async r=>{const u=new URL(r.request().url());const reply=data=>r.fulfill({json:data});
  if(u.pathname==='/api/pos-config')return reply({configured:true,url:'https://pos-test.invalid/mock',key:'test'});
- if(u.pathname.includes('/auth/v1/token'))return reply({access_token:email,refresh_token:'test',expires_in:3600,user:{id:email}});
+ if(u.pathname==='/api/pos-login')return reply({access_token:email,refresh_token:'test',expires_in:3600,user:{id:email}});
  const snapshot=()=>({...state,access:{sell:email==='cashier',kitchen:email==='cook',cancel:true}});
  if(u.pathname.endsWith('/pos_read'))return reply(snapshot());
  if(u.pathname.endsWith('/pos_mutate')){const {action,payload}=r.request().postDataJSON();
@@ -21,7 +21,7 @@ const {chromium}=require('playwright');
  else{const o=state.orders.find(o=>o.id===payload.orderId);if(action==='order_start'){state.unitLots[0].qty-=o.reserved['product:prep'].qty;o.status='preparing';}if(action==='order_ready')o.status='ready';if(action==='order_complete')o.status='paid';}
  return reply(snapshot());}
  try{const file=path.join(root,u.pathname.endsWith('/')?u.pathname+'index.html':u.pathname);return r.fulfill({body:fs.readFileSync(file),contentType:/\.m?js$/.test(file)?'text/javascript':file.endsWith('.css')?'text/css':file.endsWith('.html')?'text/html':'image/png'});}catch{return r.fulfill({status:404,body:''});}});
- await page.goto('https://pos-test.invalid/pos/');await page.locator('[name=email]').fill(email+'@test.local');await page.locator('[name=password]').fill('fixture');await page.locator('#login-form button').click();await page.locator('nav').waitFor();return page;}
+ await page.goto('https://pos-test.invalid/pos/');await page.locator('[name=identifier]').fill(email+'@test.local');await page.locator('[name=password]').fill('fixture');await page.locator('#login-form button').click();await page.locator('nav').waitFor();return page;}
  const cashier=await setup('cashier'),cook=await setup('cook');
  assert.equal(await cook.locator('main h1').innerText(),'Antrean Kitchen');assert.equal(await cook.locator('nav [data-view=cashier]').count(),0);
  await cook.locator('#kitchen-sound').click();assert.equal(await cook.locator('#kitchen-sound').getAttribute('aria-pressed'),'true');

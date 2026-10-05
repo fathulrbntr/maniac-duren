@@ -21,7 +21,7 @@ for (const mode of ["fresh", "upgrade"]) {
   const db = new PGlite();
   try {
     await db.exec(
-      `create role anon;create role authenticated;create schema auth;create table auth.users(id uuid primary key,email text);create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;`,
+      `create role anon;create role authenticated;create role service_role;create schema auth;create table auth.users(id uuid primary key,email text);create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;`,
     );
     for (const file of mode === "fresh"
       ? ["pos.sql"]

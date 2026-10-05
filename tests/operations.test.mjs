@@ -6,7 +6,7 @@ import {PGlite} from '@electric-sql/pglite';
 for(const install of ['fresh','upgrade']){
  const db=new PGlite();
  try{
- await db.exec("create role anon;create role authenticated;create schema auth;create table auth.users(id uuid primary key,email text);create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;");
+ await db.exec("create role anon;create role authenticated;create role service_role;create schema auth;create table auth.users(id uuid primary key,email text);create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;");
  const sql=fs.readFileSync('database/pos.sql','utf8');
  const owner=id();
  if(install==='upgrade'){
@@ -18,6 +18,7 @@ for(const install of ['fresh','upgrade']){
   await db.exec(fs.readFileSync('database/012-pay-first-kitchen.sql','utf8'));
  await db.exec(fs.readFileSync('database/013-kitchen-recipes-only.sql','utf8'));
  await db.exec(fs.readFileSync('database/015-employees-attendance.sql','utf8'));
+ await db.exec(fs.readFileSync('database/016-employee-accounts.sql','utf8'));
  }else{
   await db.exec(sql);
   await db.query('insert into auth.users values($1,$2)',[owner,'owner@test.local']);
