@@ -1,7 +1,7 @@
 export const sections = [
   {
     label: "Operasional",
-    pages: ["orders", "cashier", "stock", "sorting", "production", "waste", "losses"],
+    pages: ["orders", "kitchen", "stock", "sorting", "production", "waste", "losses"],
   },
   { label: "Laporan", pages: ["salesreport", "finance", "trace", "dashboard", "reports"] },
   { label: "Tim", pages: ["employees", "attendance"] },
@@ -12,10 +12,11 @@ export const sections = [
   },
 ];
 export function navigation(title, view, icon, access) {
-  return sections
+  const visibility=access?{salesreport:access.reports,orders:access.sell,kitchen:access.kitchen||access.sell,dashboard:access.reports,cashier:access.sell,stock:access.stock||access.produce,sorting:access.stock,production:access.produce,waste:access.waste,losses:access.waste,reports:access.reports,finance:access.finance,trace:access.trace,employees:access.employees,attendance:access.attendance,products:access.master,recipes:access.master,stores:access.master,suppliers:access.master,guide:true}:null;
+  return sections.filter(section=>section.pages.some(key=>!visibility||visibility[key]))
     .map(
       (section) =>
-        `<div class="nav-section"><span class="nav-heading">${section.label}</span>${section.pages.filter(key=>!access||({salesreport:access.reports,orders:access.sell||access.kitchen,dashboard:access.reports,cashier:access.sell,stock:access.stock||access.produce,sorting:access.stock,production:access.produce,waste:access.waste,losses:access.waste,reports:access.reports,finance:access.finance,trace:access.trace,employees:access.employees,attendance:access.attendance,products:access.master,recipes:access.master,stores:access.master,suppliers:access.master,guide:true})[key]).map((key) => `<button data-view="${key}" class="${view === key ? "active" : ""}" ${view === key ? 'aria-current="page"' : ""}>${icon(key)}${title[key]}</button>`).join("")}</div>`,
+        `<div class="nav-section"><span class="nav-heading">${section.label}</span>${section.pages.filter(key=>!access||({salesreport:access.reports,orders:access.sell,kitchen:access.kitchen||access.sell,dashboard:access.reports,cashier:access.sell,stock:access.stock||access.produce,sorting:access.stock,production:access.produce,waste:access.waste,losses:access.waste,reports:access.reports,finance:access.finance,trace:access.trace,employees:access.employees,attendance:access.attendance,products:access.master,recipes:access.master,stores:access.master,suppliers:access.master,guide:true})[key]).map((key) => `<button data-view="${key}" class="${view === key ? "active" : ""}" ${view === key ? 'aria-current="page"' : ""}>${icon(key)}${title[key]}</button>`).join("")}</div>`,
     )
     .join("");
 }

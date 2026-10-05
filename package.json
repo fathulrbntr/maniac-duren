@@ -6,7 +6,9 @@
     "test:db": "node tests/database.test.mjs && node tests/operations.test.mjs",
     "test:browser": "node tests/browser.mjs",
     "db:build": "node scripts/build-database.mjs",
-    "test:operations": "node tests/operations.test.mjs"
+    "test:operations": "node tests/operations.test.mjs",
+    "test:kitchen": "node tests/order-stock.test.mjs && node tests/kitchen-orders.test.mjs",
+    "test:kitchen:browser": "node tests/kitchen-browser.cjs"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.8",

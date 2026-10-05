@@ -1,10 +1,10 @@
-import {opsPages,opsPage,bindOps,clearOrderDraft} from './operations-ui.mjs?v=10';
+import {opsPages,opsPage,bindOps,clearOrderDraft} from './operations-ui.mjs?v=12';
 import {
   sections,
   navigation,
   mayLeave,
   trackForms,
-} from "./navigation.mjs?v=9";
+} from "./navigation.mjs?v=12";
 import {
   prepareRetry,
   settleRetry,
@@ -35,6 +35,8 @@ import {
 import { isLegacyStock } from "./catalog.mjs?v=9";
 import { catalogPanel, productDialog } from "./catalog-ui.mjs?v=9";
 const catalogFilter = { query: "", category: "", itemType: "" };
+let stateRevision=0, polling=false, soundEnabled=false, audioContext;
+const seenKitchen=new Map();
 let state = emptyState(),
   mode = "",
   config = {},
@@ -55,6 +57,7 @@ const title = {
   recipes: "Master Resep",
   production: "Produksi bahan",
   cashier: "Kasir buah cepat",
+  kitchen: "Antrean Kitchen",
   stock: "Stok & barang masuk",
   waste: "Olah reject",
   reports: "Rincian kasir buah cepat",
@@ -65,6 +68,7 @@ const title = {
 const paths = {
   dashboard: "M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z",
   orders: "M7 4H5v17l3-2 4 2 4-2 3 2V4h-2 M9 3h6v4H9z M8 11h8 M8 15h5",
+  kitchen: "M4 4h16v17H4z M8 2v4 M16 2v4 M8 10h8 M8 14h8 M8 18h4",
   cashier: "M4 3h16v13H4z M8 20h8 M12 16v4 M7 7h10 M7 11h4",
   stock: "M3 7l9-4 9 4-9 4z M3 7v10l9 4 9-4V7 M12 11v10 M7 5l10 5",
   sorting: "M4 5h10 M4 9h7 M4 13h4 M17 4v16 M13 16l4 4 4-4",
@@ -160,6 +164,7 @@ async function mutate(action, payload) {
     toast(error.message);
     return false;
   }
+  stateRevision++;
   busy = true;
   const controls = [
     ...document.querySelectorAll("button,input,select,textarea"),
@@ -209,7 +214,7 @@ function login(message = "") {
       mode = "live";
       setRetryScope(config.url + ":" + d.user.id);
       await refresh();
-      view=state.access?.sell||state.access?.kitchen?"orders":"guide";
+      view=state.access?.sell?"orders":state.access?.kitchen?"kitchen":"guide";
       render();
     } catch (err) {
       token = "";
@@ -234,7 +239,7 @@ function dashboard() {
     kg = lots.reduce((a, x) => a + x.kg, 0),
     pieces = lots.reduce((a, x) => a + x.pieces, 0);
   const receiptCount = new Set(rows.map((x) => x.saleId)).size;
-  return `<div class="intro"><div><h2>Ringkasan hari ini</h2><div class="muted">${e(name("stores", store))} · ${new Intl.DateTimeFormat("id-ID", { dateStyle: "full", timeZone: "Asia/Jakarta" }).format(new Date())}</div></div><button class="primary" data-view="cashier">${icon("cashier")} Transaksi baru</button></div><div class="stats">${stat("Omzet hari ini", money(s.total), `${receiptCount} transaksi selesai`)}${stat("Stok durian utuh", num(kg) + " kg", num(pieces) + " butir di store ini")}${stat("Omzet jual per butir", money(s.pieceRevenue), "Menggunakan " + num(s.pieceKg) + " kg stok")}${stat("Durian terjual", num(s.kg) + " kg", num(s.pieces) + " butir terjual")}</div><div class="split"><section class="panel"><div class="header-row"><h3>Penjualan terbaru</h3><button class="small" data-view="reports">Lihat laporan</button></div>${salesTable(rows.slice(-6).reverse(), false)}</section><section class="panel"><h3>Omzet berdasarkan cara jual</h3>${[
+  return `<div class="intro"><div><h2>Ringkasan hari ini</h2><div class="muted">${e(name("stores", store))} · ${new Intl.DateTimeFormat("id-ID", { dateStyle: "full", timeZone: "Asia/Jakarta" }).format(new Date())}</div></div><button class="primary" data-view="orders">${icon("cashier")} Transaksi baru</button></div><div class="stats">${stat("Omzet hari ini", money(s.total), `${receiptCount} transaksi selesai`)}${stat("Stok durian utuh", num(kg) + " kg", num(pieces) + " butir di store ini")}${stat("Omzet jual per butir", money(s.pieceRevenue), "Menggunakan " + num(s.pieceKg) + " kg stok")}${stat("Durian terjual", num(s.kg) + " kg", num(s.pieces) + " butir terjual")}</div><div class="split"><section class="panel"><div class="header-row"><h3>Penjualan terbaru</h3><button class="small" data-view="reports">Lihat laporan</button></div>${salesTable(rows.slice(-6).reverse(), false)}</section><section class="panel"><h3>Omzet berdasarkan cara jual</h3>${[
     "KG",
     "BUTIR",
   ]
@@ -389,6 +394,8 @@ function render() {
     refreshToken = "";
     expires = 0;
     mode = "";
+    stateRevision++;
+    seenKitchen.clear();
     cart = [];
     state = emptyState();
     view = "dashboard";
@@ -422,12 +429,14 @@ function render() {
       }
     };
   }
-  bindOps(view,state,store,{modal,mutate,render,toast,refresh,createAccount:async(employeeId,password)=>{
+  bindOps(view,state,store,{modal,mutate,render,toast,refresh,getState:()=>state,createAccount:async(employeeId,password)=>{
     if(mode!=="live")throw Error("Akun hanya dapat dibuat saat login database.");
     await request("/rest/v1/rpc/pos_allowed",{permission:"employees"});
     const res=await fetch("/api/pos-employee",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+token},body:JSON.stringify({employeeId,password})});
     const data=await res.json();if(!res.ok)throw Error(data.error||"Gagal membuat akun");return data;
   }});
+  bindKitchenSound();
+  observeKitchen();
   trackForms();
   bindProduction(view, state, store, { modal, mutate, render, toast, refresh });
   bindWaste(view, state, store, {
@@ -850,3 +859,39 @@ function editMasterDetails(kind, recordId) {
     }
   };
 }
+
+// Poll only the signed-in POS session; keep order inputs intact while refreshing stock.
+
+function beepKitchen(){
+ if(!soundEnabled||!audioContext)return;
+ const oscillator=audioContext.createOscillator(),gain=audioContext.createGain();
+ oscillator.connect(gain);gain.connect(audioContext.destination);oscillator.frequency.value=880;
+ gain.gain.setValueAtTime(.12,audioContext.currentTime);gain.gain.exponentialRampToValueAtTime(.001,audioContext.currentTime+.5);
+ oscillator.start();oscillator.stop(audioContext.currentTime+.5);
+}
+function bindKitchenSound(){
+ const button=document.querySelector('#kitchen-sound');if(!button)return;
+ button.textContent=soundEnabled?'Suara aktif':'Aktifkan suara';button.setAttribute('aria-pressed',String(soundEnabled));
+ button.onclick=async()=>{try{if(!soundEnabled){audioContext ||= new (window.AudioContext||window.webkitAudioContext)();await audioContext.resume();}soundEnabled=!soundEnabled;bindKitchenSound();beepKitchen();}catch{toast('Suara tidak tersedia di browser ini. Notifikasi layar tetap aktif.');}};
+}
+function observeKitchen(){
+ if(view!=='kitchen')return;
+ const orders=(state.orders||[]).filter(o=>o.store_id===store);
+ const previous=seenKitchen.get(store);
+ const incoming=previous?orders.filter(o=>o.status==='queued'&&!previous.has(o.id)):[];
+ seenKitchen.set(store,new Set(orders.map(o=>o.id)));
+ if(incoming.length){toast(`${incoming.length} pesanan baru masuk ke kitchen`);beepKitchen();}
+}
+setInterval(async()=>{
+ if(mode!=='live'||busy||polling||!['orders','kitchen'].includes(view))return;
+ polling=true;const revision=stateRevision,sessionToken=token;
+ try{
+  const fresh=await request('/rest/v1/rpc/pos_read',{});
+  if(mode!=='live'||busy||revision!==stateRevision||sessionToken!==token)return;
+  state=fresh;observeKitchen();
+  if(view==='kitchen'&&!document.querySelector('dialog[open]'))render();
+  else document.querySelector('#order-products')?.dispatchEvent(new CustomEvent('stock-refresh',{detail:state}));
+  const status=document.querySelector('#kitchen-sync');if(status)status.textContent='Terhubung · diperbarui '+new Date().toLocaleTimeString('id-ID');
+ }catch(err){const status=document.querySelector('#kitchen-sync');if(status)status.textContent='Koneksi terputus. Mencoba lagi otomatis; tekan Perbarui untuk mencoba sekarang.';}
+ finally{polling=false;}
+},5000);

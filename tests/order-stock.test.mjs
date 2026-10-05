@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import {checkOrder,menuStatus} from '../pos/order-stock.mjs';
+const day='2026-10-05';
+const s={orderStockVersion:11,products:[{id:'dessert',name:'Es duren',itemType:'recipe',stockUnit:'porsi'},{id:'other',name:'Sop',itemType:'recipe',stockUnit:'porsi'},{id:'prep',name:'Cendol',stockUnit:'g',itemType:'prep'},{id:'drink',name:'Air',itemType:'direct',stockUnit:'pcs'}],recipes:[{id:'r',outputId:'dessert',yieldQty:2,ingredients:[{productId:'prep',qty:100}]},{id:'r2',outputId:'other',yieldQty:1,ingredients:[{productId:'prep',qty:50}]}],unitLots:[{productId:'prep',storeId:'s',qty:100,date:day,expiry:day},{productId:'prep',storeId:'else',qty:1000,date:day},{productId:'drink',storeId:'s',qty:2,date:day,expiry:'2026-10-04'}],lots:[],orders:[]};
+assert(checkOrder(s,'s',[{productId:'dessert',qty:2}],day).ok);
+assert(!checkOrder(s,'s',[{productId:'dessert',qty:2},{productId:'other',qty:1}],day).ok);
+assert(!menuStatus(s,'s',s.products[3],[],day).ok);
+s.orders=[{store_id:'s',status:'queued',reserved:{'product:prep':{qty:50,pieces:0}}}];
+assert(checkOrder(s,'s',[{productId:'dessert',qty:1}],day).ok);
+assert(!checkOrder(s,'s',[{productId:'dessert',qty:2}],day).ok);
+s.orders[0].status='cancelled';assert(checkOrder(s,'s',[{productId:'dessert',qty:2}],day).ok);
+s.recipes=[];assert(!menuStatus(s,'s',s.products[0],[],day).ok);
+console.log('PASS availability: recipe yield, combined ingredients, prep stock, expiry, branch, reservation and cancellation.');
