@@ -6,7 +6,7 @@ module.exports = async (req,res) => {
  if(!url||!publicKey||!secret)return res.status(503).json({error:'Owner perlu memasang POS_SUPABASE_SERVICE_ROLE_KEY di environment Vercel untuk membuat akun.'});
  const auth=req.headers.authorization||'';
  if(!auth.startsWith('Bearer '))return res.status(401).json({error:'Login diperlukan'});
- const {employeeId,password}=typeof req.body==='string'?JSON.parse(req.body):req.body||{};
+ const {employeeId,password,action='create'}=typeof req.body==='string'?JSON.parse(req.body):req.body||{};
  if(!/^[0-9a-f-]{36}$/i.test(employeeId||'')||typeof password!=='string'||password.length<12||password.length>128)return res.status(400).json({error:'ID karyawan dan password minimal 12 karakter wajib'});
  const api=async(path,body,admin=false)=>{
   const r=await fetch(url+path,{method:'POST',headers:{apikey:admin?secret:publicKey,Authorization:admin?'Bearer '+secret:auth,'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(20000)});
@@ -14,6 +14,7 @@ module.exports = async (req,res) => {
  };
  try{
   const target=await api('/rest/v1/rpc/pos_account_target',{employee_id:employeeId});
+  if(target.linked && action==='reset'){const r=await fetch(url+'/auth/v1/admin/users/'+target.userId,{method:'PUT',headers:{apikey:secret,Authorization:'Bearer '+secret,'Content-Type':'application/json'},body:JSON.stringify({password})});const d=await r.json();if(!r.ok)throw Error(d.message||'Gagal mengubah password');return res.status(200).json({ok:true});}
   if(target.linked)return res.status(200).json({ok:true});
   // Auth lookup uses the owner-only RPC, so a retry after creation can finish linking.
   let userId=target.userId;

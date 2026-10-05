@@ -199,7 +199,7 @@ async function mutate(action, payload) {
   }
 }
 function login(message = "") {
-  app.innerHTML = `<div class="auth"><section class="auth-brand"><img src="logo.png" alt="Maniac Duren"><h1>Satu kasir.<br>Dua satuan stok.</h1><p>Penjualan per kilo atau per butir, stok setiap store, dan asal supplier dalam satu tempat.</p></section><section class="auth-form"><div><span class="tag">AREA ADMIN</span><h2 style="margin-top:20px">Masuk ke POS</h2><p class="muted">Kelola operasional Maniac Duren.</p>${config.configured ? "" : `<div class="notice">Database belum dihubungkan. Hubungi pengelola untuk mengaktifkan akses POS.</div>`}<form id="login-form">${field("Email admin", '<input name="email" type="email" required autocomplete="username" placeholder="Email yang terdaftar">')}${field("Password", '<input name="password" type="password" required autocomplete="current-password">')}<p class="error" id="login-error">${e(message)}</p><button class="primary full" type="submit" ${config.configured ? "" : "disabled"}>Masuk</button></form><a class="muted" href="/">Kembali ke website customer</a></div></section></div>`;
+  app.innerHTML = `<div class="auth"><section class="auth-brand"><img src="logo.png" alt="Maniac Duren"><h1>Satu kasir.<br>Dua satuan stok.</h1><p>Penjualan per kilo atau per butir, stok setiap store, dan asal supplier dalam satu tempat.</p></section><section class="auth-form"><div><span class="tag">AREA ADMIN</span><h2 style="margin-top:20px">Masuk ke POS</h2><p class="muted">Kelola operasional Maniac Duren.</p>${config.configured ? "" : `<div class="notice">Database belum dihubungkan. Hubungi pengelola untuk mengaktifkan akses POS.</div>`}<form id="login-form">${field("Username / nomor telepon", '<input name="identifier" required autocomplete="username" placeholder="Username atau nomor telepon">')}${field("Password", '<input name="password" type="password" required autocomplete="current-password">')}<p class="error" id="login-error">${e(message)}</p><button class="primary full" type="submit" ${config.configured ? "" : "disabled"}>Masuk</button></form><a class="muted" href="/">Kembali ke website customer</a></div></section></div>`;
   document.querySelector("#login-form").onsubmit = async (ev) => {
     ev.preventDefault();
     const form = ev.currentTarget,
@@ -208,9 +208,7 @@ function login(message = "") {
     try {
       const d = await request(
         "/auth/v1/token?grant_type=password",
-        Object.fromEntries(new FormData(form)),
-        false,
-      );
+        (()=>{const v=Object.fromEntries(new FormData(form));return fetch("/api/pos-login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({identifier:v.identifier})}).then(async r=>{const d=await r.json();if(!r.ok)throw Error(d.error||"Login gagal");return request("/auth/v1/token?grant_type=password",{email:d.email,password:v.password},false)})})(),
       token = d.access_token;
       refreshToken = d.refresh_token;
       expires = Date.now() + d.expires_in * 1000;
@@ -434,7 +432,7 @@ function render() {
       }
     };
   }
-  bindOps(view,state,store,{modal,mutate,render,toast,refresh,getState:()=>state,employeeDocument:employeeId=>request("/rest/v1/rpc/pos_employee_document",{employee_id:employeeId}),createAccount:async(employeeId,password)=>{
+  bindOps(view,state,store,{modal,mutate,render,toast,refresh,getState:()=>state,token,employeeDocument:employeeId=>request("/rest/v1/rpc/pos_employee_document",{employee_id:employeeId}),createAccount:async(employeeId,password)=>{
     if(mode!=="live")throw Error("Akun hanya dapat dibuat saat login database.");
     await request("/rest/v1/rpc/pos_allowed",{permission:"employees"});
     const res=await fetch("/api/pos-employee",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+token},body:JSON.stringify({employeeId,password})});

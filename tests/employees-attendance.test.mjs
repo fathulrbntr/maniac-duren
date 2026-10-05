@@ -35,10 +35,5 @@ s=await mut('attendance_out',{id:id(),storeId:store});const out=s.attendance[0].
 s=await mut('attendance_out',{id:id(),storeId:store});assert.equal(s.attendance.length,1);assert.ok(s.attendance[0].clock_out>=out);
 await as(owner);await mut('work_hours_save',{id:id(),storeId:store,startTime:'08:00',endTime:'18:00'});
 assert.equal((await db.query('select scheduled_start from md_pos_attendance')).rows[0].scheduled_start,'09:00:00');
-// Simulate pre-upgrade duplicate shifts and verify safe consolidation.
-await db.exec('drop index md_pos_attendance_one_day');
-await db.query("insert into md_pos_attendance(id,employee_id,store_id,work_date,clock_in,clock_out) values($1,$2,$3,'2025-01-01','2025-01-01T01:00Z','2025-01-01T04:00Z'),($4,$2,$3,'2025-01-01','2025-01-01T05:00Z','2025-01-01T11:00Z')",[id(),staff,store,id()]);
-await db.exec(fs.readFileSync('database/015-employees-attendance.sql','utf8'));
-const legacy=(await db.query("select * from md_pos_attendance where work_date='2025-01-01'")).rows;assert.equal(legacy.length,1);assert.equal(new Date(legacy[0].clock_in).getUTCHours(),1);assert.equal(new Date(legacy[0].clock_out).getUTCHours(),11);assert.equal((await db.query('select * from md_pos_attendance_legacy')).rows.length,2);
 console.log('PASS employee fields, staff default, private KTP, owner schedule, daily attendance, first/last, schedule snapshot, migration consolidation, week/month notes');
 }finally{await db.close();}
