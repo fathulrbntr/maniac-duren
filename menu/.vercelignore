@@ -1,0 +1,12 @@
+backup/
+database/
+tests/
+scripts/
+docs/
+node_modules/
+**/*.ARW
+**/*.zip
+**/*.md
+package.json
+package-lock.json
+UPDATE.txt

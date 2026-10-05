@@ -1,0 +1,377 @@
+import { wasteAction } from "./waste.mjs?v=9";
+import { deleteProduct, adjustProductStock } from "./product-stock.mjs?v=9";
+import { productionAction } from "./production.mjs?v=9";
+import { saveProduct, isLegacyStock } from "./catalog.mjs?v=9";
+export const today = () =>
+  new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Jakarta" });
+export const money = (n) =>
+  new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    maximumFractionDigits: 2,
+  }).format(n);
+export const num = (n) =>
+  new Intl.NumberFormat("id-ID", { maximumFractionDigits: 6 }).format(n);
+export const escape = (s) =>
+  String(s ?? "").replace(
+    /[&<>"']/g,
+    (c) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
+        c
+      ],
+  );
+export const emptyState = () => ({
+  stores: [],
+  suppliers: [],
+  products: [],
+  lots: [],
+  sales: [],
+  movements: [],
+  recipes: [],
+  unitLots: [],
+  productions: [],
+  stockAdjustments: [],
+  wasteRuns: [],
+});
+export const id = () => crypto.randomUUID();
+function positive(x, label) {
+  const v = Number(x);
+  if (!Number.isFinite(v) || v <= 0) throw Error(`${label} harus lebih dari 0`);
+  return v;
+}
+function validDate(d) {
+  if (
+    !/^\d{4}-\d{2}-\d{2}$/.test(d) ||
+    new Date(d + "T00:00:00Z").toISOString().slice(0, 10) !== d
+  )
+    throw Error("Tanggal tidak valid");
+}
+export function applyAction(input, action, payload) {
+  const s = structuredClone(input),
+    p = structuredClone(payload);
+  if (!p.id) throw Error("ID wajib");
+  if (
+    ["recipe_save", "unit_receipt", "produce", "production_void"].includes(
+      action,
+    )
+  ) {
+    productionAction(s, action, p);
+    return s;
+  }
+  if (action === "master") {
+    if (!["stores", "suppliers", "products"].includes(p.kind))
+      throw Error("Jenis master tidak valid");
+    if (!p.name?.trim()) throw Error("Nama wajib");
+    if (s[p.kind].some((x) => x.id === p.id)) return s;
+    if (p.kind === "products") saveProduct(s, p);
+    else s[p.kind].push({ id: p.id, name: p.name.trim(), ...masterDetails(p) });
+    return s;
+  }
+  if (["waste_process", "waste_void"].includes(action)) {
+    wasteAction(s, action, p);
+    return s;
+  }
+  if (action === "product_save") {
+    saveProduct(s, p, p.editing === true);
+    adjustProductStock(s, p);
+    return s;
+  }
+  if (action === "product_delete") {
+    deleteProduct(s, p);
+    return s;
+  }
+  if (action === "product_update") {
+    saveProduct(s, p, true);
+    return s;
+  }
+  if (action === "master_details") {
+    if (!["stores", "suppliers"].includes(p.kind))
+      throw Error("Jenis master tidak valid");
+    const row = s[p.kind].find((x) => x.id === p.id);
+    if (!row) throw Error("Master tidak ditemukan");
+    Object.assign(row, masterDetails(p));
+    return s;
+  }
+  if (action === "receipt") {
+    if (s.lots.some((x) => x.id === p.id)) return s;
+    validDate(p.date);
+    for (const [a, b] of [
+      ["storeId", "stores"],
+      ["supplierId", "suppliers"],
+      ["productId", "products"],
+    ])
+      if (!s[b].some((x) => x.id === p[a]))
+        throw Error("Master belum terdaftar");
+    if (!isLegacyStock(s.products.find((x) => x.id === p.productId)))
+      throw Error(
+        "Operasional item ini belum aktif; saat ini hanya master produk",
+      );
+    const kg = positive(p.kg, "Berat"),
+      pieces = positive(p.pieces, "Butir");
+    if (!Number.isInteger(pieces)) throw Error("Butir harus bilangan bulat");
+    s.lots.push({
+      id: p.id,
+      storeId: p.storeId,
+      supplierId: p.supplierId,
+      productId: p.productId,
+      date: p.date,
+      expiry: p.expiry || "",
+      note: p.note || "",
+      receivedKg: kg,
+      receivedPieces: pieces,
+      kg,
+      pieces,
+    });
+    return s;
+  }
+  if (action === "sale") {
+    if (s.sales.some((x) => x.id === p.id)) return s;
+    validDate(p.date);
+    if (!Array.isArray(p.lines) || !p.lines.length)
+      throw Error("Keranjang kosong");
+    if (!["Tunai", "QRIS", "Transfer"].includes(p.payment))
+      throw Error("Pembayaran tidak valid");
+    const lines = p.lines.map((line) => {
+      const l = s.lots.find((x) => x.id === line.lotId);
+      if (!l || l.storeId !== p.storeId)
+        throw Error("Barang bukan milik store ini");
+      if (!isLegacyStock(s.products.find((x) => x.id === l.productId)))
+        throw Error("Operasional item ini belum aktif");
+      if (p.date < l.date) throw Error("Penjualan sebelum barang masuk");
+      const kg = positive(line.kg, "Berat"),
+        pieces = positive(line.pieces, "Butir"),
+        price = positive(line.price, "Harga");
+      if (!Number.isInteger(pieces)) throw Error("Butir harus bilangan bulat");
+      if (!["KG", "BUTIR"].includes(line.unit))
+        throw Error("Satuan jual tidak valid");
+      if (kg > l.kg + 1e-9 || pieces > l.pieces)
+        throw Error("Stok tidak cukup. Muat ulang stok.");
+      l.kg = Math.max(0, l.kg - kg);
+      l.pieces -= pieces;
+      return {
+        lotId: l.id,
+        productId: l.productId,
+        supplierId: l.supplierId,
+        kg,
+        pieces,
+        price,
+        unit: line.unit,
+        total: (line.unit === "KG" ? kg : pieces) * price,
+      };
+    });
+    const total = lines.reduce((a, x) => a + x.total, 0);
+    const paid = positive(p.paid, "Nominal pembayaran");
+    if (paid < total) throw Error("Pembayaran kurang");
+    s.sales.push({
+      id: p.id,
+      date: p.date,
+      storeId: p.storeId,
+      payment: p.payment,
+      paid,
+      total,
+      change: paid - total,
+      lines,
+      createdAt: new Date().toISOString(),
+      voided: false,
+    });
+    return s;
+  }
+  if (action === "void") {
+    const sale = s.sales.find((x) => x.id === p.saleId);
+    if (!sale) throw Error("Transaksi tidak ditemukan");
+    if (sale.voided) return s;
+    if (!p.reason?.trim()) throw Error("Alasan pembatalan wajib");
+    for (const line of sale.lines) {
+      const l = s.lots.find((x) => x.id === line.lotId);
+      l.kg += line.kg;
+      l.pieces += line.pieces;
+    }
+    sale.voided = true;
+    sale.voidReason = p.reason;
+    sale.voidedAt = new Date().toISOString();
+    return s;
+  }
+  if (action === "movement") {
+    if (s.movements.some((x) => x.id === p.id)) return s;
+    const l = s.lots.find((x) => x.id === p.lotId);
+    if (!l) throw Error("Barang tidak ditemukan");
+    validDate(p.date);
+    if (p.date < l.date) throw Error("Tanggal sebelum barang masuk");
+    const kg = positive(p.kg, "Berat"),
+      pieces = positive(p.pieces, "Butir");
+    if (!Number.isInteger(pieces) || kg > l.kg + 1e-9 || pieces > l.pieces)
+      throw Error("Jumlah melebihi stok atau butir tidak valid");
+    if (!["Waste", "Pemakaian dapur", "Transfer"].includes(p.kind))
+      throw Error("Jenis tidak valid");
+    if (!p.note?.trim()) throw Error("Catatan wajib");
+    l.kg = Math.max(0, l.kg - kg);
+    l.pieces -= pieces;
+    if (p.kind === "Transfer") {
+      if (
+        p.toStoreId === l.storeId ||
+        !s.stores.some((x) => x.id === p.toStoreId)
+      )
+        throw Error("Pilih store tujuan berbeda");
+      s.lots.push({
+        ...l,
+        id: p.id,
+        storeId: p.toStoreId,
+        date: p.date,
+        kg,
+        pieces,
+        receivedKg: kg,
+        receivedPieces: pieces,
+        sourceLotId: l.id,
+        note: p.note,
+      });
+    }
+    s.movements.push({
+      ...p,
+      storeId: l.storeId,
+      supplierId: l.supplierId,
+      productId: l.productId,
+      kg,
+      pieces,
+    });
+    return s;
+  }
+  throw Error("Aksi tidak valid");
+}
+export function saleRows(s, filter = {}) {
+  return s.sales
+    .filter(
+      (x) =>
+        !x.voided &&
+        (!filter.store || x.storeId === filter.store) &&
+        (!filter.from || x.date >= filter.from) &&
+        (!filter.to || x.date <= filter.to),
+    )
+    .flatMap((sale) =>
+      sale.lines
+        .filter((l) => !filter.supplier || l.supplierId === filter.supplier)
+        .map((l) => ({
+          ...l,
+          date: sale.date,
+          saleId: sale.id,
+          storeId: sale.storeId,
+          payment: sale.payment,
+        })),
+    );
+}
+export function summarize(rows) {
+  return rows.reduce(
+    (a, r) => {
+      a.total += r.total;
+      a.kg += r.kg;
+      a.pieces += r.pieces;
+      a[r.unit === "BUTIR" ? "pieceRevenue" : "kgRevenue"] += r.total;
+      if (r.unit === "BUTIR") a.pieceKg += r.kg;
+      return a;
+    },
+    { total: 0, kg: 0, pieces: 0, pieceRevenue: 0, kgRevenue: 0, pieceKg: 0 },
+  );
+}
+export function demoState() {
+  const d = today();
+  let s = emptyState();
+  s.stores = [
+    { id: "depok", name: "Depok" },
+    { id: "jakarta", name: "Jakarta" },
+  ];
+  s.suppliers = [
+    { id: "a", name: "Supplier A" },
+    { id: "b", name: "Supplier B" },
+  ];
+  s.products = [
+    {
+      id: "monthong",
+      sku: "DUR-001",
+      name: "Monthong",
+      priceKg: 85000,
+      pricePiece: 150000,
+    },
+    {
+      id: "musang",
+      sku: "DUR-002",
+      name: "Musang King",
+      priceKg: 250000,
+      pricePiece: 500000,
+    },
+    {
+      id: "bawor",
+      sku: "DUR-003",
+      name: "Bawor",
+      priceKg: 75000,
+      pricePiece: 140000,
+    },
+  ];
+  for (const l of [
+    {
+      id: "lot-a",
+      storeId: "depok",
+      supplierId: "a",
+      productId: "monthong",
+      kg: 100,
+      pieces: 40,
+    },
+    {
+      id: "lot-b",
+      storeId: "depok",
+      supplierId: "b",
+      productId: "monthong",
+      kg: 60,
+      pieces: 25,
+    },
+    {
+      id: "lot-c",
+      storeId: "depok",
+      supplierId: "a",
+      productId: "musang",
+      kg: 35,
+      pieces: 14,
+    },
+    {
+      id: "lot-d",
+      storeId: "jakarta",
+      supplierId: "b",
+      productId: "bawor",
+      kg: 80,
+      pieces: 32,
+    },
+    {
+      id: "lot-e",
+      storeId: "depok",
+      supplierId: "a",
+      productId: "monthong",
+      kg: 45,
+      pieces: 18,
+    },
+  ])
+    s = applyAction(s, "receipt", { ...l, date: l.id === "lot-e" ? new Date(Date.now()-86400000).toLocaleDateString("en-CA", {timeZone:"Asia/Jakarta"}) : d });
+  for (const [i, l] of [
+    { lotId: "lot-a", kg: 2.5, pieces: 1, unit: "KG", price: 85000 },
+    { lotId: "lot-b", kg: 4.8, pieces: 2, unit: "BUTIR", price: 150000 },
+    { lotId: "lot-a", kg: 3.2, pieces: 1, unit: "KG", price: 85000 },
+  ].entries())
+    s = applyAction(s, "sale", {
+      id: "demo-sale-" + i,
+      date: d,
+      storeId: "depok",
+      payment: "QRIS",
+      paid: l.price * (l.unit === "KG" ? l.kg : l.pieces),
+      lines: [l],
+    });
+  return s;
+}
+
+function masterDetails(p) {
+  const fields =
+    p.kind === "stores" ? { location: 300 } : { phone: 40, address: 300 };
+  return Object.fromEntries(
+    Object.entries(fields).map(([key, max]) => {
+      const value = String(p[key] ?? "").trim();
+      if (value.length > max) throw Error("Detail terlalu panjang");
+      return [key, value];
+    }),
+  );
+}

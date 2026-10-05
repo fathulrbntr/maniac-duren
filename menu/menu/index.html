@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Menu Durian | Maniac Duren</title>
+  <meta name="description" content="Pilihan menu Maniac Duren: Durian Monthong, Durian Kupas, dan Paket Durian. Pesan langsung melalui WhatsApp.">
+  <link rel="canonical" href="https://www.maniacduren.com/menu">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/menu/menu.css">
+<link rel="stylesheet" href="/menu/categories.css"></head>
+<body class="menu-page">
+<a class="skip-link" href="#menu">Lewati ke menu</a>
+<header class="navbar">
+
+    <a href="/#home" class="brand" aria-label="Maniac Duren - Home">
+      <img
+        src="/assets/logo.png"
+        alt="Maniac Duren"
+        class="brand-logo"
+      >
+    </a>
+
+    <nav class="nav-menu" id="main-navigation" aria-label="Main navigation">
+      <a href="/#home">Home</a>
+      <a href="/#promo">Promo</a>
+      <a href="/menu" aria-current="page">Menu</a>
+      <a href="/#tiktok">TikTok</a>
+      <a href="/#about">About</a>
+      <a href="/#location">Location</a>
+    </nav>
+
+    <a
+      href="https://wa.me/628133331105?text=Halo%20Maniac%20Duren,%20saya%20mau%20pesan%20durian"
+      class="nav-cta"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      Order Now
+    </a>
+
+    <button
+      class="menu-toggle"
+      type="button"
+      aria-label="Open Menu"
+      aria-expanded="false"
+      aria-controls="main-navigation"
+    >
+      ☰
+    </button>
+
+  </header>
+<main><section class="menu-section section" id="menu">
+
+      <a class="menu-back" href="/">← Kembali ke beranda</a>
+      <div class="section-heading">
+
+        <p class="eyebrow">OUR MENU</p>
+
+        <h1>
+          Pilih Durian
+          <span>Favoritmu.</span>
+        </h1>
+
+      </div>
+
+
+      <p id="cart-status" role="status" aria-live="polite"></p>
+      <div class="category-filters" role="group" aria-label="Kategori menu"><button type="button" data-menu-type="durian" aria-pressed="true">Durian</button><button type="button" data-menu-type="makanan" aria-pressed="false">Makanan</button><button type="button" data-menu-type="minuman" aria-pressed="false">Minuman</button></div>
+      <div id="catalog" aria-busy="true"><p>Memuat menu…</p></div>
+      <noscript>Aktifkan JavaScript untuk melihat menu dan menggunakan keranjang.</noscript>
+      <p class="menu-note">Konfirmasi harga dan ketersediaan melalui WhatsApp sebelum memesan.</p>
+    </section></main>
+<div class="cart-dock" hidden><button id="open-cart" aria-haspopup="dialog" aria-controls="cart-dialog"><span><strong id="dock-count">0 item</strong><small>Maniac Duren · Lihat keranjang</small></span><strong id="dock-total">Rp0</strong><span aria-hidden="true">↗</span></button></div>
+<dialog id="cart-dialog" aria-labelledby="cart-title">
+  <header class="dialog-head"><div><h2 id="cart-title">Pesanan kamu</h2><p>Maniac Duren</p></div><button id="close-cart" class="icon-button" aria-label="Tutup keranjang">×</button></header>
+  <button id="add-more" class="more-button">+ Tambah menu</button>
+  <div id="cart-items"></div>
+  <div class="dialog-summary"><div><strong>Total harga</strong><strong id="cart-total">Rp0</strong></div><p>Belum termasuk ongkir. Berat akhir untuk satuan kg dan stok dikonfirmasi melalui WhatsApp.</p><button id="checkout" class="button button-primary" disabled>Pesan via WhatsApp</button></div>
+</dialog>
+<footer><a href="/" aria-label="Maniac Duren — Beranda"><img src="/assets/logo.png" alt="Maniac Duren" class="footer-logo"></a><p>© 2026 MANIAC DUREN</p></footer>
+<script src="/script.js"></script>
+<script src="/menu/logic.js"></script><script src="/menu/catalog.js"></script>
+</body>
+</html>

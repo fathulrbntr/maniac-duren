@@ -1,0 +1,5 @@
+UPDATE 08 — MULAI DARI README.md / UPDATE.md
+Database baru: gunakan database/pos.sql. Sumber SQL dikelompokkan di database/sections/ tanpa nomor di nama file.
+Database produksi: jangan menjalankan ulang database/pos.sql; gunakan migration perubahan terbaru yang belum terpasang.
+Panduan alur: docs/ALUR-PENGGUNA.md
+Temuan dan pengujian: docs/HASIL-AUDIT.md
