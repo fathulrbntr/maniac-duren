@@ -10,7 +10,7 @@ export function setRetryScope(scope) {
   }
 }
 const tracked = new Set([
-  "order_create", "order_start", "order_ready", "order_pay", "order_cancel", "sort", "inventory_loss", "recover", "employee_save", "attendance_in", "attendance_out",
+  "order_complete", "order_create", "order_start", "order_ready", "order_pay", "order_cancel", "sort", "inventory_loss", "recover", "employee_save", "attendance_in", "attendance_out",
   "sale",
   "receipt",
   "movement",
@@ -57,6 +57,7 @@ export function reconcileRetry(state) {
   if (!pending) return false;
   const rows =
     {
+      order_create: state.orders,
       sale: state.sales,
       receipt: state.lots,
       movement: state.movements,

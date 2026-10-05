@@ -1,4 +1,4 @@
-import {opsPages,opsPage,bindOps,clearOrderDraft} from './operations-ui.mjs?v=12';
+import {opsPages,opsPage,bindOps,clearOrderDraft} from './operations-ui.mjs?v=13';
 import {
   sections,
   navigation,
@@ -11,7 +11,7 @@ import {
   reconcileRetry,
   pendingRetry,
   setRetryScope,
-} from "./retry.mjs?v=9";
+} from "./retry.mjs?v=13";
 import { wastePage, bindWaste } from "./waste-ui.mjs?v=9";
 import {
   recipesPage,
@@ -152,6 +152,7 @@ async function refresh() {
   const pending = pendingRetry();
   if (reconcileRetry(state)) {
     if (pending.action === "sale") cart = [];
+    if (pending.action === "order_create") clearOrderDraft();
     toast("Pengiriman sebelumnya sudah tersimpan.");
   }
 }
@@ -421,6 +422,7 @@ function render() {
         ) {
           if (await mutate(pending.action, { ...pending.payload })) {
             if (pending.action === "sale") cart = [];
+            if (pending.action === "order_create") clearOrderDraft();
             render();
           }
         } else render();
@@ -876,7 +878,7 @@ function bindKitchenSound(){
 }
 function observeKitchen(){
  if(view!=='kitchen')return;
- const orders=(state.orders||[]).filter(o=>o.store_id===store);
+ const orders=(state.orders||[]).filter(o=>o.store_id===store&&(o.payment_status==='paid'||(!o.payment_status&&o.status==='paid')));
  const previous=seenKitchen.get(store);
  const incoming=previous?orders.filter(o=>o.status==='queued'&&!previous.has(o.id)):[];
  seenKitchen.set(store,new Set(orders.map(o=>o.id)));

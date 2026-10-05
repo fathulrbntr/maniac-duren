@@ -38,6 +38,8 @@ assert.equal(reconcileRetry({ sales: [] }), false);
 assert.equal(reconcileRetry({ sales: [{ id: "one" }] }), true);
 assert.equal(pendingRetry(), null);
 for (const [action, table] of [
+  ["order_create", "orders"],
+  ["order_complete", "events"],
   ["receipt", "lots"],
   ["movement", "movements"],
   ["unit_receipt", "unitLots"],

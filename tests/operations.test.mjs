@@ -14,6 +14,8 @@ for(const install of ['fresh','upgrade']){
   await db.query('insert into auth.users values($1,$2)',[owner,'owner@test.local']);
   await db.query('insert into public.md_pos_staff values($1)',[owner]);
   await db.exec(fs.readFileSync('database/009-integrated-operations.sql','utf8'));
+  await db.exec(fs.readFileSync('database/011-order-stock-kitchen.sql','utf8'));
+  await db.exec(fs.readFileSync('database/012-pay-first-kitchen.sql','utf8'));
  }else{
   await db.exec(sql);
   await db.query('insert into auth.users values($1,$2)',[owner,'owner@test.local']);
@@ -23,7 +25,7 @@ for(const install of ['fresh','upgrade']){
  const as=async u=>db.query("select set_config('request.jwt.claim.sub',$1,false)",[u]);await as(owner);
  const read=async()=> (await db.query('select public.pos_read() s')).rows[0].s;
  const mut=async(action,p)=>(await db.query('select public.pos_mutate($1,$2::jsonb) s',[action,JSON.stringify(p)])).rows[0].s;
- const date='2026-01-01',store=id(),other=id(),supplier=id(),fruit=id(),raw=id(),prep=id(),dessert=id();
+ const date=new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Jakarta'}),store=id(),other=id(),supplier=id(),fruit=id(),raw=id(),prep=id(),dessert=id();
  for(const [key,name]of[[store,'Depok'],[other,'Bogor']])await mut('master',{id:key,kind:'stores',name});
  await mut('master',{id:supplier,kind:'suppliers',name:'Supplier A'});
  await mut('product_save',{id:fruit,name:'Monthong',sku:'M',itemType:'direct',category:'Buah',stockUnit:'kg_butir',priceKg:100,pricePiece:200});
@@ -41,20 +43,19 @@ for(const install of ['fresh','upgrade']){
  s=await read();const production=id();await mut('produce',{id:production,storeId:store,date,recipeId:recipe,recipeVersion:s.recipes.find(r=>r.id===recipe).version,batches:1,actualQty:500});
  s=await read();assert.equal(s.unitLots.find(l=>l.id===production).unitCost,.4);
  const dessertRecipe=id();await mut('recipe_save',{id:dessertRecipe,name:'Es duren',version:0,outputId:dessert,yieldQty:1,ingredients:[{productId:prep,qty:50}]});
- const order=id();const create={id:order,storeId:store,date,lines:[{productId:dessert,qty:2,price:100},{productId:fruit,lotId:ready,kg:3,pieces:1,unit:'KG',price:100}]};
+ const order=id();const create={id:order,storeId:store,date,paid:500,payment:'Tunai',lines:[{productId:dessert,qty:2,price:100},{productId:fruit,lotId:ready,kg:3,pieces:1,unit:'KG',price:100}]};
  await mut('order_create',create);await mut('order_create',create);
  assert.equal((await read()).orders.length,1);assert.equal((await read()).unitLots.find(l=>l.id===production).qty,500);
- await assert.rejects(mut('order_pay',{id:id(),orderId:order,date,paid:500,payment:'Tunai'}),/dahulu/);
+ await assert.rejects(mut('order_pay',{id:id(),orderId:order,date,paid:500,payment:'Tunai'}),/sudah dibayar/);
  const start={id:id(),orderId:order,date};await mut('order_start',start);await mut('order_start',start);
  s=await read();assert.equal(s.unitLots.find(l=>l.id===production).qty,400);assert.equal(s.orders[0].cost,70);assert.equal(s.orders[0].total,500);
- await mut('order_ready',{id:id(),orderId:order,date});await mut('order_pay',{id:id(),orderId:order,date,paid:500,payment:'Tunai'});
+ await mut('order_ready',{id:id(),orderId:order,date});await mut('order_complete',{id:id(),orderId:order,date});
  s=await read();assert.equal(s.money.find(m=>m.category==='sale').cost,70);
  // Insufficient stock rolls back every ingredient and status.
- const fail=id();await mut('order_create',{...create,id:fail,lines:[{productId:dessert,qty:100,price:100}]});
- await assert.rejects(mut('order_start',{id:id(),orderId:fail,date}),/kurang/);
- assert.equal((await read()).orders.find(o=>o.id===fail).status,'queued');
+ const fail=id();await assert.rejects(mut('order_create',{...create,id:fail,paid:10000,lines:[{productId:dessert,qty:100,price:100}]}),/kurang/);
+ assert.equal((await read()).orders.find(o=>o.id===fail),undefined);
  const cancel=id();await mut('order_create',{...create,id:cancel,lines:[{productId:dessert,qty:1,price:100}]});
- await mut('order_start',{id:id(),orderId:cancel,date});await mut('order_cancel',{id:id(),orderId:cancel,date,reason:'Salah buat'});
+ await mut('order_start',{id:id(),orderId:cancel,date});await mut('order_cancel',{id:id(),orderId:cancel,date,reason:'Salah buat',refundConfirmed:true});
  assert.equal((await read()).unitLots.find(l=>l.id===production).qty,350);
  assert.equal((await read()).money.filter(m=>m.category==='loss').length,2);
  // Reject recovery inherits exactly the input value across outputs.
@@ -66,12 +67,12 @@ for(const install of ['fresh','upgrade']){
 
  // Arbitrary recovered flesh, recipe ancestry and item-level margin.
  const flesh=id();await mut('product_save',{id:flesh,name:'Daging',sku:'DG',itemType:'prep',stockUnit:'g'});
- const recovery=id();await mut('recover',{id:recovery,lotId:reject,date,kg:2,pieces:1,productId:flesh,qty:500,reason:'Daging layak pakai',expiry:'2026-12-31'});
+ const recovery=id();await mut('recover',{id:recovery,lotId:reject,date,kg:2,pieces:1,productId:flesh,qty:500,reason:'Daging layak pakai',expiry:date});
  s=await read();assert.equal(s.unitLots.find(x=>x.id===recovery).unitCost,.04);
  const current=s.recipes.find(x=>x.id===dessertRecipe);
  await mut('recipe_save',{id:dessertRecipe,name:'Es duren',version:current.version,outputId:dessert,yieldQty:1,ingredients:[{productId:prep,qty:50},{productId:flesh,qty:100}]});
- const dessertOrder=id();await mut('order_create',{id:dessertOrder,storeId:store,date,lines:[{productId:dessert,qty:1,price:100}]});
- await mut('order_start',{id:id(),orderId:dessertOrder,date});await mut('order_ready',{id:id(),orderId:dessertOrder,date});await mut('order_pay',{id:id(),orderId:dessertOrder,date,paid:100,payment:'Tunai'});
+ const dessertOrder=id();await mut('order_create',{id:dessertOrder,storeId:store,date,paid:100,payment:'Tunai',lines:[{productId:dessert,qty:1,price:100}]});
+ await mut('order_start',{id:id(),orderId:dessertOrder,date});await mut('order_ready',{id:id(),orderId:dessertOrder,date});await mut('order_complete',{id:id(),orderId:dessertOrder,date});
  s=await read();const margin=orderMargins(s,[s.orders.find(x=>x.id===dessertOrder)])[0];
  assert.equal(margin.cost,24);assert.equal(margin.profit,76);assert.equal(margin.recovered,true);assert(Math.abs(margin.sources.reduce((a,x)=>a+x.cost,0)-24)<1e-8);
  // Product updates must not collide with the original entity ID in the audit log.
