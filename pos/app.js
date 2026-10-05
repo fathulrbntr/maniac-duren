@@ -1,5 +1,5 @@
 import {inventoryPanel,bindInventory} from "./inventory-ui.mjs?v=14";
-import {opsPages,opsPage,bindOps,clearOrderDraft} from './operations-ui.mjs?v=14';
+import {opsPages,opsPage,bindOps,clearOrderDraft} from './operations-ui.mjs?v=15';
 import {
   sections,
   navigation,
@@ -217,7 +217,7 @@ function login(message = "") {
       mode = "live";
       setRetryScope(config.url + ":" + d.user.id);
       await refresh();
-      view=state.access?.sell?"orders":state.access?.kitchen?"kitchen":"guide";
+      view=state.access?.sell?"orders":state.access?.kitchen?"kitchen":state.access?.attendance?"attendance":"guide";
       render();
     } catch (err) {
       token = "";
@@ -434,7 +434,7 @@ function render() {
       }
     };
   }
-  bindOps(view,state,store,{modal,mutate,render,toast,refresh,getState:()=>state,createAccount:async(employeeId,password)=>{
+  bindOps(view,state,store,{modal,mutate,render,toast,refresh,getState:()=>state,employeeDocument:employeeId=>request("/rest/v1/rpc/pos_employee_document",{employee_id:employeeId}),createAccount:async(employeeId,password)=>{
     if(mode!=="live")throw Error("Akun hanya dapat dibuat saat login database.");
     await request("/rest/v1/rpc/pos_allowed",{permission:"employees"});
     const res=await fetch("/api/pos-employee",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+token},body:JSON.stringify({employeeId,password})});

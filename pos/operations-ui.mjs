@@ -1,3 +1,4 @@
+import {employeesPage,bindEmployees} from './employees-ui.mjs?v=15';
 import {checkOrder,menuStatus} from './order-stock.mjs?v=12';
 import {orderMargins} from './finance.mjs?v=9';
 import {escape as e,id,today,num,money} from './core.mjs?v=9';
@@ -25,6 +26,7 @@ const cost=(n)=>n==null?'Belum diketahui':money(n);
 const allowed=(s,p)=>!s.access||s.access[p];
 let draft=[];
 export function opsPage(view,s,store){
+ if(['employees','attendance'].includes(view))return employeesPage(view,s,store);
  const note=!s.opsVersion?'<div class="notice">Fitur operasional baru memerlukan SQL versi 009 dan login. Demo lama hanya menampilkan struktur; tombol simpan baru tidak mengubah data demo.</div>':'';
  let html='';
  if(view==='guide')html=header('Urutan pendataan','Gunakan alur yang sama di setiap cabang.')+`<section class="panel"><ol class="flow-guide"><li><b>Data karyawan dan cabang</b><p>Tentukan siapa yang menerima, membuat, menjual, serta cabang yang boleh diakses.</p></li><li><b>Supplier, produk, bahan, dan resep</b><p>Buah: kg + butir. Bahan pembelian: g/ml/kg/pcs. Bahan siap pakai: hasil kitchen. Menu pesanan: porsi. Produk jual langsung: produk supplier atau kemasan siap jual.</p></li><li><b>Barang datang</b><p>Catat supplier, jumlah, total modal dan kedaluwarsa. Akun penerima terekam otomatis. Penerimaan buah masuk status belum disortir.</p></li><li><b>Sortir buah</b><p>Pisahkan seluruh sisa penerimaan menjadi matang, belum matang, dan reject. Timbang dan hitung masing-masing. Sortir ulang saat kondisinya berubah.</p></li><li><b>Persiapan kitchen</b><p>Olah reject menjadi Durpas/Coral. Gunakan Produksi bahan untuk cendol, jelly, ketan, atau daging dari kemasan melalui resep. Modal bahan diteruskan ke hasil.</p></li><li><b>Pesanan & kitchen</b><p>Kasir menerima pembayaran dan membuat satu pesanan buah/dessert/produk supplier. Buah dan produk siap jual langsung selesai serta dipotong stoknya saat bayar. Hanya menu resep masuk kitchen; stok bahan resep dipotong saat Mulai buat. Bayar di kasir → Antre → Dibuat → Siap → Diserahkan. Pesanan antre mencadangkan bahan. Stok fisik dipotong saat kitchen mulai membuat; pembatalan antre melepaskan cadangan.</p></li><li><b>Waste, absensi, dan pemeriksaan</b><p>Catat bahan basi/salah buat dan penyusutan berat. Cocokkan stok fisik dengan Jejak stok. Periksa biaya yang belum diketahui sebelum membaca laba kotor.</p></li></ol></section>`;
@@ -48,6 +50,7 @@ export function opsPage(view,s,store){
  return note+html;
 }
 export function bindOps(view,s,store,ctx){
+ if(['employees','attendance'].includes(view))return bindEmployees(view,s,store,ctx);
  if(!opsPages.includes(view))return;
  document.querySelector('#ops-refresh')?.addEventListener('click',async()=>{try{await ctx.refresh();ctx.render()}catch(err){ctx.toast(err.message)}});
  const save=async(action,p)=>{if(!s.opsVersion){ctx.toast('Hubungkan database versi 009 untuk fitur ini.');return false;}return ctx.mutate(action,{id:id(),storeId:store,date:today(),...p});};

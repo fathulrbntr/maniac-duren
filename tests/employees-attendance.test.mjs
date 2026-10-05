@@ -1,0 +1,44 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {randomUUID as id} from 'node:crypto';
+import {PGlite} from '@electric-sql/pglite';
+import {periodDates,attendanceNote} from '../pos/employees-ui.mjs';
+assert.deepEqual(periodDates('week','2026-10-05'),['2026-10-05']);
+assert.equal(periodDates('month','2026-10-05').length,5);
+assert.equal(attendanceNote({clock_in:'2026-10-05T02:01:00Z',scheduled_start:'09:00:00',scheduled_end:'17:00:00'}).tone,'late');
+assert.equal(attendanceNote({clock_in:'2026-10-05T02:00:00Z',scheduled_start:'09:00:00',scheduled_end:'17:00:00'}).tone,'good');
+const db=new PGlite();
+try{
+await db.exec("create role anon;create role authenticated;create schema auth;create table auth.users(id uuid primary key,email text);create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;");
+await db.exec(fs.readFileSync('database/pos.sql','utf8'));
+const owner=id(),staff=id(),store=id(),other=id();
+for(const u of [owner,staff])await db.query('insert into auth.users values($1,$2)',[u,u+'@test.local']);
+await db.query("insert into md_pos_employees(id,user_id,name,role) values($1,$1,'Owner','owner')",[owner]);
+await db.query('insert into md_pos_staff values($1)',[owner]);
+const as=async u=>db.query("select set_config('request.jwt.claim.sub',$1,false)",[u]);
+const mut=async(a,p)=>(await db.query('select pos_mutate($1,$2::jsonb) s',[a,JSON.stringify(p)])).rows[0].s;
+await as(owner);for(const k of [store,other])await mut('master',{id:k,kind:'stores',name:k});
+let s=await mut('employee_save',{id:id(),employeeId:staff,name:'Staff Test',email:'staff@test.local',phone:'081234',birthDate:'2000-01-02',active:true,storeIds:[store],permissions:[],ktpPhoto:'data:image/png;base64,aGVsbG8='});
+assert.equal(s.employees.find(x=>x.id===staff).role,'staff');assert.equal(s.employees.find(x=>x.id===staff).birth_date,'2000-01-02');assert.ok(!JSON.stringify(s).includes('base64'));
+assert.ok((await db.query('select pos_employee_document($1) d',[staff])).rows[0].d.ktpPhoto);
+await db.query('update md_pos_employees set user_id=$1 where id=$1',[staff]);
+await mut('work_hours_save',{id:id(),storeId:store,startTime:'09:00',endTime:'17:00'});
+await db.query('insert into md_pos_staff values($1)',[staff]);
+await as(staff);
+await assert.rejects(db.query('select pos_employee_document($1)',[staff]));
+await assert.rejects(mut('work_hours_save',{id:id(),storeId:store,startTime:'08:00',endTime:'18:00'}));
+await assert.rejects(mut('attendance_in',{id:id(),storeId:other}));
+await assert.rejects(mut('attendance_out',{id:id(),storeId:store}));
+s=await mut('attendance_in',{id:id(),storeId:store,date:'2001-01-01'});const first=s.attendance[0].clock_in;assert.equal(s.attendance.length,1);assert.equal(s.attendance[0].scheduled_start,'09:00:00');assert.notEqual(s.attendance[0].work_date,'2001-01-01');
+s=await mut('attendance_in',{id:id(),storeId:store});assert.equal(s.attendance.length,1);assert.equal(s.attendance[0].clock_in,first);
+s=await mut('attendance_out',{id:id(),storeId:store});const out=s.attendance[0].clock_out;
+s=await mut('attendance_out',{id:id(),storeId:store});assert.equal(s.attendance.length,1);assert.ok(s.attendance[0].clock_out>=out);
+await as(owner);await mut('work_hours_save',{id:id(),storeId:store,startTime:'08:00',endTime:'18:00'});
+assert.equal((await db.query('select scheduled_start from md_pos_attendance')).rows[0].scheduled_start,'09:00:00');
+// Simulate pre-upgrade duplicate shifts and verify safe consolidation.
+await db.exec('drop index md_pos_attendance_one_day');
+await db.query("insert into md_pos_attendance(id,employee_id,store_id,work_date,clock_in,clock_out) values($1,$2,$3,'2025-01-01','2025-01-01T01:00Z','2025-01-01T04:00Z'),($4,$2,$3,'2025-01-01','2025-01-01T05:00Z','2025-01-01T11:00Z')",[id(),staff,store,id()]);
+await db.exec(fs.readFileSync('database/015-employees-attendance.sql','utf8'));
+const legacy=(await db.query("select * from md_pos_attendance where work_date='2025-01-01'")).rows;assert.equal(legacy.length,1);assert.equal(new Date(legacy[0].clock_in).getUTCHours(),1);assert.equal(new Date(legacy[0].clock_out).getUTCHours(),11);assert.equal((await db.query('select * from md_pos_attendance_legacy')).rows.length,2);
+console.log('PASS employee fields, staff default, private KTP, owner schedule, daily attendance, first/last, schedule snapshot, migration consolidation, week/month notes');
+}finally{await db.close();}

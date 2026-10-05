@@ -17,6 +17,7 @@ for(const install of ['fresh','upgrade']){
   await db.exec(fs.readFileSync('database/011-order-stock-kitchen.sql','utf8'));
   await db.exec(fs.readFileSync('database/012-pay-first-kitchen.sql','utf8'));
  await db.exec(fs.readFileSync('database/013-kitchen-recipes-only.sql','utf8'));
+ await db.exec(fs.readFileSync('database/015-employees-attendance.sql','utf8'));
  }else{
   await db.exec(sql);
   await db.query('insert into auth.users values($1,$2)',[owner,'owner@test.local']);
@@ -84,7 +85,7 @@ for(const install of ['fresh','upgrade']){
  await as(cashier);s=await read();assert.equal(s.stores.length,1);assert.equal(s.money.length,0);assert.equal(s.events.length,0);assert.equal(s.employees.length,1);
  await assert.rejects(mut('receipt',{id:id(),storeId:other,supplierId:supplier,productId:fruit,date,kg:1,pieces:1,totalCost:10}),/Hak akses/);
  await assert.rejects(mut('employee_save',{id:id(),employeeId:employee,role:'owner'}),/Hak akses/);
- await mut('attendance_in',{id:id(),storeId:store,date});await assert.rejects(mut('attendance_in',{id:id(),storeId:store,date}),/unique/);await mut('attendance_out',{id:id(),date});
+ await mut('attendance_in',{id:id(),storeId:store,date});await mut('attendance_in',{id:id(),storeId:store,date});assert.equal((await read()).attendance.filter(x=>x.employee_id===employee).length,1);await mut('attendance_out',{id:id(),storeId:store,date});
  await db.exec('set role authenticated');await assert.rejects(db.query('select public.pos_read_v8()'),/permission denied/);await db.exec('reset role');
  await as(owner);fs.writeFileSync('/tmp/maniac-ops-fixture.json',JSON.stringify(await read()));
  if(install==='upgrade'&&process.env.OPS_DUMP_PATH)fs.writeFileSync(process.env.OPS_DUMP_PATH,Buffer.from(await (await db.dumpDataDir()).arrayBuffer()));
