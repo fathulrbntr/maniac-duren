@@ -17,12 +17,12 @@
 /* Employee cards follow the supplied name-left/photo-right reference. */
 .team-grid { grid-template-columns:repeat(auto-fill,minmax(min(100%,420px),1fr)); gap:22px; }
 .employee-card-v22 { display:grid; grid-template-columns:minmax(0,1fr) minmax(120px,42%); grid-template-rows:minmax(0,1fr) 64px; gap:12px; padding:24px; height:300px; box-sizing:border-box; position:relative; }
-.employee-card-v22 .employee-card-copy { min-width:0; min-height:0; }
-.employee-card-v22 h3 { font-size:clamp(27px,2.6vw,46px); line-height:.98; font-weight:850; letter-spacing:-.025em; text-transform:uppercase; overflow-wrap:anywhere; margin:0 0 10px; height:108px; overflow:hidden; }
-.employee-card-v22 .employee-username,.employee-card-v22 .employee-role { font-size:17px; line-height:1.3; font-style:italic; color:var(--ink); margin:2px 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.employee-card-photo { grid-column:2; grid-row:1 / 3; min-width:0; display:flex; align-items:center; justify-content:center; border-radius:18px; background:transparent; }
-.employee-card-photo img { width:100%; height:220px; object-fit:contain; background:transparent; border-radius:18px; }
-.employee-photo-placeholder { display:grid; place-items:center; width:100%; height:220px; border:1px dashed var(--line); border-radius:18px; color:var(--muted); font-size:36px; font-weight:800; }
+.employee-card-v22 .employee-card-copy { min-width:0; min-height:0; display:grid; grid-template-rows:minmax(0,1fr) auto auto; gap:4px; overflow:hidden; }
+.employee-card-v22 h3 { font-size:clamp(27px,2.6vw,46px); line-height:1.08; font-weight:850; letter-spacing:-.025em; text-transform:uppercase; overflow-wrap:anywhere; margin:0; min-width:0; min-height:0; height:100%; box-sizing:border-box; padding:2px; overflow:hidden; }
+.employee-card-v22 .employee-username,.employee-card-v22 .employee-role { font-size:17px; line-height:1.3; font-style:italic; color:var(--ink); margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.employee-card-photo { grid-column:2; grid-row:1 / 3; min-width:0; min-height:0; height:100%; display:flex; align-items:stretch; justify-content:center; border-radius:18px; background:transparent; }
+.employee-card-photo img { width:100%; height:100%; object-fit:contain; background:transparent; border-radius:18px; }
+.employee-photo-placeholder { display:grid; place-items:center; width:100%; height:100%; border:1px dashed var(--line); border-radius:18px; color:var(--muted); font-size:36px; font-weight:800; }
 .employee-card-footer { display:flex; flex-direction:column; align-items:flex-start; justify-content:flex-start; gap:4px; min-width:0; }
 .employee-status { padding:6px 16px; border-radius:30px; font-size:12px; font-weight:700; background:var(--surface-soft); color:var(--muted); }
 .employee-status.is-active { color:var(--success); background:var(--success-bg); }
@@ -31,7 +31,7 @@
 .employee-more summary::-webkit-details-marker { display:none; }
 .employee-more>div { position:absolute; left:0; bottom:100%; display:grid; gap:6px; min-width:165px; padding:10px; border:1px solid var(--line); border-radius:10px; background:var(--surface); box-shadow:var(--shadow); z-index:2; }
 img.employee-photo,.ktp-preview { background:transparent; object-fit:contain; }
-@media(max-width:700px){.team-grid{grid-template-columns:1fr}.employee-card-v22{padding:18px;gap:12px;height:280px;grid-template-columns:minmax(0,1fr) minmax(110px,40%)}.employee-card-v22 h3{font-size:30px;height:98px}.employee-card-v22 .employee-username,.employee-card-v22 .employee-role{font-size:15px}.employee-card-photo img,.employee-photo-placeholder{height:190px}.employee-card-footer{gap:7px}.employee-status{padding:5px 10px}.employee-more>div{left:0;right:auto}}
+@media(max-width:700px){.team-grid{grid-template-columns:1fr}.employee-card-v22{padding:18px;gap:12px;height:280px;grid-template-columns:minmax(0,1fr) minmax(110px,40%)}.employee-card-v22 h3{font-size:30px}.employee-card-v22 .employee-username,.employee-card-v22 .employee-role{font-size:15px}.employee-card-photo img,.employee-photo-placeholder{height:100%}.employee-card-footer{gap:7px}.employee-status{padding:5px 10px}.employee-more>div{left:0;right:auto}}
 
 .employee-card-v22 { cursor:pointer; transition:transform .14s ease,border-color .14s ease,box-shadow .14s ease; }
 .employee-card-v22:hover,.employee-card-v22:focus-visible { transform:translateY(-2px); border-color:var(--green); box-shadow:0 8px 20px #15211110; }
@@ -49,3 +49,7 @@ img.employee-photo,.ktp-preview { background:transparent; object-fit:contain; }
 .employee-recap-dialog .modal-actions,.employee-password-dialog .modal-actions { margin-top:16px; }
 @media(prefers-reduced-motion:reduce){.employee-card-v22 { transition:none; }.employee-card-v22:hover,.employee-card-v22:focus-visible { transform:none; }}
 @media(max-width:700px){.employee-recap-dialog,.employee-password-dialog { padding:18px; }.employee-recap-dialog .employee-info { grid-template-columns:1fr 1fr; }}
+
+.employee-card-v22 h3>span { display:block; width:100%; overflow-wrap:anywhere; }
+.employee-card-footer { justify-content:space-between; gap:0; }
+.employee-more summary { padding:0 6px; line-height:24px; }
