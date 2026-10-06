@@ -2,7 +2,7 @@ import {installMoneyInputs} from './money-input.mjs?v=19';
 installMoneyInputs();
 import { openWeighingReceipt, showWeighingHistory } from './receipt-weighing.mjs?v=19';
 import {inventoryPanel,bindInventory} from "./inventory-ui.mjs?v=19";
-import {opsPages,opsPage,bindOps,clearOrderDraft} from './operations-ui.mjs?v=23';
+import {opsPages,opsPage,bindOps,clearOrderDraft} from './operations-ui.mjs?v=24';
 import {
   sections,
   navigation,
