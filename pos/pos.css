@@ -1072,3 +1072,15 @@ tbody tr:hover { background:var(--surface-soft); }
 .account-profile div span { color:var(--muted); font-size:12px; }
 [data-owner-access-note] { padding:14px; margin-top:16px; border:1px solid var(--border); border-radius:10px; }
 [data-owner-access-note][hidden],[data-employee-access][hidden] { display:none; }
+
+/* Transparent logo and account photos; logout sits directly below the profile. */
+.brand { background:transparent; }
+.account-profile img { background:transparent; object-fit:contain; }
+.sidebar-logout { display:flex; align-items:center; justify-content:center; gap:9px; width:100%; margin-top:-16px; color:var(--danger); background:var(--danger-bg); border:1px solid var(--danger); border-radius:10px; padding:10px 14px; font-weight:700; }
+.sidebar-logout svg { width:19px; height:19px; }
+.sidebar-logout:hover { color:var(--on-primary); background:var(--danger); }
+.topbar { min-height:62px; justify-content:flex-end; }
+.topbar .toolbar { margin-left:auto; }
+@media(max-width:780px){.topbar { min-height:54px; align-items:flex-end; }.topbar .toolbar { justify-content:flex-end; }.sidebar-logout { margin-top:0; }}
+
+.account-profile .account-avatar { display:grid; place-items:center; }

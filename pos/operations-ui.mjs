@@ -1,4 +1,4 @@
-import {employeesPage,bindEmployees} from './employees-ui.mjs?v=21';
+import {employeesPage,bindEmployees} from './employees-ui.mjs?v=22';
 import {checkOrder,menuStatus} from './order-stock.mjs?v=12';
 import {orderMargins} from './finance.mjs?v=9';
 import {escape as e,id,today,num,money} from './core.mjs?v=9';
