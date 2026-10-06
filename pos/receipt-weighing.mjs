@@ -44,7 +44,8 @@ export function openWeighingReceipt(state, store, ctx) {
     let editing = null;
     const reset = () => { editing = null; wf.reset(); wf.querySelector('[type=submit]').textContent = 'Tambah timbang'; w.querySelector('[data-reset]').hidden = true; w.querySelector('[data-error]').textContent = ''; wf.elements.kg.focus(); };
     const draw = () => {
-      w.querySelector('[data-history]').innerHTML = `<table><thead><tr><th>Timbang</th><th>Berat kg</th><th>Butir</th><th>Aksi</th></tr></thead><tbody>${rows.map((row, i) => `<tr><td>${i + 1}${row.editedAt ? '<small>Diedit</small>' : ''}</td><td>${num(row.kg)}</td><td>${num(row.pieces)}</td><td><button type="button" data-edit="${e(row.id)}">Edit</button> <button type="button" data-delete="${e(row.id)}">Hapus</button></td></tr>`).join('') || '<tr><td colspan="4">Belum ada penimbangan.</td></tr>'}</tbody></table>`;
+      w.querySelector('[data-history]').innerHTML = `<table><thead><tr><th>Timbang</th><th>Berat kg</th><th>Butir</th><th>Aksi</th></tr></thead><tbody>${rows.slice().reverse().map((row, i) => `<tr><td>${rows.length - i}${row.editedAt ? '<small>Diedit</small>' : ''}</td><td>${num(row.kg)}</td><td>${num(row.pieces)}</td><td><button type="button" data-edit="${e(row.id)}">Edit</button> <button type="button" data-delete="${e(row.id)}">Hapus</button></td></tr>`).join('') || '<tr><td colspan="4">Belum ada penimbangan.</td></tr>'}</tbody></table>`;
+      w.querySelector('[data-history]').scrollTop = 0;
       const t = weighingTotals(rows); w.querySelector('[data-total]').textContent = `Total ${rows.length} kali timbang: ${num(t.kg)} kg · ${num(t.pieces)} butir`;
       w.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => { const row = rows.find(r => r.id === b.dataset.edit); editing = row.id; wf.elements.kg.value = row.kg; wf.elements.pieces.value = row.pieces; wf.querySelector('[type=submit]').textContent = 'Simpan koreksi'; w.querySelector('[data-reset]').hidden = false; wf.elements.kg.focus(); });
       w.querySelectorAll('[data-delete]').forEach(b => b.onclick = () => { if (!confirm('Hapus catatan timbang ini?')) return; rows = rows.filter(r => r.id !== b.dataset.delete); if (editing === b.dataset.delete) reset(); d.dataset.dirty = 'true'; draw(); update(); });
@@ -68,7 +69,7 @@ export function openWeighingReceipt(state, store, ctx) {
   f.onsubmit = async ev => {
     ev.preventDefault(); if (saving) return;
     try {
-      if (state.receiptWeighingVersion !== 18) throw Error('Jalankan migration 018 terlebih dahulu agar riwayat timbang tersimpan.');
+      if (state.incomingReadyVersion !== 19) throw Error('Jalankan migration 019 terlebih dahulu agar barang masuk langsung siap jual.');
       const t = totals(); if (!rows.length) throw Error('Catat penimbangan terlebih dahulu.');
       if (!confirm(`Penurunan barang sudah selesai?\n${rows.length} kali timbang · ${num(t.kg)} kg · ${num(t.pieces)} butir\nTotal modal ${money(t.total)}\nSeluruh hasil akan dimasukkan ke stok sekaligus.`)) return;
       saving = true;
@@ -81,7 +82,7 @@ export function openWeighingReceipt(state, store, ctx) {
 
 export function showWeighingHistory(lot, ctx) {
   const rows = lot.weighings || [];
-  const d = ctx.modal('Riwayat timbang barang masuk', `<p>${num(lot.receivedKg)} kg · ${num(lot.receivedPieces)} butir</p><div class="table-wrap"><table><thead><tr><th>Timbang</th><th>Berat kg</th><th>Butir</th><th>Waktu</th></tr></thead><tbody>${rows.map((r, i) => `<tr><td>${i + 1}${r.editedAt ? ' · dikoreksi' : ''}</td><td>${num(r.kg)}</td><td>${num(r.pieces)}</td><td>${e(new Date(r.editedAt || r.createdAt).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }))}</td></tr>`).join('') || '<tr><td colspan="4">Penerimaan lama tidak memiliki rincian timbang.</td></tr>'}</tbody></table></div>${lot.totalCost != null ? `<p>Harga barang: ${money(lot.purchaseCost)} · Ongkir: ${money(lot.shippingCost)}<br>Modal/kg: ${money(lot.totalCost / lot.receivedKg)} · Modal/butir: ${money(lot.totalCost / lot.receivedPieces)}</p>` : ''}`);
+  const d = ctx.modal('Riwayat timbang barang masuk', `<p>${num(lot.receivedKg)} kg · ${num(lot.receivedPieces)} butir</p><div class="table-wrap"><table><thead><tr><th>Timbang</th><th>Berat kg</th><th>Butir</th><th>Waktu</th></tr></thead><tbody>${rows.slice().reverse().map((r, i) => `<tr><td>${rows.length - i}${r.editedAt ? ' · dikoreksi' : ''}</td><td>${num(r.kg)}</td><td>${num(r.pieces)}</td><td>${e(new Date(r.editedAt || r.createdAt).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }))}</td></tr>`).join('') || '<tr><td colspan="4">Penerimaan lama tidak memiliki rincian timbang.</td></tr>'}</tbody></table></div>${lot.totalCost != null ? `<p>Harga barang: ${money(lot.purchaseCost)} · Ongkir: ${money(lot.shippingCost)}<br>Modal/kg: ${money(lot.totalCost / lot.receivedKg)} · Modal/butir: ${money(lot.totalCost / lot.receivedPieces)}</p>` : ''}`);
   d.querySelector('[type=submit]').hidden = true;
   d.querySelector('form').onsubmit = ev => ev.preventDefault();
 }

@@ -20,6 +20,7 @@ for(const install of ['fresh','upgrade']){
  await db.exec(fs.readFileSync('database/sections/operations/employees-attendance.sql','utf8'));
  await db.exec(fs.readFileSync('database/sections/operations/employee-accounts.sql','utf8'));
  await db.exec(fs.readFileSync('database/migrations/018-receipt-weighing-log.sql','utf8'));
+ await db.exec(fs.readFileSync('database/migrations/019-direct-stock-no-sorting.sql','utf8'));
  }else{
   await db.exec(sql);
   await db.query('insert into auth.users values($1,$2)',[owner,'owner@test.local']);
@@ -35,11 +36,11 @@ for(const install of ['fresh','upgrade']){
  await mut('product_save',{id:fruit,name:'Monthong',sku:'M',itemType:'direct',category:'Buah',stockUnit:'kg_butir',priceKg:100,pricePiece:200});
  for(const [key,type,unit,name]of[[raw,'raw','g','Tepung'],[prep,'prep','g','Cendol'],[dessert,'recipe','porsi','Es duren']])await mut('product_save',{id:key,name,sku:name,itemType:type,stockUnit:unit,category:type==='recipe'?'Dessert':null,salePrice:type==='recipe'?100:null});
  const lot=id();await mut('receipt',{id:lot,storeId:store,supplierId:supplier,productId:fruit,date,kg:'50+50',pieces:'20+20',purchaseCost:900,shippingCost:100});
- let receiptState=await read();assert.equal(receiptState.lots.find(x=>x.id===lot).quality,'unsorted');assert.equal(receiptState.lots.find(x=>x.id===lot).receivedKg,100);assert.equal(receiptState.lots.find(x=>x.id===lot).receivedPieces,40);assert.equal(receiptState.lots.find(x=>x.id===lot).purchaseCost,900);assert.equal(receiptState.lots.find(x=>x.id===lot).shippingCost,100);assert.equal(receiptState.lots.find(x=>x.id===lot).totalCost,1000);
- await assert.rejects(mut('sale',{id:id(),storeId:store,date,paid:100,payment:'Tunai',lines:[{lotId:lot,kg:1,pieces:1,unit:'KG',price:100}]}),/matang/);
+ let receiptState=await read();assert.equal(receiptState.lots.find(x=>x.id===lot).quality,'ready');assert.equal(receiptState.lots.find(x=>x.id===lot).receivedKg,100);assert.equal(receiptState.lots.find(x=>x.id===lot).receivedPieces,40);assert.equal(receiptState.lots.find(x=>x.id===lot).purchaseCost,900);assert.equal(receiptState.lots.find(x=>x.id===lot).shippingCost,100);assert.equal(receiptState.lots.find(x=>x.id===lot).totalCost,1000);
  const ready=id(),reject=id();
- await assert.rejects(mut('sort',{id:id(),lotId:lot,date,parts:[{id:id(),quality:'ready',kg:90,pieces:40}]}),/sama/);
- await mut('sort',{id:id(),lotId:lot,date,parts:[{id:ready,quality:'ready',kg:80,pieces:30},{id:reject,quality:'reject',kg:20,pieces:10}]});
+ await assert.rejects(mut('sort',{id:id(),lotId:lot,date,parts:[{id:id(),quality:'ready',kg:90,pieces:40}]}),/dinonaktifkan/);
+ // Simulate historical sorted lots through the private legacy wrapper; public sort stays disabled.
+ await db.query('select public.pos_mutate_v19($1,$2::jsonb)', ['sort',JSON.stringify({id:id(),lotId:lot,date,parts:[{id:ready,quality:'ready',kg:80,pieces:30},{id:reject,quality:'reject',kg:20,pieces:10}]})]);
  let s=await read();assert.equal(s.lots.find(l=>l.id===ready).unitCost,10);
  await mut('inventory_loss',{id:id(),lotId:ready,date,qty:2,pieces:0,cause:'shrinkage',reason:'Timbang ulang'});
  const rlot=id();await mut('unit_receipt',{id:rlot,storeId:store,date,productId:raw,qty:1000,totalCost:1000,supplierId:supplier,kind:'purchase'});
@@ -71,7 +72,7 @@ for(const install of ['fresh','upgrade']){
 
  // Arbitrary recovered flesh, recipe ancestry and item-level margin.
  const flesh=id();await mut('product_save',{id:flesh,name:'Daging',sku:'DG',itemType:'prep',stockUnit:'g'});
- const recovery=id();await mut('recover',{id:recovery,lotId:reject,date,kg:2,pieces:1,productId:flesh,qty:500,reason:'Daging layak pakai',expiry:date});
+ const recovery=id();await mut('recover',{id:recovery,lotId:ready,date,kg:2,pieces:1,productId:flesh,qty:500,reason:'Daging layak pakai',expiry:date});
  s=await read();assert.equal(s.unitLots.find(x=>x.id===recovery).unitCost,.04);
  const current=s.recipes.find(x=>x.id===dessertRecipe);
  await mut('recipe_save',{id:dessertRecipe,name:'Es duren',version:current.version,outputId:dessert,yieldQty:1,ingredients:[{productId:prep,qty:50},{productId:flesh,qty:100}]});

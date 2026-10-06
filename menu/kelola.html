@@ -10,7 +10,7 @@
 <label>Kategori menu<select name="menuType"><option value="durian">Durian</option><option value="makanan">Makanan</option><option value="minuman">Minuman</option></select></label>
 <label>Kelompok menu<input name="group" maxlength="60" placeholder="Contoh: Durian Segar"><small>Produk dengan kelompok yang sama ditampilkan bersama.</small></label>
 <label>Label kategori<input name="category" maxlength="40" placeholder="Contoh: BEST SELLER"></label>
-<label>Harga<input name="price" type="number" inputmode="numeric" min="0" max="1000000000" step="1" placeholder="Contoh: 75000"><small>Masukkan angka Rupiah tanpa titik atau teks. Kosong = Stok Habis.</small></label>
+<label>Harga<input name="price" type="number" inputmode="numeric" min="0" max="1000000000" step="1" placeholder="Contoh: 75000"><small>Titik pemisah ribuan muncul otomatis. Kosong = Stok Habis.</small></label>
 <label>Satuan<select name="unit"><option value="porsi">Porsi</option><option value="kg">Kg</option><option value="paket">Paket</option><option value="box">Box</option><option value="buah">Buah</option></select></label>
 <label>Deskripsi<textarea name="description" rows="3" maxlength="500" placeholder="Ceritakan singkat produk ini"></textarea></label>
 <label>Foto produk<input name="image" placeholder="/assets/monthong.png atau https://…"><small>Gunakan lokasi foto di proyek atau tautan langsung gambar.</small></label>
@@ -31,4 +31,4 @@
   </div>
   <footer class="photo-editor-actions"><button type="button" id="photo-reset" class="button button-secondary">Reset posisi</button><button type="button" id="photo-apply" class="button button-primary" disabled>Gunakan gambar</button></footer>
 </dialog>
-<script src="/menu/logic.js"></script><script src="/menu/admin.js"></script><script src="/menu/photo-editor.js"></script></body></html>
+<script src="/menu/logic.js"></script><script src="/menu/admin.js"></script><script src="/menu/photo-editor.js"></script><script type="module">import {installMoneyInputs} from "/pos/money-input.mjs?v=19";installMoneyInputs();</script></body></html>

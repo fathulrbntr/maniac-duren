@@ -19,6 +19,8 @@ for(const install of ['fresh','upgrade']) {
    await db.exec(fs.readFileSync('database/migrations/018-receipt-weighing-log.sql','utf8'));
   }
   await db.exec(fs.readFileSync('database/migrations/018-receipt-weighing-log.sql','utf8')); // rerun
+  await db.exec(fs.readFileSync('database/migrations/019-direct-stock-no-sorting.sql','utf8'));
+  await db.exec(fs.readFileSync('database/migrations/019-direct-stock-no-sorting.sql','utf8'));
   const owner=id(),store=id(),supplier=id(),product=id();
   await db.query('insert into auth.users values($1,$2)',[owner,'owner@test.local']);
   await db.query('insert into public.md_pos_staff values($1)',[owner]);
@@ -34,8 +36,14 @@ for(const install of ['fresh','upgrade']) {
   await assert.rejects(mut('receipt',{...p,weighings:[{...rows[0],pieces:1.5}]}),/bilangan bulat/);
   await assert.rejects(mut('receipt',{...p,weighings:[rows[0],rows[0]]}),/terduplikasi/);
   let s=await mut('receipt',p),lot=s.lots.find(l=>l.id===p.id);
-  assert.equal(s.receiptWeighingVersion,18);assert.deepEqual(lot.weighings,rows);assert.equal(lot.receivedKg,20);assert.equal(lot.receivedPieces,8);assert.equal(lot.totalCost,1200000);assert.equal(lot.unitCost,60000);
+  assert.equal(s.incomingReadyVersion,19);assert.equal(lot.quality,'ready');assert.equal(s.receiptWeighingVersion,18);assert.deepEqual(lot.weighings,rows);assert.equal(lot.receivedKg,20);assert.equal(lot.receivedPieces,8);assert.equal(lot.totalCost,1200000);assert.equal(lot.unitCost,60000);
   s=await mut('receipt',p);assert.equal(s.lots.filter(l=>l.id===p.id).length,1);assert.deepEqual(s.lots.find(l=>l.id===p.id).weighings,rows);
+  await assert.rejects(mut('sort',{id:id(),lotId:p.id,date:p.date,parts:[]}),/dinonaktifkan/);
+  const sold=await mut('sale',{id:id(),storeId:store,date:p.date,paid:100,payment:'Tunai',lines:[{lotId:p.id,kg:1,pieces:1,unit:'KG',price:100}]});
+  assert.equal(sold.lots.find(l=>l.id===p.id).kg,19);
+  await db.query("update public.md_pos_lots set quality='unsorted' where id=$1",[p.id]);
+  await db.exec(fs.readFileSync('database/migrations/019-direct-stock-no-sorting.sql','utf8'));
+  assert.equal((await db.query('select quality from public.md_pos_lots where id=$1',[p.id])).rows[0].quality,'ready');
   console.log('PASS weighing receipt '+install+': confirmation, totals, history, costs, retry, migration rerun');
  } finally { await db.close(); }
 }

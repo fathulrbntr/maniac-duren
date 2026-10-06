@@ -1,12 +1,14 @@
-import { openWeighingReceipt, showWeighingHistory } from './receipt-weighing.mjs?v=18';
-import {inventoryPanel,bindInventory} from "./inventory-ui.mjs?v=18";
-import {opsPages,opsPage,bindOps,clearOrderDraft} from './operations-ui.mjs?v=16.1';
+import {installMoneyInputs} from './money-input.mjs?v=19';
+installMoneyInputs();
+import { openWeighingReceipt, showWeighingHistory } from './receipt-weighing.mjs?v=19';
+import {inventoryPanel,bindInventory} from "./inventory-ui.mjs?v=19";
+import {opsPages,opsPage,bindOps,clearOrderDraft} from './operations-ui.mjs?v=19';
 import {
   sections,
   navigation,
   mayLeave,
   trackForms,
-} from "./navigation.mjs?v=12";
+} from "./navigation.mjs?v=19";
 import {
   prepareRetry,
   settleRetry,
@@ -81,7 +83,7 @@ const app = document.querySelector("#app"),
 const title = {
   dashboard: "Ringkasan buah",
   salesreport: "Seluruh penjualan",
-  orders: "Kasir & pesanan", sorting: "Sortir buah", losses: "Waste & penyusutan", trace: "Jejak stok", finance: "Biaya & laba kotor", employees: "Karyawan & akses", attendance: "Absensi", guide: "Panduan pendataan",
+  orders: "Kasir & pesanan", losses: "Waste & penyusutan", trace: "Jejak stok", finance: "Biaya & laba kotor", employees: "Karyawan & akses", attendance: "Absensi", guide: "Panduan pendataan",
   recipes: "Master Resep",
   production: "Produksi bahan",
   cashier: "Kasir buah cepat",
@@ -99,7 +101,6 @@ const paths = {
   kitchen: "M4 4h16v17H4z M8 2v4 M16 2v4 M8 10h8 M8 14h8 M8 18h4",
   cashier: "M4 3h16v13H4z M8 20h8 M12 16v4 M7 7h10 M7 11h4",
   stock: "M3 7l9-4 9 4-9 4z M3 7v10l9 4 9-4V7 M12 11v10 M7 5l10 5",
-  sorting: "M4 5h10 M4 9h7 M4 13h4 M17 4v16 M13 16l4 4 4-4",
   production: "M5 10h14v5a6 6 0 0 1-6 6h-2a6 6 0 0 1-6-6z M2 11h3 M19 11h3 M8 3v3 M12 2v4 M16 3v3",
   waste: "M8 4l3-2 3 5 M11 2L6 10 M20 11l1 4-6 1 M21 15l-5-8 M11 21l-4-1 2-5 M7 20h9",
   losses: "M3 5h18 M5 5l1 16h12l1-16 M9 5V2h6v3 M10 9v8 M14 9v8",
