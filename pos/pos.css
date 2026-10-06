@@ -1090,3 +1090,19 @@ tbody tr:hover { background:var(--surface-soft); }
 .sidebar-account .account-profile { border-bottom:0; padding:4px 8px; }
 .sidebar-account .sidebar-logout { margin-top:0; }
 @media(max-width:780px){.sidebar-account { margin-top:0; }}
+
+/* Only the navigation scrolls; brand/store and account remain visible. */
+.sidebar { display:grid; grid-template-rows:auto minmax(0,1fr) auto; height:100vh; height:100dvh; overflow:hidden; }
+.sidebar-header { display:grid; gap:20px; min-width:0; }
+.sidebar > .nav { min-height:0; overflow-y:auto; overflow-x:hidden; align-content:start; padding-right:6px; overscroll-behavior:contain; scrollbar-width:thin; scrollbar-color:var(--line) transparent; scrollbar-gutter:stable; }
+.sidebar > .nav::-webkit-scrollbar { width:6px; }
+.sidebar > .nav::-webkit-scrollbar-track { background:transparent; }
+.sidebar > .nav::-webkit-scrollbar-thumb { background:var(--line); border-radius:99px; }
+.sidebar > .nav::-webkit-scrollbar-thumb:hover { background:var(--muted); }
+.sidebar-account { margin-top:0; }
+@media(max-width:780px){
+ .sidebar { height:auto; grid-template-rows:auto auto auto; }
+ .sidebar-header { gap:13px; }
+ .sidebar > .nav { overflow-x:auto; overflow-y:hidden; padding-right:0; padding-bottom:6px; scrollbar-gutter:auto; }
+ .sidebar > .nav::-webkit-scrollbar { height:6px; }
+}
