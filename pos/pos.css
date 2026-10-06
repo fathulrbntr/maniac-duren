@@ -1084,3 +1084,9 @@ tbody tr:hover { background:var(--surface-soft); }
 @media(max-width:780px){.topbar { min-height:54px; align-items:flex-end; }.topbar .toolbar { justify-content:flex-end; }.sidebar-logout { margin-top:0; }}
 
 .account-profile .account-avatar { display:grid; place-items:center; }
+
+/* Account actions anchor the bottom of the navigation sidebar. */
+.sidebar-account { margin-top:auto; flex-shrink:0; border-top:1px solid var(--line); padding-top:14px; display:grid; gap:12px; }
+.sidebar-account .account-profile { border-bottom:0; padding:4px 8px; }
+.sidebar-account .sidebar-logout { margin-top:0; }
+@media(max-width:780px){.sidebar-account { margin-top:0; }}
