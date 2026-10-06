@@ -1044,3 +1044,14 @@ tbody tr:hover { background:var(--surface-soft); }
 }
 .stat:first-child { background:var(--success-bg); color:var(--success); }
 .stat:first-child small,.stat:first-child strong { color:var(--success); }
+.field > output {
+  display:block;
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding:11px 12px;
+  min-width:0;
+  width:100%;
+  color:var(--ink);
+  font-weight:700;
+}

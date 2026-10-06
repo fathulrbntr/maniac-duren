@@ -12,6 +12,20 @@ export const money = (n) =>
   }).format(n);
 export const num = (n) =>
   new Intl.NumberFormat("id-ID", { maximumFractionDigits: 6 }).format(n);
+export function parseAdditionExpression(value, label, integer = false) {
+  const raw = String(value ?? "").trim();
+  if (!raw || !/^[0-9]+(?:[.,][0-9]+)?(?:\s*\+\s*[0-9]+(?:[.,][0-9]+)?)*$/.test(raw)) {
+    throw Error(`${label} harus berupa angka atau penjumlahan seperti 12+5+8`);
+  }
+  const total = raw.split("+").reduce((sum, part) => {
+    const n = Number(part.trim().replace(",", "."));
+    if (!Number.isFinite(n) || n <= 0) throw Error(`${label} harus lebih dari 0`);
+    return sum + n;
+  }, 0);
+  if (!Number.isFinite(total) || total <= 0 || total > 9000000000) throw Error(`${label} terlalu besar`);
+  if (integer && !Number.isInteger(total)) throw Error(`${label} harus bilangan bulat`);
+  return total;
+}
 export const escape = (s) =>
   String(s ?? "").replace(
     /[&<>"']/g,

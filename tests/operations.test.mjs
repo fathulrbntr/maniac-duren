@@ -33,8 +33,8 @@ for(const install of ['fresh','upgrade']){
  await mut('master',{id:supplier,kind:'suppliers',name:'Supplier A'});
  await mut('product_save',{id:fruit,name:'Monthong',sku:'M',itemType:'direct',category:'Buah',stockUnit:'kg_butir',priceKg:100,pricePiece:200});
  for(const [key,type,unit,name]of[[raw,'raw','g','Tepung'],[prep,'prep','g','Cendol'],[dessert,'recipe','porsi','Es duren']])await mut('product_save',{id:key,name,sku:name,itemType:type,stockUnit:unit,category:type==='recipe'?'Dessert':null,salePrice:type==='recipe'?100:null});
- const lot=id();await mut('receipt',{id:lot,storeId:store,supplierId:supplier,productId:fruit,date,kg:100,pieces:40,totalCost:1000});
- assert.equal((await read()).lots[0].quality,'unsorted');
+ const lot=id();await mut('receipt',{id:lot,storeId:store,supplierId:supplier,productId:fruit,date,kg:'50+50',pieces:'20+20',purchaseCost:900,shippingCost:100});
+ let receiptState=await read();assert.equal(receiptState.lots.find(x=>x.id===lot).quality,'unsorted');assert.equal(receiptState.lots.find(x=>x.id===lot).receivedKg,100);assert.equal(receiptState.lots.find(x=>x.id===lot).receivedPieces,40);assert.equal(receiptState.lots.find(x=>x.id===lot).purchaseCost,900);assert.equal(receiptState.lots.find(x=>x.id===lot).shippingCost,100);assert.equal(receiptState.lots.find(x=>x.id===lot).totalCost,1000);
  await assert.rejects(mut('sale',{id:id(),storeId:store,date,paid:100,payment:'Tunai',lines:[{lotId:lot,kg:1,pieces:1,unit:'KG',price:100}]}),/matang/);
  const ready=id(),reject=id();
  await assert.rejects(mut('sort',{id:id(),lotId:lot,date,parts:[{id:id(),quality:'ready',kg:90,pieces:40}]}),/sama/);

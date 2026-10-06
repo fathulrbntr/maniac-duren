@@ -55,15 +55,13 @@ do $$ begin
  if not exists(select 1 from pg_constraint where conrelid='public.md_pos_products'::regclass and conname='md_pos_catalog_valid') then
   alter table public.md_pos_products add constraint md_pos_catalog_valid check (
    item_type in ('direct','raw','prep','recipe','finished')
-   and stock_unit in ('kg_butir','kg','g','ml','pcs','porsi')
+   and stock_unit in ('kg_butir','g','ml','pcs','porsi')
    and ((item_type in ('raw','prep') and category is null) or (item_type not in ('raw','prep') and category is not null and category in ('Buah','Dessert','Minuman','Olahan Duren')))
    and (stock_unit<>'kg_butir' or (item_type='direct' and category='Buah'))
    and ((item_type='recipe' and stock_unit='porsi') or (item_type<>'recipe' and stock_unit<>'porsi'))
    and ((stock_unit='kg_butir' and price_kg is not null and price_kg>0 and price_piece is not null and price_piece>0 and sale_price is null)
      or (stock_unit<>'kg_butir' and price_kg is null and price_piece is null and
-       ((item_type in ('raw','prep') and sale_price is null)
-         or (item_type in ('recipe','direct') and sale_price is not null and sale_price>0)
-         or (item_type='finished' and (sale_price is null or sale_price>0)))))
+       ((item_type in ('raw','prep') and sale_price is null) or (item_type not in ('raw','prep') and sale_price is not null and sale_price>0))))
   );
  end if;
 end $$;
@@ -85,15 +83,13 @@ do $$ begin
  if not exists(select 1 from pg_constraint where conrelid='public.md_pos_products'::regclass and conname='md_pos_catalog_valid') then
   alter table public.md_pos_products add constraint md_pos_catalog_valid check (
    item_type in ('direct','raw','prep','recipe','finished')
-   and stock_unit in ('kg_butir','kg','g','ml','pcs','porsi')
+   and stock_unit in ('kg_butir','g','ml','pcs','porsi')
    and ((item_type in ('raw','prep') and category is null) or (item_type not in ('raw','prep') and category is not null and category in ('Buah','Dessert','Minuman','Olahan Duren')))
    and (stock_unit<>'kg_butir' or (item_type='direct' and category='Buah'))
    and ((item_type='recipe' and stock_unit='porsi') or (item_type<>'recipe' and stock_unit<>'porsi'))
    and ((stock_unit='kg_butir' and price_kg is not null and price_kg>0 and price_piece is not null and price_piece>0 and sale_price is null)
      or (stock_unit<>'kg_butir' and price_kg is null and price_piece is null and
-     ((item_type in ('raw','prep') and sale_price is null)
-       or (item_type in ('recipe','direct') and sale_price is not null and sale_price>0)
-       or (item_type='finished' and (sale_price is null or sale_price>0)))))
+       ((item_type in ('raw','prep') and sale_price is null) or (item_type not in ('raw','prep') and sale_price is not null and sale_price>0))))
   );
  end if;
 end $$;
@@ -160,9 +156,7 @@ do $$ begin
    and ((item_type='recipe' and stock_unit='porsi') or (item_type<>'recipe' and stock_unit<>'porsi'))
    and ((stock_unit='kg_butir' and price_kg is not null and price_kg>0 and price_piece is not null and price_piece>0 and sale_price is null)
      or (stock_unit<>'kg_butir' and price_kg is null and price_piece is null and
-       ((item_type in ('raw','prep') and sale_price is null)
-         or (item_type in ('recipe','direct') and sale_price is not null and sale_price>0)
-         or (item_type='finished' and (sale_price is null or sale_price>0)))))
+       ((item_type in ('raw','prep') and sale_price is null) or (item_type not in ('raw','prep') and sale_price is not null and sale_price>0))))
   );
  end if;
 end $$;
@@ -193,9 +187,7 @@ do $$ begin
    and ((item_type='recipe' and stock_unit='porsi') or (item_type<>'recipe' and stock_unit<>'porsi'))
    and ((stock_unit='kg_butir' and price_kg is not null and price_kg>0 and price_piece is not null and price_piece>0 and sale_price is null)
      or (stock_unit<>'kg_butir' and price_kg is null and price_piece is null and
-       ((item_type in ('raw','prep') and sale_price is null)
-         or (item_type in ('recipe','direct') and sale_price is not null and sale_price>0)
-         or (item_type='finished' and (sale_price is null or sale_price>0)))))
+       ((item_type in ('raw','prep') and sale_price is null) or (item_type='finished' and sale_price is null) or (item_type not in ('raw','prep') and sale_price is not null and sale_price>0))))
   );
  end if;
 end $$;
@@ -248,6 +240,10 @@ alter table public.md_pos_lots add column quality text not null default 'ready' 
 -- NULL berarti biaya belum diketahui; tidak boleh dianggap modal nol.
 alter table public.md_pos_lots add column unit_cost numeric check(unit_cost>=0);
 alter table public.md_pos_unit_lots add column unit_cost numeric check(unit_cost>=0);
+alter table public.md_pos_lots add column if not exists purchase_cost numeric check(purchase_cost>=0);
+alter table public.md_pos_lots add column if not exists shipping_cost numeric check(shipping_cost>=0);
+alter table public.md_pos_lots add column if not exists total_cost numeric check(total_cost>=0);
+update public.md_pos_lots set total_cost=coalesce(total_cost,unit_cost*received_kg),purchase_cost=coalesce(purchase_cost,total_cost),shipping_cost=coalesce(shipping_cost,0) where total_cost is null or purchase_cost is null or shipping_cost is null;
 create table public.md_pos_events(
  id uuid primary key,action text not null,store_id uuid references public.md_pos_stores,actor uuid references auth.users,employee_id uuid references public.md_pos_employees,
  at timestamptz not null default now(),business_date date not null,payload jsonb not null,details jsonb not null default '{}');
@@ -308,7 +304,7 @@ declare s jsonb;e public.md_pos_employees%rowtype;k text;v jsonb;begin
  'journal',coalesce((select jsonb_agg(to_jsonb(x) order by id desc) from public.md_pos_stock_journal x where public.pos_allowed('trace',x.store_id)),'[]'),
  'money',coalesce((select jsonb_agg(to_jsonb(x) order by id desc) from public.md_pos_money_journal x where public.pos_allowed('finance',x.store_id)),'[]'));
  -- Lengkapi metadata penerimaan, kemudian batasi semua data per cabang di server.
- s:=jsonb_set(s,'{lots}',coalesce((select jsonb_agg(x||jsonb_build_object('quality',l.quality,'unitCost',case when public.pos_allowed('finance',l.store_id) then l.unit_cost end,'createdBy',l.created_by)) from jsonb_array_elements(s->'lots') x join public.md_pos_lots l on l.id=(x->>'id')::uuid),'[]'));
+ s:=jsonb_set(s,'{lots}',coalesce((select jsonb_agg(x||jsonb_build_object('quality',l.quality,'unitCost',case when public.pos_allowed('finance',l.store_id) then l.unit_cost end,'purchaseCost',case when public.pos_allowed('finance',l.store_id) then l.purchase_cost end,'shippingCost',case when public.pos_allowed('finance',l.store_id) then l.shipping_cost end,'totalCost',case when public.pos_allowed('finance',l.store_id) then l.total_cost end,'createdBy',l.created_by)) from jsonb_array_elements(s->'lots') x join public.md_pos_lots l on l.id=(x->>'id')::uuid),'[]'));
  s:=jsonb_set(s,'{unitLots}',coalesce((select jsonb_agg(x||jsonb_build_object('unitCost',case when public.pos_allowed('finance',l.store_id) then l.unit_cost end,'createdBy',l.created_by)) from jsonb_array_elements(s->'unitLots') x join public.md_pos_unit_lots l on l.id=(x->>'id')::uuid),'[]'));
  if e.role<>'owner' then
  foreach k in array array['lots','unitLots','sales','movements','productions','stockAdjustments','wasteRuns'] loop
@@ -483,7 +479,13 @@ begin
  else
  -- Operasi lama tetap dipakai, dengan aturan baru yang diperiksa di server.
  if action in ('receipt','unit_receipt') then
- if payload->>'totalCost' is null or (payload->>'totalCost')::numeric<0 then raise exception 'Isi total modal penerimaan (termasuk ongkos masuk)';end if;end if;
+ if action='receipt' then
+  if coalesce(nullif(payload->>'purchaseCost','')::numeric,nullif(payload->>'totalCost','')::numeric) is null or coalesce(nullif(payload->>'purchaseCost','')::numeric,nullif(payload->>'totalCost','')::numeric)<0 then raise exception 'Isi harga pembelian';end if;
+  if coalesce(nullif(payload->>'shippingCost','')::numeric,0)<0 then raise exception 'Ongkir tidak boleh negatif';end if;
+ else
+  if payload->>'totalCost' is null or (payload->>'totalCost')::numeric<0 then raise exception 'Isi total modal penerimaan (termasuk ongkos masuk)';end if;
+ end if;
+end if;
  if action='product_save' and (payload ? 'stock') then raise exception 'Gunakan menu kehilangan / penyusutan atau penerimaan untuk perubahan stok';end if;
  if action='produce' and exists(select 1 from public.md_pos_recipes r join public.md_pos_products prod on prod.id=r.output_id where r.id=(payload->>'recipeId')::uuid and prod.item_type='recipe') then raise exception 'Menu pesanan dibuat melalui Pesanan & Kitchen';end if;
  if action='sale' then for l in select value from jsonb_array_elements(payload->'lines') loop
@@ -497,7 +499,7 @@ begin
  if action in ('receipt','unit_receipt','produce','sale','waste_process','movement') and (exists(select 1 from public.md_pos_lots where id=eid) or exists(select 1 from public.md_pos_unit_lots where id=eid) or exists(select 1 from public.md_pos_sales where id=eid) or exists(select 1 from public.md_pos_waste_runs where id=eid)) then raise exception 'ID lama sudah digunakan';end if;
  if action='waste_process' then payload:=payload||jsonb_build_object('processedBy',me.name);end if;
  result:=public.pos_mutate_v8(action,payload);
- if action='receipt' then update public.md_pos_lots set unit_cost=(payload->>'totalCost')::numeric/received_kg,quality='unsorted' where id=eid;
+ if action='receipt' then update public.md_pos_lots set purchase_cost=coalesce(nullif(payload->>'purchaseCost','')::numeric,total_cost),shipping_cost=coalesce(nullif(payload->>'shippingCost','')::numeric,0),total_cost=coalesce(nullif(payload->>'purchaseCost','')::numeric,total_cost)+coalesce(nullif(payload->>'shippingCost','')::numeric,0),unit_cost=(coalesce(nullif(payload->>'purchaseCost','')::numeric,total_cost)+coalesce(nullif(payload->>'shippingCost','')::numeric,0))/received_kg,quality='unsorted' where id=eid;
  elsif action='unit_receipt' then update public.md_pos_unit_lots set unit_cost=(payload->>'totalCost')::numeric/received_qty where id=eid;
  elsif action='movement' then update public.md_pos_lots n set unit_cost=o.unit_cost,quality=o.quality from public.md_pos_lots o where n.id=eid and o.id=n.source_lot_id;
  elsif action='produce' then
@@ -1249,6 +1251,21 @@ begin
  end if;
 end $$;
 
+create or replace function public.pos_sum_positive(value text) returns numeric language plpgsql immutable set search_path='' as $$
+declare part text; total numeric:=0; pieces integer:=0; n numeric; raw text:=btrim(coalesce(value,''));
+begin
+ if raw='' or raw !~ '^[[:space:]]*[0-9]+([.,][0-9]+)?([[:space:]]*\+\s*[0-9]+([.,][0-9]+)?)*[[:space:]]*$' then raise exception 'Format angka tidak valid. Gunakan contoh 12+5+8'; end if;
+ for part in select regexp_split_to_table(raw,'\+') loop
+  part:=replace(btrim(part),',','.');
+  n:=public.pos_positive(part);
+  pieces:=pieces+1;
+  if pieces>100 then raise exception 'Maksimal 100 angka dalam satu perhitungan'; end if;
+  total:=total+n;
+  if total>9000000000 then raise exception 'Jumlah terlalu besar'; end if;
+ end loop;
+ return total;
+end $$;
+
 create or replace function public.pos_unit_qty(value text,unit text) returns numeric language plpgsql immutable set search_path='' as $$
 declare n numeric;
 begin
@@ -1855,6 +1872,7 @@ revoke all on function public.pos_positive(text) from public,anon,authenticated;
 revoke all on function public.pos_read(),public.pos_mutate(text,jsonb) from public,anon;
 grant execute on function public.pos_read(),public.pos_mutate(text,jsonb) to authenticated;
 revoke all on function public.pos_save_product(jsonb,boolean) from public,anon,authenticated;
+revoke all on function public.pos_sum_positive(text) from public,anon,authenticated;
 revoke all on function public.pos_unit_qty(text,text) from public,anon,authenticated;
 revoke all on function public.pos_production_action(text,jsonb) from public,anon,authenticated;
 revoke all on function public.pos_save_product_details(jsonb) from public,anon,authenticated;

@@ -25,6 +25,7 @@ import {
   today,
   money,
   num,
+  parseAdditionExpression,
   escape as e,
   id,
   emptyState,
@@ -32,7 +33,7 @@ import {
   saleRows,
   summarize,
   demoState,
-} from "./core.mjs?v=9";
+} from "./core.mjs?v=10";
 import { isLegacyStock } from "./catalog.mjs?v=9";
 import { catalogPanel, productDialog } from "./catalog-ui.mjs?v=14";
 const themeKey = "maniac-pos-theme";
@@ -682,22 +683,56 @@ function addReceipt() {
         .filter(isLegacyStock)
         .map((p) => `<option value="${e(p.id)}">${e(p.name)}</option>`)
         .join("")}</select>`,
-    )}${field("Supplier", `<select name="supplierId">${options("suppliers")}</select>`)}${field("Berat masuk (kg)", '<input name="kg" type="number" min="0.000001" step="any" required>')}${field("Total modal penerimaan (Rp)", '<input name="totalCost" type="number" min="0" step="any" required placeholder="Harga beli + ongkos masuk">')}${field("Butir masuk", '<input name="pieces" type="number" min="1" step="1" required>')}</div>${field("Nomor surat jalan / catatan", '<input name="note" maxlength="300" placeholder="Opsional">')}<p class="form-help">ID penerimaan dibuat otomatis. Pengiriman di tanggal yang sama tetap terpisah.</p>`,
+    )}${field("Supplier", `<select name="supplierId">${options("suppliers")}</select>`)}${field("Berat masuk (kg)", '<input name="kg" type="text" inputmode="decimal" autocomplete="off" placeholder="Contoh: 12+5+8" required>')}<div class="field"><span>Hasil berat</span><output id="receipt-kg-total">—</output></div>${field("Butir masuk", '<input name="pieces" type="text" inputmode="numeric" autocomplete="off" placeholder="Contoh: 5+8+6" required>')}<div class="field"><span>Hasil butir</span><output id="receipt-pieces-total">—</output></div>${field("Harga pembelian (Rp)", '<input name="purchaseCost" type="number" min="0" step="1" required placeholder="Harga barang saja">')}${field("Ongkir (Rp)", '<input name="shippingCost" type="number" min="0" step="1" value="0" required placeholder="Biaya pengiriman">')}<div class="field"><span>Total modal penerimaan (Rp)</span><output id="receipt-total-cost">Rp0</output></div></div>${field("Nomor surat jalan / catatan", '<input name="note" maxlength="300" placeholder="Opsional">')}<p class="form-help">Berat dan butir dapat dicatat dari beberapa hasil timbang, misalnya <b>12+5+8</b> dan <b>5+8+6</b>. Sistem menyimpan hasil akhirnya sebagai 25 kg dan 19 butir.</p><p class="error" id="receipt-form-error"></p>`,
   );
-  d.querySelector("form").onsubmit = async (ev) => {
+  const f = d.querySelector("form");
+  const kgTotal = d.querySelector("#receipt-kg-total");
+  const piecesTotal = d.querySelector("#receipt-pieces-total");
+  const totalCost = d.querySelector("#receipt-total-cost");
+  const error = d.querySelector("#receipt-form-error");
+  const updatePreview = () => {
+    error.textContent = "";
+    try {
+      const kg = parseAdditionExpression(f.kg.value, "Berat masuk");
+      const pieces = parseAdditionExpression(f.pieces.value, "Butir masuk", true);
+      kgTotal.textContent = `${num(kg)} kg`;
+      piecesTotal.textContent = `${num(pieces)} butir`;
+      const purchase = Number(f.purchaseCost.value || 0);
+      const shipping = Number(f.shippingCost.value || 0);
+      if (!Number.isFinite(purchase) || purchase < 0 || !Number.isFinite(shipping) || shipping < 0) throw Error("Harga pembelian dan ongkir tidak valid");
+      totalCost.textContent = money(purchase + shipping);
+      return { kg, pieces, purchase, shipping };
+    } catch (err) {
+      kgTotal.textContent = "—";
+      piecesTotal.textContent = "—";
+      totalCost.textContent = "Rp0";
+      error.textContent = err.message;
+      return null;
+    }
+  };
+  [f.kg, f.pieces, f.purchaseCost, f.shippingCost].forEach((input) => input.addEventListener("input", updatePreview));
+  updatePreview();
+  f.onsubmit = async (ev) => {
     ev.preventDefault();
-    if (
-      await mutate("receipt", {
-        ...Object.fromEntries(new FormData(ev.currentTarget)),
-        id: id(),
-      })
-    ) {
+    const parsed = updatePreview();
+    if (!parsed) return;
+    const payload = {
+      ...Object.fromEntries(new FormData(f)),
+      kg: String(parsed.kg),
+      pieces: String(parsed.pieces),
+      purchaseCost: String(parsed.purchase),
+      shippingCost: String(parsed.shipping),
+      totalCost: String(parsed.purchase + parsed.shipping),
+      id: id(),
+    };
+    if (await mutate("receipt", payload)) {
       d.close();
       render();
-      toast("Barang masuk tersimpan");
+      toast(`Barang masuk tersimpan · ${num(parsed.kg)} kg · ${num(parsed.pieces)} butir`);
     }
   };
 }
+
 function movement() {
   const lots = state.lots.filter(
     (l) => l.storeId === store && l.kg > 0 && l.pieces > 0,

@@ -10,6 +10,22 @@ begin
  return value::numeric;
 end $$;
 revoke all on function public.pos_positive(text) from public,anon,authenticated;
+
+create or replace function public.pos_sum_positive(value text) returns numeric language plpgsql immutable set search_path='' as $$
+declare part text; total numeric:=0; pieces integer:=0; n numeric; raw text:=btrim(coalesce(value,''));
+begin
+ if raw='' or raw !~ '^[[:space:]]*[0-9]+([.,][0-9]+)?([[:space:]]*\+\s*[0-9]+([.,][0-9]+)?)*[[:space:]]*$' then raise exception 'Format angka tidak valid. Gunakan contoh 12+5+8'; end if;
+ for part in select regexp_split_to_table(raw,'\+') loop
+  part:=replace(btrim(part),',','.');
+  n:=public.pos_positive(part);
+  pieces:=pieces+1;
+  if pieces>100 then raise exception 'Maksimal 100 angka dalam satu perhitungan'; end if;
+  total:=total+n;
+  if total>9000000000 then raise exception 'Jumlah terlalu besar'; end if;
+ end loop;
+ return total;
+end $$;
+revoke all on function public.pos_sum_positive(text) from public,anon,authenticated;
 alter table public.md_pos_products add column if not exists category text default 'Buah';
 alter table public.md_pos_products add column if not exists item_type text not null default 'direct';
 alter table public.md_pos_products add column if not exists stock_unit text not null default 'kg_butir';
@@ -243,11 +259,15 @@ begin
  elsif action='receipt' then
   if exists(select 1 from public.md_pos_lots where id=v_id) then return public.pos_read(); end if;
   if not exists(select 1 from public.md_pos_products where id=(payload->>'productId')::uuid and item_type='direct' and stock_unit='kg_butir') then raise exception 'Operasional item ini belum aktif; saat ini hanya master produk'; end if;
-  v_kg:=public.pos_positive(payload->>'kg');v_pieces:=public.pos_positive(payload->>'pieces');
+  v_kg:=public.pos_sum_positive(payload->>'kg');v_pieces:=public.pos_sum_positive(payload->>'pieces');
   if v_pieces<>trunc(v_pieces) then raise exception 'Butir harus bilangan bulat'; end if;
   v_date:=(payload->>'date')::date;
-  insert into public.md_pos_lots(id,store_id,supplier_id,product_id,received_date,received_kg,received_pieces,kg,pieces,note,created_by)
-  values(v_id,(payload->>'storeId')::uuid,(payload->>'supplierId')::uuid,(payload->>'productId')::uuid,v_date,v_kg,v_pieces::integer,v_kg,v_pieces::integer,left(coalesce(payload->>'note',''),300),auth.uid());
+  insert into public.md_pos_lots(id,store_id,supplier_id,product_id,received_date,received_kg,received_pieces,kg,pieces,purchase_cost,shipping_cost,total_cost,note,created_by)
+  values(v_id,(payload->>'storeId')::uuid,(payload->>'supplierId')::uuid,(payload->>'productId')::uuid,v_date,v_kg,v_pieces::integer,v_kg,v_pieces::integer,
+   coalesce(nullif(payload->>'purchaseCost','')::numeric,nullif(payload->>'totalCost','')::numeric),
+   coalesce(nullif(payload->>'shippingCost','')::numeric,0),
+   coalesce(nullif(payload->>'purchaseCost','')::numeric,nullif(payload->>'totalCost','')::numeric)+coalesce(nullif(payload->>'shippingCost','')::numeric,0),
+   left(coalesce(payload->>'note',''),300),auth.uid());
  elsif action='sale' then
   if exists(select 1 from public.md_pos_sales where id=v_id) then return public.pos_read(); end if;
   if jsonb_typeof(payload->'lines') is distinct from 'array' or jsonb_array_length(payload->'lines') not between 1 and 100 then raise exception 'Keranjang tidak valid'; end if;
