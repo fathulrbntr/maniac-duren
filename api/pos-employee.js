@@ -11,7 +11,7 @@ module.exports = async (req, res) => {
   try { body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {}; }
   catch { return res.status(400).json({ error: 'Data akun tidak valid' }); }
   const { employeeId, password, action = 'create' } = body;
-  if (!['create', 'reset'].includes(action) || !/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(employeeId || '') || typeof password !== 'string' || password.length < 12 || password.length > 128) return res.status(400).json({ error: 'ID karyawan dan password 12–128 karakter wajib diisi.' });
+  if (!['create', 'reset'].includes(action) || !/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(employeeId || '') || typeof password !== 'string' || password.length < 6 || password.length > 128) return res.status(400).json({ error: 'ID karyawan dan password 6–128 karakter wajib diisi.' });
   const api = async (path, payload, admin = false, method = 'POST') => {
     const response = await fetch(url + path, {
       method, headers: { apikey: admin ? secret : key, Authorization: admin ? 'Bearer ' + secret : auth, 'Content-Type': 'application/json' },

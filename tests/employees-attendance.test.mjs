@@ -107,6 +107,9 @@ try{
  calls=[];response=await invoke(accounts,{employeeId,password:'new-password-123',action:'reset'});assert.equal(response.code,200);assert(calls.some(x=>x.url.endsWith('/admin/users/'+userId)&&x.options.method==='PUT'));
  calls=[];linked=false;response=await invoke(accounts,{employeeId,password:'new-password-123',action:'reset'});assert.equal(response.code,400);assert(!calls.some(x=>x.url.includes('/admin/')));
  calls=[];response=await invoke(accounts,{employeeId,password:'new-password-123',action:'create'});assert.equal(response.code,200);assert(calls.some(x=>x.url.endsWith('/pos_mutate')));
+ calls=[];response=await invoke(accounts,{employeeId,password:'abc123',action:'create'});assert.equal(response.code,200);assert(calls.some(x=>x.url.includes('/admin/users')&&JSON.parse(x.options.body).password==='abc123'));
+ calls=[];response=await invoke(accounts,{employeeId,password:'abc12',action:'create'});assert.equal(response.code,400);assert.equal(calls.length,0);
+ linked=true;response=await invoke(accounts,{employeeId,password:'abc123',action:'reset'});assert.equal(response.code,200);
  response=await invoke(accounts,'{bad JSON');assert.equal(response.code,400);
  console.log('PASS API: server login exchange, generic rejection, rate limiting, owner authorization, linked-ID password reset, account create/link, malformed input.');
 }finally{globalThis.fetch=previousFetch;for(const key of ['POS_SUPABASE_URL','POS_SUPABASE_PUBLISHABLE_KEY','POS_SUPABASE_SERVICE_ROLE_KEY']){if(previousEnv[key]===undefined)delete process.env[key];else process.env[key]=previousEnv[key];}}

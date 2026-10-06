@@ -25,6 +25,8 @@ try {
  assert.equal(await page.locator('#demo-enter').count(),0);
  await page.locator('[name=identifier]').fill('owner');await page.locator('[name=password]').fill('password-fixture');await page.locator('#login-form button').click();await page.waitForFunction(()=>document.querySelector('#login-error')?.textContent==='Login salah');
  failLogin=false;await page.locator('#login-form button').click();await page.locator('nav').waitFor();
+ assert(await page.locator('.account-profile').isVisible());assert((await page.locator('.account-profile').innerText()).includes('Owner Test'));
+ assert(await page.locator('.account-profile').evaluate(el=>!!(el.compareDocumentPosition(document.querySelector('.sidebar-store'))&Node.DOCUMENT_POSITION_FOLLOWING)));
  const nav=async view=>{await page.locator(`nav [data-view="${view}"]`).click();};
  const views=await page.locator('nav [data-view]').evaluateAll(bs=>bs.map(b=>b.dataset.view));
  for(const theme of ['light','dark']) {
@@ -40,15 +42,17 @@ try {
  const png=Buffer.from(await page.evaluate(()=>{const canvas=document.createElement('canvas');canvas.width=20;canvas.height=20;canvas.getContext('2d').fillRect(0,0,20,20);return canvas.toDataURL('image/png').split(',')[1];}),'base64');
  await page.locator('[data-profile]').setInputFiles({name:'avatar.png',mimeType:'image/png',buffer:png});await page.locator('[data-profile-preview]').waitFor({state:'visible'});await page.locator('dialog [type=submit]').click();await page.waitForFunction(()=>!document.querySelector('dialog[open]'));assert(saves.some(x=>x.action==='employee_save'&&x.payload.username==='new.employee'&&x.payload.profilePhoto.startsWith('data:image/jpeg;')));
  await page.locator('[data-employee-new]').click();
+ await page.locator('dialog [name=role]').selectOption('owner');assert(await page.locator('[data-owner-access-note]').isVisible());assert(await page.locator('[data-employee-access]').isHidden());assert(await page.locator('dialog [name=permissions]').first().isDisabled());
+ await page.locator('dialog [name=role]').selectOption('staff');assert(await page.locator('[data-employee-access]').isVisible());
  await page.locator('dialog [name=name]').fill('Login employee');
  await page.locator('dialog [name=email]').fill('new.login@test.local');
- await page.locator('dialog [name=initialPassword]').fill('initial-password-fixture');
+ await page.locator('dialog [name=initialPassword]').fill('abc123');
  await page.locator('[data-toggle-initial-password]').click();assert.equal(await page.locator('dialog [name=initialPassword]').getAttribute('type'),'text');
  await page.locator('[data-toggle-initial-password]').click();
  await page.locator('dialog [type=submit]').click();await page.waitForFunction(()=>!document.querySelector('dialog[open]'));
  const employeeSave=saves.find(x=>x.action==='employee_save'&&x.payload.name==='Login employee');
  assert(employeeSave);assert(!Object.hasOwn(employeeSave.payload,'initialPassword'));
- assert(saves.some(x=>x.action==='create'&&x.employeeId===employeeSave.payload.employeeId&&x.password==='initial-password-fixture'));
+ assert(saves.some(x=>x.action==='create'&&x.employeeId===employeeSave.payload.employeeId&&x.password==='abc123'));
  assert.deepEqual(errors,[]);
  const savedTheme=await page.evaluate(()=>document.documentElement.dataset.theme);await page.reload();await page.locator('#login-form').waitFor();assert.equal(await page.evaluate(()=>document.documentElement.dataset.theme),savedTheme);
  // Also render the public site and menu; all local scripts must load without exceptions.

@@ -2,7 +2,7 @@ import {installMoneyInputs} from './money-input.mjs?v=19';
 installMoneyInputs();
 import { openWeighingReceipt, showWeighingHistory } from './receipt-weighing.mjs?v=19';
 import {inventoryPanel,bindInventory} from "./inventory-ui.mjs?v=19";
-import {opsPages,opsPage,bindOps,clearOrderDraft} from './operations-ui.mjs?v=20';
+import {opsPages,opsPage,bindOps,clearOrderDraft} from './operations-ui.mjs?v=21';
 import {
   sections,
   navigation,
@@ -264,8 +264,16 @@ function login(message = "") {
 function stat(label, value, note) {
   return `<div class="stat"><small>${label}</small><strong>${value}</strong><span>${note}</span></div>`;
 }
+function accountProfile() {
+  const person = state.employees?.find(employee => employee.id === state.me?.id) || state.me || {};
+  const accountName = person.name || "Akun login";
+  const photo = person.profile_photo;
+  const role = {owner:"Owner · Akses penuh",manager:"Manager",cashier:"Kasir",kitchen:"Kitchen",warehouse:"Gudang",staff:"Staff"}[person.role] || "Staff";
+  const initials = accountName.trim().split(/\s+/).slice(0,2).map(word => word[0]).join("").toUpperCase();
+  return `<div class="account-profile" aria-label="Akun yang login">${photo ? `<img src="${e(photo)}" alt="Foto ${e(accountName)}">` : `<span class="account-avatar" aria-hidden="true">${e(initials)}</span>`}<div><small>AKUN LOGIN</small><strong>${e(accountName)}</strong><span>${e(role)}</span></div></div>`;
+}
 function shell(body) {
-  return `<div class="shell ${["products","stock"].includes(view)?"inventory-shell":""}"><aside class="sidebar"><div><div class="brand"><img src="logo.png" alt="Maniac Duren"></div><div class="brand-sub">OPERATIONS / POS</div></div><div class="sidebar-store"><label for="active-store">TOKO AKTIF</label><div class="store-select-wrap">${icon("stores")}<select id="active-store" aria-label="Toko aktif" title="${e(name("stores", store))}">${options("stores", store)}</select></div></div><nav class="nav" aria-label="Navigasi POS">${navigation(title, view, icon, state.access)}</nav><div class="sidebar-foot">${mode === "demo" ? "DATA CONTOH · DEMO" : "AKSES ADMIN"}<br>Fresh. Creamy. Berkualitas.<br><a href="/" target="_blank" rel="noopener">Website customer</a></div></aside><main><header class="topbar"><div><div class="breadcrumb">Maniac Duren / ${sections.find((section) => section.pages.includes(view))?.label || "Operasional"}</div><h1>${title[view]}</h1></div><div class="toolbar"><span class="tag ${mode === "demo" ? "demo" : ""}">${mode === "demo" ? "MODE DEMO" : "DATABASE AKTIF"}</span>${themeButton()}<button id="logout" class="small">Keluar</button></div></header>${body}<p class="page-foot">${mode === "demo" ? "Semua angka adalah data contoh." : "Stok dan penjualan tersimpan di database bersama."} Berat kg dicatat pada setiap penjualan, termasuk penjualan per butir.</p></main></div>`;
+  return `<div class="shell ${["products","stock"].includes(view)?"inventory-shell":""}"><aside class="sidebar"><div><div class="brand"><img src="logo.png" alt="Maniac Duren"></div><div class="brand-sub">OPERATIONS / POS</div></div>${accountProfile()}<div class="sidebar-store"><label for="active-store">TOKO AKTIF</label><div class="store-select-wrap">${icon("stores")}<select id="active-store" aria-label="Toko aktif" title="${e(name("stores", store))}">${options("stores", store)}</select></div></div><nav class="nav" aria-label="Navigasi POS">${navigation(title, view, icon, state.access)}</nav><div class="sidebar-foot">${mode === "demo" ? "DATA CONTOH · DEMO" : "AKSES ADMIN"}<br>Fresh. Creamy. Berkualitas.<br><a href="/" target="_blank" rel="noopener">Website customer</a></div></aside><main><header class="topbar"><div><div class="breadcrumb">Maniac Duren / ${sections.find((section) => section.pages.includes(view))?.label || "Operasional"}</div><h1>${title[view]}</h1></div><div class="toolbar"><span class="tag ${mode === "demo" ? "demo" : ""}">${mode === "demo" ? "MODE DEMO" : "DATABASE AKTIF"}</span>${themeButton()}<button id="logout" class="small">Keluar</button></div></header>${body}<p class="page-foot">${mode === "demo" ? "Semua angka adalah data contoh." : "Stok dan penjualan tersimpan di database bersama."} Berat kg dicatat pada setiap penjualan, termasuk penjualan per butir.</p></main></div>`;
 }
 function dashboard() {
   const rows = saleRows(state, { from: today(), to: today(), store }),

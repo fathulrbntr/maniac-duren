@@ -1061,3 +1061,14 @@ tbody tr:hover { background:var(--surface-soft); }
 .weighing-dialog { width: min(760px, 94vw); }
 .weighing-dialog .table-wrap { max-height: 40vh; overflow: auto; margin-top: 16px; }
 .weighing-dialog td small { display: block; }
+
+.account-profile { display:flex; align-items:center; gap:12px; padding:16px; border-bottom:1px solid var(--border); min-width:0; }
+.account-profile img,.account-avatar { width:44px; height:44px; border-radius:50%; flex-shrink:0; object-fit:cover; }
+.account-avatar { display:grid; place-items:center; background:var(--surface-raised); color:var(--text); font-weight:800; }
+.account-profile > div { min-width:0; }
+.account-profile small,.account-profile strong,.account-profile span { display:block; }
+.account-profile small { color:var(--muted); font-size:10px; letter-spacing:.08em; }
+.account-profile strong { color:var(--text); overflow-wrap:anywhere; font-size:14px; margin:4px 0; }
+.account-profile div span { color:var(--muted); font-size:12px; }
+[data-owner-access-note] { padding:14px; margin-top:16px; border:1px solid var(--border); border-radius:10px; }
+[data-owner-access-note][hidden],[data-employee-access][hidden] { display:none; }
