@@ -10,7 +10,8 @@
     "test:kitchen": "node tests/order-stock.test.mjs && node tests/kitchen-orders.test.mjs && node tests/direct-orders.test.mjs",
     "test:kitchen:browser": "node tests/kitchen-browser.cjs",
     "test:employees": "node tests/employees-attendance.test.mjs",
-    "test:employees:browser": "node tests/employees-browser.cjs"
+    "test:employees:browser": "node tests/employees-browser.cjs",
+    "test:weighing": "node tests/receipt-weighing.test.mjs"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.8",

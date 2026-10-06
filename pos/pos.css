@@ -1055,3 +1055,9 @@ tbody tr:hover { background:var(--surface-soft); }
   color:var(--ink);
   font-weight:700;
 }
+
+.weigh-summary { margin: 16px 0; padding: 16px; border: 1px solid var(--border, #ddd); border-radius: 12px; }
+.weigh-summary p { margin: 8px 0; }
+.weighing-dialog { width: min(760px, 94vw); }
+.weighing-dialog .table-wrap { max-height: 40vh; overflow: auto; margin-top: 16px; }
+.weighing-dialog td small { display: block; }

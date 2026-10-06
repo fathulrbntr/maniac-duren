@@ -1,4 +1,5 @@
-import {inventoryPanel,bindInventory} from "./inventory-ui.mjs?v=14";
+import { openWeighingReceipt, showWeighingHistory } from './receipt-weighing.mjs?v=18';
+import {inventoryPanel,bindInventory} from "./inventory-ui.mjs?v=18";
 import {opsPages,opsPage,bindOps,clearOrderDraft} from './operations-ui.mjs?v=16.1';
 import {
   sections,
@@ -25,7 +26,6 @@ import {
   today,
   money,
   num,
-  parseAdditionExpression,
   escape as e,
   id,
   emptyState,
@@ -336,7 +336,7 @@ function cashier() {
 function stockPage() {return inventoryPanel(state,store,stockFilter,"stock")+`<details class="inventory-history"><summary>Rincian penerimaan, asal barang & riwayat pergerakan</summary>${stockHistoryPage()}</details>`;}
 function stockHistoryPage() {
   const lots = state.lots.filter((l) => l.storeId === store);
-  return `${unitStockPanel(state, store)}<section class="panel">${inventoryTable(lots)}</section><section class="panel"><h3>Rincian asal barang</h3><div class="table-wrap"><table><thead><tr><th>ID / TANGGAL MASUK</th><th>PRODUK</th><th>SUPPLIER</th><th class="numeric">AWAL KG / BUTIR</th><th class="numeric">SISA KG / BUTIR</th><th>CATATAN</th></tr></thead><tbody>${lots.map((l) => `<tr><td><b>${short(l.id)}</b><small>${l.date}${l.sourceLotId ? " · transfer" : ""}</small></td><td>${e(name("products", l.productId))}</td><td>${e(name("suppliers", l.supplierId))}</td><td class="numeric">${num(l.receivedKg)} kg / ${l.receivedPieces}</td><td class="numeric"><b>${num(l.kg)} kg</b><small>${l.pieces} butir</small></td><td>${e(l.note || "—")}</td></tr>`).join("") || '<tr><td colspan="6" class="empty">Belum ada barang masuk.</td></tr>'}</tbody></table></div></section><section class="panel"><h3>Riwayat waste, pemakaian dapur & transfer</h3><div class="table-wrap"><table><thead><tr><th>TANGGAL</th><th>JENIS</th><th>PRODUK / SUPPLIER</th><th class="numeric">KG / BUTIR</th><th>CATATAN</th></tr></thead><tbody>${
+  return `${unitStockPanel(state, store)}<section class="panel">${inventoryTable(lots)}</section><section class="panel"><h3>Rincian asal barang</h3><div class="table-wrap"><table><thead><tr><th>ID / TANGGAL MASUK</th><th>PRODUK</th><th>SUPPLIER</th><th class="numeric">AWAL KG / BUTIR</th><th class="numeric">SISA KG / BUTIR</th><th>CATATAN</th></tr></thead><tbody>${lots.map((l) => `<tr><td><b>${short(l.id)}</b><small>${l.date}${l.sourceLotId ? " · transfer" : ""}</small></td><td>${e(name("products", l.productId))}</td><td>${e(name("suppliers", l.supplierId))}</td><td class="numeric">${num(l.receivedKg)} kg / ${l.receivedPieces}</td><td class="numeric"><b>${num(l.kg)} kg</b><small>${l.pieces} butir</small></td><td>${e(l.note || "—")}${l.weighings?.length ? `<br><button type="button" data-weigh-history="${e(l.id)}">Riwayat timbang</button>` : ""}</td></tr>`).join("") || '<tr><td colspan="6" class="empty">Belum ada barang masuk.</td></tr>'}</tbody></table></div></section><section class="panel"><h3>Riwayat waste, pemakaian dapur & transfer</h3><div class="table-wrap"><table><thead><tr><th>TANGGAL</th><th>JENIS</th><th>PRODUK / SUPPLIER</th><th class="numeric">KG / BUTIR</th><th>CATATAN</th></tr></thead><tbody>${
     state.movements
       .filter((x) => x.storeId === store || x.toStoreId === store)
       .slice()
@@ -441,6 +441,10 @@ function render() {
   document
     .querySelectorAll("[data-receipt]")
     .forEach((b) => (b.onclick = () => receipt(b.dataset.receipt)));
+  document.querySelectorAll('[data-weigh-history]').forEach(b => b.onclick = () => {
+    const lot = state.lots.find(l => l.id === b.dataset.weighHistory);
+    if (lot) showWeighingHistory(lot, { modal });
+  });
   const pending = pendingRetry();
   if (pending) {
     const box = document.createElement("div");
@@ -669,68 +673,7 @@ function addItem(productId) {
   };
 }
 function addReceipt() {
-  if (
-    !state.products.some(isLegacyStock) ||
-    !state.suppliers.length ||
-    !state.stores.length
-  )
-    return toast("Tambahkan produk, store dan supplier terlebih dahulu.");
-  const d = modal(
-    "Barang masuk",
-    `<div class="form-grid">${field("Tanggal masuk", `<input name="date" type="date" value="${today()}" required>`)}${field("Store", `<select name="storeId">${options("stores", store)}</select>`)}${field(
-      "Produk",
-      `<select name="productId">${state.products
-        .filter(isLegacyStock)
-        .map((p) => `<option value="${e(p.id)}">${e(p.name)}</option>`)
-        .join("")}</select>`,
-    )}${field("Supplier", `<select name="supplierId">${options("suppliers")}</select>`)}${field("Berat masuk (kg)", '<input name="kg" type="text" inputmode="decimal" autocomplete="off" placeholder="Contoh: 12+5+8" required>')}<div class="field"><span>Hasil berat</span><output id="receipt-kg-total">—</output></div>${field("Butir masuk", '<input name="pieces" type="text" inputmode="numeric" autocomplete="off" placeholder="Contoh: 5+8+6" required>')}<div class="field"><span>Hasil butir</span><output id="receipt-pieces-total">—</output></div>${field("Harga pembelian (Rp)", '<input name="purchaseCost" type="number" min="0" step="1" required placeholder="Harga barang saja">')}${field("Ongkir (Rp)", '<input name="shippingCost" type="number" min="0" step="1" value="0" required placeholder="Biaya pengiriman">')}<div class="field"><span>Total modal penerimaan (Rp)</span><output id="receipt-total-cost">Rp0</output></div></div>${field("Nomor surat jalan / catatan", '<input name="note" maxlength="300" placeholder="Opsional">')}<p class="form-help">Berat dan butir dapat dicatat dari beberapa hasil timbang, misalnya <b>12+5+8</b> dan <b>5+8+6</b>. Sistem menyimpan hasil akhirnya sebagai 25 kg dan 19 butir.</p><p class="error" id="receipt-form-error"></p>`,
-  );
-  const f = d.querySelector("form");
-  const kgTotal = d.querySelector("#receipt-kg-total");
-  const piecesTotal = d.querySelector("#receipt-pieces-total");
-  const totalCost = d.querySelector("#receipt-total-cost");
-  const error = d.querySelector("#receipt-form-error");
-  const updatePreview = () => {
-    error.textContent = "";
-    try {
-      const kg = parseAdditionExpression(f.kg.value, "Berat masuk");
-      const pieces = parseAdditionExpression(f.pieces.value, "Butir masuk", true);
-      kgTotal.textContent = `${num(kg)} kg`;
-      piecesTotal.textContent = `${num(pieces)} butir`;
-      const purchase = Number(f.purchaseCost.value || 0);
-      const shipping = Number(f.shippingCost.value || 0);
-      if (!Number.isFinite(purchase) || purchase < 0 || !Number.isFinite(shipping) || shipping < 0) throw Error("Harga pembelian dan ongkir tidak valid");
-      totalCost.textContent = money(purchase + shipping);
-      return { kg, pieces, purchase, shipping };
-    } catch (err) {
-      kgTotal.textContent = "—";
-      piecesTotal.textContent = "—";
-      totalCost.textContent = "Rp0";
-      error.textContent = err.message;
-      return null;
-    }
-  };
-  [f.kg, f.pieces, f.purchaseCost, f.shippingCost].forEach((input) => input.addEventListener("input", updatePreview));
-  updatePreview();
-  f.onsubmit = async (ev) => {
-    ev.preventDefault();
-    const parsed = updatePreview();
-    if (!parsed) return;
-    const payload = {
-      ...Object.fromEntries(new FormData(f)),
-      kg: String(parsed.kg),
-      pieces: String(parsed.pieces),
-      purchaseCost: String(parsed.purchase),
-      shippingCost: String(parsed.shipping),
-      totalCost: String(parsed.purchase + parsed.shipping),
-      id: id(),
-    };
-    if (await mutate("receipt", payload)) {
-      d.close();
-      render();
-      toast(`Barang masuk tersimpan · ${num(parsed.kg)} kg · ${num(parsed.pieces)} butir`);
-    }
-  };
+  openWeighingReceipt(state, store, { modal, mutate, render, toast });
 }
 
 function movement() {

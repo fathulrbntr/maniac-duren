@@ -66,7 +66,7 @@ declare target uuid;safe jsonb;result jsonb;u text;photo text;v_phone text;repla
  if photo is not null and photo<>'' and (length(photo)>2000000 or photo !~ '^data:image/(jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$') then raise exception 'Foto profil harus JPEG/PNG/WebP maksimal 1,5 MB';end if;
  safe:=(payload-'profilePhoto')||jsonb_build_object('username',u);
  if payload ? 'profilePhoto' then safe:=safe||jsonb_build_object('profileDigest',md5(coalesce(photo,'')));end if;
- replayed:=exists(select 1 from public.md_pos_events where id=(pos_mutate.payload->>'id')::uuid);
+ replayed:=exists(select 1 from public.md_pos_events where id=($2->>'id')::uuid);
  result:=public.pos_mutate_v16(action,safe);
  if replayed then return public.pos_read();end if;
  update public.md_pos_employees set username=u,profile_photo=case when payload ? 'profilePhoto' then nullif(photo,'') else profile_photo end where id=target;
