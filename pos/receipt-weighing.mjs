@@ -17,6 +17,11 @@ export function weighingTotals(rows, purchase = 0, shipping = 0) {
   return { kg, pieces, purchase, shipping, total, purchaseKg: kg ? purchase / kg : 0, purchasePiece: pieces ? purchase / pieces : 0, costKg: kg ? total / kg : 0, costPiece: pieces ? total / pieces : 0 };
 }
 
+export function availableReceiptProducts(products, lines, active) {
+  const used = new Set(lines.filter((_, i) => i !== active).map(line => line.productId));
+  return products.filter(product => !used.has(product.id));
+}
+
 export function shipmentTotals(lines, shipping = 0) {
   shipping = Number(shipping);
   if (!Array.isArray(lines) || !lines.length || lines.length > 50) throw Error('Isi 1–50 produk dalam kiriman');
@@ -43,28 +48,42 @@ export function openWeighingReceipt(state, store, ctx) {
   let rows = [], saving = false, active = 0;
   const lines = [{id:id(), productId:products[0].id, purchaseCost:'', weighings:rows}];
   const error = d.querySelector('#form-error');
+  const drawProductOptions = () => {
+    const selected = lines[active].productId;
+    f.elements.productId.innerHTML = availableReceiptProducts(products, lines, active).map(p => `<option value="${e(p.id)}" ${p.id === selected ? 'selected' : ''}>${e(p.name)}</option>`).join('');
+  };
   const sync = () => Object.assign(lines[active], {productId:f.elements.productId.value, purchaseCost:f.elements.purchaseCost.value, weighings:rows});
   const totals = () => {sync(); return shipmentTotals(lines, f.elements.shippingCost.value).items[active];};
-  const switchLine = index => {sync(); active=index; rows=lines[active].weighings; f.elements.productId.value=lines[active].productId; f.elements.purchaseCost.value=lines[active].purchaseCost; update();};
+  const switchLine = index => {sync(); active=index; rows=lines[active].weighings; drawProductOptions(); f.elements.purchaseCost.value=lines[active].purchaseCost; update();};
 
   const update = () => {
     try {
       const t = totals();
+      drawProductOptions();
       d.querySelector('[data-weigh-summary]').innerHTML = `<b>${rows.length} kali timbang · ${num(t.kg)} kg · ${num(t.pieces)} butir</b><div class="form-grid"><p>Harga barang / kg<br><strong>${money(t.purchaseKg)}</strong></p><p>Harga barang / butir<br><strong>${money(t.purchasePiece)}</strong></p><p>Modal termasuk ongkir / kg<br><strong>${money(t.costKg)}</strong></p><p>Modal termasuk ongkir / butir<br><strong>${money(t.costPiece)}</strong></p></div><p>Total modal: <b>${money(t.total)}</b></p>`;
       const shipment = shipmentTotals(lines, f.elements.shippingCost.value);
       const picker = d.querySelector('[data-shipment-line]');
       picker.innerHTML = lines.map((line,i)=>`<option value="${i}" ${i===active?'selected':''}>${i+1}. ${e(products.find(p=>p.id===line.productId)?.name||'Produk')} · ${num(shipment.items[i].kg)} kg</option>`).join('');
       d.querySelector('[data-remove-line]').disabled=lines.length===1;
-      d.querySelector('[data-add-line]').disabled=lines.length>=Math.min(products.length,50);
+      const add = d.querySelector('[data-add-line]');
+      const hasUnused = products.some(p=>!lines.some(line=>line.productId===p.id));
+      add.disabled=!hasUnused || lines.length>=50;
+      add.title=!hasUnused ? 'Semua jenis durian sudah ditambahkan.' : 'Tambah jenis durian lain ke kiriman ini';
       d.querySelector('[data-shipment-summary]').innerHTML=`<b>Ringkasan seluruh kiriman · ${lines.length} produk</b><div class="table-wrap"><table><thead><tr><th>Produk</th><th>Berat / butir</th><th>Harga barang</th><th>Bagian ongkir</th></tr></thead><tbody>${lines.map((line,i)=>`<tr><td>${e(products.find(p=>p.id===line.productId)?.name)}</td><td>${num(shipment.items[i].kg)} kg / ${num(shipment.items[i].pieces)}</td><td>${money(shipment.items[i].purchase)}</td><td>${money(shipment.items[i].shipping)}</td></tr>`).join('')}</tbody></table></div><p>Total barang: ${money(shipment.purchase)} · Ongkir: ${money(shipment.shipping)}<br><b>Total modal kiriman: ${money(shipment.total)}</b></p>`;
       f.querySelector('[type=submit]').disabled = lines.some(line=>!line.weighings.length||line.purchaseCost==='') || new Set(lines.map(line=>line.productId)).size!==lines.length;
       error.textContent = new Set(lines.map(line=>line.productId)).size!==lines.length ? 'Produk yang sama cukup dicatat sekali dalam kiriman.' : '';
     } catch (err) { error.textContent = err.message; f.querySelector('[type=submit]').disabled = true; }
   };
   d.querySelector('[data-shipment-line]').onchange = ev => switchLine(Number(ev.target.value));
-  d.querySelector('[data-add-line]').onclick = () => {sync(); const next=products.find(p=>!lines.some(line=>line.productId===p.id)); if(!next)return; lines.push({id:id(),productId:next.id,purchaseCost:'',weighings:[]}); switchLine(lines.length-1); d.dataset.dirty='true';};
-  d.querySelector('[data-remove-line]').onclick=()=>{if(lines.length===1)return;if(!confirm('Hapus produk ini beserta catatan timbangnya dari kiriman?'))return;lines.splice(active,1);active=0;rows=lines[0].weighings;f.elements.productId.value=lines[0].productId;f.elements.purchaseCost.value=lines[0].purchaseCost;update();d.dataset.dirty='true';};
-  f.elements.productId.onchange = update;
+  d.querySelector('[data-add-line]').onclick = () => {sync(); const next=products.find(p=>!lines.some(line=>line.productId===p.id)); if(!next || lines.length>=50)return; lines.push({id:id(),productId:next.id,purchaseCost:'',weighings:[]}); switchLine(lines.length-1); d.dataset.dirty='true';};
+  d.querySelector('[data-remove-line]').onclick=()=>{if(lines.length===1)return;if(!confirm('Hapus produk ini beserta catatan timbangnya dari kiriman?'))return;lines.splice(active,1);active=0;rows=lines[0].weighings;drawProductOptions();f.elements.purchaseCost.value=lines[0].purchaseCost;update();d.dataset.dirty='true';};
+  f.elements.productId.onchange = () => {
+    const value=f.elements.productId.value;
+    if(lines.some((line,i)=>i!==active && line.productId===value)){
+      drawProductOptions();ctx.toast('Durian ini sudah ada dalam kiriman.');return;
+    }
+    update();d.dataset.dirty='true';
+  };
   f.elements.purchaseCost.oninput = update; f.elements.shippingCost.oninput = update;
   d.querySelector('[data-weigh-open]').onclick = () => {
     const w = document.createElement('dialog');
