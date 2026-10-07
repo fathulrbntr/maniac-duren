@@ -1,3 +1,4 @@
+import {loadPhoto, encodePhoto} from "../shared/photo.mjs?v=28";
 "use strict";
 (() => {
   const input = document.querySelector("#photo");
@@ -11,7 +12,7 @@
   const apply = document.querySelector("#photo-apply");
   const message = document.querySelector("#photo-editor-status");
   let picture = null,
-    objectURL = null,
+    source = null,
     generation = 0,
     drag = null;
 
@@ -75,8 +76,8 @@
     generation++;
     picture = null;
     drag = null;
-    if (objectURL) URL.revokeObjectURL(objectURL);
-    objectURL = null;
+    if (source) source.close();
+    source = null;
     input.value = "";
     apply.disabled = true;
   }
@@ -91,37 +92,27 @@
   input.addEventListener("change", async () => {
     const file = input.files[0];
     if (!file) return;
-    if (
-      !["image/png", "image/jpeg", "image/webp"].includes(file.type) ||
-      file.size > 2 * 1024 * 1024
-    ) {
-      say("Gunakan PNG, JPG, atau WebP maksimal 2 MB.");
-      input.value = "";
-      return;
-    }
     release();
     const ticket = generation;
-    objectURL = URL.createObjectURL(file);
     message.textContent = "Memuat gambar…";
     ratio.value = "1";
     reset();
     apply.textContent = "Gunakan gambar";
     dialog.showModal();
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const image = new Image();
-    image.src = objectURL;
     try {
-      await image.decode();
-      if (ticket !== generation || !dialog.open) return;
-      picture = image;
+      const loaded = await loadPhoto(file);
+      if (ticket !== generation || !dialog.open) { loaded.close(); return; }
+      source = loaded;
+      picture = loaded.image;
       reset();
       apply.disabled = false;
       message.textContent =
         "Pratinjau menunjukkan hasil potongan. File asli tetap utuh.";
-    } catch {
+    } catch (error) {
       if (ticket === generation)
         message.textContent =
-          "Gambar gagal dibaca. Tutup dan pilih file gambar lain.";
+          error.message || "Gambar gagal dibaca.";
     }
   });
   canvas.addEventListener("pointerdown", (event) => {
@@ -188,23 +179,7 @@
         output.width,
         output.height,
       );
-      let blob;
-      for (const quality of [0.94, 0.86, 0.76, 0.65]) {
-        blob = await new Promise((resolve) =>
-          output.toBlob(resolve, "image/webp", quality),
-        );
-        if (blob && blob.size <= 2000000) break;
-      }
-      if (!blob || blob.size > 2000000)
-        throw Error(
-          "Hasil gambar terlalu besar. Pilih potongan atau gambar lain.",
-        );
-      const data = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
+      const {photo: data} = await encodePhoto(output, 2000000);
       if (ticket !== generation || !dialog.open) return;
       form.elements.image.value = data;
       preview();
