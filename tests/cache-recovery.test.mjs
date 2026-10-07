@@ -1,0 +1,22 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+import {recoverPos} from '../pos-recovery.mjs';
+let removed=[],unregistered=[];
+const registration=scope=>({scope,unregister:async()=>{unregistered.push(scope);return true}});
+const result=await recoverPos({origin:'https://shop.test',serviceWorker:{getRegistrations:async()=>[registration('https://shop.test/pos/'),registration('https://shop.test/menu/')]},cacheStorage:{keys:async()=>['maniac-pos-shell-old','other-app-cache'],delete:async key=>{removed.push(key);return true}}});
+assert.deepEqual(unregistered,['https://shop.test/pos/']);assert.deepEqual(removed,['maniac-pos-shell-old']);assert.deepEqual(result,{workers:1,assets:1});
+await recoverPos({origin:'https://shop.test'});
+await assert.rejects(recoverPos({origin:'https://shop.test',serviceWorker:{getRegistrations:async()=>[{scope:'https://shop.test/pos/',unregister:async()=>false}]}}),/Pemulihan belum/);
+const handlers={},rows=new Map([['https://shop.test/pos/app.js',new Response('OLD')],['https://shop.test/pos/app.js?v=35',new Response('OLD-35')]]);
+let online=true,puts=0,quota=false;
+const cache={match:async key=>rows.get(typeof key==='string'?key:key.url)?.clone(),put:async(req,res)=>{if(quota)throw Error('quota');puts++;rows.set(req.url,res)}};
+vm.runInNewContext(fs.readFileSync('pos/sw.js','utf8'),{URL,self:{location:{origin:'https://shop.test'},addEventListener:(name,fn)=>handlers[name]=fn},caches:{open:async()=>cache},fetch:async()=>{if(!online)throw Error('offline');return new Response('NEW')}});
+async function read(url){let response;handlers.fetch({request:new Request(url),respondWith:p=>response=p});return response?await (await response).text():null}
+assert.equal(await read('https://shop.test/pos/app.js?v=37'),'NEW');assert.equal(puts,1);
+online=false;assert.equal(await read('https://shop.test/pos/app.js?v=37'),'NEW');
+await assert.rejects(read('https://shop.test/pos/app.js?v=38'),/offline/);
+assert.equal(await read('https://shop.test/api/pos-login'),null);
+assert.equal(await read('https://other.test/pos/app.js'),null);
+online=true;quota=true;assert.equal(await read('https://shop.test/pos/app.js?v=39'),'NEW');
+console.log('PASS recovery scope/cache isolation, exact-version offline fallback, fresh network response, cache quota failure, API exclusion');

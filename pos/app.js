@@ -237,7 +237,7 @@ function login(message = "") {
   document.querySelector("#login-form").onsubmit = async (ev) => {
     ev.preventDefault();
     const startedAt = performance.now();
-    const timing = window.posLoginTiming = {version:36};
+    const timing = window.posLoginTiming = {version:37};
     const form = ev.currentTarget,
       b = form.querySelector("button");
     b.disabled = true;
