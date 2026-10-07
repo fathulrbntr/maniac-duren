@@ -1,4 +1,4 @@
-import {showWeighingHistory} from './receipt-weighing.mjs?v=20.1';
+import {showWeighingHistory} from './receipt-weighing.mjs?v=20.2';
 import {escape as e,money,num,today} from './core.mjs?v=9';
 import {productDefaults,itemTypes,isMaterial,isLegacyStock} from './catalog.mjs?v=9';
 import {availableStock,menuStatus} from './order-stock.mjs?v=12';
