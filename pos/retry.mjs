@@ -13,6 +13,7 @@ const tracked = new Set([
   "order_direct", "order_complete", "order_create", "order_start", "order_ready", "order_pay", "order_cancel", "sort", "inventory_loss", "recover", "employee_save", "attendance_in", "attendance_out", "work_hours_save",
   "sale",
   "receipt",
+  "receipt_batch",
   "movement",
   "unit_receipt",
   "produce",
@@ -55,6 +56,12 @@ export function settleRetry(action, uncertain = false) {
 }
 export function reconcileRetry(state) {
   if (!pending) return false;
+  if (pending.action === 'receipt_batch') {
+    if ((state.lots || []).some(row => row.shipmentId === pending.id)) {
+      pending = null; persist(); return true;
+    }
+    return false;
+  }
   const rows =
     {
       order_create: state.orders,

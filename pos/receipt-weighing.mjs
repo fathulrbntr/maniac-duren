@@ -17,23 +17,54 @@ export function weighingTotals(rows, purchase = 0, shipping = 0) {
   return { kg, pieces, purchase, shipping, total, purchaseKg: kg ? purchase / kg : 0, purchasePiece: pieces ? purchase / pieces : 0, costKg: kg ? total / kg : 0, costPiece: pieces ? total / pieces : 0 };
 }
 
+export function shipmentTotals(lines, shipping = 0) {
+  shipping = Number(shipping);
+  if (!Array.isArray(lines) || !lines.length || lines.length > 50) throw Error('Isi 1–50 produk dalam kiriman');
+  if (!Number.isFinite(shipping) || shipping < 0) throw Error('Ongkir tidak valid');
+  const totals = lines.map(line => weighingTotals(line.weighings, line.purchaseCost, 0));
+  const kg = Number(totals.reduce((sum, t) => sum + t.kg, 0).toFixed(9));
+  const pieces = totals.reduce((sum, t) => sum + t.pieces, 0);
+  let allocated = 0;
+  const items = totals.map((t, i) => {
+    const share = i === totals.length - 1 ? shipping - allocated : kg ? shipping * t.kg / kg : 0;
+    allocated += share;
+    return {...t, shipping: share, total: t.purchase + share, costKg: t.kg ? (t.purchase + share) / t.kg : 0, costPiece: t.pieces ? (t.purchase + share) / t.pieces : 0};
+  });
+  const purchase = totals.reduce((sum, t) => sum + t.purchase, 0);
+  return {items, kg, pieces, purchase, shipping, total: purchase + shipping};
+}
+
 export function openWeighingReceipt(state, store, ctx) {
   const options = (kind, selected) => state[kind].map(p => `<option value="${e(p.id)}" ${p.id === selected ? 'selected' : ''}>${e(p.name)}</option>`).join('');
   const products = state.products.filter(isLegacyStock);
   if (!products.length || !state.suppliers.length || !state.stores.length) return ctx.toast('Tambahkan produk, store dan supplier terlebih dahulu.');
-  const d = ctx.modal('Barang masuk', `<div class="form-grid"><label class="field">Tanggal masuk<input name="date" type="date" value="${today()}" required></label><label class="field">Store<select name="storeId">${options('stores', store)}</select></label><label class="field">Produk<select name="productId">${products.map(p => `<option value="${e(p.id)}">${e(p.name)}</option>`).join('')}</select></label><label class="field">Supplier<select name="supplierId">${options('suppliers')}</select></label><label class="field">Total harga barang masuk (Rp)<input name="purchaseCost" type="number" min="0" step="any" required></label><label class="field">Ongkir (Rp)<input name="shippingCost" type="number" min="0" step="any" value="0" required></label></div><button type="button" class="primary" data-weigh-open>Catat penimbangan</button><div data-weigh-summary class="weigh-summary"></div><label class="field">Nomor surat jalan / catatan<input name="note" maxlength="300"></label><p class="form-help">Catatan timbang belum menambah stok. Stok masuk sekaligus setelah penurunan barang dikonfirmasi selesai.</p>`, 'Penurunan selesai · masukkan ke stok');
+  const d = ctx.modal('Barang masuk', `<div class="form-grid"><label class="field">Tanggal masuk<input name="date" type="date" value="${today()}" required></label><label class="field">Store<select name="storeId">${options('stores', store)}</select></label><label class="field">Produk yang sedang diisi<select name="productId">${products.map(p => `<option value="${e(p.id)}">${e(p.name)}</option>`).join('')}</select></label><label class="field">Supplier<select name="supplierId">${options('suppliers')}</select></label><label class="field">Harga barang untuk produk ini (Rp)<input name="purchaseCost" type="number" min="0" step="any" required></label><label class="field">Ongkir seluruh kiriman (Rp)<input name="shippingCost" type="number" min="0" step="any" value="0" required></label></div><div class="form-grid"><label class="field">Produk dalam kiriman<select data-shipment-line></select></label><div><button type="button" data-add-line>+ Tambah produk</button> <button type="button" data-remove-line>Hapus produk ini</button></div></div><p class="form-help">Satu supplier dan satu ongkir untuk seluruh kiriman. Ongkir dibagi berdasarkan berat masing-masing produk.</p><button type="button" class="primary" data-weigh-open>Catat penimbangan</button><div data-weigh-summary class="weigh-summary"></div><div data-shipment-summary class="weigh-summary"></div><label class="field">Nomor surat jalan / catatan<input name="note" maxlength="300"></label><p class="form-help">Catatan timbang belum menambah stok. Stok masuk sekaligus setelah penurunan barang dikonfirmasi selesai.</p>`, 'Penurunan selesai · masukkan ke stok');
   const f = d.querySelector('form'), requestId = id();
-  let rows = [], saving = false;
+  let rows = [], saving = false, active = 0;
+  const lines = [{id:id(), productId:products[0].id, purchaseCost:'', weighings:rows}];
   const error = d.querySelector('#form-error');
-  const totals = () => weighingTotals(rows, f.elements.purchaseCost.value, f.elements.shippingCost.value);
+  const sync = () => Object.assign(lines[active], {productId:f.elements.productId.value, purchaseCost:f.elements.purchaseCost.value, weighings:rows});
+  const totals = () => {sync(); return shipmentTotals(lines, f.elements.shippingCost.value).items[active];};
+  const switchLine = index => {sync(); active=index; rows=lines[active].weighings; f.elements.productId.value=lines[active].productId; f.elements.purchaseCost.value=lines[active].purchaseCost; update();};
+
   const update = () => {
     try {
       const t = totals();
       d.querySelector('[data-weigh-summary]').innerHTML = `<b>${rows.length} kali timbang · ${num(t.kg)} kg · ${num(t.pieces)} butir</b><div class="form-grid"><p>Harga barang / kg<br><strong>${money(t.purchaseKg)}</strong></p><p>Harga barang / butir<br><strong>${money(t.purchasePiece)}</strong></p><p>Modal termasuk ongkir / kg<br><strong>${money(t.costKg)}</strong></p><p>Modal termasuk ongkir / butir<br><strong>${money(t.costPiece)}</strong></p></div><p>Total modal: <b>${money(t.total)}</b></p>`;
-      f.querySelector('[type=submit]').disabled = !rows.length;
-      error.textContent = '';
+      const shipment = shipmentTotals(lines, f.elements.shippingCost.value);
+      const picker = d.querySelector('[data-shipment-line]');
+      picker.innerHTML = lines.map((line,i)=>`<option value="${i}" ${i===active?'selected':''}>${i+1}. ${e(products.find(p=>p.id===line.productId)?.name||'Produk')} · ${num(shipment.items[i].kg)} kg</option>`).join('');
+      d.querySelector('[data-remove-line]').disabled=lines.length===1;
+      d.querySelector('[data-add-line]').disabled=lines.length>=Math.min(products.length,50);
+      d.querySelector('[data-shipment-summary]').innerHTML=`<b>Ringkasan seluruh kiriman · ${lines.length} produk</b><div class="table-wrap"><table><thead><tr><th>Produk</th><th>Berat / butir</th><th>Harga barang</th><th>Bagian ongkir</th></tr></thead><tbody>${lines.map((line,i)=>`<tr><td>${e(products.find(p=>p.id===line.productId)?.name)}</td><td>${num(shipment.items[i].kg)} kg / ${num(shipment.items[i].pieces)}</td><td>${money(shipment.items[i].purchase)}</td><td>${money(shipment.items[i].shipping)}</td></tr>`).join('')}</tbody></table></div><p>Total barang: ${money(shipment.purchase)} · Ongkir: ${money(shipment.shipping)}<br><b>Total modal kiriman: ${money(shipment.total)}</b></p>`;
+      f.querySelector('[type=submit]').disabled = lines.some(line=>!line.weighings.length||line.purchaseCost==='') || new Set(lines.map(line=>line.productId)).size!==lines.length;
+      error.textContent = new Set(lines.map(line=>line.productId)).size!==lines.length ? 'Produk yang sama cukup dicatat sekali dalam kiriman.' : '';
     } catch (err) { error.textContent = err.message; f.querySelector('[type=submit]').disabled = true; }
   };
+  d.querySelector('[data-shipment-line]').onchange = ev => switchLine(Number(ev.target.value));
+  d.querySelector('[data-add-line]').onclick = () => {sync(); const next=products.find(p=>!lines.some(line=>line.productId===p.id)); if(!next)return; lines.push({id:id(),productId:next.id,purchaseCost:'',weighings:[]}); switchLine(lines.length-1); d.dataset.dirty='true';};
+  d.querySelector('[data-remove-line]').onclick=()=>{if(lines.length===1)return;if(!confirm('Hapus produk ini beserta catatan timbangnya dari kiriman?'))return;lines.splice(active,1);active=0;rows=lines[0].weighings;f.elements.productId.value=lines[0].productId;f.elements.purchaseCost.value=lines[0].purchaseCost;update();d.dataset.dirty='true';};
+  f.elements.productId.onchange = update;
   f.elements.purchaseCost.oninput = update; f.elements.shippingCost.oninput = update;
   d.querySelector('[data-weigh-open]').onclick = () => {
     const w = document.createElement('dialog');
@@ -70,19 +101,23 @@ export function openWeighingReceipt(state, store, ctx) {
     ev.preventDefault(); if (saving) return;
     try {
       if (state.incomingReadyVersion !== 19) throw Error('Jalankan migration 019 terlebih dahulu agar barang masuk langsung siap jual.');
-      const t = totals(); if (!rows.length) throw Error('Catat penimbangan terlebih dahulu.');
-      if (!confirm(`Penurunan barang sudah selesai?\n${rows.length} kali timbang · ${num(t.kg)} kg · ${num(t.pieces)} butir\nTotal modal ${money(t.total)}\nSeluruh hasil akan dimasukkan ke stok sekaligus.`)) return;
-      saving = true;
-      const payload = { ...Object.fromEntries(new FormData(f)), id: requestId, kg: String(t.kg), pieces: String(t.pieces), totalCost: String(t.total), weighings: structuredClone(rows), unloadingComplete: true };
-      if (await ctx.mutate('receipt', payload)) { d.close(); ctx.render(); ctx.toast(`Barang masuk tersimpan · ${num(t.kg)} kg · ${num(t.pieces)} butir`); }
-    } catch (err) { error.textContent = err.message; } finally { saving = false; }
+      sync();
+      if (state.multiReceiptVersion !== 20) throw Error('Jalankan migration 020 terlebih dahulu untuk kiriman beberapa produk.');
+      const t=shipmentTotals(lines,f.elements.shippingCost.value);
+      if(lines.some(line=>!line.weighings.length||line.purchaseCost===''))throw Error('Isi harga barang dan penimbangan untuk setiap produk.');
+      if(new Set(lines.map(line=>line.productId)).size!==lines.length)throw Error('Produk yang sama cukup dicatat sekali dalam kiriman.');
+      if (!confirm(`Penurunan barang sudah selesai?\n${lines.length} produk · ${num(t.kg)} kg · ${num(t.pieces)} butir\nSatu ongkir ${money(t.shipping)} · Total modal ${money(t.total)}\nSeluruh produk akan masuk stok sekaligus.`)) return;
+      saving = true; f.querySelector('[type=submit]').disabled=true;
+      const payload = {id:requestId,storeId:f.elements.storeId.value,supplierId:f.elements.supplierId.value,date:f.elements.date.value,note:f.elements.note.value,shippingCost:f.elements.shippingCost.value,unloadingComplete:true,lines:structuredClone(lines)};
+      if (await ctx.mutate('receipt_batch', payload)) { d.close(); ctx.render(); ctx.toast(`Kiriman tersimpan · ${lines.length} produk · ${num(t.kg)} kg · ${num(t.pieces)} butir`); }
+    } catch (err) { error.textContent = err.message; } finally { saving = false; if(d.open){const message=error.textContent;update();if(message)error.textContent=message;} }
   };
   update();
 }
 
 export function showWeighingHistory(lot, ctx) {
   const rows = lot.weighings || [];
-  const d = ctx.modal('Riwayat timbang barang masuk', `<p>${num(lot.receivedKg)} kg · ${num(lot.receivedPieces)} butir</p><div class="table-wrap"><table><thead><tr><th>Timbang</th><th>Berat kg</th><th>Butir</th><th>Waktu</th></tr></thead><tbody>${rows.slice().reverse().map((r, i) => `<tr><td>${rows.length - i}${r.editedAt ? ' · dikoreksi' : ''}</td><td>${num(r.kg)}</td><td>${num(r.pieces)}</td><td>${e(new Date(r.editedAt || r.createdAt).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }))}</td></tr>`).join('') || '<tr><td colspan="4">Penerimaan lama tidak memiliki rincian timbang.</td></tr>'}</tbody></table></div>${lot.totalCost != null ? `<p>Harga barang: ${money(lot.purchaseCost)} · Ongkir: ${money(lot.shippingCost)}<br>Modal/kg: ${money(lot.totalCost / lot.receivedKg)} · Modal/butir: ${money(lot.totalCost / lot.receivedPieces)}</p>` : ''}`);
+  const d = ctx.modal('Riwayat timbang barang masuk', `<p>${num(lot.receivedKg)} kg · ${num(lot.receivedPieces)} butir</p><div class="table-wrap"><table><thead><tr><th>Timbang</th><th>Berat kg</th><th>Butir</th><th>Waktu</th></tr></thead><tbody>${rows.slice().reverse().map((r, i) => `<tr><td>${rows.length - i}${r.editedAt ? ' · dikoreksi' : ''}</td><td>${num(r.kg)}</td><td>${num(r.pieces)}</td><td>${e(new Date(r.editedAt || r.createdAt).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }))}</td></tr>`).join('') || '<tr><td colspan="4">Penerimaan lama tidak memiliki rincian timbang.</td></tr>'}</tbody></table></div>${lot.totalCost != null ? `<p>${lot.shipmentId ? `Kiriman #${e(lot.shipmentId.slice(0,8))} · Ongkir di bawah merupakan bagian untuk produk ini.<br>` : ''}Harga barang: ${money(lot.purchaseCost)} · Ongkir: ${money(lot.shippingCost)}<br>Modal/kg: ${money(lot.totalCost / lot.receivedKg)} · Modal/butir: ${money(lot.totalCost / lot.receivedPieces)}</p>` : ''}`);
   d.querySelector('[type=submit]').hidden = true;
   d.querySelector('form').onsubmit = ev => ev.preventDefault();
 }

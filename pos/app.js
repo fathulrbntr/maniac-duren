@@ -1,6 +1,6 @@
 import {installMoneyInputs} from './money-input.mjs?v=19';
 installMoneyInputs();
-import { openWeighingReceipt, showWeighingHistory } from './receipt-weighing.mjs?v=19';
+import { openWeighingReceipt, showWeighingHistory } from './receipt-weighing.mjs?v=20';
 import {inventoryPanel,bindInventory} from "./inventory-ui.mjs?v=19";
 import {opsPages,opsPage,bindOps,clearOrderDraft} from './operations-ui.mjs?v=25';
 import {
@@ -15,7 +15,7 @@ import {
   reconcileRetry,
   pendingRetry,
   setRetryScope,
-} from "./retry.mjs?v=16.1";
+} from "./retry.mjs?v=20";
 import { wastePage, bindWaste } from "./waste-ui.mjs?v=9";
 import {
   recipesPage,
