@@ -152,6 +152,7 @@ async function request(path, body, auth = true) {
     await refreshingToken;
   }
   const r = await fetch(config.url + path, {
+    signal: AbortSignal.timeout(30000),
     method: body ? "POST" : "GET",
     headers: {
       apikey: config.key,
@@ -234,9 +235,13 @@ function login(message = "") {
     const form = ev.currentTarget,
       b = form.querySelector("button");
     b.disabled = true;
+    b.textContent = "Memeriksa akun…";
+    form.setAttribute("aria-busy", "true");
+    document.querySelector("#login-error").textContent = "";
     try {
       const values = Object.fromEntries(new FormData(form));
       const response = await fetch("/api/pos-login", {
+        signal: AbortSignal.timeout(60000),
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(values),
@@ -249,6 +254,7 @@ function login(message = "") {
       expires = Date.now() + d.expires_in * 1000;
       mode = "live";
       setRetryScope(config.url + ":" + d.user.id);
+      b.textContent = "Memuat data outlet…";
       await refresh();
       view=state.access?.sell?"orders":state.access?.kitchen?"kitchen":state.access?.attendance?"attendance":"guide";
       render();
@@ -256,9 +262,11 @@ function login(message = "") {
       token = "";
       refreshToken = "";
       mode = "";
-      document.querySelector("#login-error").textContent = err.message;
+      document.querySelector("#login-error").textContent = ["TimeoutError", "AbortError"].includes(err.name) ? "Server terlalu lama merespons. Periksa koneksi lalu coba masuk kembali." : err.message;
     } finally {
       b.disabled = false;
+      b.textContent = "Masuk";
+      form.removeAttribute("aria-busy");
     }
   };
 }

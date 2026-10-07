@@ -26,9 +26,12 @@ module.exports = async (req, res) => {
   try {
     const ip = String(req.headers['x-vercel-forwarded-for'] || req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown').split(',')[0].trim();
     const normalized = /^[+\d\s().-]+$/.test(identifier) ? identifier.replace(/\D/g, '').replace(/^0/, '62') : identifier;
-    for (const bucket of ['ip:' + hash(ip), 'login:' + hash(normalized)]) {
-      if (!await rpc('pos_login_throttle', { bucket })) return res.status(429).json({ error: 'Terlalu banyak percobaan. Coba lagi dalam 15 menit.' });
-    }
+    // Both independent limits still apply; await both before looking up the account.
+    const limits = await Promise.all(
+      ['ip:' + hash(ip), 'login:' + hash(normalized)]
+        .map(bucket => rpc('pos_login_throttle', { bucket })),
+    );
+    if (limits.some(allowed => !allowed)) return res.status(429).json({ error: 'Terlalu banyak percobaan. Coba lagi dalam 15 menit.' });
     const target = await rpc('pos_login_identity', { identifier });
     if (!target?.email || !target.userId) return invalid();
     const response = await fetch(url + '/auth/v1/token?grant_type=password', {
