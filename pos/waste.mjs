@@ -59,7 +59,7 @@ export function wastePlan(s, p) {
       output = s.products.find((x) => x.id === line.productId);
     if (
       !output ||
-      !["finished", "direct"].includes(output.itemType) ||
+      !["prep", "finished", "direct"].includes(output.itemType) ||
       output.stockUnit !== spec.unit ||
       seen.has(output.id)
     )

@@ -2,7 +2,7 @@
   "name": "maniac-duren",
   "private": true,
   "scripts": {
-    "test": "npm run test:unit",
+    "test": "node --test tests/product-details.test.mjs tests/production.test.mjs tests/waste.test.mjs tests/retry.test.mjs",
     "test:db": "node tests/database.test.mjs && node tests/operations.test.mjs",
     "test:browser": "node tests/browser.mjs",
     "db:build": "node scripts/build-database.mjs",
@@ -12,11 +12,7 @@
     "test:employees": "node tests/employees-attendance.test.mjs",
     "test:employees:browser": "node tests/employees-browser.cjs",
     "test:weighing": "node tests/receipt-weighing.test.mjs && node tests/money-input.test.mjs",
-    "pwa:build": "node scripts/build-pwa.mjs",
-    "test:offline": "node --test tests/offline.test.mjs && node tests/offline-database.test.mjs",
-    "test:offline:browser": "node tests/offline-browser.mjs",
-    "test:receipts": "node tests/multi-product-receipt.test.mjs",
-    "test:unit": "node --test tests/product-details.test.mjs tests/production.test.mjs tests/waste.test.mjs tests/retry.test.mjs tests/money-input.test.mjs tests/order-stock.test.mjs tests/offline.test.mjs"
+    "test:batches": "node tests/batch-tracking.test.mjs"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.8",

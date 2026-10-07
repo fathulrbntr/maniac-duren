@@ -14,4 +14,4 @@ Untuk database baru/reset, gunakan `database/pos.sql` yang sudah di-build dari s
 
 020-multi-product-receipt.sql: jalankan setelah 019 untuk satu kiriman berisi beberapa produk dengan satu ongkir. Aman dijalankan ulang; tidak mereset stok.
 
-- `021-offline-pos.sql` — jalankan setelah 020 untuk antrean POS offline. Menambahkan catatan pengiriman per perangkat, waktu asli transaksi, verifikasi resep dan endpoint sinkronisasi idempotent. Aman dijalankan ulang. Tidak menghapus transaksi / stok.
+021-batch-tracking.sql: setelah 020. Intake stocker, rekonsiliasi PO/nota admin, reject harian, penyusutan kulit/biji, modal hasil olahan, campuran supplier dan Admin pusat. Baca UPDATE-021.md. Aman dijalankan ulang; tanpa reset data.

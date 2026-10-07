@@ -1,16 +1,15 @@
-import {OfflinePOS,readLocal,writeLocal,deviceId} from './offline.mjs?v=28';
-import {startPWA,installButton,bindInstall} from './pwa.mjs?v=28';
+import {receiptAdminPanel,bindBatch} from "./batch-ui.mjs?v=21";
 import {installMoneyInputs} from './money-input.mjs?v=19';
 installMoneyInputs();
-import { openWeighingReceipt, showWeighingHistory } from './receipt-weighing.mjs?v=20.3';
-import {inventoryPanel,bindInventory} from "./inventory-ui.mjs?v=19";
-import {opsPages,opsPage,bindOps,clearOrderDraft} from './operations-ui.mjs?v=28';
+import { openWeighingReceipt, showWeighingHistory } from './receipt-weighing.mjs?v=21';
+import {inventoryPanel,bindInventory} from "./inventory-ui.mjs?v=21";
+import {opsPages,opsPage,bindOps,clearOrderDraft} from './operations-ui.mjs?v=27';
 import {
   sections,
   navigation,
   mayLeave,
   trackForms,
-} from "./navigation.mjs?v=19";
+} from "./navigation.mjs?v=21";
 import {
   prepareRetry,
   settleRetry,
@@ -18,7 +17,7 @@ import {
   pendingRetry,
   setRetryScope,
 } from "./retry.mjs?v=20";
-import { wastePage, bindWaste } from "./waste-ui.mjs?v=9";
+import { wastePage, bindWaste } from "./waste-ui.mjs?v=21";
 import {
   recipesPage,
   productionPage,
@@ -137,50 +136,6 @@ function toast(text) {
   toast.timer = setTimeout(() => (t.style.display = "none"), 5000);
 }
 let refreshingToken;
-let offline, userId='', terminalId='', connected=navigator.onLine, syncRunning=false, terminalRelease;
-async function persistSession() {
-  await writeLocal('session',{config,token,refreshToken,expires,userId,store});
-}
-async function claimTerminal() {
-  if(terminalRelease)return true;
-  if(!navigator.locks)throw Error('Buka POS melalui HTTPS di Chrome / Edge terbaru.');
-  return new Promise((resolve,reject)=>{
-    navigator.locks.request('maniac-pos-terminal',{ifAvailable:true},async lock=>{
-      if(!lock){resolve(false);return;}
-      await new Promise(release=>{terminalRelease=release;resolve(true);});
-    }).catch(reject);
-  });
-}
-function updateSyncStatus() {
-  const el=document.querySelector('#sync-status');if(!el||!offline)return;
-  offline.bundle().then(b=>{
-    const conflicts=b.queue.filter(r=>r.status==='conflict').length;
-    const ready=!!navigator.serviceWorker?.controller;
-    el.textContent=(connected?'Online':'Offline')+' · '+(syncRunning?'Menyinkronkan…':conflicts?conflicts+' transaksi perlu diperiksa':b.queue.length?b.queue.length+' transaksi belum tersinkron':'Semua data tersinkron')+(ready?'':' · Aplikasi offline belum siap');
-    el.dataset.state=conflicts?'error':b.queue.length||!connected||!ready?'pending':'ok';
-  }).catch(()=>{el.textContent='Penyimpanan perangkat tidak tersedia';el.dataset.state='error';});
-}
-async function syncOrders(retry=false) {
-  if(!offline||syncRunning||mode!=='live')return;
-  syncRunning=true;updateSyncStatus();
-  try {
-    const result=await offline.sync(envelope=>request('/rest/v1/rpc/pos_sync_order',{payload:envelope}),retry);
-    if(mode==='live'&&result.state)state=result.state;
-    if(result.error?.auth)throw result.error;
-    if(result.error?.definitive)toast('Transaksi tetap tersimpan di perangkat. '+result.error.message);
-  }finally{syncRunning=false;updateSyncStatus();}
-}
-async function showSyncQueue() {
-  const b=await offline.bundle();
-  const d=modal('Status sinkronisasi',`<p>Data terakhir dari server: ${e(b.syncedAt?new Date(b.syncedAt).toLocaleString('id-ID'):'Belum ada')}.</p><p>Kitchen di perangkat lain menerima pesanan setelah transaksi tersinkron. Saat offline, gunakan cetak struk untuk menyerahkan pesanan ke kitchen.</p><div class="sync-list">${b.queue.map(r=>`<article><b>#${e(r.id.slice(0,8))} · ${money(r.order.total)}</b><p>${e(name('stores',r.order.store_id))} · ${e(r.createdAt)}</p><p>${e(r.status==='conflict'?'Perlu diperiksa: '+r.error:'Menunggu sinkronisasi'+(r.error?' · '+r.error:''))}</p></article>`).join('')||'<p>Semua transaksi sudah tersinkron.</p>'}</div><p>Jika stok kurang, periksa stok fisik dan koreksi stok melalui akun berwenang, lalu coba lagi. Jika resep atau akses berubah, hubungi pengelola dengan ekspor antrean; transaksi tetap tersimpan.</p><button type="button" id="retry-sync">Sinkronkan sekarang</button> <button type="button" id="export-sync">Ekspor antrean</button>`);
-  d.querySelector('[type=submit]').hidden=true;
-  d.querySelector('#retry-sync').onclick=async()=>{try{await syncOrders(true);d.close();render();}catch(err){toast(err.message);}};
-  d.querySelector('#export-sync').onclick=()=>{
-    const url=URL.createObjectURL(new Blob([JSON.stringify({format:'maniac-pos-outbox-v1',deviceId:terminalId,exportedAt:new Date().toISOString(),queue:b.queue},null,2)],{type:'application/json'}));
-    const a=document.createElement('a');a.href=url;a.download='maniac-pos-antrean-'+today()+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
-  };
-}
-
 async function request(path, body, auth = true) {
   if (auth && refreshToken && Date.now() > expires - 60000) {
     refreshingToken ||= request(
@@ -188,18 +143,15 @@ async function request(path, body, auth = true) {
       { refresh_token: refreshToken },
       false,
     )
-      .then(async (d) => {
+      .then((d) => {
         token = d.access_token;
         refreshToken = d.refresh_token;
         expires = Date.now() + d.expires_in * 1000;
-        await persistSession();
       })
       .finally(() => (refreshingToken = null));
     await refreshingToken;
   }
-  let r;
-  try { r = await fetch(config.url + path, {
-    signal: AbortSignal.timeout(12000),
+  const r = await fetch(config.url + path, {
     method: body ? "POST" : "GET",
     headers: {
       apikey: config.key,
@@ -207,8 +159,7 @@ async function request(path, body, auth = true) {
       ...(auth ? { Authorization: "Bearer " + token } : {}),
     },
     ...(body ? { body: JSON.stringify(body) } : {}),
-  }); } catch(err) {connected=false;updateSyncStatus();throw err;}
-  connected=true;updateSyncStatus();
+  });
   const data = await r.json().catch(() => {
     throw Error("Respons server tidak dapat dibaca");
   });
@@ -216,8 +167,7 @@ async function request(path, body, auth = true) {
     const error = Error(
       data.message || data.error_description || data.msg || "Koneksi gagal",
     );
-    error.definitive = r.status < 500 && ![408,429].includes(r.status);
-    error.auth = r.status === 401 || (!auth && r.status === 400) || (path.endsWith('/pos_read') && [400,403].includes(r.status));
+    error.definitive = r.status < 500;
     throw error;
   }
   return data;
@@ -225,8 +175,7 @@ async function request(path, body, auth = true) {
 async function refresh() {
   if (busy) throw Error("Tunggu proses simpan selesai.");
   if (mode === "live") {
-    const fresh = await request("/rest/v1/rpc/pos_read", {});
-    state = offline ? await offline.accept(fresh) : fresh;
+    state = await request("/rest/v1/rpc/pos_read", {});
     if (!store || !state.stores.some((x) => x.id === store))
       store = state.stores[0]?.id || "";
   } else if (!store) store = state.stores[0]?.id || "";
@@ -238,17 +187,7 @@ async function refresh() {
   }
 }
 async function mutate(action, payload) {
-  if (busy || syncRunning) {toast('Tunggu proses simpan / sinkronisasi selesai.');return false;}
-  if (mode==='live' && action==='order_create' && !pendingRetry()) {
-    busy=true;stateRevision++;
-    try {
-      state=await offline.enqueue(payload,terminalId,userId);
-      // Persistence is the success boundary. Network failure must never restore the cart.
-      try {if(navigator.onLine)await syncOrders();}catch(err){toast('Pesanan tersimpan di perangkat. '+err.message);}
-      updateSyncStatus();return true;
-    }catch(err){toast(err.message);return false;}finally{busy=false;}
-  }
-  if(mode==='live' && !navigator.onLine){toast('Perubahan ini memerlukan koneksi. Penjualan baru tetap dapat disimpan di kasir.');return false;}
+  if (busy) return false;
   try {
     if(mode==="demo" && /^(order_|employee_|attendance_|sort$|recover$|inventory_loss$)/.test(action))throw Error("Fitur baru memerlukan login database versi 009.");
     Object.assign(payload, prepareRetry(action, payload));
@@ -269,7 +208,6 @@ async function mutate(action, payload) {
       state = next;
     } else
       state = await request("/rest/v1/rpc/pos_mutate", { action, payload });
-    if (mode === "live" && offline) state = await offline.accept(state);
     settleRetry(action);
     return true;
   } catch (error) {
@@ -297,7 +235,6 @@ function login(message = "") {
       b = form.querySelector("button");
     b.disabled = true;
     try {
-      if(!await claimTerminal())throw Error('POS sedang terbuka di tab lain. Tutup tab tersebut lalu masuk kembali.');
       const values = Object.fromEntries(new FormData(form));
       const response = await fetch("/api/pos-login", {
         method: "POST",
@@ -311,19 +248,14 @@ function login(message = "") {
       refreshToken = d.refresh_token;
       expires = Date.now() + d.expires_in * 1000;
       mode = "live";
-      if(userId!==d.user.id){clearOrderDraft();cart=[];}
-      userId=d.user.id;terminalId=await deviceId();offline=new OfflinePOS(config.url+":"+userId);
       setRetryScope(config.url + ":" + d.user.id);
       await refresh();
-      await persistSession();
-      navigator.storage?.persist?.().catch(()=>{});
       view=state.access?.sell?"orders":state.access?.kitchen?"kitchen":state.access?.attendance?"attendance":"guide";
       render();
     } catch (err) {
       token = "";
       refreshToken = "";
       mode = "";
-      terminalRelease?.();terminalRelease=null;
       document.querySelector("#login-error").textContent = err.message;
     } finally {
       b.disabled = false;
@@ -337,12 +269,12 @@ function accountProfile() {
   const person = state.employees?.find(employee => employee.id === state.me?.id) || state.me || {};
   const accountName = person.name || "Akun login";
   const photo = person.profile_photo;
-  const role = {owner:"Owner · Akses penuh",manager:"Manager",cashier:"Kasir",kitchen:"Kitchen",warehouse:"Gudang",staff:"Staff"}[person.role] || "Staff";
+  const role = {owner:"Owner · Akses penuh",manager:"Manager",cashier:"Kasir",kitchen:"Kitchen",warehouse:"Stocker",admin:"Admin pusat",staff:"Staff"}[person.role] || "Staff";
   const initials = accountName.trim().split(/\s+/).slice(0,2).map(word => word[0]).join("").toUpperCase();
   return `<div class="account-profile" aria-label="Akun yang login">${photo ? `<img src="${e(photo)}" alt="Foto ${e(accountName)}">` : `<span class="account-avatar" aria-hidden="true">${e(initials)}</span>`}<div><small>AKUN LOGIN</small><strong>${e(accountName)}</strong><span>${e(role)}</span></div></div>`;
 }
 function shell(body) {
-  return `<div class="shell ${["products","stock"].includes(view)?"inventory-shell":""}"><aside class="sidebar"><div class="sidebar-header"><div><div class="brand"><img src="logo.png" alt="Maniac Duren"></div><div class="brand-sub">OPERATIONS / POS</div></div><div class="sidebar-store"><label for="active-store">TOKO AKTIF</label><div class="store-select-wrap">${icon("stores")}<select id="active-store" aria-label="Toko aktif" title="${e(name("stores", store))}">${options("stores", store)}</select></div></div></div><nav class="nav" aria-label="Navigasi POS">${navigation(title, view, icon, state.access)}</nav><div class="sidebar-account">${accountProfile()}<button id="logout" class="sidebar-logout" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 4H4v16h5M14 8l4 4-4 4M8 12h10"/></svg>Logout</button></div></aside><main><header class="topbar"><div class="toolbar"><span class="tag ${mode === "demo" ? "demo" : ""}">${mode === "demo" ? "MODE DEMO" : "DATABASE AKTIF"}</span>${mode==='live'?'<button type="button" id="sync-status" class="sync-status">Memeriksa sinkronisasi…</button>'+installButton():''}${themeButton()}</div></header>${body}<p class="page-foot">${mode === "demo" ? "Semua angka adalah data contoh." : "Periksa status sinkronisasi sebelum menutup POS. Stok offline mengikuti data terakhir perangkat ini."} Berat kg dicatat pada setiap penjualan, termasuk penjualan per butir.</p></main></div>`;
+  return `<div class="shell ${["products","stock"].includes(view)?"inventory-shell":""}"><aside class="sidebar"><div class="sidebar-header"><div><div class="brand"><img src="logo.png" alt="Maniac Duren"></div><div class="brand-sub">OPERATIONS / POS</div></div><div class="sidebar-store"><label for="active-store">TOKO AKTIF</label><div class="store-select-wrap">${icon("stores")}<select id="active-store" aria-label="Toko aktif" title="${e(name("stores", store))}">${options("stores", store)}</select></div></div></div><nav class="nav" aria-label="Navigasi POS">${navigation(title, view, icon, state.access)}</nav><div class="sidebar-account">${accountProfile()}<button id="logout" class="sidebar-logout" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 4H4v16h5M14 8l4 4-4 4M8 12h10"/></svg>Logout</button></div></aside><main><header class="topbar"><div class="toolbar"><span class="tag ${mode === "demo" ? "demo" : ""}">${mode === "demo" ? "MODE DEMO" : "DATABASE AKTIF"}</span>${themeButton()}</div></header>${body}<p class="page-foot">${mode === "demo" ? "Semua angka adalah data contoh." : "Stok dan penjualan tersimpan di database bersama."} Berat kg dicatat pada setiap penjualan, termasuk penjualan per butir.</p></main></div>`;
 }
 function dashboard() {
   const rows = saleRows(state, { from: today(), to: today(), store }),
@@ -411,7 +343,7 @@ function cashier() {
     '<div class="empty">Tambah produk dan barang masuk dahulu.</div>'
   }</div></section><aside class="panel receipt"><div class="header-row"><h3>Pesanan</h3><span class="tag">${cart.length} item</span></div>${cart.map((l, i) => `<div class="cart-item"><div class="cart-line"><b>${e(name("products", l.productId))}</b><button data-remove="${i}" aria-label="Hapus ${e(name("products", l.productId))}">×</button></div><div class="muted">${num(l.kg)} kg · ${l.pieces} butir · per ${l.unit === "KG" ? "kg" : "butir"}</div><div class="muted">${e(name("suppliers", l.supplierId))} · ${short(l.lotId)}</div><div style="text-align:right;margin-top:9px"><b>${money(l.total)}</b></div></div>`).join("") || '<div class="empty">Pilih produk untuk mulai.</div>'}<div class="total"><span>Total</span><span>${money(total)}</span></div><form id="checkout">${field("Tanggal penjualan", `<input type="date" name="date" value="${today()}" required>`)}${field("Metode pembayaran", '<select name="payment"><option>Tunai</option><option>QRIS</option><option>Transfer</option></select>')}${field("Nominal diterima (Rp)", `<input name="paid" type="number" min="${total}" step="any" value="${total || ""}" required>`)}<p class="muted" id="change">Kembalian ${money(0)}</p><button type="submit" class="primary full" ${cart.length ? "" : "disabled"}>Simpan transaksi</button></form></aside></div>`;
 }
-function stockPage() {return inventoryPanel(state,store,stockFilter,"stock")+`<details class="inventory-history"><summary>Rincian penerimaan, asal barang & riwayat pergerakan</summary>${stockHistoryPage()}</details>`;}
+function stockPage() {return inventoryPanel(state,store,stockFilter,"stock").replace('id="add-receipt"',state.access&&!state.access.stock?'id="add-receipt" hidden disabled':'id="add-receipt"').replace('id="movement"',state.access&&!state.access.stock?'id="movement" hidden disabled':'id="movement"')+receiptAdminPanel(state,store)+`<details class="inventory-history"><summary>Rincian penerimaan, asal barang & riwayat pergerakan</summary>${stockHistoryPage()}</details>`;}
 function stockHistoryPage() {
   const lots = state.lots.filter((l) => l.storeId === store);
   return `${unitStockPanel(state, store)}<section class="panel">${inventoryTable(lots)}</section><section class="panel"><h3>Rincian asal barang</h3><div class="table-wrap"><table><thead><tr><th>ID / TANGGAL MASUK</th><th>PRODUK</th><th>SUPPLIER</th><th class="numeric">AWAL KG / BUTIR</th><th class="numeric">SISA KG / BUTIR</th><th>CATATAN</th></tr></thead><tbody>${lots.map((l) => `<tr><td><b>${short(l.id)}</b><small>${l.date}${l.sourceLotId ? " · transfer" : ""}</small></td><td>${e(name("products", l.productId))}</td><td>${e(name("suppliers", l.supplierId))}</td><td class="numeric">${num(l.receivedKg)} kg / ${l.receivedPieces}</td><td class="numeric"><b>${num(l.kg)} kg</b><small>${l.pieces} butir</small></td><td>${e(l.note || "—")}${l.weighings?.length ? `<br><button type="button" data-weigh-history="${e(l.id)}">Riwayat timbang</button>` : ""}</td></tr>`).join("") || '<tr><td colspan="6" class="empty">Belum ada barang masuk.</td></tr>'}</tbody></table></div></section><section class="panel"><h3>Riwayat waste, pemakaian dapur & transfer</h3><div class="table-wrap"><table><thead><tr><th>TANGGAL</th><th>JENIS</th><th>PRODUK / SUPPLIER</th><th class="numeric">KG / BUTIR</th><th>CATATAN</th></tr></thead><tbody>${
@@ -475,8 +407,7 @@ function render() {
       suppliers: () => directoryPage("suppliers"),
     }[view](),
   );
-  syncThemeControls();bindInstall();updateSyncStatus();
-  document.querySelector("#sync-status")?.addEventListener("click",()=>showSyncQueue().catch(err=>toast(err.message)));
+  syncThemeControls();
   document.querySelectorAll("[data-view]").forEach(
     (b) =>
       (b.onclick = () => {
@@ -498,19 +429,13 @@ function render() {
       return;
     }
     store = ev.target.value;
-    if(mode==='live')persistSession().catch(err=>toast(err.message));
     cart = [];
     clearOrderDraft();
     render();
   };
-  document.querySelector("#logout").onclick = async () => {
-    if(syncRunning||polling||refreshingToken)return toast("Tunggu sinkronisasi selesai.");
-    if(pendingRetry())return toast("Selesaikan pengiriman yang belum terkonfirmasi sebelum logout.");
-    if(offline && (await offline.bundle()).queue.length)return toast("Masih ada transaksi di perangkat. Sinkronkan semua sebelum logout.");
+  document.querySelector("#logout").onclick = () => {
     if (!mayLeave(busy)) return;
     if (cart.length && !confirm("Keluar dan kosongkan pesanan?")) return;
-    await writeLocal("session",undefined);
-    terminalRelease?.();terminalRelease=null;offline=null;userId="";
     token = "";
     refreshToken = "";
     expires = 0;
@@ -561,6 +486,7 @@ function render() {
     const res=await fetch("/api/pos-employee",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+token},body:JSON.stringify({employeeId,password,action})});
     const data=await res.json();if(!res.ok)throw Error(data.error||"Gagal membuat akun");return data;
   }});
+  bindBatch(view,state,store,{modal,mutate,render,toast,refresh});
   bindKitchenSound();
   observeKitchen();
   trackForms();
@@ -768,7 +694,7 @@ function movement() {
   if (!lots.length) return toast("Tidak ada stok tersedia");
   const d = modal(
     "Transfer / pemakaian",
-    `${field("Asal barang", `<select name="lotId">${lots.map((l) => `<option value="${e(l.id)}">${e(name("products", l.productId))} · ${e(name("suppliers", l.supplierId))} · ${short(l.id)}</option>`).join("")}</select>`)}<div class="form-grid">${field("Tanggal", `<input name="date" type="date" value="${today()}" required>`)}${field("Jenis", '<select name="kind"><option>Pemakaian dapur</option><option>Transfer</option></select>')}${field("Berat keluar (kg)", '<input name="kg" type="number" min="0.000001" step="any" required>')}${field("Butir keluar", '<input name="pieces" type="number" min="1" step="1" required>')}</div><div id="destination" hidden>${field("Store tujuan", `<select name="toStoreId">${options("stores")}</select>`)}</div>${field("Catatan / alasan", '<input name="note" required maxlength="300">')}<p class="form-help">Pemakaian dapur hanya mengurangi stok. Untuk mencatat hasil olahan durian, gunakan menu Waste & Olahan.</p>`,
+    `${field("Asal barang", `<select name="lotId">${lots.map((l) => `<option value="${e(l.id)}">${e(name("products", l.productId))} · ${e(name("suppliers", l.supplierId))} · ${short(l.id)}</option>`).join("")}</select>`)}<div class="form-grid">${field("Tanggal", `<input name="date" type="date" value="${today()}" required>`)}${field("Jenis", '<select name="kind"><option>Transfer</option></select>')}${field("Berat keluar (kg)", '<input name="kg" type="number" min="0.000001" step="any" required>')}${field("Butir keluar", '<input name="pieces" type="number" min="1" step="1" required>')}</div><div id="destination" hidden>${field("Store tujuan", `<select name="toStoreId">${options("stores")}</select>`)}</div>${field("Catatan / alasan", '<input name="note" required maxlength="300">')}<p class="form-help">Untuk pengolahan buah reject, gunakan menu Olah reject. Transfer menelusuri batch asal ke outlet tujuan.</p>`,
   );
   const f = d.querySelector("form");
   f.kind.onchange = () =>
@@ -899,27 +825,13 @@ function exportCSV() {
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-await startPWA();
-let savedSession;
-try {savedSession=await readLocal('session');}catch{ /* Login reports storage failure before accepting payment. */ }
 try {
-  const r=await fetch('/api/pos-config',{signal:AbortSignal.timeout(8000)});
-  config=r.ok?await r.json():savedSession?.config||{};
-} catch {config=savedSession?.config||{};connected=false;}
-try {
-  if(savedSession && savedSession.config.url===config.url && await claimTerminal()) {
-    ({token,refreshToken,expires,userId,store}=savedSession);
-    terminalId=await deviceId();offline=new OfflinePOS(config.url+':'+userId);
-    setRetryScope(config.url+':'+userId);mode='live';
-    state=await offline.state()||emptyState();
-    try{await refresh();}catch(err){if(err.definitive||!state.stores?.length)throw err;}
-    view=state.access?.sell?'orders':state.access?.kitchen?'kitchen':state.access?.attendance?'attendance':'guide';render();
-  }else login(savedSession?'POS sedang terbuka di tab lain. Gunakan satu tab per perangkat.':'');
-}catch(err){
-  mode='';token='';refreshToken='';terminalRelease?.();terminalRelease=null;
-  if(err.definitive)await writeLocal('session',undefined);
-  login('Masuk kembali untuk melanjutkan. '+err.message);
+  const r = await fetch("/api/pos-config", { signal: AbortSignal.timeout(15000) });
+  config = r.ok ? await r.json() : {};
+} catch {
+  config = {};
 }
+login();
 
 function masterDetailFields(kind, p = {}) {
   return kind === "stores"
@@ -974,27 +886,16 @@ function observeKitchen(){
  seenKitchen.set(store,new Set(orders.map(o=>o.id)));
  if(incoming.length){toast(`${incoming.length} pesanan baru masuk ke kitchen`);beepKitchen();}
 }
-async function pollPOS(){
- if(mode!=='live'||busy||polling||syncRunning)return;
- polling=true;const revision=stateRevision,account=userId;
+setInterval(async()=>{
+ if(mode!=='live'||busy||polling||!['orders','kitchen'].includes(view))return;
+ polling=true;const revision=stateRevision,sessionToken=token;
  try{
-  await syncOrders();
   const fresh=await request('/rest/v1/rpc/pos_read',{});
-  if(mode!=='live'||busy||revision!==stateRevision||account!==userId)return;
-  state=await offline.accept(fresh);observeKitchen();
+  if(mode!=='live'||busy||revision!==stateRevision||sessionToken!==token)return;
+  state=fresh;observeKitchen();
   if(view==='kitchen'&&!document.querySelector('dialog[open]'))render();
   else document.querySelector('#order-products')?.dispatchEvent(new CustomEvent('stock-refresh',{detail:state}));
   const status=document.querySelector('#kitchen-sync');if(status)status.textContent='Terhubung · diperbarui '+new Date().toLocaleTimeString('id-ID');
- }catch(err){
-  if(err.auth){
-    await writeLocal('session',undefined);mode='';token='';refreshToken='';terminalRelease?.();terminalRelease=null;
-    login('Sesi berakhir. Masuk dengan akun yang sama untuk menyinkronkan transaksi perangkat.');
-  }
-  const status=document.querySelector('#kitchen-sync');if(status)status.textContent='Offline · pesanan baru dari kasir lain belum dapat diterima.';
- }finally{polling=false;updateSyncStatus();}
-}
-setInterval(pollPOS,5000);
-navigator.serviceWorker?.addEventListener('controllerchange',updateSyncStatus);
-window.addEventListener('online',()=>{pollPOS();});
-window.addEventListener('offline',()=>{connected=false;updateSyncStatus();});
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')pollPOS();});
+ }catch(err){const status=document.querySelector('#kitchen-sync');if(status)status.textContent='Koneksi terputus. Mencoba lagi otomatis; tekan Perbarui untuk mencoba sekarang.';}
+ finally{polling=false;}
+},5000);
