@@ -14,7 +14,7 @@
 <label>Satuan<select name="unit"><option value="porsi">Porsi</option><option value="kg">Kg</option><option value="paket">Paket</option><option value="box">Box</option><option value="buah">Buah</option></select></label>
 <label>Deskripsi<textarea name="description" rows="3" maxlength="500" placeholder="Ceritakan singkat produk ini"></textarea></label>
 <label>Foto produk<input name="image" placeholder="/assets/monthong.png atau https://…"><small>Gunakan lokasi foto di proyek atau tautan langsung gambar.</small></label>
-<label class="upload">Atau pilih foto<input type="file" id="photo" accept="image/*,.jpg,.jpeg,.jfif,.png,.webp,.gif,.bmp,.avif,.heic,.heif,.tif,.tiff"><small>File sumber maksimal 50 MB; hasil otomatis dikompres maksimal 2 MB. Atur rasio dan posisi foto sebelum digunakan.</small></label>
+<label class="upload">Atau pilih foto<input type="file" id="photo" accept="image/png,image/jpeg,image/webp"><small>PNG, JPG, atau WebP, maksimal 2 MB. Atur rasio dan posisi foto sebelum digunakan.</small></label>
 <img id="photo-preview" alt="Pratinjau foto produk" hidden>
 <div class="actions"><button type="submit" class="button button-primary" id="submit">Tambah menu</button><button type="button" class="button button-secondary" id="cancel" hidden>Batal edit</button></div>
 </form></section>
@@ -31,4 +31,4 @@
   </div>
   <footer class="photo-editor-actions"><button type="button" id="photo-reset" class="button button-secondary">Reset posisi</button><button type="button" id="photo-apply" class="button button-primary" disabled>Gunakan gambar</button></footer>
 </dialog>
-<script src="/menu/logic.js"></script><script src="/menu/admin.js"></script><script type="module" src="/menu/photo-editor.js?v=28"></script><script type="module">import {installMoneyInputs} from "/pos/money-input.mjs?v=19";installMoneyInputs();</script></body></html>
+<script src="/menu/logic.js"></script><script src="/menu/admin.js"></script><script src="/menu/photo-editor.js"></script><script type="module">import {installMoneyInputs} from "/pos/money-input.mjs?v=19";installMoneyInputs();</script></body></html>

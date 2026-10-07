@@ -1,4 +1,3 @@
-import {coralPanel} from "./batch-ui.mjs?v=21";
 import { mayLeave } from "./navigation.mjs?v=9";
 import {
   bindEvidence,
@@ -7,7 +6,7 @@ import {
 } from "./waste-evidence.mjs?v=9";
 import { escape as e, num, today, id } from "./core.mjs?v=9";
 import { isLegacyStock } from "./catalog.mjs?v=9";
-import { wasteOutputs, wastePlan } from "./waste.mjs?v=21";
+import { wasteOutputs, wastePlan } from "./waste.mjs?v=9";
 const field = (label, body) => `<label class="field">${label}${body}</label>`;
 const choices = (rows, selected = "") =>
   rows
@@ -21,22 +20,18 @@ export function wastePage(s, store) {
     .filter((x) => x.storeId === store)
     .slice()
     .reverse();
-  const missing = wasteOutputs.filter(spec => !s.products.some(p =>
-    p.stockUnit === spec.unit && ["prep", "finished", "direct"].includes(p.itemType) &&
-    p.name.toLowerCase().replaceAll(" ", "") === (spec.key === "durpas500" ? "durpas500gr" : spec.key === "durpas1000" ? "durpas1kg" : "coral")));
-  const setup = missing.length ? `<section class="notice" role="status"><strong>Lengkapi produk hasil olahan</strong><p>Belum tersedia: ${missing.map(x => e(x.label)).join(", ")}. Buat Durpas sebagai produk jadi hasil produksi dengan satuan pcs dan harga jual aktual; buat Coral sebagai bahan produksi sendiri dengan satuan kg. Stok awal tetap 0, hasil masuk melalui pengolahan.</p>${s.access?.master ? '<button type="button" data-view="products">Buka Produk & bahan</button>' : '<p>Minta admin melengkapi master produk.</p>'}</section>` : '';
-  return `${setup}<div class="intro"><div><h2>Pengolahan reject</h2><p class="muted">Catat durian yang diproses dan timbang hasil olahannya.</p></div><button id="waste-refresh">Perbarui stok</button></div>
+  return `<div class="intro"><div><h2>Waste & Olahan</h2><p class="muted">Catat durian yang diproses dan timbang hasil olahannya.</p></div><button id="waste-refresh">Perbarui stok</button></div>
  <section class="panel"><form id="waste-form"><div class="form-grid">${field(
    "Tanggal barang masuk",
    `<input name="receivedDate" type="date" required max="${today()}">`,
- )}${field("Produk durian asal", '<select name="sourceProductId" required><option value="">Pilih tanggal masuk dulu</option></select>')}${field("Batch / supplier asal", '<select name="sourceLotId" required><option value="">Pilih produk dulu</option></select>')}${field("Tanggal pengolahan", `<input name="date" type="date" value="${today()}" readonly aria-readonly="true" required>`)}</div><div class="form-grid waste-input-row">${field("Berat durian yang diolah (kg)", '<input name="kg" type="number" min="0.000001" step="0.000001" required>')}${field("Jumlah durian (butir)", '<input name="pieces" type="number" min="1" step="1" required>')}</div><div class="form-grid waste-proof-row">${field("Nama pengolah", `<input name="processedBy" value="${e(s.me?.name||'')}" required maxlength="100" readonly>`)}${field("Foto reject sebelum diolah", '<input data-proof-file="reject" type="file" accept="image/*,.jpg,.jpeg,.jfif,.png,.webp,.gif,.bmp,.avif,.heic,.heif,.tif,.tiff"><small data-proof-status="reject">Wajib · maksimal 2 MB setelah kompresi</small>')}</div><p id="waste-source-stock" class="muted"></p>
- <div class="form-grid">${field("Kulit dibuang (kg)",'<input name="shellKg" type="number" min="0" step="0.000001" value="0" required>')}${field("Isi rusak / waste (kg)",'<input name="spoiledKg" type="number" min="0" step="0.000001" value="0" required>')}${field("Biaya tambahan bersama (Rp)",'<input name="additionalCost" type="number" min="0" step="any" value="0" required>')}</div><h3>Hasil olahan</h3><p class="muted">Durian kupas dihitung per kemasan; coral dalam kg. Keduanya masih berbiji. Catat keduanya dalam satu proses. Semua hasil 0 hanya untuk buah yang tidak dapat dimanfaatkan.</p>
+ )}${field("Produk durian asal", '<select name="sourceProductId" required><option value="">Pilih tanggal masuk dulu</option></select>')}${field("Batch / supplier asal", '<select name="sourceLotId" required><option value="">Pilih produk dulu</option></select>')}${field("Tanggal waste", `<input name="date" type="date" value="${today()}" readonly aria-readonly="true" required>`)}</div><div class="form-grid waste-input-row">${field("Berat durian yang diolah (kg)", '<input name="kg" type="number" min="0.000001" step="0.000001" required>')}${field("Jumlah durian (butir)", '<input name="pieces" type="number" min="1" step="1" required>')}</div><div class="form-grid waste-proof-row">${field("Nama pengolah", '<input name="processedBy" required maxlength="100" placeholder="Nama staf yang mengolah">')}${field("Foto reject sebelum diolah", '<input data-proof-file="reject" type="file" accept="image/jpeg,image/png,image/webp"><small data-proof-status="reject">Wajib · maksimal 2 MB setelah kompresi</small>')}</div><p id="waste-source-stock" class="muted"></p>
+ <h3>Hasil olahan</h3><p class="muted">Durpas dihitung per kemasan. Coral ditimbang dalam kg. Isi 0 untuk hasil yang tidak dibuat. Semua hasil 0 berarti waste total.</p>
  <div class="waste-output-grid">${wasteOutputs
    .map((spec) => {
      const products = s.products.filter(
          (p) =>
            p.stockUnit === spec.unit &&
-           ["prep", "finished", "direct"].includes(p.itemType),
+           ["finished", "direct"].includes(p.itemType),
        ),
        preferred = products.find(
          (p) =>
@@ -47,12 +42,12 @@ export function wastePage(s, store) {
                ? "durpas1kg"
                : "coral"),
        );
-     return `<fieldset class="waste-output waste-output-card"><legend>${spec.label}</legend><select name="${spec.key}_productId" aria-label="Produk ${spec.label}"><option value="">Pilih produk ${spec.unit}</option>${choices(products, preferred?.id)}</select>${field(spec.unit === "pcs" ? "Jumlah (pcs)" : "Jumlah (kg)", `<input name="${spec.key}_qty" type="number" min="0" step="${spec.unit === "pcs" ? "1" : "0.000001"}" value="0" required>`)}${field("Biaya kemasan khusus (Rp)", `<input name="${spec.key}_additionalCost" type="number" min="0" step="any" value="0" required>`)}${field("Bukti (input foto)", `<input data-proof-file="${spec.key}" type="file" accept="image/*,.jpg,.jpeg,.jfif,.png,.webp,.gif,.bmp,.avif,.heic,.heif,.tif,.tiff"><small data-proof-status="${spec.key}">Opsional · maksimal 2 MB setelah kompresi</small>`)}</fieldset>`;
+     return `<fieldset class="waste-output waste-output-card"><legend>${spec.label}</legend><select class="sr-only" name="${spec.key}_productId" aria-label="Produk ${spec.label}"><option value="">Pilih produk ${spec.unit}</option>${choices(products, preferred?.id)}</select>${field(spec.unit === "pcs" ? "Jumlah (pcs)" : "Jumlah (kg)", `<input name="${spec.key}_qty" type="number" min="0" step="${spec.unit === "pcs" ? "1" : "0.000001"}" value="0" required>`)}${field("Bukti (input foto)", `<input data-proof-file="${spec.key}" type="file" accept="image/jpeg,image/png,image/webp"><small data-proof-status="${spec.key}">Opsional · maksimal 2 MB setelah kompresi</small>`)}</fieldset>`;
    })
-   .join("")}</div>
- <p class="muted">Pilih produk hasil sesuai kemasan. Durpas 500 gr = 0,5 kg/pcs; Durpas 1 kg = 1 kg/pcs; Coral menggunakan kg.</p><button type="button" data-view="products">Produk & bahan</button>
- ${field("Alasan reject / catatan", '<input name="reason" required maxlength="300" placeholder="Contoh: sortasi durian untuk olahan">')}<div class="callout" id="waste-preview">Pilih batch dan isi berat durian.</div><p id="waste-error" class="error" role="alert"></p><button class="primary" type="submit" ${store ? "" : "disabled"}>Simpan pengolahan & hasil</button></form></section>
- <section class="panel"><h3>Riwayat pengolahan reject · store aktif</h3><div class="table-wrap"><table><thead><tr><th>TANGGAL OLAH</th><th>ASAL / PENGOLAH</th><th>HASIL OLAHAN</th><th>BUKTI FOTO</th><th>STATUS / ACTION</th></tr></thead><tbody>${runs.flatMap((r) => (r.outputs?.length ? r.outputs : [{ key: "total", name: "Waste total", qty: 0, unit: "kg" }]).map((o, i) => `<tr><td>${e(r.date)}<small class="catalog-meta">${e(r.id.slice(0, 8))}</small></td><td>${e(r.receivedDate)}<br><b>${e(r.sourceName)}</b><br>${e(r.supplierName)}<small class="catalog-meta">Pengolah: ${e(r.processedBy || "—")}</small></td><td>${e(o.name)}<br>${o.key === "total" ? `${num(r.kg)} kg input · ${num(r.lossKg)} kg waste` : `${num(o.qty)} ${e(o.unit)}`}</td><td>${o.key === "total" ? evidenceButton(r, "reject") : evidenceButton(r, o.key)}</td><td>${i === 0 && r.voided ? `<b>Dihapus / dibatalkan</b><small class="catalog-meta">${e(r.voidReason)}</small>` : i === 0 ? `<button class="small danger" data-waste-void="${e(r.id)}">Hapus</button>` : ""}</td></tr>`)).join("") || '<tr><td colspan="5" class="empty">Belum ada pencatatan waste.</td></tr>'}</tbody></table></div></section>${coralPanel(s,store)}`;
+   .join("")}
+ <p class="muted">Produk hasil diambil otomatis dari master: Durpas 500 gr, Durpas 1 kg, dan Coral.</p><button type="button" data-view="products">Buka Product</button>
+ ${field("Alasan waste / catatan", '<input name="reason" required maxlength="300" placeholder="Contoh: sortasi durian untuk olahan">')}<div class="callout" id="waste-preview">Pilih batch dan isi berat durian.</div><p id="waste-error" class="error" role="alert"></p><button class="primary" type="submit" ${store ? "" : "disabled"}>Simpan waste & masukkan stok olahan</button></form></section>
+ <section class="panel"><h3>Riwayat waste · store aktif</h3><div class="table-wrap"><table><thead><tr><th>TANGGAL WASTE</th><th>ASAL / PENGOLAH</th><th>HASIL OLAHAN</th><th>BUKTI FOTO</th><th>STATUS / ACTION</th></tr></thead><tbody>${runs.flatMap((r) => (r.outputs?.length ? r.outputs : [{ key: "total", name: "Waste total", qty: 0, unit: "kg" }]).map((o, i) => `<tr><td>${e(r.date)}<small class="catalog-meta">${e(r.id.slice(0, 8))}</small></td><td>${e(r.receivedDate)}<br><b>${e(r.sourceName)}</b><br>${e(r.supplierName)}<small class="catalog-meta">Pengolah: ${e(r.processedBy || "—")}</small></td><td>${e(o.name)}<br>${o.key === "total" ? `${num(r.kg)} kg input · ${num(r.lossKg)} kg waste` : `${num(o.qty)} ${e(o.unit)}`}</td><td>${o.key === "total" ? evidenceButton(r, "reject") : evidenceButton(r, o.key)}</td><td>${i === 0 && r.voided ? `<b>Dihapus / dibatalkan</b><small class="catalog-meta">${e(r.voidReason)}</small>` : i === 0 ? `<button class="small danger" data-waste-void="${e(r.id)}">Hapus</button>` : ""}</td></tr>`)).join("") || '<tr><td colspan="5" class="empty">Belum ada pencatatan waste.</td></tr>'}</tbody></table></div></section>`;
 }
 export function bindWaste(view, s, store, ctx) {
   if (view !== "waste") return;
@@ -67,7 +62,7 @@ export function bindWaste(view, s, store, ctx) {
       (l) =>
         l.storeId === store &&
         l.date === c("receivedDate").value &&
-        l.quality === "reject" && l.costFinalized !== false && l.kg > 0 &&
+        l.kg > 0 &&
         l.pieces > 0 &&
         isLegacyStock(s.products.find((p) => p.id === l.productId)),
     );
@@ -79,7 +74,6 @@ export function bindWaste(view, s, store, ctx) {
     processedBy: c("processedBy").value,
     sourceLotId: c("sourceLotId").value,
     kg: c("kg").value,
-    shellKg:c("shellKg").value,spoiledKg:c("spoiledKg").value,additionalCost:c("additionalCost").value,
     pieces: c("pieces").value,
     reason: c("reason").value,
     evidence: proof.values(),
@@ -87,7 +81,6 @@ export function bindWaste(view, s, store, ctx) {
       key: spec.key,
       productId: c(spec.key + "_productId").value,
       qty: c(spec.key + "_qty").value,
-      additionalCost:c(spec.key+"_additionalCost").value,
       expiry: "",
       lotId: lotIds[spec.key],
     })),
@@ -103,7 +96,7 @@ export function bindWaste(view, s, store, ctx) {
       ),
       kg = Number(c("kg").value || 0);
     document.querySelector("#waste-preview").textContent =
-      `Hasil berbiji: ${num(weight)} kg · Kulit: ${num(Number(c("shellKg").value))} kg · Waste isi: ${num(Number(c("spoiledKg").value))} kg · Selisih belum dicatat: ${num(kg-weight-Number(c("shellKg").value)-Number(c("spoiledKg").value))} kg.`;
+      `Total hasil olahan: ${num(weight)} kg · Sisa / susut: ${num(kg - weight)} kg (termasuk kulit, biji, atau bagian tidak terpakai).`;
   }
   function batches() {
     const rows = sourceLots().filter(
@@ -114,7 +107,7 @@ export function bindWaste(view, s, store, ctx) {
       choices(
         rows.map((l) => ({
           id: l.id,
-          name: `${s.suppliers.find((p) => p.id === l.supplierId)?.name || "Supplier"} · ${l.invoiceNo || l.id.slice(0, 8)} · ${num(l.kg)} kg / ${l.pieces} butir`,
+          name: `${s.suppliers.find((p) => p.id === l.supplierId)?.name || "Supplier"} · ${l.id.slice(0, 8)} · ${num(l.kg)} kg / ${l.pieces} butir`,
         })),
       );
     if (rows.length === 1) c("sourceLotId").value = rows[0].id;
@@ -152,10 +145,7 @@ export function bindWaste(view, s, store, ctx) {
     }
     try {
       const p = payload();
-      if(s.batchTrackingVersion!==21)throw Error("Jalankan migration 021 terlebih dahulu.");
-      const plan=wastePlan(s, p);
-      if(Math.abs(plan.kg-plan.outputKg-Number(p.shellKg)-Number(p.spoiledKg))>0.000001)throw Error("Input harus sama dengan hasil + kulit + isi rusak.");
-      if(plan.outputKg>0&&(!plan.outputs.some(o=>o.key==='coral')||!plan.outputs.some(o=>o.key!=='coral')))throw Error("Catat durian kupas dan coral sekaligus.");
+      wastePlan(s, p);
       if (
         p.outputs.every((o) => Number(o.qty) === 0) &&
         !confirm(
@@ -166,7 +156,7 @@ export function bindWaste(view, s, store, ctx) {
       if (await ctx.mutate("waste_process", p)) {
         ctx.render();
         ctx.toast(
-          "Pengolahan tersimpan; modal dan asal batch diteruskan ke hasil",
+          "Waste tersimpan; stok durian berkurang dan hasil olahan bertambah",
         );
       }
     } catch (err) {

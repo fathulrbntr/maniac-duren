@@ -1106,39 +1106,3 @@ tbody tr:hover { background:var(--surface-soft); }
  .sidebar > .nav { overflow-x:auto; overflow-y:hidden; padding-right:0; padding-bottom:6px; scrollbar-gutter:auto; }
  .sidebar > .nav::-webkit-scrollbar { height:6px; }
 }
-
-/* Connection and outbox status is visible in both themes and on small screens. */
-.sync-status{max-width:100%;white-space:normal;text-align:left;font-size:12px;line-height:1.5;border-radius:12px;padding:8px 12px}
-.sync-status[data-state="ok"]{color:#267349}
-.sync-status[data-state="pending"]{color:#a46713}
-.sync-status[data-state="error"]{color:#ce4141}
-.sync-list{max-height:40vh;overflow:auto}.sync-list article{padding:12px 0;border-bottom:1px solid var(--border,#ddd)}
-.topbar .toolbar{flex-wrap:wrap}
-
-/* Navigation: fixed header/account, independently scrolling menu. */
-.sidebar > .nav { gap:18px; padding-top:4px; padding-bottom:12px; }
-.nav-section { display:grid; gap:3px; min-width:0; }
-.nav-heading { padding:0 12px 5px; font-size:10px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; }
-.nav button { width:100%; text-align:left; min-height:44px; }
-.nav-label { min-width:0; overflow-wrap:anywhere; line-height:1.35; }
-.nav button:focus-visible { outline:2px solid var(--green); outline-offset:2px; }
-@media(max-width:780px) {
- .sidebar > .nav { gap:10px; padding-top:0; padding-bottom:6px; }
- .nav-section { display:flex; flex-shrink:0; gap:3px; }
- .nav button { width:auto; min-height:44px; }
- .nav-label { white-space:nowrap; overflow-wrap:normal; }
-}
-
-/* Compact rail: no rerender, so unsaved forms retain their values. */
-.shell {transition:grid-template-columns .18s ease}
-.shell.sidebar-collapsed {grid-template-columns:76px minmax(0,1fr)}
-.sidebar-collapsed .sidebar {width:76px;padding-left:8px;padding-right:8px}
-.sidebar-collapsed .nav-label,.sidebar-collapsed .nav-heading,.sidebar-collapsed .brand-sub,.sidebar-collapsed .sidebar-store,.sidebar-collapsed .sidebar-account {display:none}
-.sidebar-collapsed .nav button {justify-content:center;padding:12px}
-.sidebar-collapsed .brand img {max-width:52px}
-@media(prefers-reduced-motion:reduce){.shell{transition:none}}
-@media(max-width:760px){.shell.sidebar-collapsed{grid-template-columns:1fr}.sidebar-collapsed .sidebar{width:auto}.sidebar-collapsed .nav{display:flex;overflow-x:auto}.sidebar-collapsed .nav-section{display:flex;flex-shrink:0}}
-
-.sidebar-collapsed .sidebar-account{display:block}.sidebar-collapsed .sidebar-account .account-profile{display:none}.sidebar-collapsed .sidebar-logout{font-size:0;justify-content:center}.sidebar-collapsed .sidebar-logout svg{width:22px;height:22px}
-
-.page-placeholder{display:grid;gap:16px;margin:24px 0}.page-placeholder span{height:52px;border-radius:8px;background:var(--hover);opacity:.55}.page-placeholder span:first-child{max-width:60%}

@@ -3,12 +3,11 @@ import fs from 'node:fs';
 import {randomUUID as id} from 'node:crypto';
 import {orderMargins} from '../pos/finance.mjs';
 import {PGlite} from '@electric-sql/pglite';
-for(const install of ['fresh','upgrade']){
+for(const install of (process.env.POS_TEST_SQL ? ['fresh'] : ['fresh','upgrade'])){
  const db=new PGlite();
  try{
  await db.exec("create role anon;create role authenticated;create role service_role;create schema auth;create table auth.users(id uuid primary key,email text);create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;");
- // Historical operations through 020; 021's replacement flow is covered by batch-tracking.test.mjs.
- const sql=fs.readFileSync('database/pos.sql','utf8').split('-- Bagian: sections/operations/batch-tracking.sql')[0];
+ const sql=fs.readFileSync(process.env.POS_TEST_SQL || 'database/pos.sql','utf8');
  const owner=id();
  if(install==='upgrade'){
   await db.exec(sql.split('-- Upgrade setelah 008.')[0]);
@@ -20,17 +19,21 @@ for(const install of ['fresh','upgrade']){
  await db.exec(fs.readFileSync('database/sections/operations/kitchen-recipes-only.sql','utf8'));
  await db.exec(fs.readFileSync('database/sections/operations/employees-attendance.sql','utf8'));
  await db.exec(fs.readFileSync('database/sections/operations/employee-accounts.sql','utf8'));
- await db.exec(fs.readFileSync('database/sections/operations/receipt-weighing.sql','utf8'));
- await db.exec(fs.readFileSync('database/sections/operations/direct-stock-no-sorting.sql','utf8'));
+ await db.exec(fs.readFileSync('database/migrations/018-receipt-weighing-log.sql','utf8'));
+ await db.exec(fs.readFileSync('database/migrations/019-direct-stock-no-sorting.sql','utf8'));
  }else{
   await db.exec(sql);
   await db.query('insert into auth.users values($1,$2)',[owner,'owner@test.local']);
   await db.query('insert into public.md_pos_staff values($1)',[owner]);
   await db.query("insert into public.md_pos_employees(id,user_id,name,email,role) values($1,$1,'Owner','owner@test.local','owner')",[owner]);
  }
+ const definition=(await db.query("select pg_get_functiondef('public.pos_mutate(text,jsonb)'::regprocedure) body")).rows[0].body;
+ await db.exec(fs.readFileSync('database/rollback-027-compat.sql','utf8'));
+ await db.exec(fs.readFileSync('database/rollback-027-compat.sql','utf8'));
+ assert.equal((await db.query("select pg_get_functiondef('public.pos_mutate(text,jsonb)'::regprocedure) body")).rows[0].body,definition);
  const as=async u=>db.query("select set_config('request.jwt.claim.sub',$1,false)",[u]);await as(owner);
  const read=async()=> (await db.query('select public.pos_read() s')).rows[0].s;
- const mut=async(action,p)=>(await db.query('select public.pos_mutate($1,$2::jsonb) s',[action,JSON.stringify(p)])).rows[0].s;
+ const mut=async(action,p)=>(await db.query('select public.pos_mutate_027($1,$2::jsonb) s',[action,JSON.stringify(p)])).rows[0].s;
  const date=new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Jakarta'}),store=id(),other=id(),supplier=id(),fruit=id(),raw=id(),prep=id(),dessert=id();
  for(const [key,name]of[[store,'Depok'],[other,'Bogor']])await mut('master',{id:key,kind:'stores',name});
  await mut('master',{id:supplier,kind:'suppliers',name:'Supplier A'});
@@ -91,6 +94,15 @@ for(const install of ['fresh','upgrade']){
  await assert.rejects(mut('employee_save',{id:id(),employeeId:employee,role:'owner'}),/Hak akses/);
  await mut('attendance_in',{id:id(),storeId:store,date});await mut('attendance_in',{id:id(),storeId:store,date});assert.equal((await read()).attendance.filter(x=>x.employee_id===employee).length,1);await mut('attendance_out',{id:id(),storeId:store,date});
  await db.exec('set role authenticated');await assert.rejects(db.query('select public.pos_read_v8()'),/permission denied/);await db.exec('reset role');
+ await as(owner);
+ const unfinished=(await db.query('select to_jsonb(l) row from public.md_pos_lots l where id=$1',[ready])).rows[0].row;
+ if ('cost_finalized' in unfinished) {
+  await db.query('update public.md_pos_lots set cost_finalized=false where id=$1',[ready]);
+  await assert.rejects(mut('recover',{id:id(),lotId:ready,date,kg:1,pieces:1,productId:flesh,qty:100,reason:'Pending cost'}),/Selesaikan modal/);
+  await db.query('update public.md_pos_lots set cost_finalized=true where id=$1',[ready]);
+ }
+ await as(''); await assert.rejects(mut('master',{id:id(),kind:'stores',name:'Unauthorized'}),/Login diperlukan/);
+ await db.exec('set role anon');await assert.rejects(mut('master',{}),/permission denied/);await db.exec('reset role');
  await as(owner);fs.writeFileSync('/tmp/maniac-ops-fixture.json',JSON.stringify(await read()));
  if(install==='upgrade'&&process.env.OPS_DUMP_PATH)fs.writeFileSync(process.env.OPS_DUMP_PATH,Buffer.from(await (await db.dumpDataDir()).arrayBuffer()));
  console.log(install+': stock, costs, mixed orders, waste, rollback, idempotency, role/store isolation, attendance OK');

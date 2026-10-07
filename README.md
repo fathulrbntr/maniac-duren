@@ -1,51 +1,32 @@
-# Maniac Duren
+# Rollback ke patch 027
 
-Website publik dan POS kasir, stok, kitchen, laporan dan karyawan.
+Ikuti **ROLLBACK-027.txt** untuk pemasangan pada database aktif. Jalankan hanya `database/rollback-027-compat.sql`, bukan instalasi ulang atau reset database.
 
-## Pembaruan database aktif
+# Maniac Duren — hasil audit alur, update 08
 
-1. Gunakan database yang sudah memiliki versi 024 (login bootstrap).
-2. Jalankan `database/upgrade.sql` di Supabase SQL Editor.
-3. Ekspor backup, lalu jalankan `database/clear-operations.sql` untuk mengosongkan data operasional sesuai permintaan.
-4. Deploy seluruh proyek. Login ulang dan buat master produk, supplier serta resep baru.
+Website customer di `/`, menu di `/menu/`, POS di `/pos/`.
+Paket ini berdasarkan ZIP proyek yang dikirim, bukan versi website lama.
 
-Reset menghapus produk, supplier, resep, penerimaan, stok, penjualan, pesanan, produksi, waste, jurnal dan throttle login. Akun Auth, karyawan, dokumen, absensi, jam kerja, hak akses, audit karyawan dan identitas outlet tetap ada agar karyawan dapat login. Skrip tidak memakai CASCADE; ketergantungan tidak dikenal akan menghentikan reset. Reset belum dijalankan di server oleh paket ini.
+**Database baru/kosong:** gunakan `database/pos.sql`. Struktur sumber SQL dikelompokkan di `database/sections/`; jangan menjalankan bagian-bagiannya satu per satu.
 
-Instalasi baru: `database/pos.sql` hanya untuk database kosong. Folder sections adalah sumber SQL; definisi versi lama masih diperlukan oleh rantai validasi transaksi. Jangan menghapus fungsi versi lama langsung di Supabase.
+**Database produksi yang sudah berjalan:** gunakan migration perubahan terbaru yang memang belum terpasang. Jangan mengulang `database/pos.sql` pada database aktif.
 
-## Konfigurasi
+- Panduan pemasangan: [UPDATE.md](UPDATE.md)
+- Alur singkat pengguna: [docs/ALUR-PENGGUNA.md](docs/ALUR-PENGGUNA.md)
+- Temuan, perbaikan dan batas pengujian: [docs/HASIL-AUDIT.md](docs/HASIL-AUDIT.md)
 
-Vercel memerlukan POS_SUPABASE_URL, POS_SUPABASE_PUBLISHABLE_KEY dan POS_SUPABASE_SERVICE_ROLE_KEY. Service role hanya untuk server. API login tidak tersedia melalui Live Server statis.
+## Pengujian lokal
 
-## Performa
-
-Login mengambil profil sendiri dan daftar outlet melalui pos_bootstrap. Menu kasir/kitchen serta polling mengambil stok aktif dan pesanan outlet melalui pos_read_service. Polling tidak mengirim ulang katalog/foto produk; buka ulang menu untuk memperbarui perubahan katalog. Transaksi pelayanan memakai pos_mutate_service agar respons tidak membangun seluruh laporan. Pesanan yang belum selesai tetap dibaca tanpa batas tanggal; riwayat selesai dibatasi tujuh hari di pelayanan. Laporan dan menu lainnya masih memakai pos_read lengkap; belum dipaginasi. Foto produk masih disertakan pada katalog pelayanan. Tidak ada klaim pengukuran kecepatan server produksi.
-
-Sidebar dapat ditutup/dibuka tanpa merender ulang formulir; pilihan tersimpan di perangkat. Tema sebelumnya tetap digunakan.
-
-## Pengembangan dan pembersihan Git
-
+```bash
 npm ci
 npm test
 npm run test:db
-node tests/service-reset.test.mjs
-npm run db:build
-npm run pwa:build
+npx playwright install chromium
+npm run test:browser
+```
 
-Setelah menyalin paket ke repository lama, jalankan `node scripts/clean-project.mjs` untuk menghapus file patch, migration duplikat dan CSS modern yang tidak digunakan. Periksa `git diff --stat`, lalu `git add -A` untuk menyertakan penghapusan. ZIP tidak menyertakan .git, node_modules, rahasia atau file environment aktif.
+Uji database menggunakan PostgreSQL lokal dalam PGlite dengan fixture autentikasi. Tidak menyambung database operasional. Uji browser memakai server lokal dan mode demo. Untuk browser yang sudah tersedia, gunakan environment variable `BROWSER_EXECUTABLE`.
 
-## Perbaikan login 036
+`npm run db:build` membangun ulang instalasi baru dari bagian bernama di `database/sections/`. Ubah bagian sumbernya, lalu bangun ulang `database/pos.sql`.
 
-Kode toggle sidebar hanya dipasang setelah sidebar dirender. Versi 035 memasangnya juga di halaman login dan handler tema sehingga akses elemen null dapat menghentikan inisialisasi form. Tidak perlu menjalankan SQL atau reset untuk perbaikan ini.
-
-Pengukuran login tersedia di Console browser sebagai POS login timing (ms): accountMs mencakup API login, profileMs mencakup pos_bootstrap, totalMs mencakup sampai tampilan siap. Field server memisahkan identity dan auth melalui Server-Timing. Nilai hanya durasi, tidak berisi identifier, password atau token. Durasi sebelum fungsi Vercel mulai tidak tercakup Server-Timing.
-
-Uji lokal: node tests/login-startup.test.mjs dan npm run test:employees lulus. Tampilan browser dan waktu produksi belum diverifikasi.
-
-## Navigasi dan stabilisasi 038
-
-POS berjalan sebagai web biasa; cache PWA dinonaktifkan. pos/sw.js dipertahankan sebagai worker pembersih agar browser dengan instalasi lama dapat melepas cache aplikasinya. Pembaruan worker tidak memaksa navigasi tab dan tidak menghapus IndexedDB, transaksi tertunda, akun atau penyimpanan isian. Jika masih tersangkut versi lama, buka /pos-recover.html setelah deploy.
-
-Menu langsung berpindah tanpa teks “Membuka menu”. Data yang tersedia dipakai dari memori sesi; data lengkap disiapkan setelah login tanpa menahan login. Pada kunjungan pertama sebelum data tersedia, kerangka halaman tampil hingga respons diterima. Navigasi dan logout tetap dapat digunakan. Respons lama ditolak setelah pindah menu/outlet, transaksi atau logout. Pembaruan latar belakang tidak merender ulang formulir yang sedang diedit. Penyimpanan tetap divalidasi di database.
-
-Uji: node tests/page-cache.test.mjs; node tests/instant-navigation.test.mjs; node tests/login-startup.test.mjs; node tests/cache-recovery.test.mjs. Tes menggunakan data tiruan, bukan ukuran kecepatan produksi.
+Tidak ada build frontend yang diperlukan. Dependensi pengujian, SQL, arsip dan dokumentasi dikecualikan dari deployment melalui `.vercelignore`.

@@ -7,16 +7,16 @@
 *{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;background:#f1f6f3;color:#19392b;font:16px/1.6 system-ui,sans-serif}main{max-width:520px;background:#fff;padding:32px;border:1px solid #d6e2db;border-radius:20px}h1{font-size:26px;line-height:1.2}button{border:0;border-radius:10px;background:#18763f;color:#fff;font:600 16px system-ui;padding:14px 20px;cursor:pointer}button:disabled{opacity:.6}#status{min-height:28px;overflow-wrap:anywhere}small{color:#5d7064}
 </style>
 </head>
-<body><main><small>MANIAC DUREN</small><h1>Pulihkan halaman POS</h1><p>Bersihkan salinan aplikasi lama di browser, lalu buka versi terbaru.</p><p>Data transaksi, akun, dan isian yang tersimpan tidak dihapus.</p><button type="button" id="recover">Pulihkan &amp; buka POS</button><p id="status" role="status" aria-live="polite"></p></main>
+<body><main><small>MANIAC DUREN</small><h1>Pulihkan halaman POS</h1><p>Bersihkan salinan aplikasi lama di browser, lalu buka patch 027.</p><p>Data transaksi tersimpan tetap dipertahankan. Selesaikan transaksi offline yang belum tersinkron sebelum beralih, lalu tutup tab POS lainnya.</p><button type="button" id="recover">Pulihkan &amp; buka POS</button><p id="status" role="status" aria-live="polite"></p></main>
 <script type="module">
-import {recoverPos} from '/pos-recovery.mjs?v=37';
+import {recoverPos} from '/pos-recovery.mjs?v=rollback-027';
 const button=document.getElementById('recover'),status=document.getElementById('status');
 button.onclick=async()=>{
  button.disabled=true;status.textContent='Membersihkan salinan aplikasi lama…';
  try{
   await recoverPos({origin:location.origin,serviceWorker:navigator.serviceWorker,cacheStorage:globalThis.caches});
   status.textContent='Selesai. Membuka POS…';
-  location.replace('/pos/?recovered=37');
+  location.replace('/pos/?rollback=027');
  }catch(error){status.textContent=error.message||'Belum berhasil. Coba sekali lagi.';button.disabled=false;}
 };
 </script></body></html>

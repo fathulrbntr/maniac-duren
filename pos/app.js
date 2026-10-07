@@ -1,24 +1,22 @@
-import {createPageCache,mayApplyPage} from "./page-cache.mjs?v=38";
-import {receiptAdminPanel,bindBatch} from "./batch-ui.mjs?v=21";
 import {installMoneyInputs} from './money-input.mjs?v=19';
 installMoneyInputs();
-import { openWeighingReceipt, showWeighingHistory } from './receipt-weighing.mjs?v=21';
-import {inventoryPanel,bindInventory} from "./inventory-ui.mjs?v=21";
-import {opsPages,opsPage,bindOps,clearOrderDraft} from './operations-ui.mjs?v=27';
+import { openWeighingReceipt, showWeighingHistory } from './receipt-weighing.mjs?v=19';
+import {inventoryPanel,bindInventory} from "./inventory-ui.mjs?v=19";
+import {opsPages,opsPage,bindOps,clearOrderDraft} from './operations-ui.mjs?v=25';
 import {
   sections,
   navigation,
   mayLeave,
   trackForms,
-} from "./navigation.mjs?v=35";
+} from "./navigation.mjs?v=19";
 import {
   prepareRetry,
   settleRetry,
   reconcileRetry,
   pendingRetry,
   setRetryScope,
-} from "./retry.mjs?v=20";
-import { wastePage, bindWaste } from "./waste-ui.mjs?v=29";
+} from "./retry.mjs?v=16.1";
+import { wastePage, bindWaste } from "./waste-ui.mjs?v=9";
 import {
   recipesPage,
   productionPage,
@@ -67,11 +65,6 @@ window.addEventListener('storage', event => {
 });
 const stockFilter = {};
 const catalogFilter = { query: "", category: "", itemType: "" };
-let pageDataReady=false, pageReadError="", displayedSnapshot;
-const pageCache=createPageCache((page,branch)=>["orders","kitchen"].includes(page)
-  ? request("/rest/v1/rpc/pos_read_service",{branch,catalog:true})
-  : request("/rest/v1/rpc/pos_read",{}));
-const normalizeState=data=>({...emptyState(),orders:[],events:[],journal:[],money:[],people:[],attendance:[],...data});
 let stateRevision=0, polling=false, soundEnabled=false, audioContext;
 const seenKitchen=new Map();
 let state = emptyState(),
@@ -88,18 +81,18 @@ let state = emptyState(),
 const app = document.querySelector("#app"),
   filter = { from: today(), to: today(), store: "", supplier: "" };
 const title = {
-  dashboard: "Ringkasan stok buah",
+  dashboard: "Ringkasan buah",
   salesreport: "Seluruh penjualan",
   orders: "Kasir & pesanan", losses: "Waste & penyusutan", trace: "Jejak stok", finance: "Biaya & laba kotor", employees: "Karyawan & akses", attendance: "Absensi", guide: "Panduan pendataan",
-  recipes: "Resep",
+  recipes: "Master Resep",
   production: "Produksi bahan",
   cashier: "Kasir buah cepat",
   kitchen: "Antrean Kitchen",
   stock: "Stok & barang masuk",
   waste: "Olah reject",
-  reports: "Riwayat kasir buah lama",
+  reports: "Rincian kasir buah cepat",
   products: "Produk & bahan",
-  stores: "Outlet",
+  stores: "Store",
   suppliers: "Supplier",
 };
 const paths = {
@@ -158,7 +151,6 @@ async function request(path, body, auth = true) {
     await refreshingToken;
   }
   const r = await fetch(config.url + path, {
-    signal: AbortSignal.timeout(30000),
     method: body ? "POST" : "GET",
     headers: {
       apikey: config.key,
@@ -179,55 +171,19 @@ async function request(path, body, auth = true) {
   }
   return data;
 }
-function currentPageRequest(){return {revision:stateRevision,page:view,branch:store,live:mode==="live",busy};}
-function applyPageData(data){
-  displayedSnapshot=data;state=normalizeState(data);pageDataReady=true;pageReadError="";
-  if(!store||!state.stores.some(x=>x.id===store))store=state.stores[0]?.id||"";
-}
-function userIsEditing(){
-  return !!document.querySelector('dialog[open],main form[data-dirty="true"]') ||
-    !!document.activeElement?.matches('main input,main select,main textarea');
-}
-async function refresh(page=view,branch=store){
-  if(busy)throw Error("Tunggu proses simpan selesai.");
-  const expected=currentPageRequest();
-  if(mode==="live"){
-    const data=await pageCache.load(page,branch,{force:true});
-    if(!data||!mayApplyPage(expected,currentPageRequest()))return false;
-    applyPageData(data);
-  }
-  const pending=pendingRetry();
-  if(reconcileRetry(state)){
-    if(pending.action==="sale")cart=[];
-    if(pending.action==="order_create")clearOrderDraft();
+async function refresh() {
+  if (busy) throw Error("Tunggu proses simpan selesai.");
+  if (mode === "live") {
+    state = await request("/rest/v1/rpc/pos_read", {});
+    if (!store || !state.stores.some((x) => x.id === store))
+      store = state.stores[0]?.id || "";
+  } else if (!store) store = state.stores[0]?.id || "";
+  const pending = pendingRetry();
+  if (reconcileRetry(state)) {
+    if (pending.action === "sale") cart = [];
+    if (pending.action === "order_create") clearOrderDraft();
     toast("Pengiriman sebelumnya sudah tersimpan.");
   }
-  return true;
-}
-async function updatePageInBackground(force=false){
-  if(mode!=="live"||view==="start"||view==="guide")return;
-  const expected=currentPageRequest();
-  try{
-    const data=await pageCache.load(view,store,{force});
-    if(!data||!mayApplyPage(expected,currentPageRequest())||userIsEditing())return;
-    const first=!pageDataReady;
-    if(pageDataReady&&data===displayedSnapshot)return;
-    applyPageData(data);
-    if(view==="orders"&&!first){
-      document.querySelector('#order-products')?.dispatchEvent(new CustomEvent('stock-refresh',{detail:state}));
-    }else render();
-  }catch(error){
-    if(!mayApplyPage(expected,currentPageRequest()))return;
-    pageReadError=error.message;
-    if(!pageDataReady)render();else toast(error.message);
-  }
-}
-function warmPageData(){
-  if(mode==="live")void pageCache.load("stock",store).then(data=>{
-    if(data&&mode==="live"&&!busy&&!pageDataReady&&!["start","guide"].includes(view)){
-      applyPageData(data);render();
-    }
-  }).catch(()=>{});
 }
 async function mutate(action, payload) {
   if (busy) return false;
@@ -239,7 +195,6 @@ async function mutate(action, payload) {
     return false;
   }
   stateRevision++;
-  pageCache.invalidate();
   busy = true;
   const controls = [
     ...document.querySelectorAll("button,input,select,textarea"),
@@ -251,11 +206,7 @@ async function mutate(action, payload) {
       localStorage.setItem("maniac-pos-demo-v1", JSON.stringify(next));
       state = next;
     } else
-      state = ["orders","kitchen"].includes(view) && action.startsWith("order_")
-        ? {...emptyState(),journal:[],money:[],...await request("/rest/v1/rpc/pos_mutate_service",{action,payload,branch:store})}
-        : await request("/rest/v1/rpc/pos_mutate", { action, payload });
-    if(mode==="live")pageCache.put(["orders","kitchen"].includes(view)&&action.startsWith("order_")?view:"stock",store,state);
-    displayedSnapshot=state;pageDataReady=true;
+      state = await request("/rest/v1/rpc/pos_mutate_027", { action, payload });
     settleRetry(action);
     return true;
   } catch (error) {
@@ -279,25 +230,17 @@ function login(message = "") {
   syncThemeControls();
   document.querySelector("#login-form").onsubmit = async (ev) => {
     ev.preventDefault();
-    const startedAt = performance.now();
-    const timing = window.posLoginTiming = {version:38};
     const form = ev.currentTarget,
       b = form.querySelector("button");
     b.disabled = true;
-    b.textContent = "Memeriksa akun…";
-    form.setAttribute("aria-busy", "true");
-    document.querySelector("#login-error").textContent = "";
     try {
       const values = Object.fromEntries(new FormData(form));
       const response = await fetch("/api/pos-login", {
-        signal: AbortSignal.timeout(60000),
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(values),
       });
       const d = await response.json();
-      timing.accountMs = Math.round(performance.now() - startedAt);
-      timing.server = response.headers.get("Server-Timing") || "";
       if (!response.ok) throw Error(d.error || "Login gagal. Coba lagi.");
       if (!d.access_token || !d.user?.id) throw Error("Respons login tidak lengkap.");
       token = d.access_token;
@@ -305,29 +248,16 @@ function login(message = "") {
       expires = Date.now() + d.expires_in * 1000;
       mode = "live";
       setRetryScope(config.url + ":" + d.user.id);
-      b.textContent = "Membuka akun…";
-      const profileStarted = performance.now();
-      const initial = await request("/rest/v1/rpc/pos_bootstrap", {});
-      timing.profileMs = Math.round(performance.now() - profileStarted);
-      state = {...emptyState(), orders:[], events:[], journal:[], money:[], people:[], attendance:[], ...initial};
-      pageCache.reset();
-      pageDataReady = false;
-      pageReadError = "";
-      store = state.stores[0]?.id || "";
-      view = "start";
+      await refresh();
+      view=state.access?.sell?"orders":state.access?.kitchen?"kitchen":state.access?.attendance?"attendance":"guide";
       render();
-      warmPageData();
     } catch (err) {
       token = "";
       refreshToken = "";
       mode = "";
-      document.querySelector("#login-error").textContent = ["TimeoutError", "AbortError"].includes(err.name) ? "Server terlalu lama merespons. Periksa koneksi lalu coba masuk kembali." : err.message;
+      document.querySelector("#login-error").textContent = err.message;
     } finally {
       b.disabled = false;
-      b.textContent = "Masuk";
-      form.removeAttribute("aria-busy");
-      timing.totalMs = Math.round(performance.now() - startedAt);
-      console.info("POS login timing (ms)", timing);
     }
   };
 }
@@ -338,12 +268,12 @@ function accountProfile() {
   const person = state.employees?.find(employee => employee.id === state.me?.id) || state.me || {};
   const accountName = person.name || "Akun login";
   const photo = person.profile_photo;
-  const role = {owner:"Owner · Akses penuh",manager:"Manager",cashier:"Kasir",kitchen:"Kitchen",warehouse:"Stocker",admin:"Admin pusat",staff:"Staff"}[person.role] || "Staff";
+  const role = {owner:"Owner · Akses penuh",manager:"Manager",cashier:"Kasir",kitchen:"Kitchen",warehouse:"Gudang",staff:"Staff"}[person.role] || "Staff";
   const initials = accountName.trim().split(/\s+/).slice(0,2).map(word => word[0]).join("").toUpperCase();
   return `<div class="account-profile" aria-label="Akun yang login">${photo ? `<img src="${e(photo)}" alt="Foto ${e(accountName)}">` : `<span class="account-avatar" aria-hidden="true">${e(initials)}</span>`}<div><small>AKUN LOGIN</small><strong>${e(accountName)}</strong><span>${e(role)}</span></div></div>`;
 }
 function shell(body) {
-  return `<div class="shell ${localStorage.getItem("pos-sidebar-collapsed")==="1"?"sidebar-collapsed":""} ${["products","stock"].includes(view)?"inventory-shell":""}"><aside class="sidebar"><div class="sidebar-header"><div><div class="brand"><img src="logo.png" alt="Maniac Duren"></div><div class="brand-sub">OPERATIONS / POS</div></div><div class="sidebar-store"><label for="active-store">TOKO AKTIF</label><div class="store-select-wrap">${icon("stores")}<select id="active-store" aria-label="Toko aktif" title="${e(name("stores", store))}">${options("stores", store)}</select></div></div></div><nav class="nav" aria-label="Navigasi POS">${navigation(title, view, icon, state.access)}</nav><div class="sidebar-account">${accountProfile()}<button id="logout" aria-label="Logout" title="Logout" class="sidebar-logout" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 4H4v16h5M14 8l4 4-4 4M8 12h10"/></svg>Logout</button></div></aside><main><header class="topbar"><div class="toolbar"><button id="sidebar-toggle" type="button" aria-label="Buka atau tutup sidebar" aria-expanded="${localStorage.getItem("pos-sidebar-collapsed")!=="1"}" title="Buka atau tutup sidebar">☰</button><span class="tag ${mode === "demo" ? "demo" : ""}">${mode === "demo" ? "MODE DEMO" : "DATABASE AKTIF"}</span>${themeButton()}</div></header>${body}<p class="page-foot">${mode === "demo" ? "Semua angka adalah data contoh." : "Stok dan penjualan tersimpan di database bersama."} Berat kg dicatat pada setiap penjualan, termasuk penjualan per butir.</p></main></div>`;
+  return `<div class="shell ${["products","stock"].includes(view)?"inventory-shell":""}"><aside class="sidebar"><div class="sidebar-header"><div><div class="brand"><img src="logo.png" alt="Maniac Duren"></div><div class="brand-sub">OPERATIONS / POS</div></div><div class="sidebar-store"><label for="active-store">TOKO AKTIF</label><div class="store-select-wrap">${icon("stores")}<select id="active-store" aria-label="Toko aktif" title="${e(name("stores", store))}">${options("stores", store)}</select></div></div></div><nav class="nav" aria-label="Navigasi POS">${navigation(title, view, icon, state.access)}</nav><div class="sidebar-account">${accountProfile()}<button id="logout" class="sidebar-logout" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 4H4v16h5M14 8l4 4-4 4M8 12h10"/></svg>Logout</button></div></aside><main><header class="topbar"><div class="toolbar"><span class="tag ${mode === "demo" ? "demo" : ""}">${mode === "demo" ? "MODE DEMO" : "DATABASE AKTIF"}</span>${themeButton()}</div></header>${body}<p class="page-foot">${mode === "demo" ? "Semua angka adalah data contoh." : "Stok dan penjualan tersimpan di database bersama."} Berat kg dicatat pada setiap penjualan, termasuk penjualan per butir.</p></main></div>`;
 }
 function dashboard() {
   const rows = saleRows(state, { from: today(), to: today(), store }),
@@ -412,7 +342,7 @@ function cashier() {
     '<div class="empty">Tambah produk dan barang masuk dahulu.</div>'
   }</div></section><aside class="panel receipt"><div class="header-row"><h3>Pesanan</h3><span class="tag">${cart.length} item</span></div>${cart.map((l, i) => `<div class="cart-item"><div class="cart-line"><b>${e(name("products", l.productId))}</b><button data-remove="${i}" aria-label="Hapus ${e(name("products", l.productId))}">×</button></div><div class="muted">${num(l.kg)} kg · ${l.pieces} butir · per ${l.unit === "KG" ? "kg" : "butir"}</div><div class="muted">${e(name("suppliers", l.supplierId))} · ${short(l.lotId)}</div><div style="text-align:right;margin-top:9px"><b>${money(l.total)}</b></div></div>`).join("") || '<div class="empty">Pilih produk untuk mulai.</div>'}<div class="total"><span>Total</span><span>${money(total)}</span></div><form id="checkout">${field("Tanggal penjualan", `<input type="date" name="date" value="${today()}" required>`)}${field("Metode pembayaran", '<select name="payment"><option>Tunai</option><option>QRIS</option><option>Transfer</option></select>')}${field("Nominal diterima (Rp)", `<input name="paid" type="number" min="${total}" step="any" value="${total || ""}" required>`)}<p class="muted" id="change">Kembalian ${money(0)}</p><button type="submit" class="primary full" ${cart.length ? "" : "disabled"}>Simpan transaksi</button></form></aside></div>`;
 }
-function stockPage() {return inventoryPanel(state,store,stockFilter,"stock").replace('id="add-receipt"',state.access&&!state.access.stock?'id="add-receipt" hidden disabled':'id="add-receipt"').replace('id="movement"',state.access&&!state.access.stock?'id="movement" hidden disabled':'id="movement"')+receiptAdminPanel(state,store)+`<details class="inventory-history"><summary>Rincian penerimaan, asal barang & riwayat pergerakan</summary>${stockHistoryPage()}</details>`;}
+function stockPage() {return inventoryPanel(state,store,stockFilter,"stock")+`<details class="inventory-history"><summary>Rincian penerimaan, asal barang & riwayat pergerakan</summary>${stockHistoryPage()}</details>`;}
 function stockHistoryPage() {
   const lots = state.lots.filter((l) => l.storeId === store);
   return `${unitStockPanel(state, store)}<section class="panel">${inventoryTable(lots)}</section><section class="panel"><h3>Rincian asal barang</h3><div class="table-wrap"><table><thead><tr><th>ID / TANGGAL MASUK</th><th>PRODUK</th><th>SUPPLIER</th><th class="numeric">AWAL KG / BUTIR</th><th class="numeric">SISA KG / BUTIR</th><th>CATATAN</th></tr></thead><tbody>${lots.map((l) => `<tr><td><b>${short(l.id)}</b><small>${l.date}${l.sourceLotId ? " · transfer" : ""}</small></td><td>${e(name("products", l.productId))}</td><td>${e(name("suppliers", l.supplierId))}</td><td class="numeric">${num(l.receivedKg)} kg / ${l.receivedPieces}</td><td class="numeric"><b>${num(l.kg)} kg</b><small>${l.pieces} butir</small></td><td>${e(l.note || "—")}${l.weighings?.length ? `<br><button type="button" data-weigh-history="${e(l.id)}">Riwayat timbang</button>` : ""}</td></tr>`).join("") || '<tr><td colspan="6" class="empty">Belum ada barang masuk.</td></tr>'}</tbody></table></div></section><section class="panel"><h3>Riwayat waste, pemakaian dapur & transfer</h3><div class="table-wrap"><table><thead><tr><th>TANGGAL</th><th>JENIS</th><th>PRODUK / SUPPLIER</th><th class="numeric">KG / BUTIR</th><th>CATATAN</th></tr></thead><tbody>${
@@ -460,33 +390,11 @@ function directoryPage(kind) {
     label = isStore ? "Store" : "Supplier";
   return `<div class="intro"><div><h2>Master ${label}</h2><p class="muted">${isStore ? "Ubah nama toko dan lokasi melalui tombol Edit toko." : "Kelola supplier, nomor telepon, dan alamat."}</p></div><button class="primary" data-master="${kind}">Tambah ${label}</button></div><section class="panel"><div class="table-wrap"><table><thead><tr><th>NAMA</th>${isStore ? "<th>LOKASI</th>" : "<th>NOMOR TELEPON</th><th>ALAMAT</th>"}<th>ACTION</th></tr></thead><tbody>${state[kind].map((p) => `<tr><td><b>${e(p.name)}</b></td>${isStore ? `<td>${e(p.location || "—")}</td>` : `<td>${e(p.phone || "—")}</td><td>${e(p.address || "—")}</td>`}<td><button class="small" data-edit-kind="${kind}" data-edit-id="${e(p.id)}">${icon("edit")}${isStore ? "Edit toko" : "Edit"}</button></td></tr>`).join("") || `<tr><td colspan="${isStore ? 3 : 4}" class="empty">Belum ada ${label.toLowerCase()}.</td></tr>`}</tbody></table></div></section>`;
 }
-function startPage() {
-  const available = [
-    ["orders", "sell", "Kasir & pesanan"], ["kitchen", "kitchen", "Antrean Kitchen"],
-    ["stock", "stock", "Stok & barang masuk"], ["production", "produce", "Produksi bahan"],
-    ["finance", "finance", "Biaya & laba kotor"], ["attendance", "attendance", "Absensi"],
-  ].filter(([,permission]) => state.access?.[permission]);
-  return `<section class="panel"><h2>Selamat datang, ${e(state.me?.name || "")}</h2><p>${e(name("stores",store))}. Pilih pekerjaan untuk mulai.</p><div class="toolbar">${available.map(([key,,label]) => `<button type="button" data-view="${key}">${label}</button>`).join("")}</div><p class="muted">Pilih menu sesuai pekerjaan Anda.</p></section>`;
-}
-function openPage(next){
-  if(!mayLeave(busy))return;
-  stateRevision++;view=next;pageReadError="";
-  const cached=pageCache.peek(next,store);
-  pageDataReady=mode!=="live"||["start","guide"].includes(next)||!!cached;
-  if(mode==="live"&&cached)applyPageData(cached);
-  render();
-  void updatePageInBackground();
-}
-function pendingPage(){
-  return `<section class="panel" aria-busy="${!pageReadError}"><h2>${e(title[view]||"POS")}</h2>${pageReadError?`<p class="error">${e(pageReadError)}</p><button type="button" id="retry-page">Coba lagi</button>`:'<div class="page-placeholder" aria-hidden="true"><span></span><span></span><span></span></div>'}</section>`;
-}
 function render() {
-  const waiting=mode==="live"&&!pageDataReady&&!["start","guide"].includes(view);
   app.innerHTML = shell(
-    waiting?pendingPage():{
+    {
       ...Object.fromEntries(opsPages.map(key=>[key,()=>opsPage(key,state,store)])),
       dashboard,
-      start: startPage,
       recipes: () => recipesPage(state, store),
       production: () => productionPage(state, store),
       cashier,
@@ -499,17 +407,15 @@ function render() {
     }[view](),
   );
   syncThemeControls();
-  document.querySelector("#sidebar-toggle").onclick = (ev) => {
-    const collapsed = document.querySelector(".shell").classList.toggle("sidebar-collapsed");
-    localStorage.setItem("pos-sidebar-collapsed",collapsed?"1":"0");
-    ev.currentTarget.setAttribute("aria-expanded",String(!collapsed));
-  };
-
   document.querySelectorAll("[data-view]").forEach(
     (b) =>
-      (b.onclick = () => openPage(b.dataset.view, b)),
+      (b.onclick = () => {
+        if (!mayLeave(busy)) return;
+        view = b.dataset.view;
+        render();
+      }),
   );
-  document.querySelector("#active-store").onchange = async (ev) => {
+  document.querySelector("#active-store").onchange = (ev) => {
     if (!mayLeave(busy)) {
       ev.target.value = store;
       return;
@@ -521,11 +427,10 @@ function render() {
       ev.target.value = store;
       return;
     }
-    stateRevision++;store=ev.target.value;cart=[];clearOrderDraft();pageReadError="";
-    const cached=pageCache.peek(view,store);
-    pageDataReady=mode!=="live"||["start","guide"].includes(view)||!!cached;
-    if(mode==="live"&&cached)applyPageData(cached);
-    render();void updatePageInBackground();
+    store = ev.target.value;
+    cart = [];
+    clearOrderDraft();
+    render();
   };
   document.querySelector("#logout").onclick = () => {
     if (!mayLeave(busy)) return;
@@ -538,18 +443,10 @@ function render() {
     seenKitchen.clear();
     cart = [];
     state = emptyState();
-    pageCache.reset();
-    pageDataReady = false;
-    pageReadError = "";
     view = "dashboard";
     clearOrderDraft();
     login();
   };
-  if(waiting){
-    const retry=document.querySelector("#retry-page");
-    if(retry)retry.onclick=()=>{pageReadError="";render();void updatePageInBackground(true);};
-    return;
-  }
   document
     .querySelectorAll("[data-receipt]")
     .forEach((b) => (b.onclick = () => receipt(b.dataset.receipt)));
@@ -588,7 +485,6 @@ function render() {
     const res=await fetch("/api/pos-employee",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+token},body:JSON.stringify({employeeId,password,action})});
     const data=await res.json();if(!res.ok)throw Error(data.error||"Gagal membuat akun");return data;
   }});
-  bindBatch(view,state,store,{modal,mutate,render,toast,refresh});
   bindKitchenSound();
   observeKitchen();
   trackForms();
@@ -796,7 +692,7 @@ function movement() {
   if (!lots.length) return toast("Tidak ada stok tersedia");
   const d = modal(
     "Transfer / pemakaian",
-    `${field("Asal barang", `<select name="lotId">${lots.map((l) => `<option value="${e(l.id)}">${e(name("products", l.productId))} · ${e(name("suppliers", l.supplierId))} · ${short(l.id)}</option>`).join("")}</select>`)}<div class="form-grid">${field("Tanggal", `<input name="date" type="date" value="${today()}" required>`)}${field("Jenis", '<select name="kind"><option>Transfer</option></select>')}${field("Berat keluar (kg)", '<input name="kg" type="number" min="0.000001" step="any" required>')}${field("Butir keluar", '<input name="pieces" type="number" min="1" step="1" required>')}</div><div id="destination" hidden>${field("Store tujuan", `<select name="toStoreId">${options("stores")}</select>`)}</div>${field("Catatan / alasan", '<input name="note" required maxlength="300">')}<p class="form-help">Untuk pengolahan buah reject, gunakan menu Olah reject. Transfer menelusuri batch asal ke outlet tujuan.</p>`,
+    `${field("Asal barang", `<select name="lotId">${lots.map((l) => `<option value="${e(l.id)}">${e(name("products", l.productId))} · ${e(name("suppliers", l.supplierId))} · ${short(l.id)}</option>`).join("")}</select>`)}<div class="form-grid">${field("Tanggal", `<input name="date" type="date" value="${today()}" required>`)}${field("Jenis", '<select name="kind"><option>Pemakaian dapur</option><option>Transfer</option></select>')}${field("Berat keluar (kg)", '<input name="kg" type="number" min="0.000001" step="any" required>')}${field("Butir keluar", '<input name="pieces" type="number" min="1" step="1" required>')}</div><div id="destination" hidden>${field("Store tujuan", `<select name="toStoreId">${options("stores")}</select>`)}</div>${field("Catatan / alasan", '<input name="note" required maxlength="300">')}<p class="form-help">Pemakaian dapur hanya mengurangi stok. Untuk mencatat hasil olahan durian, gunakan menu Waste & Olahan.</p>`,
   );
   const f = d.querySelector("form");
   f.kind.onchange = () =>
@@ -928,8 +824,8 @@ function exportCSV() {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 try {
-  config = await (window.posConfigReady || fetch("/api/pos-config", { signal: AbortSignal.timeout(15000) }).then(r => r.ok ? r.json() : {}));
-  delete window.posConfigReady;
+  const r = await fetch("/api/pos-config", { signal: AbortSignal.timeout(15000) });
+  config = r.ok ? await r.json() : {};
 } catch {
   config = {};
 }
@@ -989,12 +885,12 @@ function observeKitchen(){
  if(incoming.length){toast(`${incoming.length} pesanan baru masuk ke kitchen`);beepKitchen();}
 }
 setInterval(async()=>{
- if(mode!=='live'||!pageDataReady||busy||polling||!['orders','kitchen'].includes(view))return;
+ if(mode!=='live'||busy||polling||!['orders','kitchen'].includes(view))return;
  polling=true;const revision=stateRevision,sessionToken=token;
  try{
-  const fresh={...emptyState(),journal:[],money:[],...await request('/rest/v1/rpc/pos_read_service',{branch:store,catalog:false}),products:state.products,recipes:state.recipes,suppliers:state.suppliers};
+  const fresh=await request('/rest/v1/rpc/pos_read',{});
   if(mode!=='live'||busy||revision!==stateRevision||sessionToken!==token)return;
-  state=fresh;displayedSnapshot=fresh;pageCache.put(view,store,fresh);observeKitchen();
+  state=fresh;observeKitchen();
   if(view==='kitchen'&&!document.querySelector('dialog[open]'))render();
   else document.querySelector('#order-products')?.dispatchEvent(new CustomEvent('stock-refresh',{detail:state}));
   const status=document.querySelector('#kitchen-sync');if(status)status.textContent='Terhubung · diperbarui '+new Date().toLocaleTimeString('id-ID');

@@ -1,0 +1,69 @@
+ROLLBACK MANIAC DUREN KE PATCH 027
+
+Basis: commit 1a4fd69d0a71ca48f9e603eee2103de82c246be1
+Patch asli: maniac-duren-patch-027-sidebar-freeze.zip.
+File app.js, pos.css dan index.html dari arsip patch cocok dengan commit tersebut.
+
+ISI PAKET
+ZIP berisi file baru/berubah untuk menimpa proyek yang sudah memakai patch 028-038.
+Tampilan dan alur POS kembali ke patch 027, sebelum PWA. Header/footer sidebar
+menetap; bagian menu yang scroll. Pindah menu memakai data yang sudah dibaca saat
+login. Penjualan kembali online; offline queue dan menu baru setelah 027 tidak aktif.
+
+Penyesuaian terbatas di luar sumber 027:
+- Endpoint pos_mutate_027 menghubungkan form 027 ke fungsi mutasi SQL 019 yang
+  disimpan sebagai pos_mutate_v20 pada database yang sudah diperbarui.
+- API versi terbaru tetap ada. SQL ini tidak mengubah pos_mutate aktif, tabel,
+  karyawan, stok, penjualan, atau catatan historis.
+- Batch dari versi baru yang modalnya belum final tetap ditolak untuk pemakaian.
+- Service worker pensiun + halaman pemulihan membersihkan cache aset POS saja.
+- Script memindahkan file sisa versi setelah 027 ke backup lokal, serta pengujian.
+
+CARA PASANG
+1. Selesaikan sinkronisasi transaksi PWA yang masih tertunda sebelum berpindah.
+   Antrean lokal tidak dihapus paket ini, tetapi aplikasi 027 tidak menjalankan
+   sinkronisasinya. Jika ada batch menunggu rekonsiliasi modal, selesaikan dahulu
+   melalui versi yang sekarang sebelum menu rekonsiliasi tersebut dinonaktifkan.
+2. Ekstrak isi ZIP di folder utama proyek, sejajar package.json. Timpa file yang
+   sama. Jangan menghapus folder proyek, folder .git, atau konfigurasi environment.
+3. Supabase > SQL Editor: jalankan SELURUH database/rollback-027-compat.sql.
+   Ini wajib sebelum deploy, agar form 027 cocok dengan database yang sudah maju.
+   Aman dijalankan ulang. JANGAN menjalankan database/pos.sql atau reset-pos.sql
+   pada database aktif. File tersebut hanya arsip instalasi versi ini.
+4. Di terminal folder proyek:
+
+   node scripts/rollback-027-clean.mjs
+   git status --short
+   git add -A
+   git commit -m "Rollback POS to patch 027"
+   git push
+
+   Script hanya memindahkan daftar file sisa yang diketahui ke backup/rollback-027/.
+   Backup diabaikan Git dan deployment. Tidak mengakses Supabase maupun browser.
+   Dapat diperiksa dahulu dengan: node scripts/rollback-027-clean.mjs --check
+5. Setelah deployment selesai, tutup tab/PWA POS lainnya. Buka /pos-recover.html
+   di domain web yang sama, lalu klik Pulihkan & buka POS. Lakukan sekali pada
+   setiap browser/perangkat yang pernah memakai PWA. Buka POS sebagai web biasa.
+
+DATABASE BARU / PENGUJIAN
+Instalasi database/pos.sql hanya untuk database baru dan sudah menyertakan RPC 027.
+Tidak perlu npm run pwa:build. PWA dan script build-nya tidak dipakai lagi.
+
+VERIFIKASI LOKAL
+- Uji produk, produksi, waste, retry, penimbangan dan input rupiah: lulus.
+- Startup aplikasi asli dengan DOM/API tiruan: login gagal/berhasil, tema, pindah
+  menu tanpa pembacaan server tambahan, pindah outlet, dan logout: lulus.
+- Uji operasi SQL 027: stok, biaya, kasir/kitchen, waste, transaksi ulang,
+  hak akses/outlet dan absensi: lulus pada instalasi baru dan jalur upgrade.
+- Uji kontrak 027 pada salinan skema dari paket terbaru: lulus melalui RPC 027.
+- RPC kompatibilitas dapat dijalankan ulang, tidak mengganti endpoint terbaru,
+  menolak tanpa login, dan melindungi batch yang belum memiliki modal final.
+- Uji pemulihan hanya menghapus cache aset/worker /pos/: lulus.
+
+Pengujian menggunakan data lokal PGlite dan DOM tiruan. Database Supabase produksi,
+login akun nyata, tampilan browser produksi dan deployment belum diuji/diubah
+langsung dalam pekerjaan rollback ini. Perubahan perlu dipasang melalui langkah
+SQL dan Git di atas. Rollback ini tidak menjanjikan login lebih cepat dari 027;
+pembacaan awal tetap mengikuti perilaku asli 027.
+
+Jalankan npm ci, npm test, npm run test:weighing, npm run test:rollback untuk uji.

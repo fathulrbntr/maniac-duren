@@ -91,7 +91,6 @@ const previousFetch=globalThis.fetch,previousEnv={...process.env};
 process.env.POS_SUPABASE_URL='https://fixture.supabase.co';process.env.POS_SUPABASE_PUBLISHABLE_KEY='public-fixture';process.env.POS_SUPABASE_SERVICE_ROLE_KEY='private-fixture';
 const userId=id(),employeeId=id();let calls=[],denyOwner=false,rateAllowed=true,loginValid=true,linked=true;
 globalThis.fetch=async(url,options)=>{calls.push({url,options});const response=(data,status=200)=>new Response(JSON.stringify(data),{status});
- if(url.endsWith('/pos_login_prepare'))return response({allowed:rateAllowed,target:{email:'staff@test.local',userId}});
  if(url.endsWith('/pos_login_throttle'))return response(rateAllowed);
  if(url.endsWith('/pos_login_identity'))return response({email:'staff@test.local',userId});
  if(url.includes('/token?'))return loginValid?response({user:{id:userId},access_token:'access-fixture',refresh_token:'refresh-fixture',expires_in:3600}):response({error:'invalid'},400);

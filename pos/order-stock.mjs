@@ -9,12 +9,9 @@ export function requirements(state, lines) {
     const p = state.products.find(p=>p.id===line.productId);
     if (!p || ['raw','prep'].includes(p.itemType)) throw Error('Produk tidak dapat dijual');
     if (p.stockUnit==='kg_butir') {
-      if (!line.lotId || !Number.isFinite(Number(line.kg)) || !(Number(line.kg)>0) || !Number.isInteger(Number(line.pieces)) || !(Number(line.pieces)>0)) throw Error('Isi berat dan butir buah');
-      if (state.lots.find(l=>l.id===line.lotId)?.productId !== p.id) throw Error('Asal stok buah tidak cocok');
+      if (!line.lotId || !(Number(line.kg)>0) || !(Number(line.pieces)>0)) throw Error('Isi berat dan butir buah');
       add('lot:'+line.lotId,line.kg,line.pieces);
-    } else {
-      if (!Number.isFinite(Number(line.qty)) || !(Number(line.qty)>0) || (['pcs','porsi'].includes(p.stockUnit) && !Number.isInteger(Number(line.qty)))) throw Error('Jumlah produk tidak valid');
-      if (p.itemType==='recipe') {
+    } else if (p.itemType==='recipe') {
       const recipes=(state.recipes||[]).filter(r=>r.outputId===p.id);
       if(recipes.length!==1 || !(recipes[0].yieldQty>0) || !recipes[0].ingredients?.length) throw Error('Resep belum lengkap');
       for(const item of recipes[0].ingredients) {
@@ -24,7 +21,6 @@ export function requirements(state, lines) {
         add('product:'+item.productId,qty);
       }
     } else add('product:'+p.id,line.qty);
-    }
   }
   return needs;
 }

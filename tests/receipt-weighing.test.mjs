@@ -15,12 +15,12 @@ for(const install of ['fresh','upgrade']) {
   if(install==='fresh') await db.exec(sql);
   else {
    await db.exec(process.env.RECEIPT_BASELINE_SQL ? fs.readFileSync(process.env.RECEIPT_BASELINE_SQL,'utf8') : sql.slice(0,sql.indexOf('-- 018:')));
-   await db.exec(fs.readFileSync('database/sections/operations/receipt-cost-breakdown.sql','utf8'));
-   await db.exec(fs.readFileSync('database/sections/operations/receipt-weighing.sql','utf8'));
+   await db.exec(fs.readFileSync('database/migrations/017-receipt-cost-breakdown.sql','utf8'));
+   await db.exec(fs.readFileSync('database/migrations/018-receipt-weighing-log.sql','utf8'));
   }
-  await db.exec(fs.readFileSync('database/sections/operations/receipt-weighing.sql','utf8')); // rerun
-  await db.exec(fs.readFileSync('database/sections/operations/direct-stock-no-sorting.sql','utf8'));
-  await db.exec(fs.readFileSync('database/sections/operations/direct-stock-no-sorting.sql','utf8'));
+  await db.exec(fs.readFileSync('database/migrations/018-receipt-weighing-log.sql','utf8')); // rerun
+  await db.exec(fs.readFileSync('database/migrations/019-direct-stock-no-sorting.sql','utf8'));
+  await db.exec(fs.readFileSync('database/migrations/019-direct-stock-no-sorting.sql','utf8'));
   const owner=id(),store=id(),supplier=id(),product=id();
   await db.query('insert into auth.users values($1,$2)',[owner,'owner@test.local']);
   await db.query('insert into public.md_pos_staff values($1)',[owner]);
@@ -42,7 +42,7 @@ for(const install of ['fresh','upgrade']) {
   const sold=await mut('sale',{id:id(),storeId:store,date:p.date,paid:100,payment:'Tunai',lines:[{lotId:p.id,kg:1,pieces:1,unit:'KG',price:100}]});
   assert.equal(sold.lots.find(l=>l.id===p.id).kg,19);
   await db.query("update public.md_pos_lots set quality='unsorted' where id=$1",[p.id]);
-  await db.exec(fs.readFileSync('database/sections/operations/direct-stock-no-sorting.sql','utf8'));
+  await db.exec(fs.readFileSync('database/migrations/019-direct-stock-no-sorting.sql','utf8'));
   assert.equal((await db.query('select quality from public.md_pos_lots where id=$1',[p.id])).rows[0].quality,'ready');
   console.log('PASS weighing receipt '+install+': confirmation, totals, history, costs, retry, migration rerun');
  } finally { await db.close(); }

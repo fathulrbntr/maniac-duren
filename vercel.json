@@ -24,6 +24,24 @@
           "value": "no-cache"
         }
       ]
+    },
+    {
+      "source": "/pos-recover.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        }
+      ]
+    },
+    {
+      "source": "/pos-recovery.mjs",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        }
+      ]
     }
   ]
 }

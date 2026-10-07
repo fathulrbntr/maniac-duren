@@ -32,18 +32,11 @@ for(const install of ['fresh','upgrade']){
  await mut('product_save',{id:fruit,name:'Monthong',sku:'M',itemType:'direct',category:'Buah',stockUnit:'kg_butir',priceKg:100,pricePiece:200});
  for(const [key,type,unit,name]of[[raw,'raw','g','Tepung'],[prep,'prep','g','Cendol'],[dessert,'recipe','porsi','Es duren']])await mut('product_save',{id:key,name,sku:name,itemType:type,stockUnit:unit,category:type==='recipe'?'Dessert':null,salePrice:type==='recipe'?100:null});
  const lot=id();await mut('receipt',{id:lot,storeId:store,supplierId:supplier,productId:fruit,date,kg:100,pieces:40,totalCost:1000});
+ assert.equal((await read()).lots[0].quality,'unsorted');
+ await assert.rejects(mut('sale',{id:id(),storeId:store,date,paid:100,payment:'Tunai',lines:[{lotId:lot,kg:1,pieces:1,unit:'KG',price:100}]}),/matang/);
  const ready=id(),reject=id();
- if(install==='fresh'){
-  assert.equal((await read()).lots[0].quality,'ready');
-  await assert.rejects(mut('sort',{id:id(),lotId:lot,date,parts:[{id:id(),quality:'ready',kg:90,pieces:40}]}),/dinonaktifkan/);
-  // Historical sorted fixture; current UI uses reject_mark instead.
-  await db.query('select public.pos_mutate_v19($1,$2::jsonb)', ['sort',JSON.stringify({id:id(),lotId:lot,date,parts:[{id:ready,quality:'ready',kg:80,pieces:30},{id:reject,quality:'reject',kg:20,pieces:10}]})]);
- }else{
-  assert.equal((await read()).lots[0].quality,'unsorted');
-  await assert.rejects(mut('sale',{id:id(),storeId:store,date,paid:100,payment:'Tunai',lines:[{lotId:lot,kg:1,pieces:1,unit:'KG',price:100}]}),/matang/);
-  await assert.rejects(mut('sort',{id:id(),lotId:lot,date,parts:[{id:id(),quality:'ready',kg:90,pieces:40}]}),/sama/);
-  await mut('sort',{id:id(),lotId:lot,date,parts:[{id:ready,quality:'ready',kg:80,pieces:30},{id:reject,quality:'reject',kg:20,pieces:10}]});
- }
+ await assert.rejects(mut('sort',{id:id(),lotId:lot,date,parts:[{id:id(),quality:'ready',kg:90,pieces:40}]}),/sama/);
+ await mut('sort',{id:id(),lotId:lot,date,parts:[{id:ready,quality:'ready',kg:80,pieces:30},{id:reject,quality:'reject',kg:20,pieces:10}]});
  let s=await read();assert.equal(s.lots.find(l=>l.id===ready).unitCost,10);
  await mut('inventory_loss',{id:id(),lotId:ready,date,qty:2,pieces:0,cause:'shrinkage',reason:'Timbang ulang'});
  const rlot=id();await mut('unit_receipt',{id:rlot,storeId:store,date,productId:raw,qty:1000,totalCost:1000,supplierId:supplier,kind:'purchase'});

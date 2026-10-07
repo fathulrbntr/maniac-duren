@@ -1,29 +1,23 @@
 export const sections = [
-  { label: "Kasir & pelayanan", pages: ["orders", "kitchen"] },
-  { label: "Stok & penerimaan", pages: ["stock", "losses"] },
-  { label: "Kitchen & produksi", pages: ["production", "waste"] },
+  {
+    label: "Operasional",
+    pages: ["orders", "kitchen", "stock", "production", "waste", "losses"],
+  },
   { label: "Laporan", pages: ["salesreport", "finance", "trace", "dashboard", "reports"] },
   { label: "Tim", pages: ["employees", "attendance"] },
-  { label: "Pengaturan", pages: ["products", "recipes", "stores", "suppliers", "guide"] },
+  { label: "Panduan", pages: ["guide"] },
+  {
+    label: "Master data",
+    pages: ["products", "recipes", "stores", "suppliers"],
+  },
 ];
-export function visiblePages(access) {
-  if (!access) return Object.fromEntries(sections.flatMap(s => s.pages.map(key => [key, true])));
-  return {
-    orders: access.sell, kitchen: access.kitchen || access.sell,
-    stock: access.stock || access.produce || access.finance,
-    losses: access.waste, production: access.produce, waste: access.produce && access.waste,
-    salesreport: access.reports, finance: access.finance, trace: access.trace,
-    dashboard: access.reports, reports: access.reports,
-    employees: access.employees, attendance: access.attendance,
-    products: access.master, recipes: access.master, stores: access.master,
-    suppliers: access.master, guide: true,
-  };
-}
 export function navigation(title, view, icon, access) {
-  const visible = visiblePages(access);
-  return sections.map(section => ({...section, pages: section.pages.filter(key => visible[key])}))
-    .filter(section => section.pages.length)
-    .map(section => `<section class="nav-section" aria-label="${section.label}"><span class="nav-heading">${section.label}</span>${section.pages.map(key => `<button type="button" data-view="${key}" title="${title[key]}" aria-label="${title[key]}" class="${view === key ? "active" : ""}" ${view === key ? 'aria-current="page"' : ""}>${icon(key)}<span class="nav-label">${title[key]}</span></button>`).join("")}</section>`)
+  const visibility=access?{salesreport:access.reports,orders:access.sell,kitchen:access.kitchen||access.sell,dashboard:access.reports,cashier:access.sell,stock:access.stock||access.produce,production:access.produce,waste:access.waste,losses:access.waste,reports:access.reports,finance:access.finance,trace:access.trace,employees:access.employees,attendance:access.attendance,products:access.master,recipes:access.master,stores:access.master,suppliers:access.master,guide:true}:null;
+  return sections.filter(section=>section.pages.some(key=>!visibility||visibility[key]))
+    .map(
+      (section) =>
+        `<div class="nav-section"><span class="nav-heading">${section.label}</span>${section.pages.filter(key=>!access||({salesreport:access.reports,orders:access.sell,kitchen:access.kitchen||access.sell,dashboard:access.reports,cashier:access.sell,stock:access.stock||access.produce,production:access.produce,waste:access.waste,losses:access.waste,reports:access.reports,finance:access.finance,trace:access.trace,employees:access.employees,attendance:access.attendance,products:access.master,recipes:access.master,stores:access.master,suppliers:access.master,guide:true})[key]).map((key) => `<button data-view="${key}" class="${view === key ? "active" : ""}" ${view === key ? 'aria-current="page"' : ""}>${icon(key)}${title[key]}</button>`).join("")}</div>`,
+    )
     .join("");
 }
 export function mayLeave(busy) {
