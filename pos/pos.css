@@ -1114,3 +1114,17 @@ tbody tr:hover { background:var(--surface-soft); }
 .sync-status[data-state="error"]{color:#ce4141}
 .sync-list{max-height:40vh;overflow:auto}.sync-list article{padding:12px 0;border-bottom:1px solid var(--border,#ddd)}
 .topbar .toolbar{flex-wrap:wrap}
+
+/* Navigation: fixed header/account, independently scrolling menu. */
+.sidebar > .nav { gap:18px; padding-top:4px; padding-bottom:12px; }
+.nav-section { display:grid; gap:3px; min-width:0; }
+.nav-heading { padding:0 12px 5px; font-size:10px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; }
+.nav button { width:100%; text-align:left; min-height:44px; }
+.nav-label { min-width:0; overflow-wrap:anywhere; line-height:1.35; }
+.nav button:focus-visible { outline:2px solid var(--green); outline-offset:2px; }
+@media(max-width:780px) {
+ .sidebar > .nav { gap:10px; padding-top:0; padding-bottom:6px; }
+ .nav-section { display:flex; flex-shrink:0; gap:3px; }
+ .nav button { width:auto; min-height:44px; }
+ .nav-label { white-space:nowrap; overflow-wrap:normal; }
+}

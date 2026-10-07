@@ -1,27 +1,25 @@
 # Maniac Duren
 
-Website customer: `/`. Menu: `/menu/`. Operasional dan kasir: `/pos/`.
+Website pelanggan: `/`. Katalog: `/menu/`. Operasional: `/pos/`.
 
-Panduan update terbaru: **[PATCH-028.md](PATCH-028.md)**. PWA memakai database lokal IndexedDB untuk antrean penjualan dan sinkronisasi ke Supabase. Data operasional lama tetap disimpan.
-
-Database yang sudah berjalan sampai migration 020: jalankan `database/migrations/021-offline-pos.sql` sekali. Database kosong: `database/pos.sql`. Jangan jalankan reset atau instalasi baru pada database aktif.
+Pembaruan terbaru: `UPDATE-029.md`.
+Frontend HTML/CSS/JavaScript modular; Supabase menyimpan data operasional.
+Kasir versi ini memerlukan koneksi internet. Modul antrean offline tersedia dalam sumber, tetapi belum diintegrasikan dengan sesi dan layar kasir.
 
 ## Pengembangan
-
-Frontend tidak memerlukan bundler. Setelah mengubah aset POS, jalankan `npm run pwa:build` agar service worker memakai versi aset baru. Setelah mengubah SQL sumber, jalankan `npm run db:build`.
 
 ```bash
 npm ci
 npm run test:unit
-npm run test:db
-npm run test:offline
+npm run test:kitchen
+npm run test:batches
 npm run test:receipts
-npm run test:employees
-npx playwright install chromium
-npm run test:browser
-npm run test:offline:browser
+npm run test:offline
+npm run test:offline:db
+npm run db:build
+npm run pwa:build
 ```
 
-Uji memakai fixture lokal dan PGlite, tidak mengubah database operasional. Jika Chromium sudah tersedia, isi `BROWSER_EXECUTABLE` dengan lokasi executable.
-
-`database/sections/` adalah sumber SQL. `database/pos.sql` adalah hasil build untuk instalasi baru. Migration diperlukan untuk database aktif. File tersebut mempunyai tujuan berbeda; jangan menghapus definisi wrapper versi lama karena fungsi aktif masih memanggilnya.
+`database/sections/` sumber SQL; `database/pos.sql` untuk instalasi baru saja.
+Database aktif yang sudah memiliki batch tracking: jalankan `database/migrations/022-offline-batch-compat.sql` tanpa reset.
+Jangan menghapus wrapper fungsi versi lama. Jangan menjalankan ulang migration offline 021 setelah batch tracking.

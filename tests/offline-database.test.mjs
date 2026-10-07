@@ -7,7 +7,7 @@ for(const install of ['fresh','upgrade']){
  const db=new PGlite();
  try{
   await db.exec("create role anon;create role authenticated;create role service_role;create schema auth;create table auth.users(id uuid primary key,email text);create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;");
-  const all=fs.readFileSync('database/pos.sql','utf8'),migration=fs.readFileSync('database/migrations/021-offline-pos.sql','utf8');
+  const all=fs.readFileSync('database/pos.sql','utf8'),migration=fs.readFileSync('database/migrations/022-offline-batch-compat.sql','utf8');
   await db.exec(install==='fresh'?all:all.slice(0,all.indexOf('-- Bagian: sections/operations/offline-pos.sql')));
   if(install==='upgrade')await db.exec(migration);
   await db.exec(migration);
@@ -16,6 +16,8 @@ for(const install of ['fresh','upgrade']){
   await db.query('insert into public.md_pos_staff values($1)',[owner]);
   await db.query("insert into public.md_pos_employees(id,user_id,name,email,role) values($1,$1,'Owner','owner@test.local','owner')",[owner]);
   await db.query("select set_config('request.jwt.claim.sub',$1,false)",[owner]);
+  const metadata=(await db.query('select public.pos_read() s')).rows[0].s;
+  assert.equal(metadata.batchTrackingVersion,21);assert.equal(metadata.offlineSyncVersion,21);
   const mut=async(action,p)=>(await db.query('select public.pos_mutate($1,$2::jsonb) s',[action,JSON.stringify(p)])).rows[0].s;
   const read=async()=>(await db.query('select public.pos_read() s')).rows[0].s;
   const sync=async p=>(await db.query('select public.pos_sync_order($1::jsonb) s',[JSON.stringify(p)])).rows[0].s;

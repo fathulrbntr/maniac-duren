@@ -40,10 +40,13 @@ Catat stok awal **satu kali**. Jangan memasukkan jumlah yang sama melalui tambah
 - Master produk hanya dapat dihapus jika belum mempunyai riwayat/pemakaian.
 - Transfer/pemakaian dapur hanya mengurangi/memindahkan stok durian. Untuk membuat hasil dengan resep gunakan Produksi; untuk reject dengan hasil gunakan Waste & Olahan.
 
-**Kasir produk satuan (dessert, minuman, durpas/coral) belum tersedia dalam versi kode ini.** Stoknya sudah dapat dikelola, tetapi penjualannya perlu tahap pengembangan berikutnya agar mengurangi stok produk jadi tanpa memotong bahan lagi.
+**Kasir produk satuan sudah tersedia:** produk siap jual memotong stok saat bayar; menu resep masuk kitchen setelah pembayaran. Bahan raw/prep tidak dijual langsung.
 
-## Saat kasir offline (patch 028)
+## Status offline
 
-Login dan ambil data saat online terlebih dahulu. Kasir tetap dapat membuat penjualan baru; saldo tersedia dikurangi cadangan transaksi lokal. Periksa indikator Online/Offline di atas halaman. Detail/struk menandai pembayaran yang belum tersinkron.
+Kasir frontend versi ini memerlukan internet. Fungsi sinkronisasi tersedia di database, tetapi antrean perangkat dan pemulihan sesi belum terhubung ke app.js. Jangan mengandalkan transaksi offline sebelum integrasi frontend selesai.
 
-Pesanan belum muncul di kitchen perangkat lain hingga tersinkron. Gunakan struk untuk komunikasi manual saat offline. Setelah internet pulih dan aplikasi terbuka, antrean dikirim otomatis dengan ID yang sama. Konflik stok/resep tetap tersimpan dan bisa dilihat melalui indikator sinkronisasi. Masuk kembali dengan akun sama jika sesi kedaluwarsa. Selesaikan seluruh antrean sebelum logout atau menghapus data browser.
+## Penerimaan dan reject
+
+Stocker mencatat nota, timbang aktual termasuk reject dan butir. Admin menetapkan nilai nota, PO dan ongkir; stok baru dapat dijual/diolah setelah modal final. Ongkir mengikuti proporsi kg aktual. Reject harian dipisahkan dari batch asal dengan modal yang sama.
+Pengolahan menghasilkan durpas dan coral berbiji; kulit dan isi rusak dicatat terpisah. Coral diolah lagi dengan penyusutan biji. Buat produk Durpas 500 gr dan Durpas 1 kg sebagai finished/pcs dengan harga jual aktual, Coral sebagai prep/kg tanpa harga jual. Stok awal 0.

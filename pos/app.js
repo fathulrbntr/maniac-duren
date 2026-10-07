@@ -9,7 +9,7 @@ import {
   navigation,
   mayLeave,
   trackForms,
-} from "./navigation.mjs?v=21";
+} from "./navigation.mjs?v=29";
 import {
   prepareRetry,
   settleRetry,
@@ -17,7 +17,7 @@ import {
   pendingRetry,
   setRetryScope,
 } from "./retry.mjs?v=20";
-import { wastePage, bindWaste } from "./waste-ui.mjs?v=21";
+import { wastePage, bindWaste } from "./waste-ui.mjs?v=29";
 import {
   recipesPage,
   productionPage,
@@ -82,18 +82,18 @@ let state = emptyState(),
 const app = document.querySelector("#app"),
   filter = { from: today(), to: today(), store: "", supplier: "" };
 const title = {
-  dashboard: "Ringkasan buah",
+  dashboard: "Ringkasan stok buah",
   salesreport: "Seluruh penjualan",
   orders: "Kasir & pesanan", losses: "Waste & penyusutan", trace: "Jejak stok", finance: "Biaya & laba kotor", employees: "Karyawan & akses", attendance: "Absensi", guide: "Panduan pendataan",
-  recipes: "Master Resep",
+  recipes: "Resep",
   production: "Produksi bahan",
   cashier: "Kasir buah cepat",
   kitchen: "Antrean Kitchen",
   stock: "Stok & barang masuk",
   waste: "Olah reject",
-  reports: "Rincian kasir buah cepat",
+  reports: "Riwayat kasir buah lama",
   products: "Produk & bahan",
-  stores: "Store",
+  stores: "Outlet",
   suppliers: "Supplier",
 };
 const paths = {
