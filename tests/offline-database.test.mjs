@@ -7,7 +7,7 @@ for(const install of ['fresh','upgrade']){
  const db=new PGlite();
  try{
   await db.exec("create role anon;create role authenticated;create role service_role;create schema auth;create table auth.users(id uuid primary key,email text);create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;");
-  const all=fs.readFileSync('database/pos.sql','utf8'),migration=fs.readFileSync('database/migrations/022-offline-batch-compat.sql','utf8');
+  const all=fs.readFileSync('database/pos.sql','utf8'),migration=fs.readFileSync('database/sections/operations/offline-pos.sql','utf8');
   await db.exec(install==='fresh'?all:all.slice(0,all.indexOf('-- Bagian: sections/operations/offline-pos.sql')));
   if(install==='upgrade')await db.exec(migration);
   await db.exec(migration);

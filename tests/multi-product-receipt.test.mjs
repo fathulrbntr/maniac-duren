@@ -17,12 +17,12 @@ for(const install of ['fresh','upgrade']) {
   if(install==='fresh') await db.exec(sql);
   else {
    await db.exec(process.env.RECEIPT_BASELINE_SQL ? fs.readFileSync(process.env.RECEIPT_BASELINE_SQL,'utf8') : sql.slice(0,sql.indexOf('-- 018:')));
-   await db.exec(fs.readFileSync('database/migrations/017-receipt-cost-breakdown.sql','utf8'));
-   await db.exec(fs.readFileSync('database/migrations/018-receipt-weighing-log.sql','utf8'));
+   await db.exec(fs.readFileSync('database/sections/operations/receipt-cost-breakdown.sql','utf8'));
+   await db.exec(fs.readFileSync('database/sections/operations/receipt-weighing.sql','utf8'));
   }
-  await db.exec(fs.readFileSync('database/migrations/018-receipt-weighing-log.sql','utf8')); // rerun
-  await db.exec(fs.readFileSync('database/migrations/019-direct-stock-no-sorting.sql','utf8'));
-  await db.exec(fs.readFileSync('database/migrations/019-direct-stock-no-sorting.sql','utf8'));
+  await db.exec(fs.readFileSync('database/sections/operations/receipt-weighing.sql','utf8')); // rerun
+  await db.exec(fs.readFileSync('database/sections/operations/direct-stock-no-sorting.sql','utf8'));
+  await db.exec(fs.readFileSync('database/sections/operations/direct-stock-no-sorting.sql','utf8'));
   const owner=id(),store=id(),supplier=id(),product=id();
   await db.query('insert into auth.users values($1,$2)',[owner,'owner@test.local']);
   await db.query('insert into public.md_pos_staff values($1)',[owner]);
@@ -33,8 +33,8 @@ for(const install of ['fresh','upgrade']) {
   await mut('master',{id:supplier,kind:'suppliers',name:'Supplier'});
   await mut('product_save',{id:product,name:'Monthong',sku:'M',itemType:'direct',category:'Buah',stockUnit:'kg_butir',priceKg:100,pricePiece:200});
 
-  await db.exec(fs.readFileSync('database/migrations/020-multi-product-receipt.sql','utf8'));
-  await db.exec(fs.readFileSync('database/migrations/020-multi-product-receipt.sql','utf8'));
+  await db.exec(fs.readFileSync('database/sections/operations/multi-product-receipt.sql','utf8'));
+  await db.exec(fs.readFileSync('database/sections/operations/multi-product-receipt.sql','utf8'));
   const product2=id();
   await mut('product_save',{id:product2,name:'Bawor',sku:'B',itemType:'direct',category:'Buah',stockUnit:'kg_butir',priceKg:100,pricePiece:200});
   const line=(pid,kg,cost)=>({id:id(),productId:pid,purchaseCost:cost,weighings:[{id:id(),kg,pieces:5,createdAt:new Date().toISOString()}]});

@@ -1128,3 +1128,15 @@ tbody tr:hover { background:var(--surface-soft); }
  .nav button { width:auto; min-height:44px; }
  .nav-label { white-space:nowrap; overflow-wrap:normal; }
 }
+
+/* Compact rail: no rerender, so unsaved forms retain their values. */
+.shell {transition:grid-template-columns .18s ease}
+.shell.sidebar-collapsed {grid-template-columns:76px minmax(0,1fr)}
+.sidebar-collapsed .sidebar {width:76px;padding-left:8px;padding-right:8px}
+.sidebar-collapsed .nav-label,.sidebar-collapsed .nav-heading,.sidebar-collapsed .brand-sub,.sidebar-collapsed .sidebar-store,.sidebar-collapsed .sidebar-account {display:none}
+.sidebar-collapsed .nav button {justify-content:center;padding:12px}
+.sidebar-collapsed .brand img {max-width:52px}
+@media(prefers-reduced-motion:reduce){.shell{transition:none}}
+@media(max-width:760px){.shell.sidebar-collapsed{grid-template-columns:1fr}.sidebar-collapsed .sidebar{width:auto}.sidebar-collapsed .nav{display:flex;overflow-x:auto}.sidebar-collapsed .nav-section{display:flex;flex-shrink:0}}
+
+.sidebar-collapsed .sidebar-account{display:block}.sidebar-collapsed .sidebar-account .account-profile{display:none}.sidebar-collapsed .sidebar-logout{font-size:0;justify-content:center}.sidebar-collapsed .sidebar-logout svg{width:22px;height:22px}

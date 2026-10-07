@@ -40,6 +40,6 @@ module.exports = async (req, res) => {
     if (!response.ok || session.user?.id !== target.userId || !session.access_token) return invalid();
     return res.status(200).json({ access_token: session.access_token, refresh_token: session.refresh_token, expires_in: session.expires_in, user: { id: session.user.id } });
   } catch {
-    return res.status(503).json({ error: 'Layanan login belum tersedia. Pastikan migration 023-login-fast dan konfigurasi server sudah diterapkan.' });
+    return res.status(503).json({ error: 'Layanan login belum tersedia. Pastikan fungsi pos_login_prepare dan konfigurasi server sudah diterapkan.' });
   }
 };

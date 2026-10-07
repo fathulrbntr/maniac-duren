@@ -9,7 +9,7 @@ import {
   navigation,
   mayLeave,
   trackForms,
-} from "./navigation.mjs?v=34";
+} from "./navigation.mjs?v=35";
 import {
   prepareRetry,
   settleRetry,
@@ -57,11 +57,21 @@ document.addEventListener('click', event => {
   document.documentElement.dataset.theme = theme;
   try { localStorage.setItem(themeKey, theme); } catch { /* Theme still works when storage is unavailable. */ }
   syncThemeControls();
+  document.querySelector("#sidebar-toggle").onclick = (ev) => {
+    const collapsed = document.querySelector(".shell").classList.toggle("sidebar-collapsed");
+    localStorage.setItem("pos-sidebar-collapsed",collapsed?"1":"0");
+    ev.currentTarget.setAttribute("aria-expanded",String(!collapsed));
+  };
 });
 window.addEventListener('storage', event => {
   if (event.key === themeKey && ['light','dark'].includes(event.newValue)) {
     document.documentElement.dataset.theme = event.newValue;
     syncThemeControls();
+  document.querySelector("#sidebar-toggle").onclick = (ev) => {
+    const collapsed = document.querySelector(".shell").classList.toggle("sidebar-collapsed");
+    localStorage.setItem("pos-sidebar-collapsed",collapsed?"1":"0");
+    ev.currentTarget.setAttribute("aria-expanded",String(!collapsed));
+  };
   }
 });
 const stockFilter = {};
@@ -174,10 +184,10 @@ async function request(path, body, auth = true) {
   }
   return data;
 }
-async function refresh() {
+async function refresh(page = view, branch = store) {
   if (busy) throw Error("Tunggu proses simpan selesai.");
   if (mode === "live") {
-    state = await request("/rest/v1/rpc/pos_read", {});
+    state = ["orders","kitchen"].includes(page) ? { ...emptyState(), journal:[], money:[], ...await request("/rest/v1/rpc/pos_read_service", {branch,catalog:true}) } : await request("/rest/v1/rpc/pos_read", {});
     fullDataLoaded = true;
     if (!store || !state.stores.some((x) => x.id === store))
       store = state.stores[0]?.id || "";
@@ -210,7 +220,9 @@ async function mutate(action, payload) {
       localStorage.setItem("maniac-pos-demo-v1", JSON.stringify(next));
       state = next;
     } else
-      state = await request("/rest/v1/rpc/pos_mutate", { action, payload });
+      state = ["orders","kitchen"].includes(view) && action.startsWith("order_")
+        ? {...emptyState(),journal:[],money:[],...await request("/rest/v1/rpc/pos_mutate_service",{action,payload,branch:store})}
+        : await request("/rest/v1/rpc/pos_mutate", { action, payload });
     settleRetry(action);
     return true;
   } catch (error) {
@@ -232,6 +244,11 @@ async function mutate(action, payload) {
 function login(message = "") {
   app.innerHTML = `<div class="auth">${themeButton("auth-theme")}<section class="auth-brand"><img src="logo.png" alt="Maniac Duren"><h1>Satu kasir.<br>Dua satuan stok.</h1><p>Penjualan per kilo atau per butir, stok setiap store, dan asal supplier dalam satu tempat.</p></section><section class="auth-form"><div><span class="tag">AREA ADMIN</span><h2 style="margin-top:20px">Masuk ke POS</h2><p class="muted">Kelola operasional Maniac Duren.</p>${config.configured ? "" : `<div class="notice">Database belum dihubungkan. Hubungi pengelola untuk mengaktifkan akses POS.</div>`}<form id="login-form">${field("Email / username / nomor telepon", '<input name="identifier" required autocomplete="username" placeholder="Email, username, atau nomor telepon">')}${field("Password", '<input name="password" type="password" required autocomplete="current-password">')}<p class="error" id="login-error">${e(message)}</p><button class="primary full" type="submit" ${config.configured ? "" : "disabled"}>Masuk</button></form><a class="muted" href="/">Kembali ke website customer</a></div></section></div>`;
   syncThemeControls();
+  document.querySelector("#sidebar-toggle").onclick = (ev) => {
+    const collapsed = document.querySelector(".shell").classList.toggle("sidebar-collapsed");
+    localStorage.setItem("pos-sidebar-collapsed",collapsed?"1":"0");
+    ev.currentTarget.setAttribute("aria-expanded",String(!collapsed));
+  };
   document.querySelector("#login-form").onsubmit = async (ev) => {
     ev.preventDefault();
     const form = ev.currentTarget,
@@ -287,7 +304,7 @@ function accountProfile() {
   return `<div class="account-profile" aria-label="Akun yang login">${photo ? `<img src="${e(photo)}" alt="Foto ${e(accountName)}">` : `<span class="account-avatar" aria-hidden="true">${e(initials)}</span>`}<div><small>AKUN LOGIN</small><strong>${e(accountName)}</strong><span>${e(role)}</span></div></div>`;
 }
 function shell(body) {
-  return `<div class="shell ${["products","stock"].includes(view)?"inventory-shell":""}"><aside class="sidebar"><div class="sidebar-header"><div><div class="brand"><img src="logo.png" alt="Maniac Duren"></div><div class="brand-sub">OPERATIONS / POS</div></div><div class="sidebar-store"><label for="active-store">TOKO AKTIF</label><div class="store-select-wrap">${icon("stores")}<select id="active-store" aria-label="Toko aktif" title="${e(name("stores", store))}">${options("stores", store)}</select></div></div></div><nav class="nav" aria-label="Navigasi POS">${navigation(title, view, icon, state.access)}</nav><div class="sidebar-account">${accountProfile()}<button id="logout" class="sidebar-logout" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 4H4v16h5M14 8l4 4-4 4M8 12h10"/></svg>Logout</button></div></aside><main><header class="topbar"><div class="toolbar"><span class="tag ${mode === "demo" ? "demo" : ""}">${mode === "demo" ? "MODE DEMO" : "DATABASE AKTIF"}</span>${themeButton()}</div></header>${body}<p class="page-foot">${mode === "demo" ? "Semua angka adalah data contoh." : "Stok dan penjualan tersimpan di database bersama."} Berat kg dicatat pada setiap penjualan, termasuk penjualan per butir.</p></main></div>`;
+  return `<div class="shell ${localStorage.getItem("pos-sidebar-collapsed")==="1"?"sidebar-collapsed":""} ${["products","stock"].includes(view)?"inventory-shell":""}"><aside class="sidebar"><div class="sidebar-header"><div><div class="brand"><img src="logo.png" alt="Maniac Duren"></div><div class="brand-sub">OPERATIONS / POS</div></div><div class="sidebar-store"><label for="active-store">TOKO AKTIF</label><div class="store-select-wrap">${icon("stores")}<select id="active-store" aria-label="Toko aktif" title="${e(name("stores", store))}">${options("stores", store)}</select></div></div></div><nav class="nav" aria-label="Navigasi POS">${navigation(title, view, icon, state.access)}</nav><div class="sidebar-account">${accountProfile()}<button id="logout" aria-label="Logout" title="Logout" class="sidebar-logout" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 4H4v16h5M14 8l4 4-4 4M8 12h10"/></svg>Logout</button></div></aside><main><header class="topbar"><div class="toolbar"><button id="sidebar-toggle" type="button" aria-label="Buka atau tutup sidebar" aria-expanded="${localStorage.getItem("pos-sidebar-collapsed")!=="1"}" title="Buka atau tutup sidebar">☰</button><span class="tag ${mode === "demo" ? "demo" : ""}">${mode === "demo" ? "MODE DEMO" : "DATABASE AKTIF"}</span>${themeButton()}</div></header>${body}<p class="page-foot">${mode === "demo" ? "Semua angka adalah data contoh." : "Stok dan penjualan tersimpan di database bersama."} Berat kg dicatat pada setiap penjualan, termasuk penjualan per butir.</p></main></div>`;
 }
 function dashboard() {
   const rows = saleRows(state, { from: today(), to: today(), store }),
@@ -418,7 +435,8 @@ async function openPage(next, button) {
   const label = button?.textContent;
   if (button) {button.disabled = true;button.textContent = "Membuka menu…";}
   try {
-    if (mode === "live" && !fullDataLoaded && next !== "start") await refresh();
+    stateRevision++;
+    if (mode === "live" && next !== "start") await refresh(next);
     view = next;
     render();
   } catch (error) { toast(error.message); }
@@ -445,11 +463,16 @@ function render() {
     }[view](),
   );
   syncThemeControls();
+  document.querySelector("#sidebar-toggle").onclick = (ev) => {
+    const collapsed = document.querySelector(".shell").classList.toggle("sidebar-collapsed");
+    localStorage.setItem("pos-sidebar-collapsed",collapsed?"1":"0");
+    ev.currentTarget.setAttribute("aria-expanded",String(!collapsed));
+  };
   document.querySelectorAll("[data-view]").forEach(
     (b) =>
       (b.onclick = () => openPage(b.dataset.view, b)),
   );
-  document.querySelector("#active-store").onchange = (ev) => {
+  document.querySelector("#active-store").onchange = async (ev) => {
     if (loadingPage || !mayLeave(busy)) {
       ev.target.value = store;
       return;
@@ -461,10 +484,13 @@ function render() {
       ev.target.value = store;
       return;
     }
-    store = ev.target.value;
-    cart = [];
-    clearOrderDraft();
-    render();
+    const previous = store, next = ev.target.value;
+    loadingPage = true; stateRevision++;
+    try {
+      if (mode === "live" && view !== "start") await refresh(view,next);
+      store = next; cart = []; clearOrderDraft(); render();
+    } catch(error) { store = previous; ev.target.value = previous; toast(error.message); }
+    finally { loadingPage = false; }
   };
   document.querySelector("#logout").onclick = () => {
     if (loadingPage || !mayLeave(busy)) return;
@@ -924,7 +950,7 @@ setInterval(async()=>{
  if(mode!=='live'||!fullDataLoaded||loadingPage||busy||polling||!['orders','kitchen'].includes(view))return;
  polling=true;const revision=stateRevision,sessionToken=token;
  try{
-  const fresh=await request('/rest/v1/rpc/pos_read',{});
+  const fresh={...emptyState(),journal:[],money:[],...await request('/rest/v1/rpc/pos_read_service',{branch:store,catalog:false}),products:state.products,recipes:state.recipes,suppliers:state.suppliers};
   if(mode!=='live'||busy||revision!==stateRevision||sessionToken!==token)return;
   state=fresh;observeKitchen();
   if(view==='kitchen'&&!document.querySelector('dialog[open]'))render();

@@ -1,3 +1,0 @@
-Panduan versi ini: PATCH-028.md dan CARA-PASANG.txt.
-Patch 028 memerlukan SQL migration 021; petunjuk lama yang menyebut tanpa SQL sudah tidak berlaku untuk update ini.
-Foto tetap menggunakan pengolahan versi sebelumnya. Format yang tidak bisa dibaca browser (sebagian HEIC, TIFF, RAW) perlu dikonversi lebih dulu.

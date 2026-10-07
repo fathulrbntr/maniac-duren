@@ -25,7 +25,7 @@ for(const install of ['fresh','upgrade']){
  }
  const as=async u=>db.query("select set_config('request.jwt.claim.sub',$1,false)",[u]);await as(owner);
  const read=async()=> (await db.query('select public.pos_read() s')).rows[0].s;
- const mut=async(action,p)=>(await db.query('select public.pos_mutate($1,$2::jsonb) s',[action,JSON.stringify(p)])).rows[0].s;
+ const mut=async(action,p)=>(await db.query(install==='fresh' && action.startsWith('order_') ? 'select public.pos_mutate_service($1,$2::jsonb,$3::uuid) s' : 'select public.pos_mutate($1,$2::jsonb) s',install==='fresh' && action.startsWith('order_') ? [action,JSON.stringify(p),p.storeId||store] : [action,JSON.stringify(p)])).rows[0].s;
  const date=new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Jakarta'}),store=id(),other=id(),supplier=id(),fruit=id(),raw=id(),prep=id(),dessert=id();
  for(const [key,name]of[[store,'Depok'],[other,'Bogor']])await mut('master',{id:key,kind:'stores',name});
  await mut('master',{id:supplier,kind:'suppliers',name:'Supplier A'});

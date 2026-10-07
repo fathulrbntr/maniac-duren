@@ -1,25 +1,35 @@
 # Maniac Duren
 
-Website pelanggan: `/`. Katalog: `/menu/`. Operasional: `/pos/`.
+Website publik dan POS kasir, stok, kitchen, laporan dan karyawan.
 
-Pembaruan terbaru: `UPDATE-029.md`.
-Frontend HTML/CSS/JavaScript modular; Supabase menyimpan data operasional.
-Kasir versi ini memerlukan koneksi internet. Modul antrean offline tersedia dalam sumber, tetapi belum diintegrasikan dengan sesi dan layar kasir.
+## Pembaruan database aktif
 
-## Pengembangan
+1. Gunakan database yang sudah memiliki versi 024 (login bootstrap).
+2. Jalankan `database/upgrade.sql` di Supabase SQL Editor.
+3. Ekspor backup, lalu jalankan `database/clear-operations.sql` untuk mengosongkan data operasional sesuai permintaan.
+4. Deploy seluruh proyek. Login ulang dan buat master produk, supplier serta resep baru.
 
-```bash
+Reset menghapus produk, supplier, resep, penerimaan, stok, penjualan, pesanan, produksi, waste, jurnal dan throttle login. Akun Auth, karyawan, dokumen, absensi, jam kerja, hak akses, audit karyawan dan identitas outlet tetap ada agar karyawan dapat login. Skrip tidak memakai CASCADE; ketergantungan tidak dikenal akan menghentikan reset. Reset belum dijalankan di server oleh paket ini.
+
+Instalasi baru: `database/pos.sql` hanya untuk database kosong. Folder sections adalah sumber SQL; definisi versi lama masih diperlukan oleh rantai validasi transaksi. Jangan menghapus fungsi versi lama langsung di Supabase.
+
+## Konfigurasi
+
+Vercel memerlukan POS_SUPABASE_URL, POS_SUPABASE_PUBLISHABLE_KEY dan POS_SUPABASE_SERVICE_ROLE_KEY. Service role hanya untuk server. API login tidak tersedia melalui Live Server statis.
+
+## Performa
+
+Login mengambil profil sendiri dan daftar outlet melalui pos_bootstrap. Menu kasir/kitchen serta polling mengambil stok aktif dan pesanan outlet melalui pos_read_service. Polling tidak mengirim ulang katalog/foto produk; buka ulang menu untuk memperbarui perubahan katalog. Transaksi pelayanan memakai pos_mutate_service agar respons tidak membangun seluruh laporan. Pesanan yang belum selesai tetap dibaca tanpa batas tanggal; riwayat selesai dibatasi tujuh hari di pelayanan. Laporan dan menu lainnya masih memakai pos_read lengkap; belum dipaginasi. Foto produk masih disertakan pada katalog pelayanan. Tidak ada klaim pengukuran kecepatan server produksi.
+
+Sidebar dapat ditutup/dibuka tanpa merender ulang formulir; pilihan tersimpan di perangkat. Tema sebelumnya tetap digunakan.
+
+## Pengembangan dan pembersihan Git
+
 npm ci
-npm run test:unit
-npm run test:kitchen
-npm run test:batches
-npm run test:receipts
-npm run test:offline
-npm run test:offline:db
+npm test
+npm run test:db
+node tests/service-reset.test.mjs
 npm run db:build
 npm run pwa:build
-```
 
-`database/sections/` sumber SQL; `database/pos.sql` untuk instalasi baru saja.
-Database aktif yang sudah memiliki batch tracking: jalankan `database/migrations/022-offline-batch-compat.sql` tanpa reset.
-Jangan menghapus wrapper fungsi versi lama. Jangan menjalankan ulang migration offline 021 setelah batch tracking.
+Setelah menyalin paket ke repository lama, jalankan `node scripts/clean-project.mjs` untuk menghapus file patch, migration duplikat dan CSS modern yang tidak digunakan. Periksa `git diff --stat`, lalu `git add -A` untuk menyertakan penghapusan. ZIP tidak menyertakan .git, node_modules, rahasia atau file environment aktif.

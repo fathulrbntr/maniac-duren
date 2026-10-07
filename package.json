@@ -18,7 +18,9 @@
     "test:offline": "node --test tests/offline.test.mjs",
     "test:offline:db": "node tests/offline-database.test.mjs",
     "test:offline:browser": "node tests/offline-browser.mjs",
-    "test:receipts": "node tests/multi-product-receipt.test.mjs"
+    "test:receipts": "node tests/multi-product-receipt.test.mjs",
+    "test:service": "node tests/service-reset.test.mjs",
+    "clean": "node scripts/clean-project.mjs"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.8",
