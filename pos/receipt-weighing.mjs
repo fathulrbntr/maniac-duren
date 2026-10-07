@@ -44,36 +44,28 @@ export function openWeighingReceipt(state, store, ctx) {
   const options = (kind, selected) => state[kind].map(p => `<option value="${e(p.id)}" ${p.id === selected ? 'selected' : ''}>${e(p.name)}</option>`).join('');
   const products = state.products.filter(isLegacyStock);
   if (!products.length || !state.suppliers.length || !state.stores.length) return ctx.toast('Tambahkan produk, store dan supplier terlebih dahulu.');
-  const d = ctx.modal('Barang masuk', `<div class="form-grid"><label class="field">Tanggal masuk<input name="date" type="date" value="${today()}" required></label><label class="field">Store<select name="storeId">${options('stores', store)}</select></label><label class="field">Produk yang sedang diisi<select name="productId">${products.map(p => `<option value="${e(p.id)}">${e(p.name)}</option>`).join('')}</select></label><label class="field">Supplier<select name="supplierId">${options('suppliers')}</select></label><label class="field">Ongkir seluruh kiriman (Rp)<input name="shippingCost" type="number" min="0" step="any" value="0" required></label></div><div class="form-grid"><label class="field">Produk dalam kiriman<select data-shipment-line></select></label><div><button type="button" data-add-line>+ Tambah produk</button> <button type="button" data-remove-line>Hapus produk ini</button></div></div><p class="form-help">Isi total harga nota masing-masing durian pada ringkasan di bawah. Satu supplier dan satu ongkir untuk seluruh kiriman. Ongkir dibagi berdasarkan berat masing-masing produk.</p><button type="button" class="primary" data-weigh-open>Catat penimbangan</button><div data-weigh-summary class="weigh-summary"></div><div data-shipment-summary class="weigh-summary"></div><label class="field">Nomor surat jalan / catatan<input name="note" maxlength="300"></label><p class="form-help">Catatan timbang belum menambah stok. Stok masuk sekaligus setelah penurunan barang dikonfirmasi selesai.</p>`, 'Penurunan selesai · masukkan ke stok');
+  const d = ctx.modal('Barang masuk', `<div class="form-grid"><label class="field">Tanggal masuk<input name="date" type="date" value="${today()}" required></label><label class="field">Store<select name="storeId">${options('stores', store)}</select></label><label class="field">Supplier<select name="supplierId">${options('suppliers')}</select></label><label class="field">Ongkir satu kiriman (Rp)<input name="shippingCost" type="number" min="0" step="any" value="0" required></label></div><p class="form-help">Isi durian, harga nota, dan hasil timbang pada setiap kartu. Ongkir dibagi otomatis berdasarkan berat.</p><div data-product-cards></div><button type="button" data-add-line>+ Tambah durian</button><div data-shipment-summary class="weigh-summary"></div><label class="field">Nomor surat jalan / catatan<input name="note" maxlength="300"></label><p class="form-help">Stok masuk setelah seluruh kiriman disimpan.</p>`, 'Simpan barang masuk');
   const f = d.querySelector('form'), requestId = id();
   let rows = [], saving = false, active = 0;
   const lines = [{id:id(), productId:products[0].id, purchaseCost:'', weighings:rows}];
   const error = d.querySelector('#form-error');
-  const drawProductOptions = () => {
-    const selected = lines[active].productId;
-    f.elements.productId.innerHTML = availableReceiptProducts(products, lines, active).map(p => `<option value="${e(p.id)}" ${p.id === selected ? 'selected' : ''}>${e(p.name)}</option>`).join('');
-  };
-  const sync = () => Object.assign(lines[active], {productId:f.elements.productId.value, weighings:rows});
-  const totals = () => {sync(); return shipmentTotals(lines, f.elements.shippingCost.value).items[active];};
-  const switchLine = index => {sync(); active=index; rows=lines[active].weighings; drawProductOptions(); update();};
-
+  const sync = () => {lines[active].weighings=rows;};
   const update = () => {
     const focused = d.querySelector('[data-line-cost]:focus');
     const focusIndex = focused?.dataset.lineCost;
     const caret = focused?.selectionStart;
     try {
-      const t = totals();
-      drawProductOptions();
-      d.querySelector('[data-weigh-summary]').innerHTML = `<b>${rows.length} kali timbang · ${num(t.kg)} kg · ${num(t.pieces)} butir</b><div class="form-grid"><p>Harga barang / kg<br><strong>${money(t.purchaseKg)}</strong></p><p>Harga barang / butir<br><strong>${money(t.purchasePiece)}</strong></p><p>Modal termasuk ongkir / kg<br><strong>${money(t.costKg)}</strong></p><p>Modal termasuk ongkir / butir<br><strong>${money(t.costPiece)}</strong></p></div><p>Total modal: <b>${money(t.total)}</b></p>`;
+      sync();
       const shipment = shipmentTotals(lines, f.elements.shippingCost.value);
-      const picker = d.querySelector('[data-shipment-line]');
-      picker.innerHTML = lines.map((line,i)=>`<option value="${i}" ${i===active?'selected':''}>${i+1}. ${e(products.find(p=>p.id===line.productId)?.name||'Produk')} · ${num(shipment.items[i].kg)} kg</option>`).join('');
-      d.querySelector('[data-remove-line]').disabled=lines.length===1;
+      d.querySelector('[data-product-cards]').innerHTML = lines.map((line,i) => {
+        const t=shipment.items[i];
+        return `<section class="weigh-summary" style="margin:12px 0;padding:16px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><b>Durian ${i+1}</b><button type="button" data-remove-line="${i}" ${lines.length===1?'disabled':''}>Hapus</button></div><div class="form-grid"><label class="field">Jenis durian<select data-line-product="${i}">${availableReceiptProducts(products,lines,i).map(p=>`<option value="${e(p.id)}" ${p.id===line.productId?'selected':''}>${e(p.name)}</option>`).join('')}</select></label><label class="field">Total harga nota (Rp)<input data-line-cost="${i}" type="text" inputmode="decimal" required value="${e(formatMoneyInput(line.purchaseCost))}" placeholder="Harga barang tanpa ongkir"></label></div><div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;flex-wrap:wrap"><span><b>${num(t.kg)} kg · ${num(t.pieces)} butir</b><br><small>${line.weighings.length} kali timbang</small></span><button type="button" class="primary" data-weigh-open="${i}">${line.weighings.length?'Lihat / edit timbang':'Catat timbang'}</button></div><p class="form-help">Bagian ongkir: ${money(t.shipping)} · Modal/kg: ${money(t.costKg)}</p></section>`;
+      }).join('');
       const add = d.querySelector('[data-add-line]');
       const hasUnused = products.some(p=>!lines.some(line=>line.productId===p.id));
       add.disabled=!hasUnused || lines.length>=50;
       add.title=!hasUnused ? 'Semua jenis durian sudah ditambahkan.' : 'Tambah jenis durian lain ke kiriman ini';
-      d.querySelector('[data-shipment-summary]').innerHTML=`<b>Ringkasan seluruh kiriman · ${lines.length} produk</b><div class="table-wrap"><table><thead><tr><th>Produk</th><th>Berat / butir</th><th>Total harga nota (Rp)</th><th>Bagian ongkir</th></tr></thead><tbody>${lines.map((line,i)=>`<tr><td>${e(products.find(p=>p.id===line.productId)?.name)}</td><td>${num(shipment.items[i].kg)} kg / ${num(shipment.items[i].pieces)}</td><td><input data-line-cost="${i}" type="text" inputmode="decimal" required value="${e(formatMoneyInput(line.purchaseCost))}" aria-label="Total harga nota ${e(products.find(p=>p.id===line.productId)?.name)}" style="min-width:150px"></td><td>${money(shipment.items[i].shipping)}</td></tr>`).join('')}</tbody></table></div><p>Total barang: ${money(shipment.purchase)} · Ongkir: ${money(shipment.shipping)}<br><b>Total modal kiriman: ${money(shipment.total)}</b></p>`;
+      d.querySelector('[data-shipment-summary]').innerHTML=`<b>Total kiriman · ${lines.length} jenis durian</b><p>${num(shipment.kg)} kg · ${num(shipment.pieces)} butir</p><p>Harga nota: ${money(shipment.purchase)}<br>Ongkir: ${money(shipment.shipping)}</p><b>Total modal: ${money(shipment.total)}</b>`;
       if (focusIndex !== undefined) {
         const input = d.querySelector(`[data-line-cost="${focusIndex}"]`);
         input?.focus();
@@ -83,7 +75,7 @@ export function openWeighingReceipt(state, store, ctx) {
       error.textContent = new Set(lines.map(line=>line.productId)).size!==lines.length ? 'Produk yang sama cukup dicatat sekali dalam kiriman.' : '';
     } catch (err) { error.textContent = err.message; f.querySelector('[type=submit]').disabled = true; }
   };
-  d.querySelector('[data-shipment-summary]').addEventListener('input', ev => {
+  d.querySelector('[data-product-cards]').addEventListener('input', ev => {
     const input = ev.target.closest('[data-line-cost]');
     if (!input) return;
     try {
@@ -94,21 +86,24 @@ export function openWeighingReceipt(state, store, ctx) {
     } catch(error) { input.setCustomValidity(error.message);return; }
     d.dataset.dirty='true';update();
   });
-  d.querySelector('[data-shipment-line]').onchange = ev => switchLine(Number(ev.target.value));
-  d.querySelector('[data-add-line]').onclick = () => {sync(); const next=products.find(p=>!lines.some(line=>line.productId===p.id)); if(!next || lines.length>=50)return; lines.push({id:id(),productId:next.id,purchaseCost:'',weighings:[]}); switchLine(lines.length-1); d.dataset.dirty='true';};
-  d.querySelector('[data-remove-line]').onclick=()=>{if(lines.length===1)return;if(!confirm('Hapus produk ini beserta catatan timbangnya dari kiriman?'))return;lines.splice(active,1);active=0;rows=lines[0].weighings;drawProductOptions();update();d.dataset.dirty='true';};
-  f.elements.productId.onchange = () => {
-    const value=f.elements.productId.value;
-    if(lines.some((line,i)=>i!==active && line.productId===value)){
-      drawProductOptions();ctx.toast('Durian ini sudah ada dalam kiriman.');return;
-    }
-    update();d.dataset.dirty='true';
-  };
+  d.querySelector('[data-add-line]').onclick = () => {sync(); const next=products.find(p=>!lines.some(line=>line.productId===p.id)); if(!next || lines.length>=50)return; lines.push({id:id(),productId:next.id,purchaseCost:'',weighings:[]});update();d.dataset.dirty='true';};
+  d.querySelector('[data-product-cards]').addEventListener('change', ev => {
+    const input=ev.target.closest('[data-line-product]');if(!input)return;
+    const i=Number(input.dataset.lineProduct),value=input.value;
+    if(lines.some((line,j)=>j!==i&&line.productId===value)){update();ctx.toast('Durian ini sudah ada dalam kiriman.');return;}
+    lines[i].productId=value;update();d.dataset.dirty='true';
+  });
+  d.querySelector('[data-product-cards]').addEventListener('click', ev => {
+    const remove=ev.target.closest('[data-remove-line]');
+    if(remove){if(lines.length===1)return;if(!confirm('Hapus durian ini beserta catatan timbangnya?'))return;sync();lines.splice(Number(remove.dataset.removeLine),1);active=0;rows=lines[0].weighings;update();d.dataset.dirty='true';return;}
+    const weigh=ev.target.closest('[data-weigh-open]');
+    if(weigh){sync();active=Number(weigh.dataset.weighOpen);rows=lines[active].weighings;openWeighing();}
+  });
   f.elements.shippingCost.oninput = update;
-  d.querySelector('[data-weigh-open]').onclick = () => {
+  const openWeighing = () => {
     const w = document.createElement('dialog');
     w.className = 'modal weighing-dialog';
-    w.innerHTML = `<div class="modal-head"><h2>Riwayat penimbangan</h2><button type="button" data-close aria-label="Tutup">×</button></div><p>Setiap baris mencatat berat dan butir dalam satu kali timbang.</p><form class="weigh-entry"><div class="form-grid"><label class="field">Berat (kg)<input name="kg" type="number" min="0.000000001" step="any" required autofocus></label><label class="field">Butir<input name="pieces" type="number" min="1" step="1" required></label></div><button class="primary" type="submit">Tambah timbang</button><button type="button" data-reset hidden>Batal edit</button><p class="error" data-error></p></form><div data-history class="table-wrap"></div><p data-total aria-live="polite"></p><div class="modal-actions"><button type="button" data-close class="primary">Selesai menghitung</button></div>`;
+    w.innerHTML = `<div class="modal-head"><h2>Timbang ${e(products.find(p=>p.id===lines[active].productId)?.name)}</h2><button type="button" data-close aria-label="Tutup">×</button></div><p>Setiap baris mencatat berat dan butir dalam satu kali timbang.</p><form class="weigh-entry"><div class="form-grid"><label class="field">Berat (kg)<input name="kg" type="number" min="0.000000001" step="any" required autofocus></label><label class="field">Butir<input name="pieces" type="number" min="1" step="1" required></label></div><button class="primary" type="submit">Tambah timbang</button><button type="button" data-reset hidden>Batal edit</button><p class="error" data-error></p></form><div data-history class="table-wrap"></div><p data-total aria-live="polite"></p><div class="modal-actions"><button type="button" data-close class="primary">Selesai menghitung</button></div>`;
     document.body.append(w);
     const wf = w.querySelector('form');
     let editing = null;

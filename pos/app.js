@@ -1,6 +1,6 @@
 import {installMoneyInputs} from './money-input.mjs?v=19';
 installMoneyInputs();
-import { openWeighingReceipt, showWeighingHistory } from './receipt-weighing.mjs?v=20.2';
+import { openWeighingReceipt, showWeighingHistory } from './receipt-weighing.mjs?v=20.3';
 import {inventoryPanel,bindInventory} from "./inventory-ui.mjs?v=19";
 import {opsPages,opsPage,bindOps,clearOrderDraft} from './operations-ui.mjs?v=25';
 import {
