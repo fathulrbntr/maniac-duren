@@ -1,0 +1,59 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {randomUUID as id} from 'node:crypto';
+import {PGlite} from '@electric-sql/pglite';
+import {makeOrder} from '../pos/offline.mjs';
+for(const install of ['fresh','upgrade']){
+ const db=new PGlite();
+ try{
+  await db.exec("create role anon;create role authenticated;create role service_role;create schema auth;create table auth.users(id uuid primary key,email text);create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;");
+  const all=fs.readFileSync('database/pos.sql','utf8'),migration=fs.readFileSync('database/migrations/021-offline-pos.sql','utf8');
+  await db.exec(install==='fresh'?all:all.slice(0,all.indexOf('-- Bagian: sections/operations/offline-pos.sql')));
+  if(install==='upgrade')await db.exec(migration);
+  await db.exec(migration);
+  const owner=id(),store=id(),other=id(),supplier=id(),water=id(),lot=id();
+  await db.query('insert into auth.users values($1,$2)',[owner,'owner@test.local']);
+  await db.query('insert into public.md_pos_staff values($1)',[owner]);
+  await db.query("insert into public.md_pos_employees(id,user_id,name,email,role) values($1,$1,'Owner','owner@test.local','owner')",[owner]);
+  await db.query("select set_config('request.jwt.claim.sub',$1,false)",[owner]);
+  const mut=async(action,p)=>(await db.query('select public.pos_mutate($1,$2::jsonb) s',[action,JSON.stringify(p)])).rows[0].s;
+  const read=async()=>(await db.query('select public.pos_read() s')).rows[0].s;
+  const sync=async p=>(await db.query('select public.pos_sync_order($1::jsonb) s',[JSON.stringify(p)])).rows[0].s;
+  for(const [key,name]of[[store,'Depok'],[other,'Bogor']])await mut('master',{id:key,kind:'stores',name});
+  await mut('master',{id:supplier,kind:'suppliers',name:'Supplier'});
+  await mut('product_save',{id:water,name:'Air',sku:'AIR',itemType:'direct',stockUnit:'pcs',salePrice:5000});
+  const date=new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Jakarta'});
+  await mut('unit_receipt',{id:lot,storeId:store,date,productId:water,qty:10,totalCost:20000,supplierId:supplier,kind:'purchase'});
+  const row=makeOrder(await read(),{id:id(),storeId:store,date,payment:'Tunai',paid:10000,lines:[{productId:water,qty:2,price:5000}]},id(),owner);
+  let s=await sync(row.envelope);s=await sync(row.envelope);
+  assert.equal(s.orders.filter(o=>o.id===row.id).length,1);assert.equal(s.orders.find(o=>o.id===row.id).deviceId,row.envelope.deviceId);await db.query(fs.readFileSync('database/audit-data.sql','utf8'));assert.equal(s.unitLots.find(l=>l.id===lot).qty,8);
+  assert.equal(s.money.filter(m=>m.event_id===row.id).length,1);
+  assert.equal((await db.query('select count(*)::int n from public.md_pos_sync_receipts')).rows[0].n,1);
+  const changed=structuredClone(row.envelope);changed.sale.paid=20000;
+  await assert.rejects(sync(changed),/berbeda/);
+  const bad=structuredClone(row.envelope);bad.sale.id=id();bad.sale.lines[0].qty=99;bad.sale.paid=495000;
+  await assert.rejects(sync(bad),/stok|Stok/);
+  assert.equal((await read()).unitLots.find(l=>l.id===lot).qty,8);
+  assert.equal((await db.query('select count(*)::int n from public.md_pos_sync_receipts')).rows[0].n,1);
+  const prep=id(),dessert=id(),recipe=id();
+  await mut('product_save',{id:prep,name:'Cendol',sku:'CEN',itemType:'prep',stockUnit:'g'});
+  await mut('product_save',{id:dessert,name:'Es',sku:'ES',itemType:'recipe',stockUnit:'porsi',salePrice:10000});
+  // Prepared stock originates from the normal unit receipt flow in this fixture.
+  await mut('unit_receipt',{id:id(),storeId:store,date,productId:prep,qty:500,totalCost:10000,kind:'opening',note:'Saldo awal untuk pengujian'});
+  await mut('recipe_save',{id:recipe,name:'Es',version:0,outputId:dessert,yieldQty:1,ingredients:[{productId:prep,qty:50}]});
+  const recipeRow=makeOrder(await read(),{id:id(),storeId:store,date,payment:'Tunai',paid:10000,lines:[{productId:dessert,qty:1,price:10000}]},id(),owner);
+  await db.query('update public.md_pos_recipes set version=version+1 where id=$1',[recipe]);
+  await assert.rejects(sync(recipeRow.envelope),/Resep berubah/);
+  assert(!(await read()).orders.some(o=>o.id===recipeRow.id));
+  await db.query('update public.md_pos_recipes set version=version-1 where id=$1',[recipe]);
+  s=await sync(recipeRow.envelope);assert.equal(s.orders.find(o=>o.id===recipeRow.id).status,'queued');
+  assert.equal(s.orders.find(o=>o.id===recipeRow.id).reserved['product:'+prep].qty,50);
+  const cashier=id();await db.query('insert into auth.users values($1,$2)',[cashier,'cashier@test.local']);await db.query('insert into public.md_pos_staff values($1)',[cashier]);
+  await db.query("insert into public.md_pos_employees(id,user_id,name,role,store_ids) values($1,$1,'Cashier','cashier',array[$2]::uuid[])",[cashier,other]);
+  await db.query("select set_config('request.jwt.claim.sub',$1,false)",[cashier]);
+  await assert.rejects(sync(row.envelope),/cập|quyền|quyen|toko|store|akses|cabang/i);
+  await db.exec('set role anon');await assert.rejects(sync(row.envelope),/permission denied/);await db.exec('reset role');
+  await db.exec('set role authenticated');await assert.rejects(db.query('select * from public.md_pos_sync_receipts'),/permission denied/);await db.exec('reset role');
+  console.log('PASS offline SQL '+install+': replay once, conflicting payload, rollback, recipe version, kitchen reservation, authorization, rerunnable upgrade.');
+ }finally{await db.close();}
+}

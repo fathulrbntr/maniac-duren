@@ -1106,3 +1106,11 @@ tbody tr:hover { background:var(--surface-soft); }
  .sidebar > .nav { overflow-x:auto; overflow-y:hidden; padding-right:0; padding-bottom:6px; scrollbar-gutter:auto; }
  .sidebar > .nav::-webkit-scrollbar { height:6px; }
 }
+
+/* Connection and outbox status is visible in both themes and on small screens. */
+.sync-status{max-width:100%;white-space:normal;text-align:left;font-size:12px;line-height:1.5;border-radius:12px;padding:8px 12px}
+.sync-status[data-state="ok"]{color:#267349}
+.sync-status[data-state="pending"]{color:#a46713}
+.sync-status[data-state="error"]{color:#ce4141}
+.sync-list{max-height:40vh;overflow:auto}.sync-list article{padding:12px 0;border-bottom:1px solid var(--border,#ddd)}
+.topbar .toolbar{flex-wrap:wrap}

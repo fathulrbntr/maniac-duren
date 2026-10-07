@@ -13,3 +13,5 @@ Untuk database baru/reset, gunakan `database/pos.sql` yang sudah di-build dari s
 - `019-direct-stock-no-sorting.sql` — setelah 018: penerimaan buah langsung siap jual, stok belum disortir dibuka dan fitur sortir dinonaktifkan. Riwayat stok lama tetap tersimpan.
 
 020-multi-product-receipt.sql: jalankan setelah 019 untuk satu kiriman berisi beberapa produk dengan satu ongkir. Aman dijalankan ulang; tidak mereset stok.
+
+- `021-offline-pos.sql` — jalankan setelah 020 untuk antrean POS offline. Menambahkan catatan pengiriman per perangkat, waktu asli transaksi, verifikasi resep dan endpoint sinkronisasi idempotent. Aman dijalankan ulang. Tidak menghapus transaksi / stok.

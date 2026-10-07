@@ -5,5 +5,25 @@
       "destination": "https://docs.google.com/forms/d/e/1FAIpQLSeju0UwrZD2Q9daJIN7if6GotCGq0fWhsFrxT3IpWsd9n_omg/viewform",
       "permanent": false
     }
+  ],
+  "headers": [
+    {
+      "source": "/pos/sw.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/pos/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        }
+      ]
+    }
   ]
 }

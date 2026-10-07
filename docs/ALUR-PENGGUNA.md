@@ -41,3 +41,9 @@ Catat stok awal **satu kali**. Jangan memasukkan jumlah yang sama melalui tambah
 - Transfer/pemakaian dapur hanya mengurangi/memindahkan stok durian. Untuk membuat hasil dengan resep gunakan Produksi; untuk reject dengan hasil gunakan Waste & Olahan.
 
 **Kasir produk satuan (dessert, minuman, durpas/coral) belum tersedia dalam versi kode ini.** Stoknya sudah dapat dikelola, tetapi penjualannya perlu tahap pengembangan berikutnya agar mengurangi stok produk jadi tanpa memotong bahan lagi.
+
+## Saat kasir offline (patch 028)
+
+Login dan ambil data saat online terlebih dahulu. Kasir tetap dapat membuat penjualan baru; saldo tersedia dikurangi cadangan transaksi lokal. Periksa indikator Online/Offline di atas halaman. Detail/struk menandai pembayaran yang belum tersinkron.
+
+Pesanan belum muncul di kitchen perangkat lain hingga tersinkron. Gunakan struk untuk komunikasi manual saat offline. Setelah internet pulih dan aplikasi terbuka, antrean dikirim otomatis dengan ID yang sama. Konflik stok/resep tetap tersimpan dan bisa dilihat melalui indikator sinkronisasi. Masuk kembali dengan akun sama jika sesi kedaluwarsa. Selesaikan seluruh antrean sebelum logout atau menghapus data browser.

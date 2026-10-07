@@ -1,0 +1,7 @@
+PATCH 028 — baca PATCH-028.md untuk petunjuk lengkap.
+1. Ekstrak ZIP ke folder utama proyek dan timpa file.
+2. Jalankan database/migrations/021-offline-pos.sql di Supabase SQL Editor (setelah 020).
+3. Jalankan node scripts/clean-legacy-docs.mjs, lalu npm run pwa:build.
+4. Git add / commit / push sesuai PATCH-028.md; tunggu deployment.
+5. Buka /pos/ online, login, lalu install POS di Chrome/Edge.
+Jangan jalankan reset-pos.sql atau pos.sql pada database operasional.

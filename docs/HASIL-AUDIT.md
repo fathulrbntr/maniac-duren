@@ -1,46 +1,46 @@
-# Hasil audit — 5 Oktober 2026
+# Hasil audit patch 028
 
-Acuan: ZIP full stack yang dikirim pengguna. Pemeriksaan mencakup kode website customer, katalog/menu, API konfigurasi, modul POS, SQL migration, dan alur stok. Pengujian yang dicantumkan di bawah dilakukan lokal; tidak mengakses akun Supabase/Vercel operasional.
+Sumber: ZIP `maniac-duren(4).zip`. Perubahan ini disiapkan lokal; belum diterapkan ke Vercel atau Supabase produksi.
 
 ## Temuan dan perbaikan
 
 | Temuan | Perbaikan |
 |---|---|
-| Instalasi `pos.sql` lama belum mencakup fitur terbaru | Bootstrap terbaru dibangun dari bagian SQL bernama di `database/sections/`, menyertakan definisi fungsi terakhir; diuji instalasi baru dan upgrade |
-| Create Product mudah tertukar dengan tambah master produk | Menu dinamai Produksi, navigasi dibagi tiga kelompok |
-| Waste bisa dimasukkan dari dua form | Jalur input waste dipusatkan; riwayat lama dipertahankan |
-| Penerimaan bahan muncul terpisah dari penerimaan durian | Satu tombol Barang masuk dengan pilihan jenis barang |
-| Tanggal waste diketik tanpa panduan penerimaan | Pilihan tanggal berasal dari saldo batch store aktif |
-| Bagian hasil olahan terlalu panjang dan bukti foto terpisah | Tiga kartu ringkas menampilkan jumlah dan input foto per hasil |
-| Nama pengolah belum tercatat | Nama pengolah wajib tersimpan di snapshot waste |
-| Tanggal waste dapat diedit pengguna | Payload memakai tanggal hari ini dan input hanya-baca |
-| Form dapat ditinggalkan setelah diisi | Konfirmasi form transaksi/produksi/waste dan popup; filter pencarian tidak ikut memunculkan konfirmasi |
-| Simpan ulang setelah koneksi putus dapat membuat ID baru | Penyimpanan ID/payload retry per akun/tab, rekonsiliasi dengan riwayat, snapshot payload agar tidak berubah saat keranjang diedit |
-| Beberapa kontrol yang awalnya nonaktif bisa kembali aktif setelah simpan | Status disabled setiap kontrol dipulihkan sesuai keadaan awal |
-| Permintaan refresh token bersamaan bisa saling bertabrakan | Refresh token dijalankan satu kali untuk permintaan bersamaan |
-| Stok transfer tujuan memakai tanggal pembelian di asal | Transfer baru memakai tanggal transfer; supplier dan sumber batch tetap tersimpan |
-| Foto waste ikut terbawa setiap `pos_read`/hasil mutasi | Daftar mengirim penanda foto; endpoint staff mengambil foto saat Lihat bukti diklik |
-| Header desktop berpotensi terpotong | Tinggi fleksibel dan lebar selector store dibatasi |
-| Kode banyak berbentuk satu baris | Modul POS, API dan skrip menu diformat; navigasi dan retry dipisahkan ke modul kecil |
-| Arsip, SQL dan file kamera mentah ikut menjadi aset deployment | `.vercelignore` mengecualikan berkas nonoperasional |
+| Kasir bergantung pada respons server | IndexedDB menyimpan pembayaran dan antrean sebelum UI menyatakan sukses |
+| Reload menghapus sesi | Sesi dipulihkan dari perangkat, refresh token disimpan kembali; logout membersihkan sesi aktif |
+| Retry lama hanya satu transaksi | Outbox berurutan dengan status, identitas perangkat/akun/store, timestamp dan resep |
+| Respons hilang dapat membuat hasil transaksi tidak pasti | Endpoint `pos_sync_order` mencocokkan seluruh payload dan menyimpan ACK atomik dengan stok/order/jurnal |
+| Stok lokal tidak mencadangkan transaksi offline | Seluruh kebutuhan produk/bahan antrean mengurangi ketersediaan lokal |
+| Dua tab berpotensi memakai saldo yang sama | Web Lock satu terminal per profil browser dan lock per akun untuk penulisan/sinkronisasi |
+| Tidak ada cache aplikasi offline | Service worker menyimpan aset POS; API, token dan respons transaksi tidak masuk Cache Storage |
+| Barcode ada di master tetapi belum menjadi input kasir | Pencocokan persis barcode/SKU lewat Enter, termasuk nol di depan; duplikasi ditolak |
+| Beberapa jumlah tidak valid lolos pemeriksaan awal | Jumlah harus finite/positif, pcs/porsi/butir bulat; lot harus cocok dengan produk |
+| Pemilihan durian baru bisa membawa satuan lama dan harga KG | Satuan/harga disetel bersama dan supplier diambil dari lot |
+| Total JavaScript pecahan berpotensi berbeda dengan NUMERIC SQL | Aritmetika desimal untuk perkalian dan penjumlahan total; berat tidak dibulatkan |
+| Panduan lama menyebut demo, login ulang setiap reload, atau tidak perlu SQL | Panduan pemasangan disatukan pada PATCH-028.md, setup dan README diperbarui |
+| Dokumen patch lama menumpuk | Script pembersihan terbatas pada PATCH-018.md sampai PATCH-027.md |
 
-Perubahan tanggal transfer berlaku untuk transfer yang dibuat setelah update; data historis tidak ditulis ulang. Pengelompokan menu tidak menghapus Product, Store, Supplier, Master Resep, produksi, waste, bukti, atau riwayat pembatalan.
+## Pengujian yang lulus
 
-## Bukti pengujian
+- `npm run test:unit`: 10 hasil uji termasuk katalog/stok, FIFO produksi, waste, retry, ketersediaan, uang, cadangan offline dan total desimal.
+- `npm run test:db`: database fresh dan upgrade; otorisasi, rollback, transaksi, perpindahan stok, produksi, waste dan jurnal biaya.
+- `npm run test:offline`: validasi/pencadangan lokal serta SQL fresh/upgrade; migration 021 dijalankan ulang, replay tanpa duplikasi, payload berbeda, stok kurang, perubahan resep, antrean kitchen dan akses cabang. Query audit data juga dijalankan pada fixture.
+- `npm run test:receipts`: kiriman beberapa produk, harga nota masing-masing, satu ongkir, retry, duplikasi produk, rollback, nol ongkir dan pembagian biaya tanpa selisih.
+- `npm run test:employees`: profil/foto, username/telepon, akses privat akun, rate limit, reset password, absensi dan jadwal.
+- `npm run test:browser`: smoke test seluruh halaman POS desktop/mobile dan tema terang/gelap, form karyawan/foto, login serta halaman website/menu.
+- `npm run test:offline:browser`: Chromium dengan HTTP server lokal, IndexedDB dan service worker sungguhan; jaringan dimatikan. Meliputi barcode, dua pembayaran offline, reload, cetak struk lokal, pencegahan logout dan dua tab, reconnect, commit dengan respons putus, konflik/retry, sesi kedaluwarsa dan login ulang, penolakan penyimpanan penuh serta lebar mobile.
+- Sintaks file JavaScript yang diubah diperiksa. Manifest service worker dibangun dari seluruh aset POS.
 
-- `npm test`: empat berkas uji lulus. Mencakup metadata/foto produk, penyesuaian dan penghapusan, FIFO, resep bertingkat, tanggal/store/kedaluwarsa, kekurangan bahan, duplikasi simpan, pembatalan, waste total, keseimbangan berat, bukti, dan retry.
-- `npm run test:db`: SQL PostgreSQL lokal lulus untuk instalasi baru dan urutan upgrade 000–007. Mencakup akses staff/helper, penjualan butir dengan kg aktual, rollback pembayaran kurang, idempotensi, tanggal transfer, waste/bukti setelah dibatalkan, resep, produksi dan pemulihan bahan.
-- `npm run test:browser`: Chromium lulus untuk semua halaman navigasi, form produk/bahan, penerimaan, resep, produksi/batal, jual per butir, penjagaan form, upload foto, lihat bukti, waste/batal. Pemeriksaan overflow halaman dilakukan pada lebar 1440 dan 390 piksel; tabel lebar memakai scroll di dalam panel.
-- Website customer dan menu tidak dibangun ulang. Kode menu ditelaah/diformat; integrasi eksternal seperti WhatsApp, peta, TikTok dan konfigurasi hosting tidak diuji secara langsung.
+Browser memakai backend fixture; SQL diuji dengan PostgreSQL PGlite. Kedua lapisan diuji terpisah. Database produksi, perangkat scanner/timbangan/printer, pemasangan Android/iOS/Windows dan deployment Vercel belum diuji langsung.
 
-## Kebutuhan yang belum tercakup pada implementasi saat ini
+## Cleaning data
 
-1. **Kasir produk satuan:** penjualan dessert/minuman/olahan belum tersedia. Ini prioritas berikutnya untuk menyelesaikan alur hasil produksi → stok produk jadi → penjualan.
-2. **HPP/laba:** harga beli saat ini referensi master, bukan biaya aktual per penerimaan atau HPP resep. Laporan omzet bukan laporan laba.
-3. **Menu customer:** editor `/menu/kelola.html` menyimpan draft lokal lalu mengekspor `menu.json`; belum sinkron otomatis dengan produk POS.
-4. **Hak akses:** seluruh staff terdaftar dapat mengakses semua store. Belum ada pemisahan owner/kasir per cabang.
-5. **Skala data:** `pos_read` masih membaca seluruh riwayat dan foto master produk. Foto waste sekarang dimuat terpisah, tetapi pagination/filter server dan penyimpanan foto di object storage tetap tahap berikutnya jika data membesar.
-6. **Penyesuaian stok:** pengurangan kg/butir menggunakan FIFO terpisah, tidak memilih batch fisik. Untuk koreksi operasional gunakan pembatalan transaksi asal bila tersedia; penyesuaian saldo bukan pengganti pelacakan batch.
-7. **Browser recovery:** sessionStorage terbatas dan dapat dinonaktifkan. Payload foto besar bisa gagal dipersistenkan, meski ID retry masih tersedia selama tab aktif. Riwayat server perlu diperiksa setelah tab hilang sebelum membuat transaksi pengganti.
+ZIP berisi source, bukan salinan isi database aktif. Tidak ada penghapusan / penggabungan otomatis data operasional. `database/audit-data.sql` menampilkan kandidat masalah tanpa mengubah data: duplikasi barcode/SKU, saldo buah tidak seimbang, resep kosong/ganda, biaya belum diketahui, stok kedaluwarsa dan journal tanpa lot.
 
-Tidak ada klaim bebas bug atau validasi atas konfigurasi akun produksi. Paket ini belum di-push, di-deploy, atau dijalankan terhadap database operasional.
+Duplikasi definisi fungsi SQL versi lama dipertahankan: wrapper aktif masih memanggilnya. Menghapusnya sebagai “kode ganda” akan memutus alur database. `pos.sql` merupakan hasil build; `sections` adalah sumber; `migrations` untuk update database yang sudah berjalan.
+
+## Batas fitur
+
+Sinkronisasi berjalan saat aplikasi terbuka. Kitchen di perangkat berbeda membutuhkan koneksi untuk menerima order. Akses/master/stok global tetap diverifikasi server. Konflik antarkasir offline atau perubahan resep ditahan untuk pemeriksaan, tidak dihilangkan otomatis. Format barcode timbangan dinamis masih perlu konfigurasi alat. Cetak menggunakan driver/dialog browser. QRIS/transfer diverifikasi manual.
+
+Referensi API browser: [Service workers](https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API/Using_Service_Workers), [IndexedDB](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API/Using_IndexedDB).
