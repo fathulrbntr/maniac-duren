@@ -33,3 +33,11 @@ npm run db:build
 npm run pwa:build
 
 Setelah menyalin paket ke repository lama, jalankan `node scripts/clean-project.mjs` untuk menghapus file patch, migration duplikat dan CSS modern yang tidak digunakan. Periksa `git diff --stat`, lalu `git add -A` untuk menyertakan penghapusan. ZIP tidak menyertakan .git, node_modules, rahasia atau file environment aktif.
+
+## Perbaikan login 036
+
+Kode toggle sidebar hanya dipasang setelah sidebar dirender. Versi 035 memasangnya juga di halaman login dan handler tema sehingga akses elemen null dapat menghentikan inisialisasi form. Tidak perlu menjalankan SQL atau reset untuk perbaikan ini.
+
+Pengukuran login tersedia di Console browser sebagai POS login timing (ms): accountMs mencakup API login, profileMs mencakup pos_bootstrap, totalMs mencakup sampai tampilan siap. Field server memisahkan identity dan auth melalui Server-Timing. Nilai hanya durasi, tidak berisi identifier, password atau token. Durasi sebelum fungsi Vercel mulai tidak tercakup Server-Timing.
+
+Uji lokal: node tests/login-startup.test.mjs dan npm run test:employees lulus. Tampilan browser dan waktu produksi belum diverifikasi.

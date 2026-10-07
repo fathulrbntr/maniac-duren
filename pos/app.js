@@ -57,21 +57,11 @@ document.addEventListener('click', event => {
   document.documentElement.dataset.theme = theme;
   try { localStorage.setItem(themeKey, theme); } catch { /* Theme still works when storage is unavailable. */ }
   syncThemeControls();
-  document.querySelector("#sidebar-toggle").onclick = (ev) => {
-    const collapsed = document.querySelector(".shell").classList.toggle("sidebar-collapsed");
-    localStorage.setItem("pos-sidebar-collapsed",collapsed?"1":"0");
-    ev.currentTarget.setAttribute("aria-expanded",String(!collapsed));
-  };
 });
 window.addEventListener('storage', event => {
   if (event.key === themeKey && ['light','dark'].includes(event.newValue)) {
     document.documentElement.dataset.theme = event.newValue;
     syncThemeControls();
-  document.querySelector("#sidebar-toggle").onclick = (ev) => {
-    const collapsed = document.querySelector(".shell").classList.toggle("sidebar-collapsed");
-    localStorage.setItem("pos-sidebar-collapsed",collapsed?"1":"0");
-    ev.currentTarget.setAttribute("aria-expanded",String(!collapsed));
-  };
   }
 });
 const stockFilter = {};
@@ -244,13 +234,10 @@ async function mutate(action, payload) {
 function login(message = "") {
   app.innerHTML = `<div class="auth">${themeButton("auth-theme")}<section class="auth-brand"><img src="logo.png" alt="Maniac Duren"><h1>Satu kasir.<br>Dua satuan stok.</h1><p>Penjualan per kilo atau per butir, stok setiap store, dan asal supplier dalam satu tempat.</p></section><section class="auth-form"><div><span class="tag">AREA ADMIN</span><h2 style="margin-top:20px">Masuk ke POS</h2><p class="muted">Kelola operasional Maniac Duren.</p>${config.configured ? "" : `<div class="notice">Database belum dihubungkan. Hubungi pengelola untuk mengaktifkan akses POS.</div>`}<form id="login-form">${field("Email / username / nomor telepon", '<input name="identifier" required autocomplete="username" placeholder="Email, username, atau nomor telepon">')}${field("Password", '<input name="password" type="password" required autocomplete="current-password">')}<p class="error" id="login-error">${e(message)}</p><button class="primary full" type="submit" ${config.configured ? "" : "disabled"}>Masuk</button></form><a class="muted" href="/">Kembali ke website customer</a></div></section></div>`;
   syncThemeControls();
-  document.querySelector("#sidebar-toggle").onclick = (ev) => {
-    const collapsed = document.querySelector(".shell").classList.toggle("sidebar-collapsed");
-    localStorage.setItem("pos-sidebar-collapsed",collapsed?"1":"0");
-    ev.currentTarget.setAttribute("aria-expanded",String(!collapsed));
-  };
   document.querySelector("#login-form").onsubmit = async (ev) => {
     ev.preventDefault();
+    const startedAt = performance.now();
+    const timing = window.posLoginTiming = {version:36};
     const form = ev.currentTarget,
       b = form.querySelector("button");
     b.disabled = true;
@@ -266,6 +253,8 @@ function login(message = "") {
         body: JSON.stringify(values),
       });
       const d = await response.json();
+      timing.accountMs = Math.round(performance.now() - startedAt);
+      timing.server = response.headers.get("Server-Timing") || "";
       if (!response.ok) throw Error(d.error || "Login gagal. Coba lagi.");
       if (!d.access_token || !d.user?.id) throw Error("Respons login tidak lengkap.");
       token = d.access_token;
@@ -274,7 +263,9 @@ function login(message = "") {
       mode = "live";
       setRetryScope(config.url + ":" + d.user.id);
       b.textContent = "Membuka akun…";
+      const profileStarted = performance.now();
       const initial = await request("/rest/v1/rpc/pos_bootstrap", {});
+      timing.profileMs = Math.round(performance.now() - profileStarted);
       state = {...emptyState(), orders:[], events:[], journal:[], money:[], people:[], attendance:[], ...initial};
       fullDataLoaded = false;
       store = state.stores[0]?.id || "";
@@ -289,6 +280,8 @@ function login(message = "") {
       b.disabled = false;
       b.textContent = "Masuk";
       form.removeAttribute("aria-busy");
+      timing.totalMs = Math.round(performance.now() - startedAt);
+      console.info("POS login timing (ms)", timing);
     }
   };
 }
@@ -468,6 +461,7 @@ function render() {
     localStorage.setItem("pos-sidebar-collapsed",collapsed?"1":"0");
     ev.currentTarget.setAttribute("aria-expanded",String(!collapsed));
   };
+
   document.querySelectorAll("[data-view]").forEach(
     (b) =>
       (b.onclick = () => openPage(b.dataset.view, b)),
