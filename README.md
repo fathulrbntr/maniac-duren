@@ -41,3 +41,11 @@ Kode toggle sidebar hanya dipasang setelah sidebar dirender. Versi 035 memasangn
 Pengukuran login tersedia di Console browser sebagai POS login timing (ms): accountMs mencakup API login, profileMs mencakup pos_bootstrap, totalMs mencakup sampai tampilan siap. Field server memisahkan identity dan auth melalui Server-Timing. Nilai hanya durasi, tidak berisi identifier, password atau token. Durasi sebelum fungsi Vercel mulai tidak tercakup Server-Timing.
 
 Uji lokal: node tests/login-startup.test.mjs dan npm run test:employees lulus. Tampilan browser dan waktu produksi belum diverifikasi.
+
+## Navigasi dan stabilisasi 038
+
+POS berjalan sebagai web biasa; cache PWA dinonaktifkan. pos/sw.js dipertahankan sebagai worker pembersih agar browser dengan instalasi lama dapat melepas cache aplikasinya. Pembaruan worker tidak memaksa navigasi tab dan tidak menghapus IndexedDB, transaksi tertunda, akun atau penyimpanan isian. Jika masih tersangkut versi lama, buka /pos-recover.html setelah deploy.
+
+Menu langsung berpindah tanpa teks “Membuka menu”. Data yang tersedia dipakai dari memori sesi; data lengkap disiapkan setelah login tanpa menahan login. Pada kunjungan pertama sebelum data tersedia, kerangka halaman tampil hingga respons diterima. Navigasi dan logout tetap dapat digunakan. Respons lama ditolak setelah pindah menu/outlet, transaksi atau logout. Pembaruan latar belakang tidak merender ulang formulir yang sedang diedit. Penyimpanan tetap divalidasi di database.
+
+Uji: node tests/page-cache.test.mjs; node tests/instant-navigation.test.mjs; node tests/login-startup.test.mjs; node tests/cache-recovery.test.mjs. Tes menggunakan data tiruan, bukan ukuran kecepatan produksi.

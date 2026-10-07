@@ -8,15 +8,13 @@ const result=await recoverPos({origin:'https://shop.test',serviceWorker:{getRegi
 assert.deepEqual(unregistered,['https://shop.test/pos/']);assert.deepEqual(removed,['maniac-pos-shell-old']);assert.deepEqual(result,{workers:1,assets:1});
 await recoverPos({origin:'https://shop.test'});
 await assert.rejects(recoverPos({origin:'https://shop.test',serviceWorker:{getRegistrations:async()=>[{scope:'https://shop.test/pos/',unregister:async()=>false}]}}),/Pemulihan belum/);
-const handlers={},rows=new Map([['https://shop.test/pos/app.js',new Response('OLD')],['https://shop.test/pos/app.js?v=35',new Response('OLD-35')]]);
-let online=true,puts=0,quota=false;
-const cache={match:async key=>rows.get(typeof key==='string'?key:key.url)?.clone(),put:async(req,res)=>{if(quota)throw Error('quota');puts++;rows.set(req.url,res)}};
-vm.runInNewContext(fs.readFileSync('pos/sw.js','utf8'),{URL,self:{location:{origin:'https://shop.test'},addEventListener:(name,fn)=>handlers[name]=fn},caches:{open:async()=>cache},fetch:async()=>{if(!online)throw Error('offline');return new Response('NEW')}});
-async function read(url){let response;handlers.fetch({request:new Request(url),respondWith:p=>response=p});return response?await (await response).text():null}
-assert.equal(await read('https://shop.test/pos/app.js?v=37'),'NEW');assert.equal(puts,1);
-online=false;assert.equal(await read('https://shop.test/pos/app.js?v=37'),'NEW');
-await assert.rejects(read('https://shop.test/pos/app.js?v=38'),/offline/);
-assert.equal(await read('https://shop.test/api/pos-login'),null);
-assert.equal(await read('https://other.test/pos/app.js'),null);
-online=true;quota=true;assert.equal(await read('https://shop.test/pos/app.js?v=39'),'NEW');
-console.log('PASS recovery scope/cache isolation, exact-version offline fallback, fresh network response, cache quota failure, API exclusion');
+const handlers={},deleted=[];let unregisteredWorker=false,skipWaiting=false;
+vm.runInNewContext(fs.readFileSync('pos/sw.js','utf8'),{
+ self:{addEventListener:(name,fn)=>handlers[name]=fn,skipWaiting:async()=>{skipWaiting=true},registration:{unregister:async()=>{unregisteredWorker=true}}},
+ caches:{keys:async()=>['maniac-pos-shell-old','other-app'],delete:async key=>{deleted.push(key);return true}}
+});
+let installed,activated;
+handlers.install({waitUntil:promise=>installed=promise});await installed;
+handlers.activate({waitUntil:promise=>activated=promise});await activated;
+assert(skipWaiting);assert(unregisteredWorker);assert.deepEqual(deleted,['maniac-pos-shell-old']);assert.equal(handlers.fetch,undefined);
+console.log('PASS recovery scope/cache isolation and retirement worker: no fetch interception, no unrelated cache deletion');

@@ -1140,3 +1140,5 @@ tbody tr:hover { background:var(--surface-soft); }
 @media(max-width:760px){.shell.sidebar-collapsed{grid-template-columns:1fr}.sidebar-collapsed .sidebar{width:auto}.sidebar-collapsed .nav{display:flex;overflow-x:auto}.sidebar-collapsed .nav-section{display:flex;flex-shrink:0}}
 
 .sidebar-collapsed .sidebar-account{display:block}.sidebar-collapsed .sidebar-account .account-profile{display:none}.sidebar-collapsed .sidebar-logout{font-size:0;justify-content:center}.sidebar-collapsed .sidebar-logout svg{width:22px;height:22px}
+
+.page-placeholder{display:grid;gap:16px;margin:24px 0}.page-placeholder span{height:52px;border-radius:8px;background:var(--hover);opacity:.55}.page-placeholder span:first-child{max-width:60%}

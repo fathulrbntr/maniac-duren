@@ -1,3 +1,4 @@
+import {createPageCache,mayApplyPage} from "./page-cache.mjs?v=38";
 import {receiptAdminPanel,bindBatch} from "./batch-ui.mjs?v=21";
 import {installMoneyInputs} from './money-input.mjs?v=19';
 installMoneyInputs();
@@ -66,7 +67,11 @@ window.addEventListener('storage', event => {
 });
 const stockFilter = {};
 const catalogFilter = { query: "", category: "", itemType: "" };
-let fullDataLoaded=false, loadingPage=false;
+let pageDataReady=false, pageReadError="", displayedSnapshot;
+const pageCache=createPageCache((page,branch)=>["orders","kitchen"].includes(page)
+  ? request("/rest/v1/rpc/pos_read_service",{branch,catalog:true})
+  : request("/rest/v1/rpc/pos_read",{}));
+const normalizeState=data=>({...emptyState(),orders:[],events:[],journal:[],money:[],people:[],attendance:[],...data});
 let stateRevision=0, polling=false, soundEnabled=false, audioContext;
 const seenKitchen=new Map();
 let state = emptyState(),
@@ -174,20 +179,55 @@ async function request(path, body, auth = true) {
   }
   return data;
 }
-async function refresh(page = view, branch = store) {
-  if (busy) throw Error("Tunggu proses simpan selesai.");
-  if (mode === "live") {
-    state = ["orders","kitchen"].includes(page) ? { ...emptyState(), journal:[], money:[], ...await request("/rest/v1/rpc/pos_read_service", {branch,catalog:true}) } : await request("/rest/v1/rpc/pos_read", {});
-    fullDataLoaded = true;
-    if (!store || !state.stores.some((x) => x.id === store))
-      store = state.stores[0]?.id || "";
-  } else if (!store) store = state.stores[0]?.id || "";
-  const pending = pendingRetry();
-  if (reconcileRetry(state)) {
-    if (pending.action === "sale") cart = [];
-    if (pending.action === "order_create") clearOrderDraft();
+function currentPageRequest(){return {revision:stateRevision,page:view,branch:store,live:mode==="live",busy};}
+function applyPageData(data){
+  displayedSnapshot=data;state=normalizeState(data);pageDataReady=true;pageReadError="";
+  if(!store||!state.stores.some(x=>x.id===store))store=state.stores[0]?.id||"";
+}
+function userIsEditing(){
+  return !!document.querySelector('dialog[open],main form[data-dirty="true"]') ||
+    !!document.activeElement?.matches('main input,main select,main textarea');
+}
+async function refresh(page=view,branch=store){
+  if(busy)throw Error("Tunggu proses simpan selesai.");
+  const expected=currentPageRequest();
+  if(mode==="live"){
+    const data=await pageCache.load(page,branch,{force:true});
+    if(!data||!mayApplyPage(expected,currentPageRequest()))return false;
+    applyPageData(data);
+  }
+  const pending=pendingRetry();
+  if(reconcileRetry(state)){
+    if(pending.action==="sale")cart=[];
+    if(pending.action==="order_create")clearOrderDraft();
     toast("Pengiriman sebelumnya sudah tersimpan.");
   }
+  return true;
+}
+async function updatePageInBackground(force=false){
+  if(mode!=="live"||view==="start"||view==="guide")return;
+  const expected=currentPageRequest();
+  try{
+    const data=await pageCache.load(view,store,{force});
+    if(!data||!mayApplyPage(expected,currentPageRequest())||userIsEditing())return;
+    const first=!pageDataReady;
+    if(pageDataReady&&data===displayedSnapshot)return;
+    applyPageData(data);
+    if(view==="orders"&&!first){
+      document.querySelector('#order-products')?.dispatchEvent(new CustomEvent('stock-refresh',{detail:state}));
+    }else render();
+  }catch(error){
+    if(!mayApplyPage(expected,currentPageRequest()))return;
+    pageReadError=error.message;
+    if(!pageDataReady)render();else toast(error.message);
+  }
+}
+function warmPageData(){
+  if(mode==="live")void pageCache.load("stock",store).then(data=>{
+    if(data&&mode==="live"&&!busy&&!pageDataReady&&!["start","guide"].includes(view)){
+      applyPageData(data);render();
+    }
+  }).catch(()=>{});
 }
 async function mutate(action, payload) {
   if (busy) return false;
@@ -199,6 +239,7 @@ async function mutate(action, payload) {
     return false;
   }
   stateRevision++;
+  pageCache.invalidate();
   busy = true;
   const controls = [
     ...document.querySelectorAll("button,input,select,textarea"),
@@ -213,6 +254,8 @@ async function mutate(action, payload) {
       state = ["orders","kitchen"].includes(view) && action.startsWith("order_")
         ? {...emptyState(),journal:[],money:[],...await request("/rest/v1/rpc/pos_mutate_service",{action,payload,branch:store})}
         : await request("/rest/v1/rpc/pos_mutate", { action, payload });
+    if(mode==="live")pageCache.put(["orders","kitchen"].includes(view)&&action.startsWith("order_")?view:"stock",store,state);
+    displayedSnapshot=state;pageDataReady=true;
     settleRetry(action);
     return true;
   } catch (error) {
@@ -237,7 +280,7 @@ function login(message = "") {
   document.querySelector("#login-form").onsubmit = async (ev) => {
     ev.preventDefault();
     const startedAt = performance.now();
-    const timing = window.posLoginTiming = {version:37};
+    const timing = window.posLoginTiming = {version:38};
     const form = ev.currentTarget,
       b = form.querySelector("button");
     b.disabled = true;
@@ -267,10 +310,13 @@ function login(message = "") {
       const initial = await request("/rest/v1/rpc/pos_bootstrap", {});
       timing.profileMs = Math.round(performance.now() - profileStarted);
       state = {...emptyState(), orders:[], events:[], journal:[], money:[], people:[], attendance:[], ...initial};
-      fullDataLoaded = false;
+      pageCache.reset();
+      pageDataReady = false;
+      pageReadError = "";
       store = state.stores[0]?.id || "";
       view = "start";
       render();
+      warmPageData();
     } catch (err) {
       token = "";
       refreshToken = "";
@@ -420,27 +466,24 @@ function startPage() {
     ["stock", "stock", "Stok & barang masuk"], ["production", "produce", "Produksi bahan"],
     ["finance", "finance", "Biaya & laba kotor"], ["attendance", "attendance", "Absensi"],
   ].filter(([,permission]) => state.access?.[permission]);
-  return `<section class="panel"><h2>Selamat datang, ${e(state.me?.name || "")}</h2><p>${e(name("stores",store))}. Pilih pekerjaan untuk mulai.</p><div class="toolbar">${available.map(([key,,label]) => `<button type="button" data-view="${key}">${label}</button>`).join("")}</div><p class="muted">Data operasional diambil saat menu dibuka.</p></section>`;
+  return `<section class="panel"><h2>Selamat datang, ${e(state.me?.name || "")}</h2><p>${e(name("stores",store))}. Pilih pekerjaan untuk mulai.</p><div class="toolbar">${available.map(([key,,label]) => `<button type="button" data-view="${key}">${label}</button>`).join("")}</div><p class="muted">Pilih menu sesuai pekerjaan Anda.</p></section>`;
 }
-async function openPage(next, button) {
-  if (!mayLeave(busy) || loadingPage) return;
-  loadingPage = true;
-  const label = button?.textContent;
-  if (button) {button.disabled = true;button.textContent = "Membuka menu…";}
-  try {
-    stateRevision++;
-    if (mode === "live" && next !== "start") await refresh(next);
-    view = next;
-    render();
-  } catch (error) { toast(error.message); }
-  finally {
-    loadingPage = false;
-    if (button?.isConnected) {button.disabled = false;button.textContent = label;}
-  }
+function openPage(next){
+  if(!mayLeave(busy))return;
+  stateRevision++;view=next;pageReadError="";
+  const cached=pageCache.peek(next,store);
+  pageDataReady=mode!=="live"||["start","guide"].includes(next)||!!cached;
+  if(mode==="live"&&cached)applyPageData(cached);
+  render();
+  void updatePageInBackground();
+}
+function pendingPage(){
+  return `<section class="panel" aria-busy="${!pageReadError}"><h2>${e(title[view]||"POS")}</h2>${pageReadError?`<p class="error">${e(pageReadError)}</p><button type="button" id="retry-page">Coba lagi</button>`:'<div class="page-placeholder" aria-hidden="true"><span></span><span></span><span></span></div>'}</section>`;
 }
 function render() {
+  const waiting=mode==="live"&&!pageDataReady&&!["start","guide"].includes(view);
   app.innerHTML = shell(
-    {
+    waiting?pendingPage():{
       ...Object.fromEntries(opsPages.map(key=>[key,()=>opsPage(key,state,store)])),
       dashboard,
       start: startPage,
@@ -467,7 +510,7 @@ function render() {
       (b.onclick = () => openPage(b.dataset.view, b)),
   );
   document.querySelector("#active-store").onchange = async (ev) => {
-    if (loadingPage || !mayLeave(busy)) {
+    if (!mayLeave(busy)) {
       ev.target.value = store;
       return;
     }
@@ -478,16 +521,14 @@ function render() {
       ev.target.value = store;
       return;
     }
-    const previous = store, next = ev.target.value;
-    loadingPage = true; stateRevision++;
-    try {
-      if (mode === "live" && view !== "start") await refresh(view,next);
-      store = next; cart = []; clearOrderDraft(); render();
-    } catch(error) { store = previous; ev.target.value = previous; toast(error.message); }
-    finally { loadingPage = false; }
+    stateRevision++;store=ev.target.value;cart=[];clearOrderDraft();pageReadError="";
+    const cached=pageCache.peek(view,store);
+    pageDataReady=mode!=="live"||["start","guide"].includes(view)||!!cached;
+    if(mode==="live"&&cached)applyPageData(cached);
+    render();void updatePageInBackground();
   };
   document.querySelector("#logout").onclick = () => {
-    if (loadingPage || !mayLeave(busy)) return;
+    if (!mayLeave(busy)) return;
     if (cart.length && !confirm("Keluar dan kosongkan pesanan?")) return;
     token = "";
     refreshToken = "";
@@ -497,11 +538,18 @@ function render() {
     seenKitchen.clear();
     cart = [];
     state = emptyState();
-    fullDataLoaded = false;
+    pageCache.reset();
+    pageDataReady = false;
+    pageReadError = "";
     view = "dashboard";
     clearOrderDraft();
     login();
   };
+  if(waiting){
+    const retry=document.querySelector("#retry-page");
+    if(retry)retry.onclick=()=>{pageReadError="";render();void updatePageInBackground(true);};
+    return;
+  }
   document
     .querySelectorAll("[data-receipt]")
     .forEach((b) => (b.onclick = () => receipt(b.dataset.receipt)));
@@ -941,12 +989,12 @@ function observeKitchen(){
  if(incoming.length){toast(`${incoming.length} pesanan baru masuk ke kitchen`);beepKitchen();}
 }
 setInterval(async()=>{
- if(mode!=='live'||!fullDataLoaded||loadingPage||busy||polling||!['orders','kitchen'].includes(view))return;
+ if(mode!=='live'||!pageDataReady||busy||polling||!['orders','kitchen'].includes(view))return;
  polling=true;const revision=stateRevision,sessionToken=token;
  try{
   const fresh={...emptyState(),journal:[],money:[],...await request('/rest/v1/rpc/pos_read_service',{branch:store,catalog:false}),products:state.products,recipes:state.recipes,suppliers:state.suppliers};
   if(mode!=='live'||busy||revision!==stateRevision||sessionToken!==token)return;
-  state=fresh;observeKitchen();
+  state=fresh;displayedSnapshot=fresh;pageCache.put(view,store,fresh);observeKitchen();
   if(view==='kitchen'&&!document.querySelector('dialog[open]'))render();
   else document.querySelector('#order-products')?.dispatchEvent(new CustomEvent('stock-refresh',{detail:state}));
   const status=document.querySelector('#kitchen-sync');if(status)status.textContent='Terhubung · diperbarui '+new Date().toLocaleTimeString('id-ID');
