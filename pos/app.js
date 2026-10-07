@@ -9,7 +9,7 @@ import {
   navigation,
   mayLeave,
   trackForms,
-} from "./navigation.mjs?v=33";
+} from "./navigation.mjs?v=34";
 import {
   prepareRetry,
   settleRetry,
@@ -64,8 +64,6 @@ window.addEventListener('storage', event => {
     syncThemeControls();
   }
 });
-let compactSidebar = true;
-try { compactSidebar = localStorage.getItem("maniac-pos-sidebar") !== "expanded"; } catch {}
 const stockFilter = {};
 const catalogFilter = { query: "", category: "", itemType: "" };
 let fullDataLoaded=false, loadingPage=false;
@@ -289,7 +287,7 @@ function accountProfile() {
   return `<div class="account-profile" aria-label="Akun yang login">${photo ? `<img src="${e(photo)}" alt="Foto ${e(accountName)}">` : `<span class="account-avatar" aria-hidden="true">${e(initials)}</span>`}<div><small>AKUN LOGIN</small><strong>${e(accountName)}</strong><span>${e(role)}</span></div></div>`;
 }
 function shell(body) {
-  return `<div class="shell ${compactSidebar?"sidebar-compact":""} ${["products","stock"].includes(view)?"inventory-shell":""}"><aside class="sidebar"><div class="sidebar-header"><div><div class="brand"><img src="logo.png" alt="Maniac Duren"></div><div class="brand-sub">MANIAC DUREN · POS</div><button type="button" class="sidebar-toggle" data-sidebar-toggle aria-label="${compactSidebar?'Perluas sidebar':'Ringkas sidebar'}" title="${compactSidebar?'Perluas sidebar':'Ringkas sidebar'}" aria-expanded="${!compactSidebar}">${icon("stock")}<span>Ringkas menu</span></button></div><div class="sidebar-store"><label for="active-store">TOKO AKTIF</label><div class="store-select-wrap">${icon("stores")}<select id="active-store" aria-label="Toko aktif" title="${e(name("stores", store))}">${options("stores", store)}</select></div></div></div><nav class="nav" aria-label="Navigasi POS">${navigation(title, view, icon, state.access)}</nav><div class="sidebar-account">${accountProfile()}<button id="logout" class="sidebar-logout" type="button" title="Logout" aria-label="Logout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 4H4v16h5M14 8l4 4-4 4M8 12h10"/></svg><span>Logout</span></button></div></aside><main><header class="topbar"><div class="workspace-heading"><span class="workspace-eyebrow">MANIAC DUREN</span><strong>${e(view === "start" ? "Beranda" : title[view] || "Operasional")}</strong></div><div class="toolbar"><span class="outlet-chip" title="${e(name("stores",store))}">${e(name("stores",store))}</span><span class="tag ${mode === "demo" ? "demo" : ""}">${mode === "demo" ? "MODE DEMO" : "DATABASE AKTIF"}</span>${themeButton()}</div></header>${body}<p class="page-foot">${mode === "demo" ? "Semua angka adalah data contoh." : "Stok dan penjualan tersimpan di database bersama."} Berat kg dicatat pada setiap penjualan, termasuk penjualan per butir.</p></main></div>`;
+  return `<div class="shell ${["products","stock"].includes(view)?"inventory-shell":""}"><aside class="sidebar"><div class="sidebar-header"><div><div class="brand"><img src="logo.png" alt="Maniac Duren"></div><div class="brand-sub">OPERATIONS / POS</div></div><div class="sidebar-store"><label for="active-store">TOKO AKTIF</label><div class="store-select-wrap">${icon("stores")}<select id="active-store" aria-label="Toko aktif" title="${e(name("stores", store))}">${options("stores", store)}</select></div></div></div><nav class="nav" aria-label="Navigasi POS">${navigation(title, view, icon, state.access)}</nav><div class="sidebar-account">${accountProfile()}<button id="logout" class="sidebar-logout" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 4H4v16h5M14 8l4 4-4 4M8 12h10"/></svg>Logout</button></div></aside><main><header class="topbar"><div class="toolbar"><span class="tag ${mode === "demo" ? "demo" : ""}">${mode === "demo" ? "MODE DEMO" : "DATABASE AKTIF"}</span>${themeButton()}</div></header>${body}<p class="page-foot">${mode === "demo" ? "Semua angka adalah data contoh." : "Stok dan penjualan tersimpan di database bersama."} Berat kg dicatat pada setiap penjualan, termasuk penjualan per butir.</p></main></div>`;
 }
 function dashboard() {
   const rows = saleRows(state, { from: today(), to: today(), store }),
@@ -447,16 +445,6 @@ function render() {
     }[view](),
   );
   syncThemeControls();
-  document.querySelector('[data-sidebar-toggle]').onclick = () => {
-    compactSidebar = !compactSidebar;
-    try { localStorage.setItem("maniac-pos-sidebar", compactSidebar ? "compact" : "expanded"); } catch {}
-    // Toggle layout without rebuilding forms or losing unsaved input.
-    document.querySelector('.shell').classList.toggle('sidebar-compact', compactSidebar);
-    const button = document.querySelector('[data-sidebar-toggle]');
-    button.setAttribute('aria-expanded', String(!compactSidebar));
-    button.setAttribute('aria-label', compactSidebar ? 'Perluas sidebar' : 'Ringkas sidebar');
-    button.title = compactSidebar ? 'Perluas sidebar' : 'Ringkas sidebar';
-  };
   document.querySelectorAll("[data-view]").forEach(
     (b) =>
       (b.onclick = () => openPage(b.dataset.view, b)),

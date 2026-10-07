@@ -23,7 +23,7 @@ export function navigation(title, view, icon, access) {
   const visible = visiblePages(access);
   return sections.map(section => ({...section, pages: section.pages.filter(key => visible[key])}))
     .filter(section => section.pages.length)
-    .map(section => `<section class="nav-section" aria-label="${section.label}"><span class="nav-heading">${section.label}</span>${section.pages.map(key => `<button type="button" data-view="${key}" title="${title[key]}" aria-label="${title[key]}" class="${view === key ? "active" : ""}" ${view === key ? 'aria-current="page"' : ""}>${icon(key)}<span class="nav-label">${title[key]}</span></button>`).join("")}</section>`)
+    .map(section => `<section class="nav-section" aria-label="${section.label}"><span class="nav-heading">${section.label}</span>${section.pages.map(key => `<button type="button" data-view="${key}" class="${view === key ? "active" : ""}" ${view === key ? 'aria-current="page"' : ""}>${icon(key)}<span class="nav-label">${title[key]}</span></button>`).join("")}</section>`)
     .join("");
 }
 export function mayLeave(busy) {
