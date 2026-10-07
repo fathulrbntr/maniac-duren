@@ -26,7 +26,7 @@ const files = [
 ];
 // Jalankan sumber sesuai urutan agar rename wrapper tetap menunjuk fungsi versi sebelumnya.
 // Menghapus definisi yang namanya sama akan memutus rantai pos_read/pos_mutate.
-const result = "-- GENERATED: node scripts/build-database.mjs\n-- Install baru saja. Database aktif: gunakan migration.\n" + [...files, "sections/operations/receipt-weighing.sql", "sections/operations/direct-stock-no-sorting.sql", "sections/operations/multi-product-receipt.sql", "sections/operations/batch-tracking.sql", "sections/operations/offline-pos.sql", "sections/operations/login-fast.sql"].map(name =>
+const result = "-- GENERATED: node scripts/build-database.mjs\n-- Install baru saja. Database aktif: gunakan migration.\n" + [...files, "sections/operations/receipt-weighing.sql", "sections/operations/direct-stock-no-sorting.sql", "sections/operations/multi-product-receipt.sql", "sections/operations/batch-tracking.sql", "sections/operations/offline-pos.sql", "sections/operations/login-fast.sql", "sections/operations/login-bootstrap.sql"].map(name =>
   "\n-- Bagian: " + name + "\n" + fs.readFileSync(path.join(base, name), "utf8")
 ).join("\n");
 fs.writeFileSync(path.join(base, "pos.sql"), result);

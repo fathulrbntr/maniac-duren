@@ -9,7 +9,7 @@ import {
   navigation,
   mayLeave,
   trackForms,
-} from "./navigation.mjs?v=29";
+} from "./navigation.mjs?v=33";
 import {
   prepareRetry,
   settleRetry,
@@ -64,8 +64,11 @@ window.addEventListener('storage', event => {
     syncThemeControls();
   }
 });
+let compactSidebar = true;
+try { compactSidebar = localStorage.getItem("maniac-pos-sidebar") !== "expanded"; } catch {}
 const stockFilter = {};
 const catalogFilter = { query: "", category: "", itemType: "" };
+let fullDataLoaded=false, loadingPage=false;
 let stateRevision=0, polling=false, soundEnabled=false, audioContext;
 const seenKitchen=new Map();
 let state = emptyState(),
@@ -177,6 +180,7 @@ async function refresh() {
   if (busy) throw Error("Tunggu proses simpan selesai.");
   if (mode === "live") {
     state = await request("/rest/v1/rpc/pos_read", {});
+    fullDataLoaded = true;
     if (!store || !state.stores.some((x) => x.id === store))
       store = state.stores[0]?.id || "";
   } else if (!store) store = state.stores[0]?.id || "";
@@ -254,9 +258,12 @@ function login(message = "") {
       expires = Date.now() + d.expires_in * 1000;
       mode = "live";
       setRetryScope(config.url + ":" + d.user.id);
-      b.textContent = "Memuat data outlet…";
-      await refresh();
-      view=state.access?.sell?"orders":state.access?.kitchen?"kitchen":state.access?.attendance?"attendance":"guide";
+      b.textContent = "Membuka akun…";
+      const initial = await request("/rest/v1/rpc/pos_bootstrap", {});
+      state = {...emptyState(), orders:[], events:[], journal:[], money:[], people:[], attendance:[], ...initial};
+      fullDataLoaded = false;
+      store = state.stores[0]?.id || "";
+      view = "start";
       render();
     } catch (err) {
       token = "";
@@ -282,7 +289,7 @@ function accountProfile() {
   return `<div class="account-profile" aria-label="Akun yang login">${photo ? `<img src="${e(photo)}" alt="Foto ${e(accountName)}">` : `<span class="account-avatar" aria-hidden="true">${e(initials)}</span>`}<div><small>AKUN LOGIN</small><strong>${e(accountName)}</strong><span>${e(role)}</span></div></div>`;
 }
 function shell(body) {
-  return `<div class="shell ${["products","stock"].includes(view)?"inventory-shell":""}"><aside class="sidebar"><div class="sidebar-header"><div><div class="brand"><img src="logo.png" alt="Maniac Duren"></div><div class="brand-sub">OPERATIONS / POS</div></div><div class="sidebar-store"><label for="active-store">TOKO AKTIF</label><div class="store-select-wrap">${icon("stores")}<select id="active-store" aria-label="Toko aktif" title="${e(name("stores", store))}">${options("stores", store)}</select></div></div></div><nav class="nav" aria-label="Navigasi POS">${navigation(title, view, icon, state.access)}</nav><div class="sidebar-account">${accountProfile()}<button id="logout" class="sidebar-logout" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 4H4v16h5M14 8l4 4-4 4M8 12h10"/></svg>Logout</button></div></aside><main><header class="topbar"><div class="toolbar"><span class="tag ${mode === "demo" ? "demo" : ""}">${mode === "demo" ? "MODE DEMO" : "DATABASE AKTIF"}</span>${themeButton()}</div></header>${body}<p class="page-foot">${mode === "demo" ? "Semua angka adalah data contoh." : "Stok dan penjualan tersimpan di database bersama."} Berat kg dicatat pada setiap penjualan, termasuk penjualan per butir.</p></main></div>`;
+  return `<div class="shell ${compactSidebar?"sidebar-compact":""} ${["products","stock"].includes(view)?"inventory-shell":""}"><aside class="sidebar"><div class="sidebar-header"><div><div class="brand"><img src="logo.png" alt="Maniac Duren"></div><div class="brand-sub">MANIAC DUREN · POS</div><button type="button" class="sidebar-toggle" data-sidebar-toggle aria-label="${compactSidebar?'Perluas sidebar':'Ringkas sidebar'}" title="${compactSidebar?'Perluas sidebar':'Ringkas sidebar'}" aria-expanded="${!compactSidebar}">${icon("stock")}<span>Ringkas menu</span></button></div><div class="sidebar-store"><label for="active-store">TOKO AKTIF</label><div class="store-select-wrap">${icon("stores")}<select id="active-store" aria-label="Toko aktif" title="${e(name("stores", store))}">${options("stores", store)}</select></div></div></div><nav class="nav" aria-label="Navigasi POS">${navigation(title, view, icon, state.access)}</nav><div class="sidebar-account">${accountProfile()}<button id="logout" class="sidebar-logout" type="button" title="Logout" aria-label="Logout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 4H4v16h5M14 8l4 4-4 4M8 12h10"/></svg><span>Logout</span></button></div></aside><main><header class="topbar"><div class="workspace-heading"><span class="workspace-eyebrow">MANIAC DUREN</span><strong>${e(view === "start" ? "Beranda" : title[view] || "Operasional")}</strong></div><div class="toolbar"><span class="outlet-chip" title="${e(name("stores",store))}">${e(name("stores",store))}</span><span class="tag ${mode === "demo" ? "demo" : ""}">${mode === "demo" ? "MODE DEMO" : "DATABASE AKTIF"}</span>${themeButton()}</div></header>${body}<p class="page-foot">${mode === "demo" ? "Semua angka adalah data contoh." : "Stok dan penjualan tersimpan di database bersama."} Berat kg dicatat pada setiap penjualan, termasuk penjualan per butir.</p></main></div>`;
 }
 function dashboard() {
   const rows = saleRows(state, { from: today(), to: today(), store }),
@@ -399,11 +406,35 @@ function directoryPage(kind) {
     label = isStore ? "Store" : "Supplier";
   return `<div class="intro"><div><h2>Master ${label}</h2><p class="muted">${isStore ? "Ubah nama toko dan lokasi melalui tombol Edit toko." : "Kelola supplier, nomor telepon, dan alamat."}</p></div><button class="primary" data-master="${kind}">Tambah ${label}</button></div><section class="panel"><div class="table-wrap"><table><thead><tr><th>NAMA</th>${isStore ? "<th>LOKASI</th>" : "<th>NOMOR TELEPON</th><th>ALAMAT</th>"}<th>ACTION</th></tr></thead><tbody>${state[kind].map((p) => `<tr><td><b>${e(p.name)}</b></td>${isStore ? `<td>${e(p.location || "—")}</td>` : `<td>${e(p.phone || "—")}</td><td>${e(p.address || "—")}</td>`}<td><button class="small" data-edit-kind="${kind}" data-edit-id="${e(p.id)}">${icon("edit")}${isStore ? "Edit toko" : "Edit"}</button></td></tr>`).join("") || `<tr><td colspan="${isStore ? 3 : 4}" class="empty">Belum ada ${label.toLowerCase()}.</td></tr>`}</tbody></table></div></section>`;
 }
+function startPage() {
+  const available = [
+    ["orders", "sell", "Kasir & pesanan"], ["kitchen", "kitchen", "Antrean Kitchen"],
+    ["stock", "stock", "Stok & barang masuk"], ["production", "produce", "Produksi bahan"],
+    ["finance", "finance", "Biaya & laba kotor"], ["attendance", "attendance", "Absensi"],
+  ].filter(([,permission]) => state.access?.[permission]);
+  return `<section class="panel"><h2>Selamat datang, ${e(state.me?.name || "")}</h2><p>${e(name("stores",store))}. Pilih pekerjaan untuk mulai.</p><div class="toolbar">${available.map(([key,,label]) => `<button type="button" data-view="${key}">${label}</button>`).join("")}</div><p class="muted">Data operasional diambil saat menu dibuka.</p></section>`;
+}
+async function openPage(next, button) {
+  if (!mayLeave(busy) || loadingPage) return;
+  loadingPage = true;
+  const label = button?.textContent;
+  if (button) {button.disabled = true;button.textContent = "Membuka menu…";}
+  try {
+    if (mode === "live" && !fullDataLoaded && next !== "start") await refresh();
+    view = next;
+    render();
+  } catch (error) { toast(error.message); }
+  finally {
+    loadingPage = false;
+    if (button?.isConnected) {button.disabled = false;button.textContent = label;}
+  }
+}
 function render() {
   app.innerHTML = shell(
     {
       ...Object.fromEntries(opsPages.map(key=>[key,()=>opsPage(key,state,store)])),
       dashboard,
+      start: startPage,
       recipes: () => recipesPage(state, store),
       production: () => productionPage(state, store),
       cashier,
@@ -416,16 +447,22 @@ function render() {
     }[view](),
   );
   syncThemeControls();
+  document.querySelector('[data-sidebar-toggle]').onclick = () => {
+    compactSidebar = !compactSidebar;
+    try { localStorage.setItem("maniac-pos-sidebar", compactSidebar ? "compact" : "expanded"); } catch {}
+    // Toggle layout without rebuilding forms or losing unsaved input.
+    document.querySelector('.shell').classList.toggle('sidebar-compact', compactSidebar);
+    const button = document.querySelector('[data-sidebar-toggle]');
+    button.setAttribute('aria-expanded', String(!compactSidebar));
+    button.setAttribute('aria-label', compactSidebar ? 'Perluas sidebar' : 'Ringkas sidebar');
+    button.title = compactSidebar ? 'Perluas sidebar' : 'Ringkas sidebar';
+  };
   document.querySelectorAll("[data-view]").forEach(
     (b) =>
-      (b.onclick = () => {
-        if (!mayLeave(busy)) return;
-        view = b.dataset.view;
-        render();
-      }),
+      (b.onclick = () => openPage(b.dataset.view, b)),
   );
   document.querySelector("#active-store").onchange = (ev) => {
-    if (!mayLeave(busy)) {
+    if (loadingPage || !mayLeave(busy)) {
       ev.target.value = store;
       return;
     }
@@ -442,7 +479,7 @@ function render() {
     render();
   };
   document.querySelector("#logout").onclick = () => {
-    if (!mayLeave(busy)) return;
+    if (loadingPage || !mayLeave(busy)) return;
     if (cart.length && !confirm("Keluar dan kosongkan pesanan?")) return;
     token = "";
     refreshToken = "";
@@ -452,6 +489,7 @@ function render() {
     seenKitchen.clear();
     cart = [];
     state = emptyState();
+    fullDataLoaded = false;
     view = "dashboard";
     clearOrderDraft();
     login();
@@ -895,7 +933,7 @@ function observeKitchen(){
  if(incoming.length){toast(`${incoming.length} pesanan baru masuk ke kitchen`);beepKitchen();}
 }
 setInterval(async()=>{
- if(mode!=='live'||busy||polling||!['orders','kitchen'].includes(view))return;
+ if(mode!=='live'||!fullDataLoaded||loadingPage||busy||polling||!['orders','kitchen'].includes(view))return;
  polling=true;const revision=stateRevision,sessionToken=token;
  try{
   const fresh=await request('/rest/v1/rpc/pos_read',{});
