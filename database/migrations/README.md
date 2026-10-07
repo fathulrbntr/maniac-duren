@@ -17,3 +17,5 @@ Untuk database baru/reset, gunakan `database/pos.sql` yang sudah di-build dari s
 021-batch-tracking.sql: setelah 020. Intake stocker, rekonsiliasi PO/nota admin, reject harian, penyusutan kulit/biji, modal hasil olahan, campuran supplier dan Admin pusat. Baca UPDATE-021.md. Aman dijalankan ulang; tanpa reset data.
 
 022-offline-batch-compat.sql: setelah 021-batch-tracking. Memisahkan wrapper baca offline dari wrapper batch dan meneruskan kedua kelompok metadata. Aman diulang. Database yang sudah menjalankan 021-offline-pos tetap dapat memakai 022. Jangan jalankan ulang 021-offline-pos setelah 022. Nomor 21 di md_pos_schema_versions adalah batch tracking, bukan bukti frontend offline aktif.
+
+023-login-fast.sql: menggabungkan dua pembatasan login dan pencarian akun dalam satu RPC khusus service_role, menambahkan indeks pencarian. Tidak mengubah stok. Jalankan sebelum deploy endpoint login terbaru.

@@ -834,8 +834,8 @@ function exportCSV() {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 try {
-  const r = await fetch("/api/pos-config", { signal: AbortSignal.timeout(15000) });
-  config = r.ok ? await r.json() : {};
+  config = await (window.posConfigReady || fetch("/api/pos-config", { signal: AbortSignal.timeout(15000) }).then(r => r.ok ? r.json() : {}));
+  delete window.posConfigReady;
 } catch {
   config = {};
 }

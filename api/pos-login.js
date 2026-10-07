@@ -26,13 +26,11 @@ module.exports = async (req, res) => {
   try {
     const ip = String(req.headers['x-vercel-forwarded-for'] || req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown').split(',')[0].trim();
     const normalized = /^[+\d\s().-]+$/.test(identifier) ? identifier.replace(/\D/g, '').replace(/^0/, '62') : identifier;
-    // Both independent limits still apply; await both before looking up the account.
-    const limits = await Promise.all(
-      ['ip:' + hash(ip), 'login:' + hash(normalized)]
-        .map(bucket => rpc('pos_login_throttle', { bucket })),
-    );
-    if (limits.some(allowed => !allowed)) return res.status(429).json({ error: 'Terlalu banyak percobaan. Coba lagi dalam 15 menit.' });
-    const target = await rpc('pos_login_identity', { identifier });
+    const prepared = await rpc('pos_login_prepare', {
+      identifier, ip_bucket: 'ip:' + hash(ip), login_bucket: 'login:' + hash(normalized),
+    });
+    if (!prepared?.allowed) return res.status(429).json({ error: 'Terlalu banyak percobaan. Coba lagi dalam 15 menit.' });
+    const target = prepared.target;
     if (!target?.email || !target.userId) return invalid();
     const response = await fetch(url + '/auth/v1/token?grant_type=password', {
       method: 'POST', headers: { apikey: key, 'Content-Type': 'application/json' },
@@ -42,6 +40,6 @@ module.exports = async (req, res) => {
     if (!response.ok || session.user?.id !== target.userId || !session.access_token) return invalid();
     return res.status(200).json({ access_token: session.access_token, refresh_token: session.refresh_token, expires_in: session.expires_in, user: { id: session.user.id } });
   } catch {
-    return res.status(503).json({ error: 'Layanan login belum tersedia. Pastikan SQL 016 terbaru dan konfigurasi server sudah diterapkan.' });
+    return res.status(503).json({ error: 'Layanan login belum tersedia. Pastikan migration 023-login-fast dan konfigurasi server sudah diterapkan.' });
   }
 };
