@@ -3,12 +3,14 @@ import {createStockDemo,applyStockDemoAction} from '../pos/stock-demo.mjs';
 import {opsPage,bindOps,clearOrderDraft,hasOrderDraft} from '../pos/operations-ui.mjs';
 import {Node,makeModal,FormDataAdapter} from './variant-dom.mjs';
 import {fixture,qty} from './stock-demo-fixture.mjs';
+import {printDocument} from './receipt-print-dom.mjs';
 const f=fixture(),m=makeModal(),root=new Node(),posted=[];let state=createStockDemo(f.state);
 const globals={document:globalThis.document,FormData:globalThis.FormData,fetch:globalThis.fetch,requestAnimationFrame:globalThis.requestAnimationFrame,window:globalThis.window};
 const descriptor=Object.getOwnPropertyDescriptor(Node.prototype,'elements');
 Object.defineProperty(Node.prototype,'elements',{configurable:true,get(){return new Proxy({namedItem:name=>this.querySelector(`[name="${name}"]`)},{get:(target,k)=>k in target?target[k]:this.querySelector(`[name="${k}"]`)});}});
 globalThis.window={print(){}};globalThis.requestAnimationFrame=fn=>fn();globalThis.FormData=FormDataAdapter;
 globalThis.document={querySelector:q=>root.querySelector(q),querySelectorAll:q=>root.querySelectorAll(q),createElement:tag=>{const n=new Node(tag);if(tag==='template')n.content=n;return n;}};
+globalThis.document=printDocument({base:globalThis.document}).document;
 globalThis.fetch=()=>{throw Error('Demo UI must not fetch');};
 const ctx={modal:m.modal,getState:()=>state,mutate:async(action,payload)=>{posted.push(action);state=applyStockDemoAction(state,action,payload);return true;},render,refresh(){},toast(){}};
 function render(){root.innerHTML=opsPage('orders',state,f.store);bindOps('orders',state,f.store,ctx);}

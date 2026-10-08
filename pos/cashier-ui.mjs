@@ -1,6 +1,7 @@
 import {id,today,money,num,escape as e} from './core.mjs?v=10';
 import {isOwner,tableLabel,cashierQuote,checkoutTotals,findDiscountApproval,validPayment} from './cashier.mjs?v=54';
 import {checkOrder} from './order-stock.mjs?v=12';
+import {printReceipt} from './receipt-printer.mjs?v=56';
 const statusName={pending:'Menunggu owner',approved:'Disetujui',rejected:'Ditolak',used:'Sudah dipakai'};
 const err=(d,error)=>{d.querySelector('#form-error').textContent=error.message;};
 const submitted=d=>d.querySelector('[type=submit]');
@@ -21,8 +22,16 @@ export function showReceipt(ctx,orderId,autoPrint=false,result){
  // The POS print stylesheet hides every body child except a receipt dialog.
  d.classList.add('receipt-dialog','cashier-receipt-dialog');
  d.querySelector('form').onsubmit=ev=>{ev.preventDefault();d.close();};d.querySelectorAll('.modal-actions .close').forEach(b=>b.textContent='Tutup');
- d.querySelector('#print-order').onclick=()=>window.print();
- if(autoPrint)requestAnimationFrame(()=>{try{window.print();}catch{ctx.toast('Pesanan tersimpan. Gunakan tombol Cetak struk untuk mencoba lagi.');}});
+ const button=d.querySelector('#print-order');
+ const print=async()=>{
+  if(button.disabled||!d.hasAttribute('open'))return;
+  button.disabled=true;
+  try{await printReceipt(d.querySelector('.receipt-print'));}
+  catch(error){ctx.toast('Pesanan tetap tersimpan. '+error.message);}
+  finally{button.disabled=false;}
+ };
+ button.onclick=print;
+ if(autoPrint)requestAnimationFrame(print);
  return d;
 }
 export function bindCheckout(ctx,store,getDraft,clearDraft){

@@ -8,14 +8,16 @@ import {visibleSections} from '../pos/navigation.mjs';
 import {orderMargins} from '../pos/finance.mjs';
 import {Node,makeModal,FormDataAdapter} from './variant-dom.mjs';
 import {fixture,qty} from './stock-demo-fixture.mjs';
+import {printDocument} from './receipt-print-dom.mjs';
 const f=fixture(),owner={...f.state.me},cashier={id:id(),role:'cashier',name:'Kasir'},root=new Node(),m=makeModal(),posted=[];
 let state=createStockDemo(f.state),view='orders',prints=0,failure=null;
 const globals={document:globalThis.document,FormData:globalThis.FormData,fetch:globalThis.fetch,requestAnimationFrame:globalThis.requestAnimationFrame,window:globalThis.window};
 const descriptor=Object.getOwnPropertyDescriptor(Node.prototype,'elements'),oldClose=Node.prototype.close;
 Object.defineProperty(Node.prototype,'elements',{configurable:true,get(){return new Proxy({namedItem:name=>this.querySelector(`[name="${name}"]`)},{get:(target,k)=>k in target?target[k]:this.querySelector(`[name="${k}"]`)});}});
-Node.prototype.close=function(){if(this.closed)return;this.closed=true;for(const fn of this.listeners.close||[])fn();};
+Node.prototype.close=function(){if(this.closed)return;this.closed=true;this.removeAttribute('open');for(const fn of this.listeners.close||[])fn();};
 globalThis.window={print(){prints++;}};globalThis.requestAnimationFrame=fn=>fn();globalThis.FormData=FormDataAdapter;
 globalThis.document={querySelector:q=>root.querySelector(q),querySelectorAll:q=>root.querySelectorAll(q),createElement:tag=>{const n=new Node(tag);if(tag==='template')n.content=n;return n;}};globalThis.fetch=()=>{throw Error('No demo request allowed');};
+globalThis.document=printDocument({base:globalThis.document,onPrint:()=>{prints++;}}).document;
 const ctx={modal:m.modal,getState:()=>state,mutate:async(action,payload)=>{posted.push({action,payload});if(failure)throw failure;state=apply(state,action,payload);return true;},render,refresh(){},toast(){}};
 function render(){root.innerHTML=opsPage(view,state,f.store);bindOps(view,state,f.store,ctx);}
 const submit=d=>d.querySelector('form').fire('submit'),field=(d,name)=>d.querySelector(`[name="${name}"]`);
