@@ -1,6 +1,6 @@
 import {itemTypes} from './catalog.mjs?v=59';
-import {posMenuEntries} from './pos-menu.mjs?v=52';
-export {posProductCards} from './pos-menu.mjs?v=52';
+import {posMenuEntries} from './pos-menu.mjs?v=62';
+export {posProductCards} from './pos-menu.mjs?v=62';
 import {escape as e} from './core.mjs?v=9';
 import {categoryEligible,categoryName,categoryPayload,posCategories,inPosCategory,posCategoryName,hasPosPrice,savePosCategory} from './pos-categories.mjs?v=52';
 const field=(label,html)=>`<label class="field">${label}${html}</label>`;

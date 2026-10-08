@@ -39,13 +39,13 @@ try{
  assert.equal(posted.length,1);assert.equal(d.querySelectorAll('[data-category-member]').length,2);
  d.close();await choose(durpas);
  assert.equal(root.querySelector(`[data-order-category="${durpas}"]`).querySelector('small').textContent,'1','Two variants use one product card');
- assert(card(product500));assert.equal(card(product500),card(product1kg));assert.equal(card(product500).hidden,false);assert.equal(card(product500).disabled,false,'Can inspect unpriced variants');assert.match(card(product500).textContent,/Harga.*belum diisi/);
+ assert(card(product500));assert.equal(card(product500),card(product1kg));assert.equal(card(product500).hidden,false);assert.equal(card(product500).disabled,true,'An unpriced group is visible but cannot be ordered');assert.match(card(product500).textContent,/Harga.*belum diisi/);
  assert.equal(root.querySelector('#order-no-results').hidden,true);assert.equal(card(raw),null);assert.equal(card(prep),null);
- let popup=await click(product500);assert.equal(popup.querySelectorAll('[data-sale-variant]').length,2);assert(popup.querySelectorAll('[data-sale-variant]').every(n=>n.disabled));
- await popup.querySelector('form').fire('submit');assert.equal(root.querySelectorAll('[data-remove-line]').length,0,'Stock without a price cannot enter cart');
+ const priorModal=m.latest;await click(product500);assert.equal(m.latest,priorModal,'Disabled group must not open a variant popup');
+ assert.equal(root.querySelectorAll('[data-remove-line]').length,0,'Stock without a price cannot enter cart');
  assert.deepEqual(state.products.map(({posCategoryIds,...p})=>p),before.map(({posCategoryIds,...p})=>p));assert.deepEqual(state.unitLots,stockBefore);
  let next=structuredClone(state);next.products[0].salePrice=75000;next.products[1].salePrice=140000;await poll(next);
- assert.equal(card(product500).hidden,false);assert.equal(popup.querySelector(`[data-sale-variant="${product500.id}"]`).disabled,false);assert.equal(popup.querySelector(`[data-sale-variant="${product1kg.id}"]`).disabled,true);assert.match(popup.textContent,/Stok kurang/);
+ assert.equal(card(product500).disabled,false);let popup=await click(product500);assert.equal(card(product500).hidden,false);assert.equal(popup.querySelector(`[data-sale-variant="${product500.id}"]`).disabled,false);assert.equal(popup.querySelector(`[data-sale-variant="${product1kg.id}"]`).disabled,true);assert.match(popup.textContent,/Stok kurang/);
  await pick(popup,product500);await popup.querySelector('form').fire('submit');assert.equal(root.querySelectorAll('[data-remove-line]').length,1);
  popup=await click(product500);next=structuredClone(state);next.products[0].salePrice=0;await poll(next);assert(popup.querySelector(`[data-sale-variant="${product500.id}"]`).disabled);
  next=structuredClone(state);next.unitLots[0].qty=4;await poll(next);assert(popup.querySelector(`[data-sale-variant="${product500.id}"]`).disabled);assert.equal(card(product500).hidden,false);
@@ -54,7 +54,7 @@ try{
  for(const itemType of ['finished','direct','recipe'])for(const salePrice of [null,undefined,0,-1,'',NaN,Infinity,'invalid']){
   const p={...product500,itemType,salePrice};assert.deepEqual(posProductStatus(state,'A',p,[],today()),{ok:false,reason:'Harga jual belum diisi'});
  }
- console.log('PASS Durpas Bawor visibility: actual manage/select/save/filter flow, group card and both popup variants shown without prices, stock-zero variant shown, invalid-price and polling guards, original master/stock preserved, raw/prep excluded, no extra reads.');
+ console.log('PASS Durpas Bawor visibility: actual manage/select/save/filter flow, unpriced group visible but disabled, priced group opens with unavailable variants disabled, invalid-price and polling guards, original master/stock preserved, raw/prep excluded, no extra reads.');
 }finally{
  clearOrderDraft();Object.assign(globalThis,originals);Object.defineProperty(Node.prototype,'elements',elementDescriptor);if(replace)Node.prototype.replaceWith=replace;else delete Node.prototype.replaceWith;
 }

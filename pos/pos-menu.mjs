@@ -34,29 +34,37 @@ function entryPrice(entry){
 }
 const entryCategories=(s,entry)=>[...new Set(entry.products.flatMap(p=>posCategoryIds(s,p)))];
 const entryCategoryName=(s,entry)=>{const ids=entryCategories(s,entry);return posCategories(s).filter(c=>ids.includes(c.id)).map(c=>c.name).join(' · ')||'Semua';};
+// Compute readiness once per card, then sort both ready and unavailable cards by name.
+const saleEntries=(state,store,draft,category='all',query='')=>posMenuEntries(state,category,query)
+ .map(entry=>({entry,status:posEntryStatus(state,store,entry,draft)}))
+ .sort((a,b)=>Number(b.status.ok)-Number(a.status.ok)||a.entry.name.localeCompare(b.entry.name,'id',{numeric:true})||a.entry.key.localeCompare(b.entry.key));
+const cardIcon=hasVariants=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${hasVariants?'M9 5l7 7-7 7':'M12 5v14M5 12h14'}"/></svg>`;
 export function posProductCards(s,store,draft=[]){
- return posMenuEntries(s).map(entry=>{
-  const status=posEntryStatus(s,store,entry,draft),photo=entry.products.find(p=>p.photo)?.photo,ids=entryCategories(s,entry),p=entry.products[0];
-  return `<button type="button" class="order-product ${entry.hasVariants?'order-product-variants':''}" ${!entry.hasVariants&&!status.ok?'disabled':''} title="${e(status.reason)}" data-menu-key="${e(entry.key)}" ${entry.hasVariants?`data-order-group="${e(p.variantGroupId||p.id)}" aria-haspopup="dialog"`:`data-order-add="${e(p.id)}"`} data-categories="${e(['all',...ids].join(' '))}"><span class="order-product-photo">${photo?`<img src="${e(photo)}" alt="" loading="lazy">`:`<span>${e(entry.name.split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase())}</span>`}</span><span class="order-product-info"><span class="order-product-category">${e(entryCategoryName(s,entry))}</span><strong>${e(entry.name)}</strong>${entry.hasVariants?`<span class="order-variant-count">${entry.products.length} pilihan varian</span>`:''}<span class="order-product-price">${e(entryPrice(entry))}</span></span><span class="order-stock-status">${e(status.reason)}</span><span class="order-product-add" aria-hidden="true">${entry.hasVariants?'›':'+'}</span></button>`;
+ return saleEntries(s,store,draft).map(({entry,status})=>{
+  const photo=entry.products.find(p=>p.photo)?.photo,ids=entryCategories(s,entry),p=entry.products[0];
+  return `<button type="button" class="order-product ${entry.hasVariants?'order-product-variants':''}" ${!status.ok?'disabled':''} aria-disabled="${!status.ok}" title="${e(entry.name+' · '+status.reason)}" data-menu-key="${e(entry.key)}" ${entry.hasVariants?`data-order-group="${e(p.variantGroupId||p.id)}" aria-haspopup="dialog"`:`data-order-add="${e(p.id)}"`} data-categories="${e(['all',...ids].join(' '))}"><span class="order-product-photo">${photo?`<img src="${e(photo)}" alt="" loading="lazy" decoding="async">`:`<span>${e(entry.name.split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase())}</span>`}</span><span class="order-product-info"><span class="order-product-category">${e(entryCategoryName(s,entry))}</span><strong>${e(entry.name)}</strong><span class="order-variant-count ${entry.hasVariants?'':'is-placeholder'}" ${entry.hasVariants?'':'aria-hidden="true"'}>${entry.hasVariants?`${entry.products.length} pilihan varian`:''}</span><span class="order-product-price">${e(entryPrice(entry))}</span></span><span class="order-product-footer"><span class="order-stock-status">${e(status.reason)}</span><span class="order-product-add" aria-hidden="true">${cardIcon(entry.hasVariants)}</span></span></button>`;
  }).join('')||'<div class="empty">Belum ada produk jual di Master Barang.</div>';
 }
-// Filtering and cart/stock updates keep the existing card images in place.
+// Move existing nodes only when their order changes. Images, handlers and local inputs survive.
 export function updatePosCards(root,state,store,draft,category='all',query=''){
- const entries=new Map(posMenuEntries(state,category,query).map(entry=>[entry.key,entry]));
- root.querySelectorAll('[data-menu-key]').forEach(card=>{
-  const entry=entries.get(card.dataset.menuKey);card.hidden=!entry;if(!entry)return;
-  const status=posEntryStatus(state,store,entry,draft);card.disabled=!entry.hasVariants&&!status.ok;card.title=status.reason;
+ const ordered=saleEntries(state,store,draft,category,query),entries=new Map(ordered.map(row=>[row.entry.key,row]));
+ const grid=root.querySelector('#order-products')||root,cards=[...grid.querySelectorAll('[data-menu-key]')],byKey=new Map(cards.map(card=>[card.dataset.menuKey,card]));
+ for(const card of cards){
+  const row=entries.get(card.dataset.menuKey);card.hidden=!row;if(!row)continue;
+  const {entry,status}=row;card.disabled=!status.ok;card.setAttribute('aria-disabled',String(!status.ok));card.title=entry.name+' · '+status.reason;
   card.querySelector('.order-stock-status').textContent=status.reason;
   card.querySelector('.order-product-price').textContent=entryPrice(entry);
   card.querySelector('.order-product-category').textContent=entryCategoryName(state,entry);
-  const count=card.querySelector('.order-variant-count');if(count)count.textContent=`${entry.products.length} pilihan varian`;
- });
+  const count=card.querySelector('.order-variant-count');if(count)count.textContent=entry.hasVariants?`${entry.products.length} pilihan varian`:'';
+ }
+ const desired=[...ordered.map(({entry})=>byKey.get(entry.key)).filter(Boolean),...cards.filter(card=>card.hidden)];
+ desired.forEach((card,index)=>{if(grid.children[index]!==card)grid.insertBefore(card,grid.children[index]||null);});
  return entries.size;
 }
 const choiceSnapshot=p=>JSON.stringify([p.id,p.name,p.sku,p.stockUnit,p.itemType,p.salePrice,p.priceKg,p.pricePiece,p.variantGroupId,p.variantGroupName,p.variant,p.variantOptions]);
 export function posVariantDialog({key,category='all',getState,getDraft,store,modal,onConfirm}){
- const initial=posMenuEntries(getState(),category).find(entry=>entry.key===key);
- if(!initial?.hasVariants)return null;
+ const state=getState(),initial=posMenuEntries(state,category).find(entry=>entry.key===key);
+ if(!initial?.hasVariants||!posEntryStatus(state,store,initial,getDraft()).ok)return null;
  const d=modal('Pilih varian',`<div class="pos-variant-heading"><h3>${e(initial.name)}</h3><p class="muted">Pilih varian yang akan dijual, lalu konfirmasi.</p></div><div class="pos-variant-options" data-sale-variants role="radiogroup" aria-label="Pilihan varian"></div><div class="pos-variant-confirmation" data-variant-confirmation aria-live="polite">Belum ada varian dipilih.</div>`,'Tambah ke pesanan');
  d.classList.add('pos-sale-variant-modal');const submit=d.querySelector('[type="submit"]');let selected='',snapshot='',confirming=false,completed=false;
  // Selecting an option is temporary; cancel can dismiss it without a save warning.

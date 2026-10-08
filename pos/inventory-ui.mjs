@@ -1,5 +1,5 @@
 import {posCategories,inPosCategory,posCategoryName} from './pos-categories.mjs?v=52';
-import {posCategoryManager,posCategoryDialog} from './pos-categories-ui.mjs?v=61';
+import {posCategoryManager,posCategoryDialog} from './pos-categories-ui.mjs?v=62';
 import {showWeighingHistory} from './receipt-weighing.mjs?v=19';
 import {escape as e,money,num,today} from './core.mjs?v=9';
 import {productDefaults,itemTypes,isMaterial,isLegacyStock} from './catalog.mjs?v=59';

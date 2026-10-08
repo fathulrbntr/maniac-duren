@@ -1,3 +1,3 @@
-import {inventoryPanel} from "./inventory-ui.mjs?v=61";
+import {inventoryPanel} from "./inventory-ui.mjs?v=62";
 export function catalogPanel(products,filter={},state={},store=""){return inventoryPanel({...state,products},store,filter,"products");}
 export {productDialog} from "./product-dialog.mjs?v=61";
