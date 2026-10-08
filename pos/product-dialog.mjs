@@ -9,7 +9,7 @@ import {
 } from "./catalog.mjs?v=59";
 import { escape as e, id, num, money } from "./core.mjs?v=9";
 import { preparePhoto } from "./product-details.mjs?v=9";
-import { productStock, productUsed } from "./product-stock.mjs?v=9";
+import { productStock, productUsed } from "./product-stock.mjs?v=60";
 const options = (values, selected) =>
   Object.entries(values)
     .map(
@@ -212,9 +212,10 @@ export function productDialog({
   };
   d.querySelector("#delete-product")?.addEventListener("click", () => {
     if (saving) return;
+    const siblings = p.variantGroupId ? state.products.filter(x => x.variantGroupId === p.variantGroupId && x.id !== p.id) : [];
     const confirm = modal(
       "Hapus produk",
-      `<p>Anda yakin untuk menghapus product?, tekan ya jika yakin.</p><p><b>${e(p.name)}</b></p>`,
+      `<p>Hapus produk berikut?</p><p><b>${e(p.name)}</b></p>${siblings.length===1?`<p>Setelah dihapus, <b>${e(siblings[0].name)}</b> kembali menjadi produk tanpa varian. Stok dan riwayat produk tersebut tetap tersimpan.</p>`:''}`,
       "Ya",
     );
     confirm.querySelector(".modal-actions .close").textContent = "Tidak";

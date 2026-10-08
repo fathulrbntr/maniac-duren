@@ -28,7 +28,19 @@ export function deleteProduct(s, p) {
     throw Error(
       "Produk sudah digunakan dalam stok, transaksi, atau resep sehingga tidak dapat dihapus",
     );
+  const groupId = s.products.find((x) => x.id === p.id)?.variantGroupId;
   s.products = s.products.filter((x) => x.id !== p.id);
+  if (groupId) collapseSingleVariants(s.products, groupId);
+}
+// Detach only grouping metadata; the remaining SKU keeps its full identity and history.
+export function collapseSingleVariants(products, groupId) {
+  const groups = new Map();
+  for (const p of products) if (p.variantGroupId && (!groupId || p.variantGroupId === groupId)) {
+    const group = groups.get(p.variantGroupId) || [];
+    group.push(p);groups.set(p.variantGroupId, group);
+  }
+  for (const group of groups.values()) if (group.length === 1)
+    Object.assign(group[0], {variantGroupId:null, variantGroupName:null, variantOptions:[], variant:''});
 }
 export function adjustProductStock(s, p) {
   if (!p.stock) return;

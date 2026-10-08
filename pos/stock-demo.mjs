@@ -1,6 +1,7 @@
+import {collapseSingleVariants} from './product-stock.mjs?v=60';
 import {cashierActions,cashierDemo} from './cashier-demo.mjs?v=54';
 // In-memory training data only. This module never sends requests or persists data.
-import {emptyState,today,id,applyAction} from './core.mjs?v=10';
+import {emptyState,today,id,applyAction} from './core.mjs?v=60';
 import {checkOrder,requirements} from './order-stock.mjs?v=12';
 import {savePosCategory} from './pos-categories.mjs?v=52';
 import {saveVariantProducts} from './product-variants.mjs?v=45';
@@ -26,6 +27,7 @@ export function createStockDemo(source){
  // Skip cloning real transaction history that the demo will immediately discard.
  const s={...emptyState(),...clone(Object.fromEntries(Object.entries(source).filter(([key])=>!transactionKeys.includes(key))))};
  for(const key of transactionKeys)s[key]=[];
+ collapseSingleVariants(s.products);
  s.stockDemo={sessionId:id(),supplierId:id(),date:today(),initialQty:100};
  s.suppliers.push({id:s.stockDemo.supplierId,name:'Supplier demo',phone:'',address:''});
  s.opsVersion=Math.max(s.opsVersion||0,19);s.orderStockVersion=Math.max(s.orderStockVersion||0,11);s.orderRoutingVersion=Math.max(s.orderRoutingVersion||0,13);

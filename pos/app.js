@@ -4,7 +4,7 @@ const sidebar = createSidebarController();
 import {installMoneyInputs} from './money-input.mjs?v=44';
 installMoneyInputs();
 import { openWeighingReceipt, showWeighingHistory } from './receipt-weighing.mjs?v=19';
-import {inventoryPanel,bindInventory} from "./inventory-ui.mjs?v=59";
+import {inventoryPanel,bindInventory} from "./inventory-ui.mjs?v=60";
 import {opsPages,opsPage,bindOps,clearOrderDraft,hasOrderDraft} from './operations-ui.mjs?v=59';
 import {printReceipt} from './receipt-printer.mjs?v=58';
 import {
@@ -36,9 +36,9 @@ import {
   emptyState,
   saleRows,
   summarize,
-} from "./core.mjs?v=10";
+} from "./core.mjs?v=60";
 import { isLegacyStock, itemTypes } from "./catalog.mjs?v=59";
-import { catalogPanel, productDialog } from "./catalog-ui.mjs?v=59";
+import { catalogPanel, productDialog } from "./catalog-ui.mjs?v=60";
 const themeKey = "maniac-pos-theme";
 function themeButton(extraClass = "") {
   return `<button type="button" class="small theme-toggle ${extraClass}" data-theme-toggle aria-label="Ganti tema"><svg class="theme-light-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></svg><svg class="theme-dark-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M20 15.5A9 9 0 0 1 8.5 4 9 9 0 1 0 20 15.5Z"/></svg><span data-theme-label></span></button>`;
@@ -132,7 +132,7 @@ function toast(text) {
   toast.timer = setTimeout(() => (t.style.display = "none"), 5000);
 }
 let stockDemoModule,demoSource=null;
-const demoEngine=()=>stockDemoModule ||= import('./stock-demo.mjs?v=54').catch(error=>{stockDemoModule=null;throw error;});
+const demoEngine=()=>stockDemoModule ||= import('./stock-demo.mjs?v=60').catch(error=>{stockDemoModule=null;throw error;});
 function assertDemoRequest(path,allowDemoRead){
   if(mode==='stock-demo'&&!(allowDemoRead&&['/rest/v1/rpc/pos_read','/auth/v1/token?grant_type=refresh_token'].includes(path)))throw Error('Mode demo tidak mengirim perubahan ke database asli.');
 }

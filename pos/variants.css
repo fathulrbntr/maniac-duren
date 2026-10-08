@@ -15,7 +15,7 @@
 .variant-notice{padding:12px 14px;border-radius:12px;background:var(--surface-soft);font-size:13px}.variant-row small{color:var(--muted)}
 .inv-variant-group{border:1px solid var(--line);background:var(--surface);border-radius:16px;overflow:hidden;min-width:0;align-self:start}
 .inv-variant-group>summary{padding:18px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;list-style:none}
-.inv-variant-group>summary::-webkit-details-marker{display:none}.inv-variant-group>summary>span:first-child{display:grid;gap:5px}.inv-variant-group>summary b{font-size:15px;overflow-wrap:anywhere}.inv-variant-group>summary small{color:var(--muted);font-size:12px}
+.inv-variant-group>summary::-webkit-details-marker{display:none}.inv-variant-group>summary>.inv-summary-copy{display:grid;gap:5px}.inv-variant-group>summary b{font-size:15px;overflow-wrap:anywhere}.inv-variant-group>summary small{color:var(--muted);font-size:12px}
 .inv-variant-group[open]>summary{border-bottom:1px solid var(--line)}.variant-group-actions{padding:12px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}.variant-group-actions small{color:var(--muted);font-size:12px}
 .variant-group-items{display:grid;gap:8px;padding:0 10px 10px}.variant-group-items .inv-card{border-radius:12px}.inv-results.is-grid .variant-group-items .inv-card{display:grid;grid-template-columns:56px minmax(0,1fr) 30px;padding:12px;gap:10px}
 .inv-results.is-grid .variant-group-items .inv-photo{width:56px;height:56px}.inv-results.is-grid .variant-group-items .inv-metric{grid-column:2}.inv-results.is-grid .variant-group-items .inv-more{grid-column:3;grid-row:1;position:static}
@@ -23,14 +23,39 @@
 
 .inv-results.is-grid .variant-group-items .inv-photo{grid-column:1;grid-row:1}.inv-results.is-grid .variant-group-items .inv-copy{grid-column:2;grid-row:1;min-height:0}.inv-results.is-grid .variant-group-items .inv-secondary{grid-column:2;grid-row:auto}
 
-/* Patch 045: every catalog entry uses the same expandable card. */
-.inv-catalog-card{position:relative;min-width:0;align-self:start}
-.inv-catalog-card .inv-variant-group>summary{min-height:84px;box-sizing:border-box}
-.inv-catalog-card.no-variants .inv-variant-group>summary{padding-right:168px}
-.inv-catalog-card .variant-open-hint{font-size:11px;color:var(--muted);white-space:nowrap}
-.inv-catalog-card.no-variants .variant-open-hint{display:none}
-.inv-add-first-variant{position:absolute;right:18px;top:25px;font-size:11px!important;line-height:1.4!important;border:1px solid var(--line)!important;border-radius:20px!important;padding:4px 10px!important;background:var(--surface)!important;color:var(--ink)!important;min-height:28px;white-space:nowrap}
+/* Catalog summaries: one layout for standalone products and variant groups. */
+.inv-catalog-card{position:relative;min-width:0;align-self:start;container-type:inline-size}
+.inv-catalog-card .inv-variant-group>summary{display:grid;grid-template-columns:72px minmax(100px,1fr) minmax(250px,1.4fr) auto;gap:16px;min-height:112px;box-sizing:border-box}
+.inv-catalog-card .inv-summary-photo{width:72px;height:72px;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:12px;background:var(--surface-soft)}
+.inv-summary-photo img{width:100%;height:100%;object-fit:contain;padding:4px;box-sizing:border-box}.inv-summary-photo>span{display:flex;color:var(--success)}.inv-summary-photo svg{width:32px;height:32px}
+.inv-summary-copy{display:grid;gap:6px;min-width:0}.inv-summary-copy b{line-height:1.4}.inv-summary-copy small{line-height:1.5}
+.inv-summary-prices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;min-width:0}
+.inv-summary-metric{display:flex;flex-direction:column;gap:5px;min-width:0}.inv-summary-metric>span{font-size:9px;color:var(--muted);letter-spacing:.3px}.inv-summary-metric>strong{font-size:14px;font-weight:600;line-height:1.5;overflow-wrap:anywhere}
+.inv-catalog-card .inv-variant-group>summary .inv-summary-metric small{font-size:10px;line-height:1.4}
+.inv-add-first-variant{position:static;font-size:11px!important;line-height:1.4!important;border:1px solid var(--line)!important;border-radius:20px!important;padding:5px 10px!important;background:var(--surface)!important;color:var(--ink)!important;min-height:30px;white-space:nowrap}
 .inv-add-first-variant:hover{background:var(--surface-soft)!important}
 .inv-add-first-variant:focus-visible,.inv-variant-group>summary:focus-visible{outline:2px solid var(--green);outline-offset:3px}
+/* Keep both fixed prices visible inside each variant at every screen size. */
+.inv-catalog-card .variant-group-items .inv-card{grid-template-columns:56px minmax(100px,1fr) minmax(110px,.6fr) minmax(110px,.6fr) 34px;gap:12px}
+.inv-catalog-card .variant-group-items .inv-photo{width:56px;height:56px}
+.inv-catalog-card .variant-group-items .inv-secondary{display:flex}
+@container(max-width:740px){
+ .inv-catalog-card .inv-variant-group>summary{grid-template-columns:64px minmax(0,1fr) auto;gap:12px;padding:16px}
+ .inv-catalog-card .inv-summary-photo{width:64px;height:64px;grid-row:1/3}
+ .inv-summary-copy{grid-column:2;grid-row:1}
+ .inv-summary-prices{grid-column:2/-1;grid-row:2}
+ .inv-catalog-card summary>.variant-tag,.inv-catalog-card summary>.inv-add-first-variant{grid-column:3;grid-row:1}
+ .inv-catalog-card .variant-group-items .inv-card{grid-template-columns:56px minmax(0,1fr) 30px;gap:10px}
+ .inv-catalog-card .variant-group-items .inv-photo{grid-column:1;grid-row:1;width:56px;height:56px}
+ .inv-catalog-card .variant-group-items .inv-copy{grid-column:2;grid-row:1;min-height:0}
+ .inv-catalog-card .variant-group-items .inv-metric{grid-column:2;grid-row:auto;border:0;padding:0}
+ .inv-catalog-card .variant-group-items .inv-more{grid-column:3;grid-row:1;position:static}
+}
+@container(max-width:420px){
+ .inv-catalog-card .inv-variant-group>summary{grid-template-columns:52px minmax(0,1fr);padding:12px;gap:10px}
+ .inv-catalog-card .inv-summary-photo{width:52px;height:52px;grid-row:1/3}
+ .inv-catalog-card summary>.variant-tag,.inv-catalog-card summary>.inv-add-first-variant{grid-column:2;grid-row:2;justify-self:start}
+ .inv-summary-prices{grid-column:1/-1;grid-row:3;gap:12px;padding-top:4px}
+}
 .variant-axis.is-adopting{grid-template-columns:minmax(100px,.8fr) minmax(110px,1fr) minmax(130px,1.3fr) auto}
-@media(max-width:700px){.inv-catalog-card{grid-column:1/-1}.inv-catalog-card.no-variants .inv-variant-group>summary{padding-right:140px}.inv-add-first-variant{right:12px}.variant-axis.is-adopting{grid-template-columns:minmax(0,1fr) 32px}.variant-axis.is-adopting .field{grid-column:1;grid-row:auto}.variant-axis.is-adopting button{grid-column:2;grid-row:3}.inv-catalog-card .inv-variant-group>summary{min-height:84px}}
+@media(max-width:700px){.inv-catalog-card{grid-column:1/-1}.variant-axis.is-adopting{grid-template-columns:minmax(0,1fr) 32px}.variant-axis.is-adopting .field{grid-column:1;grid-row:auto}.variant-axis.is-adopting button{grid-column:2;grid-row:3}.inv-catalog-card .inv-variant-group>summary{min-height:84px}}
