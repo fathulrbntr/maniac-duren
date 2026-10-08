@@ -30,15 +30,20 @@ try{
  const inventory=async()=>({lots:(await db.query('select * from public.md_pos_lots order by id')).rows,units:(await db.query('select * from public.md_pos_unit_lots order by id')).rows,recipes:(await db.query('select * from public.md_pos_recipe_items order by recipe_id,product_id')).rows});
  const inventoryBefore=await inventory(),productsBefore=(await db.query('select * from public.md_pos_products order by id')).rows;
  const root=(await db.query("select pg_get_functiondef('public.pos_read()'::regprocedure) d")).rows[0].d;
- let legacy;
+ let legacy,priorModern;
  if(process.env.POS_PREVIOUS_CATEGORY_SQL){
   await db.exec(fs.readFileSync(process.env.POS_PREVIOUS_CATEGORY_SQL,'utf8'));
   const old=await read(),categoryId=id(),productIds=[water.id,fruit.id].sort();
+  if(old.posCategoryMembershipVersion===2){
+   priorModern=await save(categoryPayload(old,{id:id(),categoryId,name:'Kategori sebelum upgrade',productIds:[]}));
+   await assert.rejects(save(categoryPayload(priorModern,{id:id(),categoryId,name:'Kategori sebelum upgrade',mode:'delete'})),/Muat ulang POS/);
+  }else{
   legacy=await save({id:id(),categoryId,name:'Kategori lama',expectedVersion:0,productIds,expectedAssignments:old.products.filter(p=>productIds.includes(p.id)).map(p=>({id:p.id,categoryId:p.posCategoryId})).sort((a,b)=>a.id.localeCompare(b.id))});
   // A 050 web payload reaches this 046 function without expectedAssignments.
   // Reproduce that rejection before applying the non-destructive SQL upgrade.
   await assert.rejects(save(categoryPayload(legacy,{id:id(),categoryId,name:'Kategori lama',mode:'remove',productIds})),/Pilihan produk tidak valid atau terlalu banyak/);
   assert.deepEqual(await read(),legacy,'Rejected modern payload cannot change legacy category membership');
+  }
  }
  await db.exec(migration);await db.exec(migration);
  const initial=await read(),cat=name=>initial.posCategories.find(c=>c.name===name).id,ids=(s,p)=>posCategoryIds(s,s.products.find(x=>x.id===p.id));
@@ -47,6 +52,9 @@ try{
  if(legacy){
   assert.deepEqual(initial.posCategories,legacy.posCategories);
   for(const p of legacy.products)assert.deepEqual(ids(initial,p),p.posCategoryId?[p.posCategoryId]:[],'Upgrade retains exact old assignment, including moves');
+ }else if(priorModern){
+  assert.deepEqual(initial.posCategories,priorModern.posCategories);
+  assert.deepEqual(initial.products,priorModern.products,'Upgrade preserves configured categories and all product memberships');
  }else{
   assert.deepEqual(initial.posCategories,defaultPosCategories());
   assert.deepEqual(ids(initial,fruit),[cat('Buah')]);assert.deepEqual(ids(initial,coral),[cat('Coral')]);
@@ -101,5 +109,32 @@ try{
  assert.deepEqual(await inventory(),inventoryBefore);
  assert.deepEqual((await db.query('select * from public.md_pos_products order by id')).rows,rowsBefore,'No master product row changes');
  assert.equal((await db.query("select public.pos_waste_output_product($1,'coral') id",[fruit.id])).rows[0].id,coral.id);
- console.log('PASS POS category membership SQL: '+(legacy?'upgrade 046':'fresh install')+', additive links, no moves/duplicates, scoped removal, rename, independent categories, permissions/RLS, stale/replay guards, old-client rejection, read/service metadata, rerun, unchanged products/stock/cost/recipe/reject lineage.');
+ // Delete removes only category records/links. Whole master stock survives.
+ const allBeforeDelete=posMenuEntries(afterRerun).map(e=>[e.key,e.products.map(p=>p.id)]);
+ const victim=afterRerun.posCategories.find(c=>c.id===payload.categoryId);
+ const staleDelete=make(afterRerun,victim.name,[],victim.id,'delete');
+ const changedBeforeDelete=await save(make(afterRerun,victim.name,[fruit.id],victim.id));
+ await assert.rejects(save(staleDelete),/Kategori sudah berubah/);
+ const deletion=make(changedBeforeDelete,victim.name,[],victim.id,'delete');
+ await assert.rejects(save({...deletion,id:id(),productIds:[water.id]}),/Hapus kategori tidak menerima pilihan/);
+ await as(cashier);await assert.rejects(save(deletion),/Hak akses/);await as(owner);
+ const deleted=await save(deletion);await save(deletion);
+ assert(!deleted.posCategories.some(c=>c.id===victim.id));
+ for(const p of changedBeforeDelete.products)assert.deepEqual(ids(deleted,p),ids(changedBeforeDelete,p).filter(c=>c!==victim.id));
+ assert.deepEqual(deleted.posCategories,changedBeforeDelete.posCategories.filter(c=>c.id!==victim.id));
+ assert.deepEqual(posMenuEntries(deleted).map(e=>[e.key,e.products.map(p=>p.id)]),allBeforeDelete);
+ assert.equal((await db.query('select count(*) n from public.md_pos_events where id=$1',[deletion.id])).rows[0].n,1);
+ await assert.rejects(save({...deletion,name:'Other'}),/ID pengiriman/);
+ await assert.rejects(save({...deletion,id:id(),mode:'add'}),/Kategori sudah berubah/);
+ let remaining=deleted;
+ for(const c of [...remaining.posCategories])remaining=await save(make(remaining,c.name,[],c.id,'delete'));
+ assert.deepEqual(remaining.posCategories,[]);assert(remaining.products.every(p=>p.posCategoryIds.length===0));
+ await db.exec(migration);const noCategories=await read();
+ assert.deepEqual(noCategories.posCategories,[],'Rerun cannot recreate deleted default categories');
+ assert(noCategories.products.every(p=>p.posCategoryIds.length===0));
+ assert.deepEqual(posMenuEntries(noCategories).map(e=>[e.key,e.products.map(p=>p.id)]),allBeforeDelete);
+ assert.deepEqual((await db.query('select * from public.md_pos_products order by id')).rows.map(({pos_category_id,...p})=>p),rowsBefore.map(({pos_category_id,...p})=>p),'Only obsolete category reference may be cleared by FK');
+ assert.deepEqual(await inventory(),inventoryBefore);
+ assert.equal((await db.query('select count(*) n from public.md_pos_menu_category_products')).rows[0].n,0);
+ console.log('PASS POS category membership SQL: '+(legacy?'upgrade 046':priorModern?'upgrade 051':'fresh install')+', additive links, scoped removal, category deletion with links/empty/all categories, exact retry, no resurrection, permissions/RLS, stale guards, read/service metadata, unchanged products/stock/cost/recipe/reject lineage.');
 }finally{await db.close();}

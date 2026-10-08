@@ -1,67 +1,55 @@
-MANIAC DUREN — PATCH 051: SIMPAN KATEGORI DAN PESAN ERROR
+MANIAC DUREN — PATCH 052: HAPUS KATEGORI POS
 
-Paket perubahan di atas patch 050. Berisi file baru/berubah saja.
+Paket file baru/berubah di atas patch 051 yang sudah dikonfirmasi benar.
 
-LANGKAH PEMASANGAN
-1. Ekstrak dan timpa file proyek dengan isi ZIP ini.
-2. Di Supabase → SQL Editor, buka query baru. Salin SELURUH isi file
-   database/pos-menu-categories.sql lalu klik Run.
-   SQL ini menyamakan fungsi simpan/baca kategori dengan web sekarang.
-   Dapat dijalankan ulang bila kategori versi 047 sudah terpasang.
-   Tidak perlu menjalankan pos.sql atau mereset database.
-3. Commit dan push perubahan web, tunggu deploy selesai, kemudian muat
-   ulang POS dengan Ctrl+Shift+R.
-4. Buka Kelola kategori, pilih produk, lalu Keluarkan yang dipilih.
-   Produk tetap ada di Semua dan data stok/master tetap tersimpan.
+PEMASANGAN
+1. Ekstrak isi ZIP ke root proyek, lalu timpa file lama.
+2. Buka database/pos-menu-categories.sql di VS Code, Ctrl+A lalu Ctrl+C.
+3. Supabase → SQL Editor → New query. Tempel SELURUH isi file dan Run.
+   Pastikan baris terakhir commit; ikut dijalankan.
+   SQL ini menambahkan dukungan hapus kategori. Aman dijalankan ulang;
+   produk, stok, transaksi, dan hubungan kategori lain tetap tersimpan.
+4. Commit/push, tunggu deploy selesai, lalu muat ulang POS (Ctrl+Shift+R).
 
-TEMUAN
-Web publik sudah memuat app.js dan CSS patch 050 pada pemeriksaan ini.
-Pesan "Perubahan kategori belum terkonfirmasi" adalah pesan umum, bukan
-pesan asli Supabase. Sebelumnya pesan asli hanya diteruskan ke notifikasi
-halaman, yang tertutup oleh pop-up dialog.
+CARA PAKAI
+Kelola kategori & produk → Hapus kategori pada baris kategori yang dipilih
+→ periksa nama dan jumlah produk → Hapus kategori untuk konfirmasi.
 
-Database kategori versi 046 memakai format simpan berbeda. Dalam pengujian
-lokal, payload web baru ditolak dengan "Pilihan produk tidak valid atau
-terlalu banyak" sampai SQL kategori diperbarui. Ini adalah kasus yang
-terverifikasi pada database uji; versi fungsi yang aktif di Supabase pengguna
-belum dapat diperiksa langsung.
+Tombol Hapus kategori berada di samping Kelola produk. Kembali ke daftar
+kategori membatalkan konfirmasi. Tidak ada penghapusan sebelum konfirmasi.
 
-PERBAIKAN
-- Pop-up sekarang menampilkan pesan kesalahan server yang sebenarnya,
-  termasuk konflik versi, hak akses, fungsi belum terpasang, koneksi gagal,
-  dan pengiriman sebelumnya yang belum pasti.
-- Bila fungsi/tabel kategori belum ditemukan, ada petunjuk menjalankan SQL.
-- Pilihan centang tetap ada ketika gagal. Tidak ditampilkan status sukses
-  bila server menolak penyimpanan.
-- Kirim ulang tetap menggunakan pengaman ID operasi. Transaksi yang belum
-  pasti tidak dihapus atau dianggap berhasil begitu saja.
-- SQL mempertahankan hubungan kategori yang sudah ada. Saat upgrade dari
-  046, hubungan lama disalin satu kali ke skema banyak kategori per produk.
-  Menjalankan ulang tidak memasukkan kembali produk yang telah dikeluarkan.
-- Alur login dan jumlah permintaan data saat membuka menu tetap sama.
-
-JIKA MASIH GAGAL
-Kirimkan teks atau screenshot pesan merah yang tampil di dalam pop-up
-setelah patch ini. Pesan tersebut kini menunjukkan error sebenarnya, sehingga
-penanganannya bisa ditentukan tanpa menebak kondisi server.
-Jika tertulis "Kategori sudah berubah", tutup pop-up dan Perbarui stok
-sebelum membuka pengaturan kategori lagi.
+PERILAKU
+- Kategori dihapus dari daftar dan filter POS di semua outlet.
+- Produk tetap ada di Semua, Master Barang, dan kategori lainnya.
+- Kategori boleh dihapus ketika kosong atau masih berisi produk.
+- Semua adalah tampilan seluruh produk jual dan tidak memiliki tombol hapus.
+- Jika filter yang sedang aktif dihapus, POS kembali ke Semua. Kata
+  pencarian, keranjang, catatan pesanan, dan form buah dipertahankan.
+- Jika seluruh kategori dihapus, Semua tetap tersedia dan kategori baru
+  tetap dapat dibuat. Kategori bawaan yang dihapus tidak dibuat ulang.
+- Hak akses sama dengan pengelolaan Master Barang. Server tetap memeriksa
+  hak akses, versi kategori, dan ID operasi untuk kirim ulang.
+- Jika kategori berubah di perangkat lain sebelum dikonfirmasi, server
+  menolak penghapusan dan meminta pembaruan data.
+- Pesan kesalahan tetap tampil langsung di pop-up. Kegagalan tidak dianggap
+  berhasil dan pengiriman ganda tidak membuat operasi ganda.
 
 VERIFIKASI LOKAL
+node tests/pos-category-delete.test.mjs
+node tests/pos-categories-sql.test.mjs
+node tests/pos-sale-variants.test.mjs
+node tests/pos-categories-ui.test.mjs
 node tests/pos-category-errors.test.mjs
 node tests/pos-category-bulk.test.mjs
-node tests/pos-categories-ui.test.mjs
-node tests/pos-sale-variants.test.mjs
-node tests/pos-categories-sql.test.mjs
 node tests/rollback-startup.test.mjs
-node --test tests/retry.test.mjs
 
-Pengujian mencakup jalur fungsi mutate aplikasi sampai pesan di pop-up,
-penolakan SQL lama, upgrade database, pengulangan SQL, hubungan kategori,
-55/57 pilihan, serta perlindungan stok/master dan kirim ulang.
-Belum diterapkan ke Supabase atau web produksi oleh asisten.
+Lulus uji handler UI/model dan SQL PGlite. Termasuk upgrade dari SQL 051,
+hapus kategori kosong/berisi/semua kategori, batal, gagal, kirim ulang,
+konflik versi, izin, tidak membuat ulang kategori, dan stok tetap tersimpan.
+Belum diuji visual di browser atau diterapkan ke server produksi oleh asisten.
 
-GIT (root proyek)
-git add pos/app.js pos/index.html pos/operations-ui.mjs pos/pos-categories-ui.mjs database/pos-menu-categories.sql tests/pos-category-errors.test.mjs tests/pos-categories-sql.test.mjs KATEGORI-POS.txt
-git commit -m "Show category save errors and align category SQL"
+GIT (root proyek setelah menyalin file)
+git add pos/app.js pos/index.html pos/operations-ui.mjs pos/pos-categories-ui.mjs pos/pos-categories.css pos/pos-categories.mjs pos/pos-menu.mjs database/pos-menu-categories.sql
+git add tests/pos-category-delete.test.mjs tests/pos-categories-sql.test.mjs tests/pos-sale-variants.test.mjs KATEGORI-POS.txt
+git commit -m "Add POS category deletion while preserving products and stock"
 git push

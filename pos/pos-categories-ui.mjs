@@ -1,7 +1,7 @@
-import {posMenuEntries} from './pos-menu.mjs?v=50';
-export {posProductCards} from './pos-menu.mjs?v=50';
+import {posMenuEntries} from './pos-menu.mjs?v=52';
+export {posProductCards} from './pos-menu.mjs?v=52';
 import {escape as e} from './core.mjs?v=9';
-import {categoryEligible,categoryName,categoryPayload,posCategories,inPosCategory,posCategoryName,hasPosPrice,savePosCategory} from './pos-categories.mjs?v=50';
+import {categoryEligible,categoryName,categoryPayload,posCategories,inPosCategory,posCategoryName,hasPosPrice,savePosCategory} from './pos-categories.mjs?v=52';
 const field=(label,html)=>`<label class="field">${label}${html}</label>`;
 const sorted=products=>products.slice().sort((a,b)=>a.name.localeCompare(b.name,'id'));
 const searchMatch=(p,q)=>[p.name,p.sku,p.barcode,p.variant,p.variantGroupName].join(' ').toLowerCase().includes(q);
@@ -19,12 +19,41 @@ export function posCategoryTabs(s){
  const items=[{id:'all',name:'Semua',count:posMenuEntries(s).length},...posCategories(s).map(c=>({...c,count:posMenuEntries(s,c.id).length}))];
  return items.map(c=>`<button type="button" class="order-category ${c.id==='all'?'selected':''}" data-order-category="${e(c.id)}" aria-pressed="${c.id==='all'}">${e(c.name)} <small>${c.count}</small></button>`).join('');
 }
+const categoryError=err=>{
+ const message=err.message||'Penyimpanan kategori gagal.',schemaMissing=err.code==='PGRST202'||['42883','42P01'].includes(err.code);
+ return message+(schemaMissing?' · Jalankan database/pos-menu-categories.sql di Supabase, lalu muat ulang POS.':'');
+};
 export function posCategoryManager(ctx){
- const state=ctx.getState?.()||ctx.state,categories=posCategories(state);
- const d=ctx.modal('Kelola kategori POS',`<p class="muted">Semua menampilkan seluruh produk jual dari Master Barang. Kategori menjadi filter untuk menyusun tampilan kasir. Satu produk dapat masuk ke beberapa kategori.</p><button type="button" data-create-pos-category class="primary">+ Tambah kategori</button><div class="pos-category-list">${categories.map(c=>`<div class="pos-category-item"><span><b>${e(c.name)}</b><small>${posMenuEntries(state,c.id).length} produk · ${state.products.filter(p=>categoryEligible(p)&&inPosCategory(state,p,c.id)).length} pilihan/SKU</small></span><button type="button" data-edit-pos-category="${e(c.id)}">Kelola produk</button></div>`).join('')}</div>`);
- d.classList.add('pos-category-modal');d.querySelector('[type="submit"]').hidden=true;
+ let state=ctx.getState?.()||ctx.state,pendingDelete=null,saving=false;
+ const d=ctx.modal('Kelola kategori POS',`<section data-category-manager-list><p class="muted">Semua menampilkan seluruh produk jual dari Master Barang. Kategori menjadi filter untuk menyusun tampilan kasir. Satu produk dapat masuk ke beberapa kategori.</p><button type="button" data-create-pos-category class="primary">+ Tambah kategori</button><div class="pos-category-list" data-category-manager-rows></div></section><section data-category-delete-step hidden><h3 data-category-delete-title></h3><p data-category-delete-count></p><p>Kategori ini akan dihapus dari semua outlet. Produk tetap tersedia di <b>Semua</b> dan kategori lainnya. Stok serta data produk tetap tersimpan.</p><button type="button" data-category-delete-back>Kembali ke daftar kategori</button></section>`,'Hapus kategori');
+ d.classList.add('pos-category-modal');const submit=d.querySelector('[type="submit"]'),error=message=>d.querySelector('#form-error').textContent=message;
+ submit.classList.add('danger');
+ function showList(){
+  pendingDelete=null;error('');submit.hidden=true;d.querySelector('[data-category-manager-list]').hidden=false;d.querySelector('[data-category-delete-step]').hidden=true;
+  d.querySelector('[data-category-manager-rows]').innerHTML=posCategories(state).map(c=>`<div class="pos-category-item"><span><b>${e(c.name)}</b><small>${posMenuEntries(state,c.id).length} produk · ${state.products.filter(p=>categoryEligible(p)&&inPosCategory(state,p,c.id)).length} pilihan/SKU</small></span><div class="pos-category-item-actions"><button type="button" data-edit-pos-category="${e(c.id)}">Kelola produk</button><button type="button" class="pos-category-delete" data-delete-pos-category="${e(c.id)}" aria-label="Hapus kategori ${e(c.name)}">Hapus kategori</button></div></div>`).join('')||'<p class="empty">Belum ada kategori. Seluruh produk jual tetap tampil di Semua.</p>';
+  d.querySelectorAll('[data-edit-pos-category]').forEach(b=>b.onclick=()=>{d.close();posCategoryDialog({...ctx,state:ctx.getState?.()||state,categoryId:b.dataset.editPosCategory});});
+  d.querySelectorAll('[data-delete-pos-category]').forEach(b=>b.onclick=()=>{
+   error('');try{
+    const category=posCategories(state).find(c=>c.id===b.dataset.deletePosCategory);
+    pendingDelete=categoryPayload(state,{id:crypto.randomUUID(),categoryId:category.id,name:category.name,mode:'delete'});
+    d.querySelector('[data-category-delete-title]').textContent=`Hapus kategori “${category.name}”?`;
+    d.querySelector('[data-category-delete-count]').textContent=`${posMenuEntries(state,category.id).length} produk · ${state.products.filter(p=>categoryEligible(p)&&inPosCategory(state,p,category.id)).length} pilihan/SKU dalam kategori ini.`;
+    d.querySelector('[data-category-manager-list]').hidden=true;d.querySelector('[data-category-delete-step]').hidden=false;submit.hidden=false;submit.disabled=false;
+   }catch(err){error(categoryError(err));}
+  });
+ }
  d.querySelector('[data-create-pos-category]').onclick=()=>{d.close();posCategoryDialog({...ctx,state:ctx.getState?.()||state});};
- d.querySelectorAll('[data-edit-pos-category]').forEach(b=>b.onclick=()=>{d.close();posCategoryDialog({...ctx,state:ctx.getState?.()||state,categoryId:b.dataset.editPosCategory});});
+ d.querySelector('[data-category-delete-back]').onclick=()=>{if(!saving)showList();};
+ d.querySelector('form').onsubmit=async ev=>{
+  ev.preventDefault();if(!pendingDelete||saving)return;saving=true;submit.disabled=true;error('');
+  try{
+   if(await ctx.mutate('pos_category_save',pendingDelete,{throwOnError:true})){
+    const updated=ctx.getState?.();if(updated)state=updated;else{state=structuredClone(state);savePosCategory(state,pendingDelete);}
+    ctx.render(state);d.dataset.dirty='false';showList();ctx.toast('Kategori dihapus. Produk tetap tersedia di Semua.');
+   }else error('Penghapusan kategori belum terkonfirmasi. Coba lagi dengan pilihan yang sama.');
+  }catch(err){error(categoryError(err));}finally{saving=false;submit.disabled=false;}
+ };
+ showList();
 }
 export function posCategoryDialog(ctx){
  let {state,categoryId}=ctx;const {modal,mutate,render,toast}=ctx;
@@ -75,7 +104,7 @@ export function posCategoryDialog(ctx){
     const updated=ctx.getState?.();if(updated)state=updated;else{state=structuredClone(state);savePosCategory(state,payload);}
     category=posCategories(state).find(c=>c.id===categoryId);operationId=crypto.randomUUID();selected.clear();removed.clear();d.dataset.dirty='false';d.querySelector('[data-category-name]').value=category.name;render(state);show('manage');toast(mode==='add'?'Produk ditambahkan ke kategori':mode==='remove'?'Produk dikeluarkan dari kategori ini':'Nama kategori tersimpan');
    }else error('Perubahan kategori belum terkonfirmasi. Periksa pesan kesalahan, lalu coba lagi.');
-  }catch(err){const message=err.message||'Penyimpanan kategori gagal.';const schemaMissing=err.code==='PGRST202'||['42883','42P01'].includes(err.code);error(message+(schemaMissing?' · Jalankan database/pos-menu-categories.sql di Supabase, lalu muat ulang POS.':''));}finally{saving=false;}
+  }catch(err){error(categoryError(err));}finally{saving=false;}
  }
  d.querySelector('[data-category-remove]').onclick=()=>removed.size?save('remove',[...removed]):undefined;
  d.querySelector('form').onsubmit=async ev=>{ev.preventDefault();if(view==='name'){d.querySelector('[data-category-next]').onclick();return;}if(view==='rename')await save('rename',[]);else if(view==='add'&&(!category||selected.size))await save('add',[...selected]);};

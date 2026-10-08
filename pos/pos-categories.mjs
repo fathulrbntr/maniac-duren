@@ -29,11 +29,12 @@ export function categoryName(value){const name=String(value??'').trim().replace(
 export function categoryPayload(s,{id,categoryId,name,productIds=[],mode='add'}){
  name=categoryName(name);
  const categories=posCategories(s),category=categories.find(c=>c.id===categoryId);
- if(!['add','remove','rename'].includes(mode)||(!category&&mode!=='add'))throw Error('Aksi kategori tidak valid.');
+ if(!['add','remove','rename','delete'].includes(mode)||(!category&&mode!=='add'))throw Error('Aksi kategori tidak valid.');
  if(categories.some(c=>c.id!==categoryId&&c.name.toLowerCase()===name.toLowerCase()))throw Error('Nama kategori sudah digunakan.');
  if(category&&mode!=='rename'&&name!==category.name)throw Error('Nama kategori sudah berubah. Perbarui data.');
  const ids=[...new Set(productIds)].sort();if(ids.length>5000)throw Error('Maksimal 5.000 produk sekali simpan.');
  if(mode==='rename'&&ids.length)throw Error('Ubah nama tidak mengubah pilihan produk.');
+ if(mode==='delete'&&ids.length)throw Error('Hapus kategori tidak menerima pilihan produk.');
  for(const id of ids){const p=s.products.find(p=>p.id===id);if(!p||(mode==='add'&&!categoryEligible(p)))throw Error('Pilih produk jual dari Master Barang.');}
  return {id,categoryId,name,mode,expectedVersion:category?.version||0,productIds:ids};
 }
@@ -52,8 +53,13 @@ export function savePosCategory(s,p){
   if(p.mode==='add')product.posCategoryIds=[...new Set([...product.posCategoryIds,p.categoryId])].sort();
   if(p.mode==='remove')product.posCategoryIds=product.posCategoryIds.filter(id=>id!==p.categoryId);
  }
- if(p.mode==='rename')category.name=p.name;
- category.version++;
+ if(p.mode==='delete'){
+  s.posCategories=s.posCategories.filter(c=>c.id!==p.categoryId);
+  for(const product of s.products){
+   product.posCategoryIds=product.posCategoryIds.filter(id=>id!==p.categoryId);
+   if(product.posCategoryId===p.categoryId)product.posCategoryId=null;
+  }
+ }else{if(p.mode==='rename')category.name=p.name;category.version++;}
  (s.events||=[]).push({id:p.id,action:'pos_category_save',payload:structuredClone(p)});
 }
 // Stock-only polling updates availability without recreating product cards/images.

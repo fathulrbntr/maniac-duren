@@ -68,6 +68,14 @@ try{
  assert.equal(root.querySelector('#order-search').value,'Bawor');assert.equal(card(bawor[0]).hidden,true,'Removed group must disappear from active category immediately');
  await choose('all');assert.equal(card(bawor[0]).hidden,false,'Removed group remains available in Semua');
  assert(!root.querySelector('[data-order-category="unassigned"]'),'No separate uncategorized tab');
+ // Deleting the selected category falls back to Semua and retains local inputs.
+ await choose(cat('Durpas'));root.querySelector('#order-note').value='Meja 09';
+ const searchBeforeDelete=root.querySelector('#order-search'),noteBeforeDelete=root.querySelector('#order-note');
+ await root.querySelector('#manage-pos-categories').fire('click');const deleteManager=m.latest;
+ await deleteManager.querySelector(`[data-delete-pos-category="${cat('Durpas')}"]`).fire('click');await submit(deleteManager);
+ assert(!root.querySelector(`[data-order-category="${cat('Durpas')}"]`));
+ assert.equal(root.querySelector('[data-order-category="all"]').attrs['aria-pressed'],'true');assert.equal(card(bawor[0]).hidden,false);
+ assert.equal(root.querySelector('#order-search'),searchBeforeDelete);assert.equal(root.querySelector('#order-note'),noteBeforeDelete);assert.equal(noteBeforeDelete.value,'Meja 09');deleteManager.close();
  // State may change between polling and submit; confirmation revalidates it.
  // Legacy products with one free-text variant also require confirmation, without guessing groups by name.
  const legacy={...water,id:id(),name:'Pancake coklat',variant:'Coklat'};const legacyState={...state,products:[legacy],unitLots:[lot(legacy,2)]};

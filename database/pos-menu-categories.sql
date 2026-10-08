@@ -1,5 +1,5 @@
--- Maniac Duren patch 051: sinkronisasi fungsi kategori dengan web.
--- Dapat dipasang dari 046 atau dijalankan ulang pada 047–050.
+-- Maniac Duren patch 052: tambah hapus kategori tanpa menghapus produk/stok.
+-- Dapat dipasang dari 046 atau dijalankan ulang pada 047–052.
 -- Menjaga pilihan kategori yang ada; tidak mereset produk atau transaksi.
 -- Kategori POS global tidak mengganti kategori operasional, stok, atau resep.
 begin;
@@ -77,7 +77,7 @@ begin
  select id into employee from public.md_pos_employees where user_id=auth.uid() and active;
  if employee is null then raise exception 'Akun tidak aktif';end if;
  -- Klien lama tidak boleh mengganti hubungan kategori dengan skema pemindahan.
- if operation is null or operation not in ('add','remove','rename') then raise exception 'Muat ulang POS patch 047 untuk mengelola kategori';end if;
+ if operation is null or operation not in ('add','remove','rename','delete') then raise exception 'Muat ulang POS untuk mengelola kategori';end if;
  if op is null or target_id is null or label is null or length(label) not between 1 and 50
     or lower(label) in ('semua','belum dikategorikan') or expected_version is null or expected_version<0 then raise exception 'Data kategori tidak valid';end if;
  if jsonb_typeof(payload->'productIds') is distinct from 'array' or jsonb_array_length(payload->'productIds')>5000
@@ -99,6 +99,7 @@ begin
  select coalesce(array_agg(value::uuid),array[]::uuid[]) into chosen from jsonb_array_elements_text(payload->'productIds');
  if exists(select 1 from unnest(chosen) x group by x having count(*)>1) then raise exception 'Produk dipilih lebih dari sekali';end if;
  if operation='rename' and cardinality(chosen)>0 then raise exception 'Ubah nama tidak mengubah pilihan produk';end if;
+ if operation='delete' and cardinality(chosen)>0 then raise exception 'Hapus kategori tidak menerima pilihan produk';end if;
  if exists(select 1 from unnest(chosen) x left join public.md_pos_products p on p.id=x where p.id is null or (operation='add' and p.item_type not in ('direct','finished','recipe'))) then raise exception 'Pilih produk jual yang terdaftar di Master Barang';end if;
  if target.id is null then
   insert into public.md_pos_menu_categories(id,name,sort_order) values(target_id,label,(select coalesce(max(sort_order),-1)+1 from public.md_pos_menu_categories));
@@ -110,7 +111,11 @@ begin
  elsif operation='remove' then
   delete from public.md_pos_menu_category_products cp where cp.category_id=target_id and cp.product_id=any(chosen);
  end if;
- update public.md_pos_menu_categories set version=version+1 where id=target_id;
+ if operation='delete' then
+  -- FK menghapus hubungan kategori saja; produk dan stok tetap tersedia.
+  delete from public.md_pos_menu_categories where id=target_id;
+ else update public.md_pos_menu_categories set version=version+1 where id=target_id;
+ end if;
  insert into public.md_pos_events(id,action,actor,employee_id,business_date,payload)
  values(op,'pos_category_save',auth.uid(),employee,(now() at time zone 'Asia/Jakarta')::date,payload);
  return public.pos_read();

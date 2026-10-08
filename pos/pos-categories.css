@@ -35,3 +35,8 @@
 .pos-category-modal .pos-category-select-all input{width:18px;height:18px;flex:0 0 18px;padding:0;margin:0;accent-color:var(--green)}
 .pos-category-picker-tools .pos-category-select-all{margin-right:auto}
 .pos-category-select-all:has(input:disabled){opacity:.55;cursor:default}
+
+.pos-category-item-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.pos-category-item-actions .pos-category-delete{color:var(--danger)}
+[data-category-delete-title]{overflow-wrap:anywhere}
+@media(max-width:600px){.pos-category-item-actions{flex-direction:column;align-items:stretch;flex-shrink:0}.pos-category-item .pos-category-item-actions button{max-width:none}.pos-category-item>span{min-width:0}}
