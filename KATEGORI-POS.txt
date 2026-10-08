@@ -1,57 +1,88 @@
-MANIAC DUREN — PATCH 046: KATEGORI MENU POS
+MANIAC DUREN — PATCH 049: KATEGORI DAN POP-UP VARIAN POS
 
-Paket ini berisi file baru/perubahan di atas patch 045 (UI produk seragam).
-Ekstrak ke root proyek dan izinkan penimpaan file dengan nama yang sama.
-Sebelum deploy, jalankan seluruh database/pos-menu-categories.sql di
-Supabase SQL Editor. Setelah SQL berhasil, deploy perubahan web.
-Tidak perlu reset database atau mengimpor ulang master barang.
+Paket perubahan di atas patch 047, sudah mencakup perbaikan tampilan yang
+sebelumnya disiapkan sebagai patch 048. Tidak perlu memasang 048 terpisah.
+Ekstrak seluruh isi ZIP ke root proyek dan timpa file lama, lalu deploy
+web dan muat ulang POS. Sertakan pos/index.html serta kedua file CSS.
+Tidak ada perubahan SQL tambahan jika database patch 045 (varian master)
+dan 047 (kategori) sudah terpasang. Tidak perlu reset data atau stok.
 
-CARA PAKAI
-1. Buka POS dengan akun yang memiliki izin Master Barang.
-2. Klik + Tambah kategori, isi nama, lalu Lanjut · Tambah produk.
-3. Cari dan centang produk/varian dari Master Barang, lalu Simpan kategori.
-4. Gunakan Kelola kategori & produk untuk mengubah nama atau pilihan produk.
+HALAMAN POS
+- Semua menampilkan Produk jual langsung, Menu dengan resep, serta
+  Produk jadi hasil produksi. Bahan baku pembelian dan Bahan produksi
+  sendiri tidak ditampilkan sebagai produk jual.
+- Produk tetap tampil walaupun harga belum diisi atau stok sedang kosong.
+  Ketersediaan menentukan apakah pilihan bisa dijual, bukan keanggotaannya
+  dalam kategori.
+- Produk bervarian tampil sebagai satu kartu sesuai kelompok di Master
+  Barang. Contoh: Durpas Bawor berisi varian 500 gr dan 1 kg.
+- Jumlah pada tombol kategori menghitung kartu produk, bukan jumlah SKU.
 
-Kategori awal: Buah, Durpas, Coral, Makan, Minuman, Dessert.
-Kategori berlaku di seluruh outlet. Satu produk/varian berada dalam satu
-kategori POS; memilih produk dari kategori lain akan memindahkannya.
-Melepas centang mengeluarkan produk dari kategori tanpa menghapus produknya.
-Produk tersebut tetap dapat ditemukan di Semua dan Belum dikategorikan
-apabila memenuhi syarat tampil di POS.
+ISI KATEGORI
+Kelola kategori & produk → Kelola produk → Tambah produk dari master
+→ Pilih produk/varian → Tambahkan ke kategori.
 
-Pemilih menampilkan produk jual langsung, produk jadi, dan produk resep,
-termasuk produk yang belum memiliki harga atau stok. Bahan baku dan bahan
-persiapan tidak ditampilkan. Penjualan tetap mengikuti harga, stok outlet,
-dan ketersediaan bahan resep yang sudah berlaku.
+Centang nama kelompok untuk memilih seluruh varian yang ditampilkan di
+bawahnya, atau centang variannya satu per satu. Pencarian nama/SKU/barcode
+serta Pilih hasil pencarian tetap tersedia. Varian yang sudah masuk kategori
+tidak ditampilkan lagi dalam pemilih tambah.
 
-Pengelompokan awal menggunakan hubungan olahan durian, nama, dan kategori
-lama. Produk yang tidak cocok tetap belum dikategorikan. Produk/varian baru
-sesudah pemasangan dipilih melalui Kelola kategori & produk. Menjalankan
-ulang SQL tidak mengembalikan pemindahan, perubahan nama, atau pilihan
-produk yang sudah disimpan admin.
+Untuk mengeluarkan produk, centang kelompok atau varian pada daftar Produk
+dalam kategori, lalu Keluarkan yang dipilih. Produk tetap ada di Semua,
+master, serta kategori lainnya. Tidak ada pemindahan atau salinan stok.
+Varian baru di master tetap bisa ditambahkan melalui pemilih ini.
 
-Kategori POS terpisah dari kategori operasional Master Barang. Perubahan
-ini mempertahankan ID produk, varian, harga, stok, resep, serta hubungan
-supplier/batch/olahan reject. Klik filter dan pencarian memakai data yang
-sudah dimuat; tidak ada permintaan kategori tambahan saat login atau
-membuka menu. Penyimpanan kategori memakai pemeriksaan konflik dan ID
-pengiriman untuk mencegah pengiriman ulang membuat data ganda.
+PILIH VARIAN UNTUK TRANSAKSI
+1. Buka kategori Durpas dan klik kartu Durpas Bawor.
+2. Pop-up menampilkan pilihan varian, nama lengkap, SKU, harga, dan status.
+3. Pilih 500 gr atau 1 kg. Pemilihan belum menambah pesanan.
+4. Klik Konfirmasi · Tambah ke pesanan.
+5. Keranjang mencatat varian yang dipilih dengan harga dan ID produk aslinya.
+
+Pop-up mengikuti isi kategori yang sedang dibuka. Jika hanya varian 500 gr
+ada di kategori tertentu, hanya varian itu yang ditawarkan di kategori
+tersebut. Semua memperlihatkan seluruh varian produk yang boleh dijual.
+
+Kelompok tetap bisa dibuka saat seluruh variannya belum siap dijual agar
+pilihannya dapat dilihat. Varian tanpa harga atau stok/bahan resep cukup
+tidak dapat dikonfirmasi. Harga, stok, resep, dan keanggotaan diperiksa
+kembali saat konfirmasi. Perubahan harga/varian meminta pemilihan ulang.
+Menutup pop-up tidak menambahkan item; klik konfirmasi ganda tidak menambah
+dua kali. Untuk buah bervarian, konfirmasi dilanjutkan ke form berat,
+butir, dan asal penerimaan sebelum masuk keranjang.
+
+Produk tanpa varian tetap mengikuti alur penjualan sebelumnya. Produk lama
+yang hanya memiliki satu label varian juga memakai pop-up konfirmasi.
+Pengelompokan beberapa SKU memakai hubungan varian di Master Barang;
+sistem tidak menebak kelompok berdasarkan kesamaan nama.
+
+PERFORMA DAN DATA
+Filter, pencarian, pengelolaan pilihan, dan pop-up memakai data yang sudah
+dimuat. Tidak ada permintaan data tambahan saat membuka kategori/varian.
+Pembaruan stok mempertahankan gambar kartu, keranjang, dan catatan pesanan.
+SKU, stok, harga tersimpan, resep, batch/supplier, dan hasil reject tetap
+menggunakan ID produk/varian yang sama. Stok diproses oleh alur transaksi
+POS yang sudah ada, bukan ketika pop-up dibuka atau pilihan dicentang.
 
 VERIFIKASI LOKAL
+node tests/pos-sale-variants.test.mjs
+node tests/pos-category-visibility.test.mjs
 node tests/pos-categories-ui.test.mjs
 node tests/pos-categories-sql.test.mjs
-npm test
 node tests/order-stock.test.mjs
 node tests/rollback-startup.test.mjs
 node tests/variants-unified-ui.test.mjs
+npm test
 
-Lulus uji interaksi dengan adapter DOM, SQL lokal PGlite pada baseline 027
-dan skema terbaru yang tersedia, izin akses, konflik, pengiriman ulang,
-stok/resep, serta startup. Tes menggunakan dependensi pengembangan proyek.
-Belum diverifikasi secara visual di browser atau dipasang ke Supabase/web
-produksi. Paket ini tidak menyatakan bahwa deployment sudah dilakukan.
+Lulus uji interaksi dengan adapter DOM, termasuk kasus Durpas Bawor dari
+pemilihan kategori sampai kartu dan konfirmasi varian; ID/harga di payload
+pembayaran, resep, buah, konflik harga/stok, konfirmasi ganda, dan startup.
+Uji SQL lokal PGlite juga memverifikasi metadata grup Durpas Bawor 500 gr/
+1 kg dari data seed dan pembaca database yang ada. Belum diperiksa secara
+visual di browser dan belum diterapkan ke server produksi.
 
-GIT (jalankan dari root proyek setelah menyalin file)
-git add pos/app.js pos/index.html pos/operations-ui.mjs pos/retry.mjs pos/pos-categories.mjs pos/pos-categories-ui.mjs pos/pos-categories.css database/pos-menu-categories.sql tests/pos-categories-ui.test.mjs tests/pos-categories-sql.test.mjs KATEGORI-POS.txt
-git commit -m "Add POS categories and master product picker"
+GIT (root proyek setelah menyalin file)
+git add pos/app.js pos/index.html pos/operations-ui.mjs pos/pos-categories* pos/pos-menu*
+git add tests/pos-categories-*.mjs tests/pos-category-visibility.test.mjs tests/pos-sale-variants.test.mjs KATEGORI-POS.txt
+git commit -m "Group POS products and confirm variants before adding orders"
 git push

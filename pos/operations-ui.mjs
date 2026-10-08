@@ -1,7 +1,8 @@
-import {posCategoryTabs,posProductCards,posCategoryDialog,posCategoryManager} from './pos-categories-ui.mjs?v=46';
-import {posSellable,menuCatalogChanged} from './pos-categories.mjs?v=46';
+import {posMenuEntries,updatePosCards,posVariantDialog} from './pos-menu.mjs?v=49';
+import {posCategoryTabs,posProductCards,posCategoryDialog,posCategoryManager} from './pos-categories-ui.mjs?v=49';
+import {posVisible,menuCatalogChanged,posProductStatus} from './pos-categories.mjs?v=49';
 import {employeesPage,bindEmployees} from './employees-ui.mjs?v=25';
-import {checkOrder,menuStatus} from './order-stock.mjs?v=12';
+import {checkOrder} from './order-stock.mjs?v=12';
 import {orderMargins} from './finance.mjs?v=9';
 import {escape as e,id,today,num,money} from './core.mjs?v=9';
 export const opsPages=['salesreport','orders','kitchen','losses','trace','finance','employees','attendance','guide'];
@@ -33,7 +34,7 @@ export function opsPage(view,s,store){
  if(view==='losses')html=header('Waste & penyusutan','Catat stok yang benar-benar hilang. Untuk buah reject yang dimanfaatkan, gunakan Olah reject.',button('Olah reject menjadi bahan','recover','')+button('Catat kehilangan','loss','', 'primary'))+`<section class="panel">${table(['Waktu','Jenis / alasan','Penanggung jawab'],(s.events||[]).filter(x=>x.store_id===store&&x.action==='inventory_loss').map(x=>`<tr><td>${e(x.business_date)}</td><td>${e(x.payload?.cause||'Waste / penyusutan')}<small>${e(x.payload?.reason||'Detail pada akun finance')}</small></td><td>${e(nm(s,'employees',x.employee_id))}</td></tr>`))}</section>`;
  if(view==='kitchen')html=kitchenPage(s,store);
  if(view==='orders'){
- const sellable=s.products.filter(posSellable);
+ const sellable=s.products.filter(posVisible);
  const draftTotal=draft.reduce((a,x)=>a+x.qty*x.price,0);
  const itemCount=draft.reduce((a,x)=>a+x.qty,0);
  const cartLines=draft.map((x,i)=>{const p=s.products.find(p=>p.id===x.productId);const fruit=p?.stockUnit==='kg_butir';const unit=fruit?(x.unit==='KG'?'kg':'butir'):(p?.stockUnit||'pcs');return `<article class="order-cart-line"><div class="order-cart-copy"><strong>${e(nm(s,'products',x.productId))}</strong><span>${num(x.qty)} ${e(unit)} × ${money(x.price)}</span>${fruit?`<small>${num(x.kg)} kg aktual · ${x.pieces} butir<br>${e(nm(s,'suppliers',x.supplierId))} · ${e((x.lotId||'').slice(0,8))}</small>`:''}</div><div class="order-cart-actions">${!fruit?`<button type="button" data-draft-qty="${i}" data-delta="-1" aria-label="Kurangi jumlah">−</button><button type="button" data-draft-qty="${i}" data-delta="1" aria-label="Tambah jumlah">+</button>`:''}<button type="button" class="order-remove" data-remove-line="${i}" aria-label="Hapus item">×</button><b>${money(x.qty*x.price)}</b></div></article>`;}).join('');
@@ -80,7 +81,8 @@ export function bindOps(view,s,store,ctx){
  const totalNode=document.querySelector('#order-total');
  const countNode=document.querySelector('#order-item-count');
  const saveButton=document.querySelector('#save-order');
- const updateCards=()=>document.querySelectorAll('[data-order-add]').forEach(card=>{const p=s.products.find(p=>p.id===card.dataset.orderAdd);const status=menuStatus(s,store,p,draft,today());card.disabled=!status.ok;card.title=status.reason;card.querySelector('.order-stock-status').textContent=status.reason;});
+ let activeCategory='all',variantDialog=null;
+ const updateCards=()=>{const visible=updatePosCards(document,s,store,draft,activeCategory,document.querySelector('#order-search')?.value||'');document.querySelector('#order-no-results').hidden=visible>0;};
  const totalDraft=()=>draft.reduce((a,x)=>a+x.qty*x.price,0);
  const showDraft=()=>{
   const total=totalDraft(),count=draft.reduce((a,x)=>a+x.qty,0);
@@ -103,23 +105,22 @@ export function bindOps(view,s,store,ctx){
   showDraft();return true;
  };
  showDraft();
- document.querySelector('#order-products').addEventListener('stock-refresh',ev=>{const changed=menuCatalogChanged(s,ev.detail);s=ev.detail;if(changed)refreshCatalog();showDraft();const template=document.createElement('template');template.innerHTML=opsPage('orders',s,store);const queue=template.content.querySelector('.order-queue');if(queue){document.querySelector('.order-queue')?.replaceWith(queue);bindActions(queue);}});
- document.querySelector('#order-products')?.addEventListener('click',ev=>{
-  const card=ev.target.closest('[data-order-add]');if(!card||card.disabled)return;
-  const p=s.products.find(p=>p.id===card.dataset.orderAdd);if(!p)return;
+ document.querySelector('#order-products').addEventListener('stock-refresh',ev=>{const changed=menuCatalogChanged(s,ev.detail);s=ev.detail;if(changed)refreshCatalog();showDraft();variantDialog?.refresh();const template=document.createElement('template');template.innerHTML=opsPage('orders',s,store);const queue=template.content.querySelector('.order-queue');if(queue){document.querySelector('.order-queue')?.replaceWith(queue);bindActions(queue);}});
+ const selectProduct=p=>{
+  const status=posProductStatus(s,store,p,draft,today());if(!status.ok){ctx.toast(status.reason);return false;}
   if(p.stockUnit==='kg_butir'){
    f.elements.productId.value=p.id;f.elements.productId.dispatchEvent(new Event('change'));
-   f.hidden=false;requestAnimationFrame(()=>f.scrollIntoView({behavior:'smooth',block:'nearest'}));
-  }else{
-   addDraftLine({productId:p.id,qty:1,price:Number(p.salePrice)});
+   f.hidden=false;requestAnimationFrame(()=>f.scrollIntoView({behavior:'smooth',block:'nearest'}));return true;
   }
- });
- let activeCategory='all';
- const filterProducts=()=>{
-  const q=(document.querySelector('#order-search')?.value||'').trim().toLowerCase();let visible=0;
-  document.querySelectorAll('[data-order-add]').forEach(card=>{const matchCategory=activeCategory==='all'||card.dataset.category===activeCategory;const matchName=card.dataset.name.includes(q);card.hidden=!(matchCategory&&matchName);if(!card.hidden)visible++;});
-  document.querySelector('#order-no-results').hidden=visible>0;
+  return addDraftLine({productId:p.id,qty:1,price:Number(p.salePrice)});
  };
+ document.querySelector('#order-products')?.addEventListener('click',ev=>{
+  const card=ev.target.closest('[data-menu-key]');if(!card||card.disabled||card.hidden)return;
+  const entry=posMenuEntries(s,activeCategory).find(x=>x.key===card.dataset.menuKey);if(!entry)return;
+  if(entry.hasVariants)variantDialog=posVariantDialog({key:entry.key,category:activeCategory,getState:()=>s,getDraft:()=>draft,store,modal:ctx.modal,onConfirm:selectProduct});
+  else selectProduct(entry.products[0]);
+ });
+ const filterProducts=()=>updateCards();
  document.querySelector('#order-search')?.addEventListener('input',filterProducts);
  const selectCategory=key=>{
   activeCategory=key;
@@ -133,7 +134,7 @@ export function bindOps(view,s,store,ctx){
   if(![...document.querySelectorAll('[data-order-category]')].some(b=>b.dataset.orderCategory===activeCategory))activeCategory='all';
   selectCategory(activeCategory);
   const selected=f.elements.productId.value;
-  f.elements.productId.innerHTML='<option value="">Pilih durian</option>'+opts(s.products.filter(p=>posSellable(p)&&p.stockUnit==='kg_butir'));
+  f.elements.productId.innerHTML='<option value="">Pilih durian</option>'+opts(s.products.filter(p=>posVisible(p)&&p.stockUnit==='kg_butir'));
   f.elements.productId.value=selected;
   if(selected&&!f.elements.productId.value){f.hidden=true;f.elements.productId.onchange?.();}
  }

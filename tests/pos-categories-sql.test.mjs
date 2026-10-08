@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {randomUUID as id} from 'node:crypto';
 import {PGlite} from '@electric-sql/pglite';
-import {categoryPayload,defaultPosCategories} from '../pos/pos-categories.mjs';
+import {categoryPayload,defaultPosCategories,posCategoryIds} from '../pos/pos-categories.mjs';
+import {posMenuEntries,posProductCards} from '../pos/pos-menu.mjs';
 const db=new PGlite(),migration=fs.readFileSync('database/pos-menu-categories.sql','utf8');
 try{
  await db.exec("create role anon;create role authenticated;create role service_role;create schema auth;create table auth.users(id uuid primary key,email text);create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;");
@@ -29,40 +30,72 @@ try{
  const inventory=async()=>({lots:(await db.query('select * from public.md_pos_lots order by id')).rows,units:(await db.query('select * from public.md_pos_unit_lots order by id')).rows,recipes:(await db.query('select * from public.md_pos_recipe_items order by recipe_id,product_id')).rows});
  const inventoryBefore=await inventory(),productsBefore=(await db.query('select * from public.md_pos_products order by id')).rows;
  const root=(await db.query("select pg_get_functiondef('public.pos_read()'::regprocedure) d")).rows[0].d;
+ let legacy;
+ if(process.env.POS_PREVIOUS_CATEGORY_SQL){
+  await db.exec(fs.readFileSync(process.env.POS_PREVIOUS_CATEGORY_SQL,'utf8'));
+  const old=await read(),categoryId=id(),productIds=[water.id,fruit.id].sort();
+  legacy=await save({id:id(),categoryId,name:'Kategori lama',expectedVersion:0,productIds,expectedAssignments:old.products.filter(p=>productIds.includes(p.id)).map(p=>({id:p.id,categoryId:p.posCategoryId})).sort((a,b)=>a.id.localeCompare(b.id))});
+ }
  await db.exec(migration);await db.exec(migration);
- const initial=await read(),cat=name=>initial.posCategories.find(c=>c.name===name).id;
- assert.deepEqual(initial.posCategories,defaultPosCategories());
- assert.equal(initial.products.find(p=>p.id===fruit.id).posCategoryId,cat('Buah'));assert.equal(initial.products.find(p=>p.id===coral.id).posCategoryId,cat('Coral'));
- assert(initial.products.filter(p=>['durpas500','durpas1000'].includes(p.durianOutput)).every(p=>p.posCategoryId===cat('Durpas')));
- assert.equal(initial.products.find(p=>p.id===water.id).posCategoryId,cat('Minuman'));assert.equal(initial.products.find(p=>p.id===dessert.id).posCategoryId,cat('Dessert'));assert.equal(initial.products.find(p=>p.id===raw.id).posCategoryId,null);assert.equal(initial.products.find(p=>p.id===prep.id).posCategoryId,null);
+ const initial=await read(),cat=name=>initial.posCategories.find(c=>c.name===name).id,ids=(s,p)=>posCategoryIds(s,s.products.find(x=>x.id===p.id));
+ assert.equal(initial.posCategoryMembershipVersion,2);
+ const baworMenu=posMenuEntries(initial,cat('Durpas')).filter(e=>e.name==='Durpas Bawor');assert.equal(baworMenu.length,1);assert.equal(baworMenu[0].products.length,2);assert(baworMenu[0].hasVariants);assert(baworMenu[0].products.every(p=>p.variantOptions.length===1));assert(posProductCards(initial,store).includes('data-order-group=\"'+baworMenu[0].products[0].variantGroupId));
+ if(legacy){
+  assert.deepEqual(initial.posCategories,legacy.posCategories);
+  for(const p of legacy.products)assert.deepEqual(ids(initial,p),p.posCategoryId?[p.posCategoryId]:[],'Upgrade retains exact old assignment, including moves');
+ }else{
+  assert.deepEqual(initial.posCategories,defaultPosCategories());
+  assert.deepEqual(ids(initial,fruit),[cat('Buah')]);assert.deepEqual(ids(initial,coral),[cat('Coral')]);
+  assert(initial.products.filter(p=>['durpas500','durpas1000'].includes(p.durianOutput)).every(p=>p.posCategoryIds.includes(cat('Durpas'))));
+  assert.deepEqual(ids(initial,water),[cat('Minuman')]);assert.deepEqual(ids(initial,dessert),[cat('Dessert')]);
+ }
+ assert.deepEqual(ids(initial,raw),[]);assert.deepEqual(ids(initial,prep),[]);
  assert.equal((await db.query("select pg_get_functiondef('public.pos_read()'::regprocedure) d")).rows[0].d,root);
  assert.deepEqual((await db.query('select * from public.md_pos_products order by id')).rows.map(({pos_category_id,...p})=>p),productsBefore);
- if(process.env.POS_TEST_SQL){const service=(await db.query('select public.pos_read_service($1,true) s',[store])).rows[0].s;assert.deepEqual(service.posCategories,initial.posCategories);assert.equal(service.products.find(p=>p.id===fruit.id).posCategoryId,cat('Buah'));}
- const make=(s,name,ids,categoryId=id())=>categoryPayload(s,{id:id(),categoryId,name,productIds:ids});
+ const rowsBefore=(await db.query('select * from public.md_pos_products order by id')).rows;
+ if(process.env.POS_TEST_SQL){const service=(await db.query('select public.pos_read_service($1,true) s',[store])).rows[0].s;assert.deepEqual(service.posCategories,initial.posCategories);assert.deepEqual(ids(service,fruit),ids(initial,fruit));assert.equal(service.posCategoryMembershipVersion,2);}
+ const make=(s,name,productIds,categoryId=id(),mode='add')=>categoryPayload(s,{id:id(),categoryId,name,productIds,mode});
  const payload=make(initial,'Paket Pilihan',[water.id,fruit.id]);
  await as(cashier);assert.deepEqual((await read()).posCategories,initial.posCategories);await assert.rejects(save(payload),/Hak akses/);await as(owner);
- await db.exec('set role anon');await assert.rejects(save(payload),/permission denied/);await db.exec('reset role');await db.exec('set role authenticated');await assert.rejects(db.query('select * from public.md_pos_menu_categories'),/permission denied/);
+ await db.exec('set role anon');await assert.rejects(save(payload),/permission denied/);await db.exec('reset role');await db.exec('set role authenticated');
+ for(const table of ['md_pos_menu_categories','md_pos_menu_category_products'])await assert.rejects(db.query('select * from public.'+table),/permission denied/);
  const saved=await save(payload);await save(payload);await db.exec('reset role');
- assert.equal(saved.posCategories.length,7);assert(saved.products.filter(p=>[water.id,fruit.id].includes(p.id)).every(p=>p.posCategoryId===payload.categoryId));
+ assert.equal(saved.posCategories.length,initial.posCategories.length+1);
+ for(const p of [water,fruit])assert.deepEqual(ids(saved,p),[...ids(initial,p),payload.categoryId].sort(),'Add preserves every prior category');
+ assert.deepEqual(saved.posCategories.filter(c=>c.id!==payload.categoryId),initial.posCategories,'Other category versions unchanged');
  assert.equal((await db.query('select count(*) n from public.md_pos_events where id=$1',[payload.id])).rows[0].n,1);
  await assert.rejects(save({...payload,name:'Nama lain'}),/ID pengiriman/);
- const count=async()=>(await db.query('select (select count(*) from public.md_pos_menu_categories) categories,(select count(*) from public.md_pos_events) events')).rows[0];
+ const count=async()=>(await db.query('select (select count(*) from public.md_pos_menu_categories) categories,(select count(*) from public.md_pos_menu_category_products) links,(select count(*) from public.md_pos_events) events')).rows[0];
  const n=await count();
- for(const kind of ['raw','prep','missing','duplicates','name','reserved','snapshot','version']){
+ for(const kind of ['raw','prep','missing','duplicates','name','reserved','mode','version','null']){
   const bad=make(saved,'Uji '+kind,[coral.id]);
   if(kind==='raw')bad.productIds=[raw.id];if(kind==='prep')bad.productIds=[prep.id];if(kind==='missing')bad.productIds=[id()];if(kind==='duplicates')bad.productIds.push(coral.id);
-  if(kind==='name')bad.name='bUaH';if(kind==='reserved')bad.name='Semua';if(kind==='snapshot')bad.expectedAssignments=[];if(kind==='version')bad.expectedVersion=99;
+  if(kind==='name')bad.name='bUaH';if(kind==='reserved')bad.name='Semua';if(kind==='mode')delete bad.mode;if(kind==='version')bad.expectedVersion=99;if(kind==='null')bad.productIds=[null];
   await assert.rejects(save(bad));assert.deepEqual(await count(),n,'No writes on '+kind);
  }
- const stale=make(saved,'Kategori baru',[coral.id]);const move=make(saved,'Paket Pilihan',[water.id,fruit.id,coral.id],payload.categoryId);const moved=await save(move);
- await assert.rejects(save(stale),/sudah berubah/);
- const oldTarget=make(saved,'Paket Pilihan',[water.id],payload.categoryId);await assert.rejects(save(oldTarget),/Kategori sudah berubah/);
- const remove=make(moved,'Pilihan kasir',[water.id],payload.categoryId);const removed=await save(remove);
- assert.equal(removed.products.find(p=>p.id===fruit.id).posCategoryId,null);assert.equal(removed.products.find(p=>p.id===coral.id).posCategoryId,null);
- const empty=await save(make(removed,'Makan malam',[]));assert(empty.posCategories.some(c=>c.name==='Makan malam'));
- const beforeRerun=await read();await db.exec(migration);assert.deepEqual((await read()).posCategories,beforeRerun.posCategories);assert.equal((await read()).products.find(p=>p.id===fruit.id).posCategoryId,null,'Rerun does not restore removed membership');
+ // Two categories can independently add the same master product from one read.
+ const independent=make(saved,'Pilihan kedua',[coral.id]);
+ const first=make(saved,'Paket Pilihan',[coral.id],payload.categoryId),firstSaved=await save(first);
+ const secondSaved=await save(independent);
+ assert.deepEqual(ids(secondSaved,coral),[...ids(initial,coral),payload.categoryId,independent.categoryId].sort());
+ const stale=make(saved,'Paket Pilihan',[fruit.id],payload.categoryId,'remove');await assert.rejects(save(stale),/Kategori sudah berubah/);
+ // Adding a member again creates no duplicate link; rename changes no links.
+ const repeated=await save(make(secondSaved,'Paket Pilihan',[coral.id],payload.categoryId));
+ assert.deepEqual(ids(repeated,coral),ids(secondSaved,coral));
+ const renamed=await save(make(repeated,'Pilihan kasir',[],payload.categoryId,'rename'));
+ assert.deepEqual(renamed.products,repeated.products);
+ const badRename=make(renamed,'Pilihan kasir',[],payload.categoryId,'rename');badRename.productIds=[fruit.id];await assert.rejects(save(badRename),/Ubah nama/);
+ const removed=await save(make(renamed,'Pilihan kasir',[fruit.id,coral.id],payload.categoryId,'remove'));
+ assert.deepEqual(ids(removed,fruit),ids(initial,fruit));assert.deepEqual(ids(removed,coral),[...ids(initial,coral),independent.categoryId].sort());assert(ids(removed,water).includes(payload.categoryId));
+ // Remove the migrated original membership, then rerun: it must stay removed.
+ const original=removed.posCategories.find(c=>c.id===ids(initial,water)[0]);
+ const noOriginal=await save(make(removed,original.name,[water.id],original.id,'remove'));
+ assert.deepEqual(ids(noOriginal,water),[payload.categoryId]);
+ const empty=await save(make(noOriginal,'Makan malam',[]));assert(empty.posCategories.some(c=>c.name==='Makan malam'));
+ const beforeRerun=await read();await db.exec(migration);const afterRerun=await read();assert.deepEqual(afterRerun.posCategories,beforeRerun.posCategories);assert.deepEqual(afterRerun.products,beforeRerun.products,'Rerun must not reseed or restore removed links');
+ if(process.env.POS_TEST_SQL){const service=(await db.query('select public.pos_read_service($1,true) s',[store])).rows[0].s;assert.deepEqual(ids(service,water),[payload.categoryId]);assert.deepEqual(ids(service,coral),ids(afterRerun,coral));}
  assert.deepEqual(await inventory(),inventoryBefore);
- assert.deepEqual((await db.query('select * from public.md_pos_products order by id')).rows.map(({pos_category_id,...p})=>p),productsBefore);
+ assert.deepEqual((await db.query('select * from public.md_pos_products order by id')).rows,rowsBefore,'No master product row changes');
  assert.equal((await db.query("select public.pos_waste_output_product($1,'coral') id",[fruit.id])).rows[0].id,coral.id);
- console.log('PASS POS categories SQL: six seeded categories, master-only mappings, read/service metadata, roles/RLS, atomic create/move/rename/remove, duplicates, replay and stale guards, repeated installation, unchanged product IDs/names/prices/groups, stock/cost/supplier/recipe/reject lineage.');
+ console.log('PASS POS category membership SQL: '+(legacy?'upgrade 046':'fresh install')+', additive links, no moves/duplicates, scoped removal, rename, independent categories, permissions/RLS, stale/replay guards, old-client rejection, read/service metadata, rerun, unchanged products/stock/cost/recipe/reject lineage.');
 }finally{await db.close();}
