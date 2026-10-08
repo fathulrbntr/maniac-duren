@@ -1,22 +1,70 @@
 <!doctype html>
-<html lang="id">
-<head>
+<html lang="id"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="robots" content="noindex,nofollow"><title>Pulihkan POS · Maniac Duren</title>
+<meta name="robots" content="noindex,nofollow"><meta name="color-scheme" content="light">
+<title>Periksa &amp; bersihkan POS · Maniac Duren</title>
 <style>
-*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;background:#f1f6f3;color:#19392b;font:16px/1.6 system-ui,sans-serif}main{max-width:520px;background:#fff;padding:32px;border:1px solid #d6e2db;border-radius:20px}h1{font-size:26px;line-height:1.2}button{border:0;border-radius:10px;background:#18763f;color:#fff;font:600 16px system-ui;padding:14px 20px;cursor:pointer}button:disabled{opacity:.6}#status{min-height:28px;overflow-wrap:anywhere}small{color:#5d7064}
-</style>
-</head>
-<body><main><small>MANIAC DUREN</small><h1>Pulihkan halaman POS</h1><p>Bersihkan salinan aplikasi lama di browser, lalu buka patch 027.</p><p>Data transaksi tersimpan tetap dipertahankan. Selesaikan transaksi offline yang belum tersinkron sebelum beralih, lalu tutup tab POS lainnya.</p><button type="button" id="recover">Pulihkan &amp; buka POS</button><p id="status" role="status" aria-live="polite"></p></main>
-<script type="module">
-import {recoverPos} from '/pos-recovery.mjs?v=rollback-027';
-const button=document.getElementById('recover'),status=document.getElementById('status');
+*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;background:#f1f6f3;color:#19392b;font:16px/1.6 system-ui,sans-serif}main{width:100%;max-width:580px;background:#fff;padding:32px;border:1px solid #d6e2db;border-radius:20px}h1{font-size:28px;line-height:1.2;margin:12px 0 20px}button,.button{display:inline-block;border:0;border-radius:10px;background:#18763f;color:#fff;font:600 16px system-ui;padding:14px 20px;text-decoration:none;cursor:pointer}button:disabled{opacity:.6;cursor:wait}.secondary{background:#e4eee7;color:#19392b}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}#status{overflow-wrap:anywhere}small{color:#5d7064}.notice{background:#fff5dc;padding:16px;border-radius:12px}[hidden]{display:none!important}:focus-visible{outline:3px solid #d7901c;outline-offset:3px}
+</style></head><body><main>
+<small>MANIAC DUREN · POS</small><h1>Periksa lalu mulai bersih</h1>
+<p>Periksa transaksi lokal terlebih dahulu. Pembersihan hanya membuang cache aplikasi dan salinan data yang sudah aman dibuang.</p>
+<p id="status" role="status" aria-live="polite">Tekan Periksa transaksi untuk melihat antrean pada perangkat ini.</p>
+<div class="actions"><button type="button" id="inspect" class="secondary">Periksa transaksi</button><button type="button" id="recover">Bersihkan cache</button></div>
+<section id="pending" class="notice" hidden><strong>Data lokal tetap disimpan</strong><p id="pending-detail"></p><button type="button" id="backup" class="secondary" hidden>Unduh cadangan transaksi</button></section>
+<p><small>Pemeriksaan antrean offline berlaku untuk browser dan domain ini. Catatan kirim ulang hanya terbaca di tab yang sama; buka halaman ini dari tab POS yang bermasalah. Tidak memeriksa status pesanan di server atau perangkat lain.</small></p>
+<p><small>Sebelum membersihkan, selesaikan transaksi dan tutup tab/PWA POS lainnya. Data karyawan, stok, dan penjualan di server tetap tersimpan.</small></p>
+<div class="actions" id="done" hidden><a id="open-pos" class="button" href="/pos/">Buka POS</a></div>
+<noscript><p>Aktifkan JavaScript untuk memeriksa dan membersihkan POS.</p></noscript>
+</main><script type="module">
+import {recoverPos,inspectPending,inspectRetries} from '/pos-recovery.mjs?v=027-fresh-1';
+const button=document.getElementById('recover'),check=document.getElementById('inspect'),status=document.getElementById('status');
+const backupButton=document.getElementById('backup');let backup;
+function showPending(result){
+  const retry=result.retry||{count:0,retries:[]};
+  backup={format:'maniac-pos-pending-backup-v1',exportedAt:new Date().toISOString(),origin:location.origin,accounts:result.backup,retries:retry.retries};
+  const count=result.pending+retry.count;
+  document.getElementById('pending').hidden=!(count||result.protectedAccounts);
+  document.getElementById('pending-detail').textContent=
+    `${result.pending} antrean offline dan ${retry.count} catatan pengiriman yang perlu diperiksa tetap disimpan. `+
+    (result.protectedAccounts?`${result.protectedAccounts} penyimpanan yang formatnya belum dikenali juga dipertahankan. `:'')+
+    'Catatan lokal belum membuktikan transaksi gagal atau belum masuk server. Unduh cadangan dan cocokkan nomor transaksinya. Patch 027 tidak menyinkronkan antrean PWA secara otomatis.';
+  backupButton.hidden=!count;
+}
+backupButton.onclick=()=>{
+  const url=URL.createObjectURL(new Blob([JSON.stringify(backup,null,2)],{type:'application/json'}));
+  const link=document.createElement('a');link.href=url;link.download='maniac-pos-transaksi-perlu-diperiksa.json';
+  document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+};
+check.onclick=async()=>{
+  check.disabled=button.disabled=true;status.textContent='Memeriksa transaksi lokal…';
+  try{
+    const result=await inspectPending({indexedDB:globalThis.indexedDB,sessionStorage:globalThis.sessionStorage});
+    showPending(result);
+    status.textContent=result.checked?
+      `Ditemukan ${result.pending} antrean offline dan ${result.retry.count} catatan kirim ulang pada tab ini.`+
+        (result.protectedAccounts?' Sebagian data belum dapat dikenali.':''):
+      'Penyimpanan offline tidak dapat diperiksa di browser ini.';
+  }catch(error){status.textContent='Pemeriksaan belum berhasil: '+error.message;}
+  finally{check.disabled=button.disabled=false;}
+};
 button.onclick=async()=>{
- button.disabled=true;status.textContent='Membersihkan salinan aplikasi lama…';
- try{
-  await recoverPos({origin:location.origin,serviceWorker:navigator.serviceWorker,cacheStorage:globalThis.caches});
-  status.textContent='Selesai. Membuka POS…';
-  location.replace('/pos/?rollback=027');
- }catch(error){status.textContent=error.message||'Belum berhasil. Coba sekali lagi.';button.disabled=false;}
+  check.disabled=button.disabled=true;status.textContent='Memeriksa transaksi dan membersihkan cache…';
+  document.getElementById('done').hidden=true;
+  try{
+    const retry=inspectRetries(globalThis.sessionStorage);
+    const result=await recoverPos({origin:location.origin,serviceWorker:navigator.serviceWorker,
+      cacheStorage:globalThis.caches,indexedDB:globalThis.indexedDB,localStorage:globalThis.localStorage,locks:navigator.locks});
+    showPending({...result,retry});let httpRequested=false;
+    try{
+      const response=await fetch('/api/pos-clean-cache',{method:'POST',cache:'no-store',
+        headers:{'X-POS-Cache-Reset':'1'},signal:AbortSignal.timeout(10000)});
+      httpRequested=response.ok&&(await response.json()).ok===true;
+    }catch{}
+    status.textContent=`Selesai: ${result.assets} cache aplikasi dan ${result.snapshots} salinan data outlet dibersihkan.`+
+      (httpRequested?' Buka POS untuk mengambil data terbaru.':' Pembersihan cache jaringan belum terkonfirmasi. Sambungkan internet, lalu coba lagi.');
+    document.getElementById('open-pos').href='/pos/?fresh='+Date.now();
+    document.getElementById('done').hidden=false;
+  }catch(error){status.textContent=error.message||'Belum berhasil. Coba sekali lagi.';}
+  finally{check.disabled=button.disabled=false;}
 };
 </script></body></html>

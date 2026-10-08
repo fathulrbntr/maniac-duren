@@ -5,9 +5,9 @@ import {recoverPos} from '../pos-recovery.mjs';
 let removed=[],unregistered=[];
 const registration=scope=>({scope,unregister:async()=>{unregistered.push(scope);return true}});
 const result=await recoverPos({origin:'https://shop.test',serviceWorker:{getRegistrations:async()=>[registration('https://shop.test/pos/'),registration('https://shop.test/menu/')]},cacheStorage:{keys:async()=>['maniac-pos-shell-old','other-app-cache'],delete:async key=>{removed.push(key);return true}}});
-assert.deepEqual(unregistered,['https://shop.test/pos/']);assert.deepEqual(removed,['maniac-pos-shell-old']);assert.deepEqual(result,{workers:1,assets:1});
+assert.deepEqual(unregistered,['https://shop.test/pos/']);assert.deepEqual(removed,['maniac-pos-shell-old']);assert.equal(result.workers,1);assert.equal(result.assets,1);assert.equal(result.pending,0);
 await recoverPos({origin:'https://shop.test'});
-await assert.rejects(recoverPos({origin:'https://shop.test',serviceWorker:{getRegistrations:async()=>[{scope:'https://shop.test/pos/',unregister:async()=>false}]}}),/Pemulihan belum/);
+await assert.rejects(recoverPos({origin:'https://shop.test',serviceWorker:{getRegistrations:async()=>[{scope:'https://shop.test/pos/',unregister:async()=>false}]}}),/Tutup tab POS/);
 const handlers={},deleted=[];let unregisteredWorker=false,skipWaiting=false;
 vm.runInNewContext(fs.readFileSync('pos/sw.js','utf8'),{
  self:{addEventListener:(name,fn)=>handlers[name]=fn,skipWaiting:async()=>{skipWaiting=true},registration:{unregister:async()=>{unregisteredWorker=true}}},

@@ -1,0 +1,71 @@
+MANIAC DUREN — PERIKSA TRANSAKSI DAN BERSIHKAN CACHE
+
+Paket tambahan setelah rollback 027. Tidak mengubah tampilan atau alur POS 027.
+Tidak ada SQL tambahan. Database Supabase tidak diakses atau direset paket ini.
+
+CARA PASANG
+1. Timpa file ZIP di folder utama proyek, sejajar package.json.
+2. Deploy melalui Git:
+
+   git add api/pos-clean-cache.js pos-recover.html pos-recovery.mjs pos/sw.js vercel.json tests/cache-recovery.test.mjs tests/fresh-cache.test.mjs BERSIHKAN-CACHE.txt
+   git commit -m "Add safe POS cache cleanup and pending transaction check"
+   git push
+
+3. Setelah deployment selesai, dari browser/perangkat kasir buka:
+   https://maniacduren.com/pos-recover.html
+   Jika POS biasa memakai www, gunakan https://www.maniacduren.com/pos-recover.html.
+   Penyimpanan per domain terpisah. Gunakan domain dan profil browser yang sama.
+4. Pilih PERIKSA TRANSAKSI terlebih dahulu. Ini membaca, tidak menghapus data.
+5. Selesaikan transaksi dan tutup tab/PWA POS lainnya. Pilih BERSIHKAN CACHE.
+6. Bila ada antrean lokal, unduh cadangannya. Tekan BUKA POS untuk memulai sesi baru.
+
+APA YANG DIPERIKSA
+- Semua account di IndexedDB maniac-pos-offline-v1 pada profil/domain yang sama.
+- Jumlah baris antrean offline, termasuk konflik. Baris lokal dapat saja sudah
+  tercatat di server tetapi konfirmasinya belum diterima. Cocokkan ID transaksi;
+  jangan langsung menginput penjualan baru dengan ID berbeda.
+- Catatan kirim ulang/hasil jaringan yang belum pasti di sessionStorage TAB INI.
+  Agar catatan tab kasir ikut terbaca, navigasikan tab kasir yang bersangkutan ke
+  halaman pemulihan setelah menyelesaikan isian. Membuka tab baru tidak menjamin
+  seluruh sessionStorage tab kasir terlihat.
+- Tidak memeriksa antrean pesanan kitchen, database server, browser/perangkat lain.
+  Angka 0 tidak membuktikan tidak ada transaksi gantung di seluruh sistem.
+
+APA YANG DIBERSIHKAN
+- Cache aset maniac-pos-shell-* dan pendaftaran service worker /pos/.
+- Salinan data outlet/account lokal hanya jika antreannya kosong dan formatnya
+  dikenal. Pemeriksaan antrean dan penghapusan berlangsung dalam satu transaksi.
+- Sesi PWA tersimpan jika tidak ada antrean/format yang perlu dilindungi.
+- Data demo lama. Tema, device ID, catatan retry, dan data aplikasi lain dipertahankan.
+- Cache jaringan domain melalui respons Clear-Site-Data: "cache" ketika tombol
+  pembersihan ditekan. Tidak meminta penghapusan cookies atau seluruh storage.
+  Dukungan header bergantung browser; pada browser yang tidak mendukung,
+  pembersihan cache aplikasi tetap berjalan dan Ctrl+Shift+R dapat memuat ulang.
+
+ANTREAN TIDAK DIHAPUS
+Record account yang berisi transaksi, beserta snapshot-nya, tetap utuh.
+Data dengan format yang tidak dikenali dipertahankan. Cadangan JSON berisi antrean
+lokal dan catatan retry, bukan token login atau seluruh profil data outlet.
+Cadangan bukan bukti sinkronisasi. Patch 027 tidak memiliki auto-sync PWA.
+Tidak ada transaksi uji yang dibuat di database operasional.
+
+Pembersihan harus dilakukan per browser/perangkat. Paket ini belum membersihkan
+browser pengguna sebelum tombol dijalankan. Penyebab login lambat di server belum
+terbukti hanya karena cache; pembersihan ini memulihkan salinan aplikasi lokal.
+
+VERIFIKASI
+Lulus: pemeriksaan read-only; DB belum ada tanpa membuat DB baru; snapshot kosong;
+perlindungan antrean pending/konflik; format belum dikenal; pembersihan berulang;
+penolakan jika terminal PWA aktif; isolasi cache; header hanya "cache";
+penolakan POST tanpa header khusus dan permintaan lintas origin.
+Uji IndexedDB memakai fake-indexeddb 6.2.5. Browser/perangkat kasir dan cache HTTP
+produksi belum diuji langsung. Tidak ada perubahan atau push ke repositori live.
+
+Opsional, untuk menjalankan uji storage:
+  npm install --no-save --package-lock=false --ignore-scripts fake-indexeddb@6.2.5
+  node tests/fresh-cache.test.mjs
+  node tests/cache-recovery.test.mjs
+
+Referensi perilaku header:
+https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Clear-Site-Data
+https://www.w3.org/TR/clear-site-data/
