@@ -1,14 +1,15 @@
+import {createSidebarController,sidebarIcon} from './sidebar.mjs?v=42';
+const sidebar = createSidebarController();
 import {installMoneyInputs} from './money-input.mjs?v=19';
 installMoneyInputs();
 import { openWeighingReceipt, showWeighingHistory } from './receipt-weighing.mjs?v=19';
 import {inventoryPanel,bindInventory} from "./inventory-ui.mjs?v=19";
 import {opsPages,opsPage,bindOps,clearOrderDraft} from './operations-ui.mjs?v=25';
 import {
-  sections,
   navigation,
   mayLeave,
   trackForms,
-} from "./navigation.mjs?v=19";
+} from "./navigation.mjs?v=42";
 import {
   prepareRetry,
   settleRetry,
@@ -81,19 +82,12 @@ let state = emptyState(),
 const app = document.querySelector("#app"),
   filter = { from: today(), to: today(), store: "", supplier: "" };
 const title = {
-  dashboard: "Ringkasan buah",
-  salesreport: "Seluruh penjualan",
-  orders: "Kasir & pesanan", losses: "Waste & penyusutan", trace: "Jejak stok", finance: "Biaya & laba kotor", employees: "Karyawan & akses", attendance: "Absensi", guide: "Panduan pendataan",
-  recipes: "Master Resep",
-  production: "Produksi bahan",
+  dashboard: "Dashboard", orders: "Kasir / POS", kitchen: "Kitchen Display",
+  products: "Master Barang", stock: "Stok & Penerimaan", losses: "Waste & Penyusutan", waste: "Olah Reject",
+  recipes: "Master Resep", production: "Produksi & Persiapan",
+  finance: "Petty Cash & Keuangan", salesreport: "Laporan Penjualan", trace: "Jejak Stok & Produksi", reports: "Rincian Penjualan Buah",
+  employees: "Karyawan & Akses", attendance: "Absensi", stores: "Outlet", suppliers: "Supplier", guide: "Panduan",
   cashier: "Kasir buah cepat",
-  kitchen: "Antrean Kitchen",
-  stock: "Stok & barang masuk",
-  waste: "Olah reject",
-  reports: "Rincian kasir buah cepat",
-  products: "Produk & bahan",
-  stores: "Store",
-  suppliers: "Supplier",
 };
 const paths = {
   dashboard: "M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z",
@@ -226,7 +220,8 @@ async function mutate(action, payload) {
   }
 }
 function login(message = "") {
-  app.innerHTML = `<div class="auth">${themeButton("auth-theme")}<section class="auth-brand"><img src="logo.png" alt="Maniac Duren"><h1>Satu kasir.<br>Dua satuan stok.</h1><p>Penjualan per kilo atau per butir, stok setiap store, dan asal supplier dalam satu tempat.</p></section><section class="auth-form"><div><span class="tag">AREA ADMIN</span><h2 style="margin-top:20px">Masuk ke POS</h2><p class="muted">Kelola operasional Maniac Duren.</p>${config.configured ? "" : `<div class="notice">Database belum dihubungkan. Hubungi pengelola untuk mengaktifkan akses POS.</div>`}<form id="login-form">${field("Email / username / nomor telepon", '<input name="identifier" required autocomplete="username" placeholder="Email, username, atau nomor telepon">')}${field("Password", '<input name="password" type="password" required autocomplete="current-password">')}<p class="error" id="login-error">${e(message)}</p><button class="primary full" type="submit" ${config.configured ? "" : "disabled"}>Masuk</button></form><a class="muted" href="/">Kembali ke website customer</a></div></section></div>`;
+  sidebar.reset();
+  app.innerHTML = `<div class="auth auth-workspace">${themeButton("auth-theme")}<section class="auth-form"><div><img class="auth-logo" src="logo.png" alt="Maniac Duren"><h1>Selamat datang kembali</h1><p class="muted auth-intro">Masuk untuk mengelola outlet Maniac Duren.</p>${config.configured ? "" : `<div class="notice">Akses POS belum tersedia. Hubungi pengelola.</div>`}<form id="login-form">${field("Email, username, atau nomor telepon", '<input name="identifier" required autocomplete="username" placeholder="Masukkan akun Anda">')}${field("Password", '<input name="password" type="password" required autocomplete="current-password" placeholder="Masukkan password">')}<p class="error" id="login-error" role="alert">${e(message)}</p><button class="primary full" type="submit" ${config.configured ? "" : "disabled"}>Masuk</button></form><a class="auth-back" href="/">Kembali ke website</a></div></section></div>`;
   syncThemeControls();
   document.querySelector("#login-form").onsubmit = async (ev) => {
     ev.preventDefault();
@@ -270,10 +265,21 @@ function accountProfile() {
   const photo = person.profile_photo;
   const role = {owner:"Owner · Akses penuh",manager:"Manager",cashier:"Kasir",kitchen:"Kitchen",warehouse:"Gudang",staff:"Staff"}[person.role] || "Staff";
   const initials = accountName.trim().split(/\s+/).slice(0,2).map(word => word[0]).join("").toUpperCase();
-  return `<div class="account-profile" aria-label="Akun yang login">${photo ? `<img src="${e(photo)}" alt="Foto ${e(accountName)}">` : `<span class="account-avatar" aria-hidden="true">${e(initials)}</span>`}<div><small>AKUN LOGIN</small><strong>${e(accountName)}</strong><span>${e(role)}</span></div></div>`;
+  return `<div class="account-profile" aria-label="Akun yang login">${photo ? `<img src="${e(photo)}" alt="Foto ${e(accountName)}">` : `<span class="account-avatar" aria-hidden="true">${e(initials)}</span>`}<div><strong>${e(accountName)}</strong><span>${e(role)}</span></div></div>`;
 }
 function shell(body) {
-  return `<div class="shell ${["products","stock"].includes(view)?"inventory-shell":""}"><aside class="sidebar"><div class="sidebar-header"><div><div class="brand"><img src="logo.png" alt="Maniac Duren"></div><div class="brand-sub">OPERATIONS / POS</div></div><div class="sidebar-store"><label for="active-store">TOKO AKTIF</label><div class="store-select-wrap">${icon("stores")}<select id="active-store" aria-label="Toko aktif" title="${e(name("stores", store))}">${options("stores", store)}</select></div></div></div><nav class="nav" aria-label="Navigasi POS">${navigation(title, view, icon, state.access)}</nav><div class="sidebar-account">${accountProfile()}<button id="logout" class="sidebar-logout" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 4H4v16h5M14 8l4 4-4 4M8 12h10"/></svg>Logout</button></div></aside><main><header class="topbar"><div class="toolbar"><span class="tag ${mode === "demo" ? "demo" : ""}">${mode === "demo" ? "MODE DEMO" : "DATABASE AKTIF"}</span>${themeButton()}</div></header>${body}<p class="page-foot">${mode === "demo" ? "Semua angka adalah data contoh." : "Stok dan penjualan tersimpan di database bersama."} Berat kg dicatat pada setiap penjualan, termasuk penjualan per butir.</p></main></div>`;
+  return `<div class="shell ${["products","stock"].includes(view)?"inventory-shell":""}" ${sidebar.attributes()}>
+    <aside class="sidebar" id="pos-sidebar" aria-label="Sidebar Maniac Duren">
+      <div class="sidebar-header">
+        <div class="sidebar-brand-row"><div class="brand"><img src="logo.png" alt=""><div><strong>Maniac Duren</strong><span>Operations / POS</span></div></div><button type="button" class="sidebar-toggle" data-sidebar-toggle aria-controls="pos-sidebar" aria-label="Tutup sidebar">${sidebarIcon}</button></div>
+        <div class="sidebar-store"><label for="active-store">Outlet aktif</label><div class="store-select-wrap">${icon("stores")}<select id="active-store" aria-label="Outlet aktif" title="${e(name("stores", store))}">${options("stores", store)}</select></div></div>
+      </div>
+      <nav class="nav" id="pos-navigation" aria-label="Navigasi POS">${navigation(title, view, icon, state.access, sidebar.closedGroups)}</nav>
+      <div class="sidebar-account">${accountProfile()}<button id="logout" class="sidebar-logout" type="button" aria-label="Logout" title="Logout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 4H4v16h5M14 8l4 4-4 4M8 12h10"/></svg><span>Logout</span></button></div>
+    </aside>
+    <button type="button" class="sidebar-backdrop" data-sidebar-close tabindex="-1" aria-label="Tutup sidebar"></button>
+    <main id="pos-main"><header class="topbar"><div class="workspace-heading"><button id="sidebar-toggle" type="button" class="sidebar-toggle" data-sidebar-toggle aria-controls="pos-sidebar" aria-label="Buka sidebar">${sidebarIcon}</button><h1>${e(title[view] || "Maniac Duren")}</h1></div><div class="workspace-tools"><span class="workspace-outlet">${icon("stores")}<span>${e(name("stores", store))}</span></span>${themeButton()}</div></header><div class="workspace-content">${body}<p class="page-foot">Maniac Duren · ${e(name("stores", store))}</p></div></main>
+  </div>`;
 }
 function dashboard() {
   const rows = saleRows(state, { from: today(), to: today(), store }),
@@ -391,6 +397,7 @@ function directoryPage(kind) {
   return `<div class="intro"><div><h2>Master ${label}</h2><p class="muted">${isStore ? "Ubah nama toko dan lokasi melalui tombol Edit toko." : "Kelola supplier, nomor telepon, dan alamat."}</p></div><button class="primary" data-master="${kind}">Tambah ${label}</button></div><section class="panel"><div class="table-wrap"><table><thead><tr><th>NAMA</th>${isStore ? "<th>LOKASI</th>" : "<th>NOMOR TELEPON</th><th>ALAMAT</th>"}<th>ACTION</th></tr></thead><tbody>${state[kind].map((p) => `<tr><td><b>${e(p.name)}</b></td>${isStore ? `<td>${e(p.location || "—")}</td>` : `<td>${e(p.phone || "—")}</td><td>${e(p.address || "—")}</td>`}<td><button class="small" data-edit-kind="${kind}" data-edit-id="${e(p.id)}">${icon("edit")}${isStore ? "Edit toko" : "Edit"}</button></td></tr>`).join("") || `<tr><td colspan="${isStore ? 3 : 4}" class="empty">Belum ada ${label.toLowerCase()}.</td></tr>`}</tbody></table></div></section>`;
 }
 function render() {
+  sidebar.capture();
   app.innerHTML = shell(
     {
       ...Object.fromEntries(opsPages.map(key=>[key,()=>opsPage(key,state,store)])),
@@ -407,11 +414,13 @@ function render() {
     }[view](),
   );
   syncThemeControls();
+  sidebar.mount();
   document.querySelectorAll("[data-view]").forEach(
     (b) =>
       (b.onclick = () => {
         if (!mayLeave(busy)) return;
         view = b.dataset.view;
+        sidebar.navigate();
         render();
       }),
   );

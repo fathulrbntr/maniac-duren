@@ -1,0 +1,46 @@
+MANIAC DUREN — SIDEBAR & UI GAYA CHATGPT
+
+Pemasangan:
+1. Ekstrak ZIP ke folder utama proyek rollback patch 027. Pilih Replace.
+2. Jalankan perintah Git di bagian akhir. Tunggu Vercel selesai deploy.
+3. Buka /pos/ lalu refresh dengan Ctrl+Shift+R.
+Tidak ada SQL tambahan untuk perubahan tampilan ini.
+
+Perubahan:
+- Sidebar dengan kelompok Utama, Inventory, Produksi,
+  Keuangan & Laporan, Manajemen, serta Bantuan.
+- Kelompok menu bisa dilipat. Menu aktif tetap mudah ditemukan.
+- Tombol panel di pojok kiri untuk membuka/menutup sidebar.
+- Desktop: sidebar bisa disembunyikan agar area kerja lebih lebar.
+- HP/tablet: sidebar menjadi panel geser dengan latar penutup.
+  Klik di luar atau tekan Escape untuk menutup.
+- Header logo/outlet dan profil di bawah tetap pada tempatnya;
+  hanya daftar menu yang bergulir.
+- Warna netral dengan mode terang/gelap, ikon garis, tombol sederhana,
+  serta gaya yang selaras untuk login, kasir, stok, tim, dan modal.
+- Posisi buka/tutup desktop serta kelompok menu disimpan di perangkat.
+- Buka/tutup sidebar tidak merender ulang form dan tidak meminta data server.
+- Tidak menggunakan library UI, font luar, atau animasi berat.
+
+Menu mengikuti fungsi yang sudah ada di POS. Penerimaan dan transfer ada
+melalui Stok & Penerimaan; role/permission melalui Karyawan & Akses;
+petty cash melalui Petty Cash & Keuangan. Nama menu baru tidak berarti
+ada fitur PO/DO atau laporan baru di database.
+
+Basis:
+Rollback patch 027 + perbaikan kompresi foto sebelumnya.
+Kompresi foto, endpoint login, API, data, dan SQL tidak diganti oleh ZIP ini.
+ZIP hanya berisi 7 file yang ditambah/diubah, bukan seluruh proyek.
+
+Verifikasi:
+Uji lokal lulus untuk izin menu, tidak ada menu ganda, penyimpanan preferensi,
+tombol desktop/HP, Escape, fokus keyboard, perubahan ukuran viewport,
+login gagal/berhasil, navigasi tanpa tambahan request, perubahan outlet,
+logout, serta validasi metadata produk.
+Pratinjau visual browser tidak berhasil dibuka karena pembatasan sesi;
+tampilan pada browser produksi belum diverifikasi.
+
+Terminal Git:
+git add -A
+git commit -m "Refresh POS UI with collapsible ChatGPT-style sidebar"
+git push

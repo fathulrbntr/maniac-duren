@@ -17,12 +17,13 @@
     <link rel="stylesheet" href="catalog-table.css?v=16.2" />
     <link rel="stylesheet" href="inventory.css?v=16.2" />
     <link rel="stylesheet" href="employees.css?v=25" />
+    <link rel="stylesheet" href="workspace-ui.css?v=42" />
   </head>
   <body>
-    <div id="app"><p style="padding:24px">Memuat POS…</p></div>
+    <div id="app"></div>
     <div id="toast" role="status" aria-live="polite"></div>
     <script type="module">
-      import('./app.js?v=27').catch(() => {
+      import('./app.js?v=42').catch(() => {
         document.getElementById('app').innerHTML = '<section style="padding:32px"><h2>POS gagal dimuat</h2><p>Muat ulang halaman. Jika tetap gagal, pastikan deployment terbaru sudah selesai.</p><button onclick="location.reload()">Muat ulang</button></section>';
       });
     </script>
