@@ -25,9 +25,8 @@ export function bindEvidence(form, keys = ["reject", "processed"]) {
     const status = form.querySelector(`[data-proof-status="${key}"]`);
     status.textContent = "Memproses foto…";
     try {
-      const result = await preparePhoto(file);
+      const result = await preparePhoto(file, "evidence");
       if (version === versions[key]) {
-        evidence[key] = result.photo;
         evidence[key] = result.photo;
         status.textContent = "Foto siap disimpan · " + Math.ceil(result.bytes / 1024) + " KB";
       }

@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer">
+  <title>Kompresi foto · Maniac Duren</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#f3f6f3;color:#17291e;font:16px/1.6 system-ui,sans-serif}main{max-width:720px;margin:40px auto;padding:28px;background:white;border:1px solid #dce6de;border-radius:20px}h1{font-size:28px;line-height:1.25}p{color:#516055}label{display:block;margin-top:14px}input,button{font:inherit;border-radius:10px;padding:12px 16px}input{display:block;width:100%;border:1px solid #c9d6cc}button{cursor:pointer;border:1px solid #ccd8cf;background:#fff;margin:14px 8px 0 0}button.primary{background:#146d3c;color:white;border-color:#146d3c}button:disabled{opacity:.55;cursor:default}#status{white-space:pre-wrap;padding:16px;background:#f3f6f3;border-radius:12px;overflow-wrap:anywhere}small{color:#5d6a60}ul{padding-left:22px}a{color:#146d3c}[hidden]{display:none!important}@media(max-width:760px){main{margin:12px;padding:20px}}
+  </style>
+</head>
+<body><main>
+  <small>MANIAC DUREN · PEMELIHARAAN FOTO</small>
+  <h1>Foto lebih ringan</h1>
+  <p>Kompres foto produk, profil karyawan, KTP, dan bukti reject yang sudah tersimpan. Foto diproses satu per satu.</p>
+  <ul><li>Profil: hingga 480 px / 70 KB.</li><li>Produk: hingga 960 px / 160 KB.</li><li>KTP: hingga 1600 px / 450 KB.</li><li>Bukti reject: hingga 1280 px / 250 KB.</li></ul>
+  <form id="login">
+    <label>Akun owner<input name="identifier" autocomplete="username" required maxlength="150"></label>
+    <label>Password<input name="password" type="password" autocomplete="current-password" required maxlength="128"></label>
+    <button class="primary" type="submit">Masuk sebagai owner</button>
+  </form>
+  <section id="controls" hidden>
+    <p>Pilih folder di komputer untuk menyimpan cadangan foto asli. Setiap cadangan disimpan sebelum foto di database diganti. Gunakan Chrome atau Edge desktop.</p>
+    <small>Cadangan dapat berisi foto KTP. Simpan di folder pribadi owner.</small><br>
+    <button class="primary" id="start">Pilih folder &amp; kompres semua</button>
+    <button id="stop" disabled>Hentikan</button><button id="logout">Logout</button>
+  </section>
+  <p id="status" role="status" aria-live="polite">Masuk untuk memulai. Halaman ini tidak memuat seluruh data POS.</p>
+  <a href="./">Kembali ke POS</a>
+</main><script type="module" src="./compress-photos.mjs?v=41"></script></body>
+</html>

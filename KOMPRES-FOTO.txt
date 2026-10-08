@@ -1,0 +1,78 @@
+MANIAC DUREN — KOMPRES FOTO POS PATCH 027
+
+ZIP ini berisi file yang ditambah/diubah saja. Ekstrak ke folder utama
+proyek yang sudah memakai rollback patch 027, lalu Replace.
+
+PASANG
+1. Buka database/compress-pos-photos.sql di VS Code.
+2. Salin SELURUH isinya ke Supabase > SQL Editor, lalu Run.
+   Jika ada error, jangan menjalankan sebagian SQL. Kirim teks errornya.
+   SQL ini menambah alat kompresi owner dan meringankan pembacaan audit.
+   SQL saja belum mengompres foto lama.
+3. Commit dan push menggunakan perintah di bagian akhir. Tunggu deployment.
+4. Buka https://maniacduren.com/pos/compress-photos.html
+   melalui Chrome atau Edge desktop, lalu login memakai akun owner.
+5. Klik "Pilih folder & kompres semua". Pilih folder pribadi di komputer,
+   misalnya Documents/ManiacDuren-Backup, di luar folder proyek Git.
+6. Tunggu laporan selesai. Cadangan asli disimpan per foto sebelum diubah.
+   Detail hasil ada di hasil-kompresi.json di folder cadangan tersebut.
+7. Muat ulang POS / login kembali untuk mengambil foto hasil kompresi.
+
+HASIL
+- Upload baru otomatis memakai kompresi bersama; tanpa dependensi tambahan.
+- Target profil: sisi panjang 480 px, maksimal 70 KiB.
+- Target produk: sisi panjang 960 px, maksimal 160 KiB.
+- Target KTP: sisi panjang 1600 px, maksimal 450 KiB; kualitas lebih tinggi.
+- Target bukti reject/olahan: sisi panjang 1280 px, maksimal 250 KiB.
+- WebP digunakan bila encoder tersedia. PNG transparan tetap transparan.
+  Pada browser tanpa encoder WebP, foto transparan memakai PNG dan foto
+  tanpa transparansi memakai JPEG.
+- Foto kecil dilewati. Foto tidak pernah diganti dengan hasil lebih besar.
+- KTP tidak dikecilkan tanpa batas: bila target gagal dicapai pada kualitas
+  dan resolusi minimum, foto lama dipertahankan dan dilaporkan gagal.
+- Periksa keterbacaan dokumen penting sesudah kompresi. Cadangan menyimpan
+  representasi asli yang sebelumnya ada di database.
+- Foto yang diubah pengguna lain saat proses berjalan dilewati.
+- Jika penyimpanan cadangan atau koneksi gagal, proses berhenti. Bisa diulang;
+  foto yang sudah kecil dilewati. Cadangan lama tidak ditimpa.
+
+CAKUPAN DATA
+Foto aktif: md_pos_products.photo, md_pos_employees.profile_photo,
+md_pos_employee_documents.ktp_photo, dan md_pos_waste_runs.snapshot.evidence
+(reject, processed, durpas500, durpas1000, coral).
+
+Salinan gambar di md_pos_events.payload sengaja tetap asli karena payload
+tersebut dipakai untuk memvalidasi pengiriman ulang transaksi. Gambar-gambar
+itu sekarang dikeluarkan dari respons riwayat yang dimuat POS, sebelum JSON
+besar dibuat. Metadata transaksi, details, stok, harga, dan angka keuangan
+utuh. Kompresi foto baru juga mengecilkan salinan audit yang dibuat berikutnya.
+
+Angka penghematan halaman adalah pengurangan panjang data foto Base64 yang
+diganti, bukan perubahan ukuran fisik database di dashboard Supabase.
+Patch tidak mengubah tampilan sidebar atau alur kasir patch 027.
+Tidak memerlukan service-role key di browser. Token hanya ada di memori
+halaman. SQL memeriksa owner aktif untuk setiap permintaan.
+Cadangan dapat berisi foto KTP: simpan di folder pribadi, jangan unggah ke Git.
+
+VALIDASI LOKAL
+- Kompresi dengan codec gambar nyata: ukuran, transparansi, fallback,
+  keterbacaan dokumen uji, dan kestabilan saat dijalankan ulang.
+- SQL diuji pada baseline 027 dan baseline database terbaru, dengan/tanpa
+  perbaikan pembacaan foto sebelumnya. Hak akses owner dan konflik diuji.
+- Login POS asli 027, perpindahan menu, serta validasi metadata produk lulus.
+- Cadangan gagal = foto tersebut tidak diubah.
+- Belum dijalankan pada database live atau browser kasir milik pengguna.
+
+Uji proyek (opsional, sesudah npm install):
+node tests/photo-maintenance.test.mjs
+node tests/photo-maintenance-page.test.mjs
+node tests/photo-maintenance-sql.test.mjs
+
+Dokumentasi encoder browser:
+https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/toBlob
+https://developer.mozilla.org/en-US/docs/Web/API/FileSystemFileHandle/createWritable
+
+TERMINAL GIT (jalankan dari folder proyek)
+git add -A
+git commit -m "Compress POS photos and reduce audit photo payloads"
+git push

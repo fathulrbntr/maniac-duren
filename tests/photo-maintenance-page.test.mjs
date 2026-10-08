@@ -1,0 +1,25 @@
+import assert from 'node:assert/strict';
+const button={disabled:false}, elements={};
+for(const id of ['login','controls','status','start','stop','logout'])elements[id]={hidden:false,disabled:false,textContent:''};
+elements.login.querySelector=()=>button;elements.login.reset=()=>{};
+globalThis.document={getElementById:id=>elements[id]};
+globalThis.window={addEventListener(){}};
+globalThis.FormData=class{constructor(form){assert.equal(form,elements.login,'Form must be retained before asynchronous requests');}*[Symbol.iterator](){yield ['identifier','owner'];yield ['password','test'];}};
+const calls=[];let allowed=false,event;
+globalThis.fetch=async(url,opts)=>{
+  calls.push(url);event.currentTarget=null;
+  if(url==='/api/pos-config')return new Response(JSON.stringify({configured:true,url:'https://fixture.invalid',key:'anon'}));
+  if(url==='/api/pos-login')return new Response(JSON.stringify({access_token:'test-access',refresh_token:'test-refresh',expires_in:3600}));
+  assert.equal(url,'https://fixture.invalid/rest/v1/rpc/pos_photo_maintain');
+  assert.equal(JSON.parse(opts.body).action,'check');
+  return new Response(JSON.stringify(allowed?{ready:true}:{message:'Hanya owner'}),{status:allowed?200:403});
+};
+await import('../pos/compress-photos.mjs?test');
+event={currentTarget:elements.login,preventDefault(){}};
+await elements.login.onsubmit(event);assert.equal(elements.status.textContent,'Hanya owner');assert.equal(button.disabled,false);
+allowed=true;event={currentTarget:elements.login,preventDefault(){}};
+await elements.login.onsubmit(event);assert.equal(elements.login.hidden,true);assert.equal(elements.controls.hidden,false);
+assert(!calls.some(x=>x.endsWith('/pos_read')),'Maintenance login must never load the full POS');
+await elements.start.onclick();assert.match(elements.status.textContent,/Chrome atau Edge/);
+elements.logout.onclick();assert.equal(elements.controls.hidden,true);assert.equal(elements.login.hidden,false);
+console.log('PASS: async login form handling, owner rejection, login without full POS read, unsupported folder API, logout.');
