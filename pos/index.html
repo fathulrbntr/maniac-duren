@@ -19,12 +19,13 @@
     <link rel="stylesheet" href="employees.css?v=25" />
     <link rel="stylesheet" href="workspace-ui.css?v=42" />
     <link rel="stylesheet" href="variants.css?v=45" />
+    <link rel="stylesheet" href="pos-categories.css?v=46" />
   </head>
   <body>
     <div id="app"></div>
     <div id="toast" role="status" aria-live="polite"></div>
     <script type="module">
-      import('./app.js?v=45').catch(() => {
+      import('./app.js?v=46').catch(() => {
         document.getElementById('app').innerHTML = '<section style="padding:32px"><h2>POS gagal dimuat</h2><p>Muat ulang halaman. Jika tetap gagal, pastikan deployment terbaru sudah selesai.</p><button onclick="location.reload()">Muat ulang</button></section>';
       });
     </script>

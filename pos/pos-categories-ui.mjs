@@ -1,0 +1,43 @@
+import {menuStatus} from './order-stock.mjs?v=12';
+import {escape as e,money,today} from './core.mjs?v=9';
+import {categoryEligible,categoryName,categoryPayload,posCategories,posCategoryId,posCategoryName,posSellable} from './pos-categories.mjs?v=46';
+const field=(label,html)=>`<label class="field">${label}${html}</label>`;
+export function posCategoryTabs(s){
+ const products=s.products.filter(posSellable),counts=new Map();for(const p of products){const key=posCategoryId(s,p)||'unassigned';counts.set(key,(counts.get(key)||0)+1);}
+ const items=[{id:'all',name:'Semua',count:products.length},...posCategories(s).map(c=>({...c,count:counts.get(c.id)||0})),...(counts.has('unassigned')?[{id:'unassigned',name:'Belum dikategorikan',count:counts.get('unassigned')}]:[])];
+ return items.map(c=>`<button type="button" class="order-category ${c.id==='all'?'selected':''}" data-order-category="${e(c.id)}" aria-pressed="${c.id==='all'}">${e(c.name)} <small>${c.count}</small></button>`).join('');
+}
+export function posCategoryManager({state,modal,mutate,render,toast}){
+ const categories=posCategories(state),d=modal('Kelola kategori POS',`<p class="muted">Kategori berlaku di semua outlet. Pilih produknya dari Master Barang.</p><button type="button" data-create-pos-category class="primary">+ Tambah kategori</button><div class="pos-category-list">${categories.map(c=>`<div class="pos-category-item"><span><b>${e(c.name)}</b><small>${state.products.filter(p=>categoryEligible(p)&&posCategoryId(state,p)===c.id).length} produk dari master</small></span><button type="button" data-edit-pos-category="${e(c.id)}">Atur produk</button></div>`).join('')}</div>`);
+ d.classList.add('pos-category-modal');d.querySelector('[type="submit"]').hidden=true;
+ d.querySelector('[data-create-pos-category]').onclick=()=>{d.close();posCategoryDialog({state,modal,mutate,render,toast});};
+ d.querySelectorAll('[data-edit-pos-category]').forEach(b=>b.onclick=()=>{d.close();posCategoryDialog({state,modal,mutate,render,toast,categoryId:b.dataset.editPosCategory});});
+}
+export function posCategoryDialog({state,categoryId,modal,mutate,render,toast}){
+ const category=posCategories(state).find(c=>c.id===categoryId),editing=!!category;
+ categoryId ||= crypto.randomUUID();const operationId=crypto.randomUUID();
+ const selected=new Set(state.products.filter(p=>categoryEligible(p)&&posCategoryId(state,p)===categoryId).map(p=>p.id));
+ const products=state.products.filter(categoryEligible).slice().sort((a,b)=>a.name.localeCompare(b.name,'id'));
+ const d=modal(editing?'Atur kategori POS':'Tambah kategori POS',`<ol class="pos-category-steps" aria-label="Langkah pengisian"><li data-category-step="1">1. ${editing?'Nama kategori':'Buat kategori'}</li><li data-category-step="2">2. Tambah produk dari master</li></ol><section data-category-name-step>${field('Nama kategori',`<input data-category-name value="${e(category?.name||'')}" maxlength="50" required placeholder="Contoh: Paket Hemat">`)}<p class="muted">Kategori ini akan tersedia di seluruh outlet.</p><button type="button" data-category-next class="primary">Lanjut · Tambah produk</button></section><section data-category-product-step hidden><div class="pos-category-selection-head"><div><b data-category-title></b><small data-category-selection-count aria-live="polite"></small></div><button type="button" data-category-back>Ubah nama</button></div>${field('Ambil produk dari Master Barang','<input data-category-search type="search" placeholder="Cari nama, SKU, atau barcode…">')}<div class="pos-category-picker-tools"><button type="button" data-category-select-visible>Pilih hasil pencarian</button><button type="button" data-category-clear>Kosongkan pilihan</button></div><p class="muted">Centang produk atau varian yang ingin dimasukkan. Produk dari kategori lain akan dipindahkan ke kategori ini.</p><div class="pos-category-picker" data-category-picker></div><p class="muted">Bahan baku dan bahan persiapan tidak ditampilkan. Produk tanpa harga dapat dipilih; kesiapan jual tetap mengikuti harga, stok, dan resep.</p></section>`,'Simpan kategori');
+ d.classList.add('pos-category-modal');const submit=d.querySelector('[type="submit"]');submit.hidden=true;
+ const error=message=>d.querySelector('#form-error').textContent=message;
+ const matches=()=>{const q=d.querySelector('[data-category-search]').value.trim().toLowerCase();return products.filter(p=>[p.name,p.sku,p.barcode,p.variant,p.variantGroupName].join(' ').toLowerCase().includes(q));};
+ const updateCount=()=>d.querySelector('[data-category-selection-count]').textContent=`${selected.size} produk dipilih · ${products.length} produk jual di master`;
+ const dirty=()=>d.dataset.dirty='true';
+ const draw=()=>{d.querySelector('[data-category-picker]').innerHTML=matches().map(p=>{const current=posCategoryName(state,p),isPriced=p.stockUnit==='kg_butir'?p.priceKg>0&&p.pricePiece>0:p.salePrice>0;return `<label class="pos-category-product"><input type="checkbox" data-category-product="${e(p.id)}" ${selected.has(p.id)?'checked':''}><span><b>${e(p.name)}</b><small>${e(p.sku)} · ${e(p.stockUnit)}${p.variant?` · ${e(p.variant)}`:''}</small><small>Kategori saat ini: ${e(current)}</small></span>${!isPriced?'<span class="pos-category-price-note">Harga belum diisi</span>':''}</label>`;}).join('')||'<p class="empty">Tidak ada produk yang cocok.</p>';updateCount();};
+ function showStep(step){d.querySelector('[data-category-name-step]').hidden=step!==1;d.querySelector('[data-category-product-step]').hidden=step!==2;submit.hidden=step!==2;d.querySelectorAll('[data-category-step]').forEach(n=>n.classList.toggle('current',Number(n.dataset.categoryStep)===step));}
+ d.querySelector('[data-category-next]').onclick=()=>{error('');try{const name=categoryName(d.querySelector('[data-category-name]').value);if(posCategories(state).some(c=>c.id!==categoryId&&c.name.toLowerCase()===name.toLowerCase()))throw Error('Nama kategori sudah digunakan.');d.querySelector('[data-category-name]').value=name;d.querySelector('[data-category-title]').textContent=name;draw();showStep(2);}catch(err){error(err.message);}};
+ d.querySelector('[data-category-back]').onclick=()=>showStep(1);
+ d.querySelector('[data-category-search]').addEventListener('input',draw);
+ d.querySelector('[data-category-picker]').addEventListener('change',ev=>{const input=ev.target.closest('[data-category-product]');if(!input)return;if(input.checked)selected.add(input.dataset.categoryProduct);else selected.delete(input.dataset.categoryProduct);dirty();updateCount();});
+ d.querySelector('[data-category-select-visible]').onclick=()=>{matches().forEach(p=>selected.add(p.id));dirty();draw();};
+ d.querySelector('[data-category-clear]').onclick=()=>{selected.clear();dirty();draw();};
+ let saving=false;
+ d.querySelector('form').onsubmit=async ev=>{ev.preventDefault();if(saving)return;if(d.querySelector('[data-category-product-step]').hidden){d.querySelector('[data-category-next]').onclick();return;}error('');try{const payload=categoryPayload(state,{id:operationId,categoryId,name:d.querySelector('[data-category-name]').value,productIds:[...selected]});saving=true;if(await mutate('pos_category_save',payload)){d.close();render();toast('Kategori dan pilihan produk tersimpan');}}catch(err){error(err.message);}finally{saving=false;}};
+ if(editing)d.querySelector('[data-category-next]').onclick();else showStep(1);
+}
+
+export function posProductCards(s,store,draft=[]){
+ const productCard=p=>{const availability=menuStatus(s,store,p,draft,today());return `<button type="button" class="order-product" ${availability.ok?'':'disabled'} title="${e(availability.reason)}" data-order-add="${e(p.id)}" data-category="${e(posCategoryId(s,p)||'unassigned')}" data-name="${e([p.name,p.sku,p.barcode,p.variant].join(' ').toLowerCase())}"><span class="order-product-photo">${p.photo?`<img src="${e(p.photo)}" alt="" loading="lazy">`:`<span>${e(p.name.split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase())}</span>`}</span><span class="order-product-info"><span class="order-product-category">${e(posCategoryName(s,p))}</span><strong>${e(p.name)}</strong><span class="order-product-price">${p.stockUnit==='kg_butir'?`${money(p.priceKg)} <small>/ kg</small><br>${money(p.pricePiece)} <small>/ butir</small>`:`${money(p.salePrice)} <small>/ ${e(p.stockUnit||'pcs')}</small>`}</span></span><span class="order-stock-status">${e(availability.reason)}</span><span class="order-product-add" aria-hidden="true">+</span></button>`;};
+ return s.products.filter(posSellable).map(productCard).join('')||'<div class="empty">Belum ada menu yang bisa dijual. Atur produk dan harga di Master Barang.</div>';
+}

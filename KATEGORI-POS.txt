@@ -1,0 +1,57 @@
+MANIAC DUREN — PATCH 046: KATEGORI MENU POS
+
+Paket ini berisi file baru/perubahan di atas patch 045 (UI produk seragam).
+Ekstrak ke root proyek dan izinkan penimpaan file dengan nama yang sama.
+Sebelum deploy, jalankan seluruh database/pos-menu-categories.sql di
+Supabase SQL Editor. Setelah SQL berhasil, deploy perubahan web.
+Tidak perlu reset database atau mengimpor ulang master barang.
+
+CARA PAKAI
+1. Buka POS dengan akun yang memiliki izin Master Barang.
+2. Klik + Tambah kategori, isi nama, lalu Lanjut · Tambah produk.
+3. Cari dan centang produk/varian dari Master Barang, lalu Simpan kategori.
+4. Gunakan Kelola kategori & produk untuk mengubah nama atau pilihan produk.
+
+Kategori awal: Buah, Durpas, Coral, Makan, Minuman, Dessert.
+Kategori berlaku di seluruh outlet. Satu produk/varian berada dalam satu
+kategori POS; memilih produk dari kategori lain akan memindahkannya.
+Melepas centang mengeluarkan produk dari kategori tanpa menghapus produknya.
+Produk tersebut tetap dapat ditemukan di Semua dan Belum dikategorikan
+apabila memenuhi syarat tampil di POS.
+
+Pemilih menampilkan produk jual langsung, produk jadi, dan produk resep,
+termasuk produk yang belum memiliki harga atau stok. Bahan baku dan bahan
+persiapan tidak ditampilkan. Penjualan tetap mengikuti harga, stok outlet,
+dan ketersediaan bahan resep yang sudah berlaku.
+
+Pengelompokan awal menggunakan hubungan olahan durian, nama, dan kategori
+lama. Produk yang tidak cocok tetap belum dikategorikan. Produk/varian baru
+sesudah pemasangan dipilih melalui Kelola kategori & produk. Menjalankan
+ulang SQL tidak mengembalikan pemindahan, perubahan nama, atau pilihan
+produk yang sudah disimpan admin.
+
+Kategori POS terpisah dari kategori operasional Master Barang. Perubahan
+ini mempertahankan ID produk, varian, harga, stok, resep, serta hubungan
+supplier/batch/olahan reject. Klik filter dan pencarian memakai data yang
+sudah dimuat; tidak ada permintaan kategori tambahan saat login atau
+membuka menu. Penyimpanan kategori memakai pemeriksaan konflik dan ID
+pengiriman untuk mencegah pengiriman ulang membuat data ganda.
+
+VERIFIKASI LOKAL
+node tests/pos-categories-ui.test.mjs
+node tests/pos-categories-sql.test.mjs
+npm test
+node tests/order-stock.test.mjs
+node tests/rollback-startup.test.mjs
+node tests/variants-unified-ui.test.mjs
+
+Lulus uji interaksi dengan adapter DOM, SQL lokal PGlite pada baseline 027
+dan skema terbaru yang tersedia, izin akses, konflik, pengiriman ulang,
+stok/resep, serta startup. Tes menggunakan dependensi pengembangan proyek.
+Belum diverifikasi secara visual di browser atau dipasang ke Supabase/web
+produksi. Paket ini tidak menyatakan bahwa deployment sudah dilakukan.
+
+GIT (jalankan dari root proyek setelah menyalin file)
+git add pos/app.js pos/index.html pos/operations-ui.mjs pos/retry.mjs pos/pos-categories.mjs pos/pos-categories-ui.mjs pos/pos-categories.css database/pos-menu-categories.sql tests/pos-categories-ui.test.mjs tests/pos-categories-sql.test.mjs KATEGORI-POS.txt
+git commit -m "Add POS categories and master product picker"
+git push

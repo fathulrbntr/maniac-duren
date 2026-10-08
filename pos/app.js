@@ -1,3 +1,4 @@
+import {savePosCategory} from './pos-categories.mjs?v=46';
 import { variantGroupDialog, productVariantDialog } from "./variant-editor.mjs?v=45";
 import { saveVariantProducts } from "./product-variants.mjs?v=45";
 import {createSidebarController,sidebarIcon} from './sidebar.mjs?v=42';
@@ -6,7 +7,7 @@ import {installMoneyInputs} from './money-input.mjs?v=44';
 installMoneyInputs();
 import { openWeighingReceipt, showWeighingHistory } from './receipt-weighing.mjs?v=19';
 import {inventoryPanel,bindInventory} from "./inventory-ui.mjs?v=45";
-import {opsPages,opsPage,bindOps,clearOrderDraft} from './operations-ui.mjs?v=25';
+import {opsPages,opsPage,bindOps,clearOrderDraft} from './operations-ui.mjs?v=46';
 import {
   navigation,
   mayLeave,
@@ -18,7 +19,7 @@ import {
   reconcileRetry,
   pendingRetry,
   setRetryScope,
-} from "./retry.mjs?v=44";
+} from "./retry.mjs?v=46";
 import { wastePage, bindWaste } from "./waste-ui.mjs?v=43";
 import {
   recipesPage,
@@ -198,12 +199,15 @@ async function mutate(action, payload) {
   controls.forEach(({ node }) => (node.disabled = true));
   try {
     if (mode === "demo") {
-      const next = action === "product_variants_save" ? structuredClone(state) : applyAction(state, action, payload);
+      const next = ["product_variants_save","pos_category_save"].includes(action) ? structuredClone(state) : applyAction(state, action, payload);
       if(action === "product_variants_save") saveVariantProducts(next,payload);
+      if(action === "pos_category_save") savePosCategory(next,payload);
       localStorage.setItem("maniac-pos-demo-v1", JSON.stringify(next));
       state = next;
     } else
-      state = action === "product_variants_save"
+      state = action === "pos_category_save"
+        ? await request("/rest/v1/rpc/pos_menu_category_save", {payload})
+        : action === "product_variants_save"
         ? await request("/rest/v1/rpc/pos_product_variants_save", { payload })
         : await request("/rest/v1/rpc/pos_mutate_027", { action, payload });
     settleRetry(action);

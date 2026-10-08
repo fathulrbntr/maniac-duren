@@ -10,7 +10,7 @@ export function setRetryScope(scope) {
   }
 }
 const tracked = new Set([
-  "product_variants_save",
+  "product_variants_save", "pos_category_save",
   "order_direct", "order_complete", "order_create", "order_start", "order_ready", "order_pay", "order_cancel", "sort", "inventory_loss", "recover", "employee_save", "attendance_in", "attendance_out", "work_hours_save",
   "sale",
   "receipt",
