@@ -1,3 +1,4 @@
+import { variantEditorMarkup, bindVariantEditor } from "./variant-editor.mjs?v=44";
 import {
   categories,
   itemTypes,
@@ -29,7 +30,7 @@ export function productDialog({
   const editing = !!product,
     p = productDefaults(product || {}),
     productId = p.id || id(),
-    locked = editing && productUsed(state, p.id),
+    locked = editing && (productUsed(state, p.id) || !!p.variantGroupId),
     adjustmentId = id();
   let photo = p.photo || "",
     photoBusy = false,
@@ -39,8 +40,11 @@ export function productDialog({
     editing ? "Edit produk / bahan" : "Tambah produk / bahan",
     `
  <div class="product-photo-editor"><img id="photo-preview" alt="Pratinjau foto produk" ${photo ? `src="${e(photo)}"` : "hidden"}><div>${field("Foto produk", '<input id="photo-file" type="file" accept="image/jpeg,image/png,image/webp">')}<small>JPG, PNG, WebP. Otomatis diperkecil; hasil maksimal 2 MB.</small><p id="photo-status" role="status"></p><button type="button" id="remove-photo">Hapus foto</button></div></div>
- <div class="form-grid">${field("Nama Produk", `<input name="name" value="${e(p.name || "")}" required maxlength="100">`)}${field("Variant", `<input name="variant" value="${e(p.variant || "")}" maxlength="100" placeholder="Contoh: Original / Durian">`)}${field("SKU", `<input name="sku" value="${e(p.sku || "")}" required maxlength="40">`)}${field("Barcode", `<input name="barcode" value="${e(p.barcode || "")}" maxlength="80" placeholder="Ketik atau scan barcode">`)}${field("Jenis item", `<select name="itemType" ${locked ? "disabled" : ""}>${options(itemTypes, p.itemType)}</select>`)}<div id="category-field">${field("Kategori jual", `<select name="category">${options(Object.fromEntries(categories.map((c) => [c, c])), p.category)}</select>`)}</div>${field("Satuan stok", `<select name="stockUnit" ${locked ? "disabled" : ""}>${options(stockUnits, p.stockUnit)}</select>`)}${field("Harga Beli (Rp / satuan; durian per kg)", `<input name="buyPrice" type="number" min="0" max="1000000000000" step="any" value="${e(p.buyPrice ?? "")}" placeholder="Opsional">`)}</div>
- <p class="muted">${locked ? "Jenis dan satuan terkunci karena sudah digunakan dalam stok atau resep." : "Gunakan gram untuk berat bahan dan ml untuk cairan."} Harga beli adalah harga referensi; harga jual berlaku di semua store.</p><div id="catalog-prices" class="form-grid"></div>
+ <div class="form-grid">${field("Nama barang", `<input name="name" value="${e(p.name || "")}" required maxlength="100" placeholder="Contoh: Durian Musang King" ${p.variantGroupId?'readonly':''}>`)}${field("Jenis barang", `<select name="itemType" ${locked ? "disabled" : ""}>${options(itemTypes, p.itemType)}</select>`)}<div id="category-field">${field("Kategori jual", `<select name="category">${options(Object.fromEntries(categories.map((c) => [c, c])), p.category)}</select>`)}</div>${field("Satuan stok", `<select name="stockUnit" ${locked ? "disabled" : ""}>${options(stockUnits, p.stockUnit)}</select>`)}</div>
+ <p class="muted">${locked ? "Jenis dan satuan mengikuti barang yang sudah terdaftar." : "Gunakan gram untuk berat bahan dan ml untuk cairan."}</p>
+ ${editing ? (p.variantGroupId?`<p class="variant-notice">Varian dari <b>${e(p.variantGroupName)}</b>. Nama lengkap tetap digunakan dalam stok dan Olah Reject.</p>`:'') : '<label class="variant-toggle"><input type="checkbox" name="hasVariants"><span><b>Memiliki varian</b><small>Aktifkan jika barang memiliki pilihan ukuran, rasa, atau kondisi.</small></span></label>'}
+ <fieldset id="single-product-fields"><div class="form-grid">${editing?field("Keterangan varian", `<input name="variant" value="${e(p.variant || "")}" maxlength="100" ${p.variantGroupId?'readonly':''}>`):''}${field("SKU", `<input name="sku" value="${e(p.sku || "")}" required maxlength="40" placeholder="Kode unik barang">`)}${field("Barcode (opsional)", `<input name="barcode" value="${e(p.barcode || "")}" maxlength="80" placeholder="Ketik atau scan barcode">`)}${field("Harga beli referensi (Rp / satuan; durian per kg)", `<input name="buyPrice" type="number" min="0" max="1000000000000" step="any" value="${e(p.buyPrice ?? "")}" placeholder="Opsional">`)}</div><p class="muted">Harga beli adalah referensi; harga jual berlaku di semua outlet.</p><div id="catalog-prices" class="form-grid"></div></fieldset>
+ ${editing?'':`<fieldset id="variant-product-fields" hidden disabled>${variantEditorMarkup()}</fieldset>`}
  <fieldset class="product-stock-editor"><legend>Qty Stok · ${e(state.stores.find((x) => x.id === store)?.name || "Pilih store dahulu")}</legend><div id="current-stock"></div><label><input type="checkbox" name="adjustStock" ${store ? "" : "disabled"}> ${editing ? "Sesuaikan stok fisik" : "Isi stok awal"}</label><div id="stock-fields" hidden></div></fieldset>
  ${
    editing
@@ -64,6 +68,20 @@ export function productDialog({
     error = (message) => {
       d.querySelector("#form-error").textContent = message;
     };
+  const groupId = id(), operationId = id();
+  const getCommon = () => ({name:c("name").value,itemType:c("itemType").value,category:c("category").value,stockUnit:c("stockUnit").value});
+  const editor = !editing ? bindVariantEditor(d.querySelector("#variant-product-fields"),{getCommon,state,groupId,operationId,error}) : null;
+  function toggleVariants() {
+    const enabled = !!c("hasVariants")?.checked;
+    const single = d.querySelector("#single-product-fields"), variants = d.querySelector("#variant-product-fields");
+    single.hidden = enabled; single.disabled = enabled;
+    if(variants){variants.hidden = !enabled;variants.disabled = !enabled;}
+    d.querySelector(".product-photo-editor").hidden = enabled;
+    d.querySelector(".product-stock-editor").hidden = enabled;
+    if(enabled){c("adjustStock").checked=false;toggleStock();}
+    d.querySelector('[type="submit"]').textContent=enabled?'Simpan semua varian':'Simpan';
+  }
+  if(editor){c("hasVariants").onchange=toggleVariants;c("name").addEventListener('input',()=>editor.markDirty());}
   const prices = {
     priceKg: p.priceKg ?? "",
     pricePiece: p.pricePiece ?? "",
@@ -99,7 +117,7 @@ export function productDialog({
       unit = c("stockUnit"),
       material = ["raw", "prep"].includes(type);
     d.querySelector("#category-field").hidden = material;
-    c("category").disabled = material;
+    c("category").disabled = material || !!p.variantGroupId;
     const allowed =
       type === "recipe"
         ? ["porsi"]
@@ -134,6 +152,7 @@ export function productDialog({
       )
       .join("");
     drawStock();
+    editor?.markDirty();
   }
   c("itemType").onchange = update;
   c("stockUnit").onchange = update;
@@ -151,6 +170,7 @@ export function productDialog({
   c("adjustStock").onchange = toggleStock;
   if(state.opsVersion){c("adjustStock").disabled=true;c("adjustStock").closest("label")?.setAttribute("title","Gunakan Barang masuk atau Waste & penyusutan untuk jejak per penerimaan.");}
   update();
+  toggleVariants();
   const preview = () => {
     const img = d.querySelector("#photo-preview");
     img.hidden = !photo;
@@ -211,13 +231,20 @@ export function productDialog({
   f.onsubmit = async (ev) => {
     ev.preventDefault();
     if (saving) return;
-    if (photoBusy) return error("Tunggu sampai foto selesai diproses.");
+    if (photoBusy && !c("hasVariants")?.checked) return error("Tunggu sampai foto selesai diproses.");
     error("");
     try {
+      if(c("hasVariants")?.checked) {
+        const payload=editor.payload();
+        saving=true;
+        if(await mutate("product_variants_save",payload)){d.close();render();toast(`${payload.variants.length} varian tersimpan`);}
+        return;
+      }
       const values = Object.fromEntries(new FormData(f));
       if (locked) {
         values.itemType = p.itemType;
         values.stockUnit = p.stockUnit;
+        if(p.variantGroupId)values.category=p.category;
       }
       const payload = {
         ...normalizeProduct({ ...values, photo }),
@@ -242,7 +269,7 @@ export function productDialog({
       if (await mutate("product_save", payload)) {
         d.close();
         render();
-        toast("Produk dan stok tersimpan");
+        toast("Barang tersimpan");
       }
     } catch (err) {
       error(err.message);

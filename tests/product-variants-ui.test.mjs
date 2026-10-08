@@ -1,0 +1,55 @@
+import assert from 'node:assert/strict';
+import {randomUUID as id} from 'node:crypto';
+import {combinations,buildVariantRows,variantPayload,saveVariantProducts} from '../pos/product-variants.mjs';
+import {productDialog} from '../pos/product-dialog.mjs';
+import {variantGroupDialog} from '../pos/variant-editor.mjs';
+import {inventoryPanel} from '../pos/inventory-ui.mjs';
+import {emptyState} from '../pos/core.mjs';
+import {setRetryScope,prepareRetry,settleRetry,reconcileRetry,pendingRetry} from '../pos/retry.mjs';
+import {FormDataAdapter,makeModal} from './variant-dom.mjs';
+const common={name:'Durpas Musang King',itemType:'finished',stockUnit:'pcs',category:'Olahan Duren'};
+const axes=[{name:'Kondisi',values:'Fresh, Nitrogen'},{name:'Ukuran',values:'500 gr, 1 kg'}];
+assert.equal(combinations(axes).length,4);
+assert.throws(()=>combinations([{name:'Rasa',values:'Original, original'}]),/duplikat/);
+assert.throws(()=>combinations([{name:'Rasa',values:'A'},{name:'rasa',values:'B'}]),/Nama pilihan/);
+assert.throws(()=>combinations([{name:'Nomor',values:Array.from({length:61},(_,i)=>String(i))}]),/60/);
+const groupId=id(),rows=buildVariantRows({name:common.name,axes,groupId});
+assert.deepEqual(rows.map(p=>p.name),['Durpas Musang King Fresh 500 gr','Durpas Musang King Fresh 1 kg','Durpas Musang King Nitrogen 500 gr','Durpas Musang King Nitrogen 1 kg']);
+rows[0].salePrice='25000';rows[0].barcode='CODE-1';
+const rebuilt=buildVariantRows({name:common.name,axes,groupId,previous:rows});assert.equal(rebuilt[0].id,rows[0].id);assert.equal(rebuilt[0].salePrice,'25000');
+assert.throws(()=>variantPayload({id:id(),groupId,name:common.name,common,rows,products:[{sku:'X',barcode:'code-1'}]}),/Barcode/);
+const modal=makeModal(),state={...emptyState(),opsVersion:19,stores:[{id:'outlet',name:'Outlet A'}]},posted=[];
+const ctx={state,store:'outlet',modal:modal.modal,mutate:async(action,payload)=>{posted.push({action,payload});if(action==='product_variants_save')saveVariantProducts(state,payload);return true},render(){},toast(){}};
+const original=globalThis.FormData;globalThis.FormData=FormDataAdapter;
+try {
+ productDialog(ctx);
+ const d=modal.latest,f=d.querySelector('form'),c=name=>f.elements.namedItem(name);
+ assert.equal(c('hasVariants').checked,false);assert.equal(d.querySelector('#variant-product-fields').hidden,true);
+ c('name').value=common.name;c('itemType').value='finished';await c('itemType').fire('change');c('category').value='Olahan Duren';c('stockUnit').value='pcs';await c('stockUnit').fire('change');
+ c('hasVariants').checked=true;await c('hasVariants').fire('change');
+ assert.equal(d.querySelector('#single-product-fields').disabled,true);assert.equal(d.querySelector('.product-photo-editor').hidden,true);
+ let axis=d.querySelector('[data-axis-row]');axis.querySelector('[data-axis-name]').value='Kondisi';axis.querySelector('[data-axis-values]').value='Fresh, Nitrogen';
+ await d.querySelector('[data-add-axis]').fire('click');
+ axis=d.querySelectorAll('[data-axis-row]')[1];axis.querySelector('[data-axis-name]').value='Ukuran';axis.querySelector('[data-axis-values]').value='500 gr, 1 kg';
+ await d.querySelector('[data-build-variants]').fire('click');assert.equal(d.querySelectorAll('[data-variant-row]').length,4);
+ const bulk=d.querySelector('[data-bulk="salePrice"]');bulk.value='50000';await d.querySelector('[data-apply-prices]').fire('click');assert(d.querySelectorAll('[data-value="salePrice"]').every(x=>x.value==='50000'));
+ const card=d.querySelector('[data-variant-row]');card.querySelector('[data-value="sku"]').value='MY-SKU';card.querySelector('[data-value="salePrice"]').value='45000';
+ await d.querySelector('[data-build-variants]').fire('click');assert.equal(d.querySelector('[data-value="sku"]').value,'MY-SKU');assert.equal(d.querySelector('[data-value="salePrice"]').value,'45000');
+ c('name').value='Durpas Ganti';await f.fire('submit');assert.equal(posted.length,0);assert.match(d.querySelector('#form-error').textContent,/Susun daftar/);c('name').value=common.name;
+ await f.fire('submit');assert.equal(posted.length,1);assert.equal(posted[0].action,'product_variants_save');assert.equal(posted[0].payload.variants.length,4);assert.equal(d.closed,true);
+ const master=inventoryPanel(state,'outlet',{},'products'),stock=inventoryPanel(state,'outlet',{},'stock');
+ assert.equal((master.match(/class="inv-variant-group"/g)||[]).length,1);assert.match(master,/Durpas Musang King Fresh 500 gr/);assert(!stock.includes('class="inv-variant-group"'));assert.equal((stock.match(/class="inv-card"/g)||[]).length,4);
+ const filtered=inventoryPanel(state,'outlet',{query:'MY-SKU'},'products');assert.match(filtered,/1 dari 4 varian/);assert(!filtered.includes('Durpas Musang King Nitrogen 1 kg'));
+ variantGroupDialog({...ctx,groupId:state.products[0].variantGroupId});const gd=modal.latest;
+ assert.equal(gd.querySelectorAll('[data-variant-row]').length,4);
+ gd.querySelectorAll('[data-axis-values]')[0].value='Fresh, Nitrogen, Beku';await gd.querySelector('[data-build-variants]').fire('click');
+ assert.equal(gd.querySelectorAll('[data-variant-row]').length,6);
+ await gd.querySelector('form').fire('submit');assert.equal(posted.length,2);assert.equal(posted[1].payload.variants.length,2);assert.equal(state.products.length,6);assert.equal(state.products.find(p=>p.sku==='MY-SKU').salePrice,45000);
+ productDialog({...ctx,product:state.products[0]});const edit=modal.latest;assert('readonly' in edit.querySelector('[name="name"]').attrs);edit.querySelector('[name="salePrice"]').value='47000';await edit.querySelector('form').fire('submit');assert.equal(posted[2].action,'product_save');assert.equal(posted[2].payload.category,'Olahan Duren');assert.equal(posted[2].payload.salePrice,47000);
+ // The normal, non-variant path remains available in the same form.
+ productDialog(ctx);const single=modal.latest;single.querySelector('[name="name"]').value='Gula';single.querySelector('[name="sku"]').value='BB-GULA';single.querySelector('[name="itemType"]').value='raw';await single.querySelector('[name="itemType"]').fire('change');single.querySelector('[name="stockUnit"]').value='g';await single.querySelector('[name="stockUnit"]').fire('change');await single.querySelector('form').fire('submit');assert.equal(posted[3].action,'product_save');assert.equal(posted[3].payload.category,null);assert.equal(posted[3].payload.stockUnit,'g');
+ // New grouped writes use the existing retry/recovery queue, with the same ID.
+ globalThis.sessionStorage={getItem(){return null},setItem(){},removeItem(){}};setRetryScope('variants-test');
+ const payload=posted[0].payload;prepareRetry('product_variants_save',payload);settleRetry('product_variants_save',true);assert(pendingRetry());assert.equal(prepareRetry('product_variants_save',{...payload,id:id()}).id,payload.id);assert(reconcileRetry({events:[{id:payload.id}]}));
+ console.log('PASS UI: 4 full-name combinations, duplicate/limit checks, price/SKU retention, real toggle/builder/bulk/save/edit/add handlers, grouping and search, individual stock names, regular raw entry and retry recovery.');
+}finally{globalThis.FormData=original;}

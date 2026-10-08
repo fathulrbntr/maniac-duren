@@ -16,7 +16,7 @@ export function installMoneyInputs(root = document) {
   const native = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
   const bind = input => {
     if (input.dataset.moneyInput) { input.value = input.value; return; }
-    if (!moneyName.test(input.name) || !['number','text'].includes(input.type)) return;
+    if (!moneyName.test(input.name || input.dataset.value || input.dataset.bulk || '') || !['number','text'].includes(input.type)) return;
     const initial = native.get.call(input);
     input.dataset.moneyInput = 'true'; input.type = 'text'; input.inputMode = 'decimal';
     let raw = initial;

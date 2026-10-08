@@ -1,9 +1,11 @@
+import { variantGroupDialog } from "./variant-editor.mjs?v=44";
+import { saveVariantProducts } from "./product-variants.mjs?v=44";
 import {createSidebarController,sidebarIcon} from './sidebar.mjs?v=42';
 const sidebar = createSidebarController();
-import {installMoneyInputs} from './money-input.mjs?v=19';
+import {installMoneyInputs} from './money-input.mjs?v=44';
 installMoneyInputs();
 import { openWeighingReceipt, showWeighingHistory } from './receipt-weighing.mjs?v=19';
-import {inventoryPanel,bindInventory} from "./inventory-ui.mjs?v=19";
+import {inventoryPanel,bindInventory} from "./inventory-ui.mjs?v=44";
 import {opsPages,opsPage,bindOps,clearOrderDraft} from './operations-ui.mjs?v=25';
 import {
   navigation,
@@ -16,7 +18,7 @@ import {
   reconcileRetry,
   pendingRetry,
   setRetryScope,
-} from "./retry.mjs?v=16.1";
+} from "./retry.mjs?v=44";
 import { wastePage, bindWaste } from "./waste-ui.mjs?v=43";
 import {
   recipesPage,
@@ -38,7 +40,7 @@ import {
   demoState,
 } from "./core.mjs?v=10";
 import { isLegacyStock } from "./catalog.mjs?v=9";
-import { catalogPanel, productDialog } from "./catalog-ui.mjs?v=14";
+import { catalogPanel, productDialog } from "./catalog-ui.mjs?v=44";
 const themeKey = "maniac-pos-theme";
 function themeButton(extraClass = "") {
   return `<button type="button" class="small theme-toggle ${extraClass}" data-theme-toggle aria-label="Ganti tema"><svg class="theme-light-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></svg><svg class="theme-dark-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M20 15.5A9 9 0 0 1 8.5 4 9 9 0 1 0 20 15.5Z"/></svg><span data-theme-label></span></button>`;
@@ -196,11 +198,14 @@ async function mutate(action, payload) {
   controls.forEach(({ node }) => (node.disabled = true));
   try {
     if (mode === "demo") {
-      const next = applyAction(state, action, payload);
+      const next = action === "product_variants_save" ? structuredClone(state) : applyAction(state, action, payload);
+      if(action === "product_variants_save") saveVariantProducts(next,payload);
       localStorage.setItem("maniac-pos-demo-v1", JSON.stringify(next));
       state = next;
     } else
-      state = await request("/rest/v1/rpc/pos_mutate_027", { action, payload });
+      state = action === "product_variants_save"
+        ? await request("/rest/v1/rpc/pos_product_variants_save", { payload })
+        : await request("/rest/v1/rpc/pos_mutate_027", { action, payload });
     settleRetry(action);
     return true;
   } catch (error) {
@@ -587,7 +592,7 @@ function render() {
     if (view === "products") {
       document.querySelector("#add-catalog-product").onclick = () =>
         productDialog({ state, store, modal, mutate, render, toast });
-      bindInventory(state,store,catalogFilter,"products",{modal,edit:key=>productDialog({product:state.products.find(p=>p.id===key),state,store,modal,mutate,render,toast})});
+      bindInventory(state,store,catalogFilter,"products",{modal,addVariant:groupId=>variantGroupDialog({groupId,state,modal,mutate,render,toast}),edit:key=>productDialog({product:state.products.find(p=>p.id===key),state,store,modal,mutate,render,toast})});
     }
     document
       .querySelectorAll("[data-edit-kind]")
