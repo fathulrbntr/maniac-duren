@@ -1,3 +1,20 @@
 .checkout-discount{border-top:1px solid var(--line);padding-top:12px;margin:12px 0}.checkout-discount p{font-size:12px;line-height:1.5}.checkout-review p{display:flex;justify-content:space-between;gap:16px;line-height:1.5}.checkout-review b{white-space:nowrap}.checkout-result{text-align:center;padding:16px 4px}.checkout-result>span{display:inline-grid;place-items:center;width:48px;height:48px;border-radius:50%;font-size:26px;background:var(--surface-soft)}.checkout-result.is-success>span,.checkout-success{color:var(--success)}.checkout-result.is-cancel>span{color:var(--muted)}.approval-list{display:grid;gap:12px}.approval-card,.discount-row{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 0;border-bottom:1px solid var(--line)}.approval-card p{font-size:13px;line-height:1.6;margin:6px 0}.discount-row small{display:block;color:var(--muted);margin-top:4px}.receipt-print table{width:100%;font-size:12px}.receipt-print th,.receipt-print td{padding:6px 3px;text-align:left}.receipt-print th:last-child,.receipt-print td:last-child{text-align:right}
 @media(max-width:600px){.approval-card{align-items:flex-start;flex-direction:column}.checkout-review p{font-size:13px}.discount-row{gap:8px}}
 @media print{.no-print,.checkout-success{display:none!important}}
+@media print{
+ body>dialog.receipt-dialog:not([open]){display:none!important}
+ body>dialog.cashier-receipt-dialog[open]{display:block!important;position:static;inset:auto;width:80mm;max-width:100%;height:auto;max-height:none;overflow:visible;margin:0;padding:0;border:0;border-radius:0;box-shadow:none;transform:none;background:#fff;color:#000}
+ dialog.cashier-receipt-dialog::backdrop{display:none!important;background:transparent}
+ dialog.cashier-receipt-dialog>form{display:block!important;margin:0;padding:0;height:auto;max-height:none;overflow:visible}
+ dialog.cashier-receipt-dialog>form>:not(.receipt-print){display:none!important}
+ dialog.cashier-receipt-dialog .receipt-print{display:block!important;margin:0;padding:0;white-space:normal;overflow-wrap:anywhere;font-size:12px;line-height:1.4;color:#000;background:#fff}
+ dialog.cashier-receipt-dialog .receipt-print h3{margin:0 0 8px;font-size:14px}
+ dialog.cashier-receipt-dialog .receipt-print p{margin:8px 0}
+ dialog.cashier-receipt-dialog .receipt-print table{width:100%;table-layout:fixed;border-collapse:collapse}
+ dialog.cashier-receipt-dialog .receipt-print th:first-child{width:48%}
+ dialog.cashier-receipt-dialog .receipt-print th:nth-child(2){width:18%}
+ dialog.cashier-receipt-dialog .receipt-print th:last-child{width:34%}
+ dialog.cashier-receipt-dialog .receipt-print thead{display:table-header-group}
+ dialog.cashier-receipt-dialog .receipt-print tr{break-inside:avoid}
+ dialog.cashier-receipt-dialog .receipt-print td,dialog.cashier-receipt-dialog .receipt-print th{white-space:normal;overflow-wrap:anywhere;color:#000}
+}

@@ -1,0 +1,42 @@
+MANIAC DUREN — PATCH 055: PERBAIKAN CETAK STRUK KOSONG
+
+Pasang di atas patch 054. ZIP hanya berisi file baru/berubah.
+Tidak ada SQL baru atau perubahan data transaksi.
+
+PENYEBAB
+CSS cetak POS menyembunyikan semua elemen utama, kecuali dialog dengan
+kelas receipt-dialog. Pop-up struk kasir 054 belum memiliki kelas tersebut,
+sehingga struk juga tersembunyi ketika browser mencetak.
+
+PERBAIKAN
+- Dialog struk diberi penanda cetak sebelum print() dipanggil.
+- Form hanya mencetak isi struk; tombol, pesan, dan kontrol disembunyikan.
+- Batas tinggi/scroll dialog dilepas pada mode cetak agar struk panjang
+  tidak terpotong oleh tinggi pop-up di layar.
+- Teks hitam dengan latar putih, tabel dan nama produk dapat membungkus.
+- Cache versi file diperbarui ke 055 pada rantai modul yang berubah.
+- Cetak ulang tetap menggunakan transaksi tersimpan tanpa transaksi baru.
+
+PASANG
+1. Ekstrak ZIP ke root proyek dan timpa file lama.
+2. Commit/push, tunggu deployment selesai.
+3. Muat ulang POS menggunakan Ctrl+Shift+R.
+4. Buka transaksi yang sudah tersimpan > Detail / struk > Cetak struk.
+   Tidak perlu membuat atau membayar pesanan lagi untuk mencoba cetak.
+5. Periksa pratinjau, lalu pilih printer dan ukuran kertas yang sesuai.
+
+UJI LOKAL
+node tests/receipt-print.test.mjs
+node tests/cashier-ui.test.mjs
+node tests/stock-demo-ui.test.mjs
+node tests/rollback-startup.test.mjs
+
+Uji regresi yang sama gagal pada renderer 054 dan lulus pada 055.
+Mencakup penanda cetak, cetak otomatis/manual, isi diskon/meja/catatan,
+penanda demo/void, dan isi 100 baris. Uji handler memakai adapter DOM;
+belum diuji melalui pratinjau browser atau printer fisik.
+
+GIT
+git add pos/app.js pos/index.html pos/operations-ui.mjs pos/cashier-ui.mjs pos/cashier.css tests/receipt-print.test.mjs PERBAIKAN-CETAK.txt
+git commit -m "Fix blank POS receipt printing"
+git push

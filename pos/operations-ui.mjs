@@ -1,4 +1,4 @@
-import {cashierFields,bindCheckout,discountsPage,bindDiscounts,voidDialog,showReceipt,payExistingOrder} from './cashier-ui.mjs?v=54';
+import {cashierFields,bindCheckout,discountsPage,bindDiscounts,voidDialog,showReceipt,payExistingOrder} from './cashier-ui.mjs?v=55';
 import {tableLabel} from './cashier.mjs?v=54';
 import {posMenuEntries,updatePosCards,posVariantDialog} from './pos-menu.mjs?v=52';
 import {posCategoryTabs,posProductCards,posCategoryDialog,posCategoryManager} from './pos-categories-ui.mjs?v=52';
