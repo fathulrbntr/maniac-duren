@@ -1,65 +1,67 @@
-MANIAC DUREN — PATCH 050: KATEGORI SEBAGAI FILTER POS
+MANIAC DUREN — PATCH 051: SIMPAN KATEGORI DAN PESAN ERROR
 
-Paket ini berisi hanya file baru/berubah di atas patch 049.
-Ekstrak ke root proyek dan timpa file lama, lalu commit, push, dan deploy.
-Muat ulang halaman POS setelah deploy selesai. Sertakan pos/index.html
-agar browser membaca versi modul dan CSS yang baru.
-Tidak ada SQL baru. Database kategori patch 047 harus sudah terpasang.
-Tidak perlu menghapus data, stok, ataupun transaksi.
+Paket perubahan di atas patch 050. Berisi file baru/berubah saja.
 
-PERILAKU POS
-- Semua menampilkan seluruh produk jual dari Master Barang: produk jual
-  langsung, menu resep, dan produk jadi. Bahan baku dan bahan produksi
-  sendiri tidak ditawarkan sebagai produk jual.
-- Produk tanpa kategori tetap tampil di Semua. Tidak ada tab terpisah
-  Belum dikategorikan.
-- Kategori menjadi filter yang dapat diatur kasir/admin sesuai akses.
-  Satu produk dapat masuk ke beberapa kategori dan tetap ada di Semua.
-- Keluarkan yang dipilih hanya menghapus hubungan dengan kategori itu.
-  Data produk, stok, harga, resep, asal batch, dan kategori lain tetap ada.
-- Sesudah menyimpan kategori, filter aktif dan kata pencarian tetap
-  dipertahankan. Keranjang, catatan, serta form buah juga tidak dibuat ulang.
-- Produk bervarian tetap memakai satu kartu dan pop-up konfirmasi varian.
-  Setiap kategori menampilkan hanya varian yang dimasukkan ke kategori itu.
+LANGKAH PEMASANGAN
+1. Ekstrak dan timpa file proyek dengan isi ZIP ini.
+2. Di Supabase → SQL Editor, buka query baru. Salin SELURUH isi file
+   database/pos-menu-categories.sql lalu klik Run.
+   SQL ini menyamakan fungsi simpan/baca kategori dengan web sekarang.
+   Dapat dijalankan ulang bila kategori versi 047 sudah terpasang.
+   Tidak perlu menjalankan pos.sql atau mereset database.
+3. Commit dan push perubahan web, tunggu deploy selesai, kemudian muat
+   ulang POS dengan Ctrl+Shift+R.
+4. Buka Kelola kategori, pilih produk, lalu Keluarkan yang dipilih.
+   Produk tetap ada di Semua dan data stok/master tetap tersimpan.
 
-CENTANG PILIH SEMUA
-Kelola kategori & produk → Kelola produk.
-- Pada Produk dalam kategori, Pilih semua mencentang seluruh pilihan/SKU.
-  Hilangkan centang pada pengecualian, lalu Keluarkan yang dipilih.
-- Pada Tambah produk dari master, Pilih semua mengikuti hasil pencarian.
-  Tanpa pencarian, seluruh produk jual yang belum ada di kategori dipilih.
-- Melepas Pilih semua hanya melepas pilihan yang sedang ditampilkan.
-  Bersihkan pilihan mengosongkan seluruh pilihan tambah, termasuk yang
-  tidak sedang terlihat karena pencarian.
-- Centang menampilkan status sebagian jika hanya beberapa pilihan dipilih.
-  Mencentang saja belum menyimpan perubahan.
+TEMUAN
+Web publik sudah memuat app.js dan CSS patch 050 pada pemeriksaan ini.
+Pesan "Perubahan kategori belum terkonfirmasi" adalah pesan umum, bukan
+pesan asli Supabase. Sebelumnya pesan asli hanya diteruskan ke notifikasi
+halaman, yang tertutup oleh pop-up dialog.
+
+Database kategori versi 046 memakai format simpan berbeda. Dalam pengujian
+lokal, payload web baru ditolak dengan "Pilihan produk tidak valid atau
+terlalu banyak" sampai SQL kategori diperbarui. Ini adalah kasus yang
+terverifikasi pada database uji; versi fungsi yang aktif di Supabase pengguna
+belum dapat diperiksa langsung.
 
 PERBAIKAN
-Versi sebelumnya membuat ulang halaman setelah simpan sehingga filter
-kembali ke Semua. Produk yang baru dikeluarkan tampak lagi karena Semua
-memang memuat seluruh produk jual. Versi ini memperbarui katalog setempat
-sambil mempertahankan filter aktif. Bila penyimpanan gagal, pop-up tetap
-menampilkan pilihan dan pesan bahwa perubahan belum terkonfirmasi.
-Tidak ada permintaan data tambahan saat memilih filter atau centang.
+- Pop-up sekarang menampilkan pesan kesalahan server yang sebenarnya,
+  termasuk konflik versi, hak akses, fungsi belum terpasang, koneksi gagal,
+  dan pengiriman sebelumnya yang belum pasti.
+- Bila fungsi/tabel kategori belum ditemukan, ada petunjuk menjalankan SQL.
+- Pilihan centang tetap ada ketika gagal. Tidak ditampilkan status sukses
+  bila server menolak penyimpanan.
+- Kirim ulang tetap menggunakan pengaman ID operasi. Transaksi yang belum
+  pasti tidak dihapus atau dianggap berhasil begitu saja.
+- SQL mempertahankan hubungan kategori yang sudah ada. Saat upgrade dari
+  046, hubungan lama disalin satu kali ke skema banyak kategori per produk.
+  Menjalankan ulang tidak memasukkan kembali produk yang telah dikeluarkan.
+- Alur login dan jumlah permintaan data saat membuka menu tetap sama.
+
+JIKA MASIH GAGAL
+Kirimkan teks atau screenshot pesan merah yang tampil di dalam pop-up
+setelah patch ini. Pesan tersebut kini menunjukkan error sebenarnya, sehingga
+penanganannya bisa ditentukan tanpa menebak kondisi server.
+Jika tertulis "Kategori sudah berubah", tutup pop-up dan Perbarui stok
+sebelum membuka pengaturan kategori lagi.
 
 VERIFIKASI LOKAL
+node tests/pos-category-errors.test.mjs
 node tests/pos-category-bulk.test.mjs
-node tests/pos-sale-variants.test.mjs
 node tests/pos-categories-ui.test.mjs
-node tests/pos-category-visibility.test.mjs
+node tests/pos-sale-variants.test.mjs
 node tests/pos-categories-sql.test.mjs
 node tests/rollback-startup.test.mjs
-node tests/order-stock.test.mjs
+node --test tests/retry.test.mjs
 
-Lulus uji interaksi adapter DOM, termasuk keluarkan 55 dari 57 SKU,
-kategori kosong, pilihan sebagian, pencarian, gagal simpan/kirim ulang,
-filter tetap aktif, serta produk/master/stok tetap tersimpan. Uji SQL lokal
-PGlite untuk hubungan kategori, hak akses, dan baca ulang juga lulus.
-Login dan navigasi tetap memakai alur pembacaan data sebelumnya.
-Belum diuji visual di browser atau diterapkan ke Supabase/web produksi.
+Pengujian mencakup jalur fungsi mutate aplikasi sampai pesan di pop-up,
+penolakan SQL lama, upgrade database, pengulangan SQL, hubungan kategori,
+55/57 pilihan, serta perlindungan stok/master dan kirim ulang.
+Belum diterapkan ke Supabase atau web produksi oleh asisten.
 
-GIT (jalankan di root proyek sesudah menyalin isi ZIP)
-git add pos/app.js pos/index.html pos/operations-ui.mjs pos/pos-categories-ui.mjs pos/pos-categories.css pos/pos-categories.mjs pos/pos-menu.mjs
-git add tests/pos-category-bulk.test.mjs tests/pos-categories-ui.test.mjs tests/pos-sale-variants.test.mjs KATEGORI-POS.txt
-git commit -m "Fix POS category filters and add select all"
+GIT (root proyek)
+git add pos/app.js pos/index.html pos/operations-ui.mjs pos/pos-categories-ui.mjs database/pos-menu-categories.sql tests/pos-category-errors.test.mjs tests/pos-categories-sql.test.mjs KATEGORI-POS.txt
+git commit -m "Show category save errors and align category SQL"
 git push

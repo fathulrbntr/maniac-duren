@@ -71,11 +71,11 @@ export function posCategoryDialog(ctx){
  async function save(mode,productIds){
   if(saving)return;error('');try{
    const payload=categoryPayload(state,{id:operationId,categoryId,name:mode==='rename'||!category?d.querySelector('[data-category-name]').value:category.name,mode,productIds});saving=true;
-   if(await mutate('pos_category_save',payload)){
+   if(await mutate('pos_category_save',payload,{throwOnError:true})){
     const updated=ctx.getState?.();if(updated)state=updated;else{state=structuredClone(state);savePosCategory(state,payload);}
     category=posCategories(state).find(c=>c.id===categoryId);operationId=crypto.randomUUID();selected.clear();removed.clear();d.dataset.dirty='false';d.querySelector('[data-category-name]').value=category.name;render(state);show('manage');toast(mode==='add'?'Produk ditambahkan ke kategori':mode==='remove'?'Produk dikeluarkan dari kategori ini':'Nama kategori tersimpan');
    }else error('Perubahan kategori belum terkonfirmasi. Periksa pesan kesalahan, lalu coba lagi.');
-  }catch(err){error(err.message);}finally{saving=false;}
+  }catch(err){const message=err.message||'Penyimpanan kategori gagal.';const schemaMissing=err.code==='PGRST202'||['42883','42P01'].includes(err.code);error(message+(schemaMissing?' · Jalankan database/pos-menu-categories.sql di Supabase, lalu muat ulang POS.':''));}finally{saving=false;}
  }
  d.querySelector('[data-category-remove]').onclick=()=>removed.size?save('remove',[...removed]):undefined;
  d.querySelector('form').onsubmit=async ev=>{ev.preventDefault();if(view==='name'){d.querySelector('[data-category-next]').onclick();return;}if(view==='rename')await save('rename',[]);else if(view==='add'&&(!category||selected.size))await save('add',[...selected]);};

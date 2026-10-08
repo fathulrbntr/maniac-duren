@@ -7,7 +7,7 @@ import {installMoneyInputs} from './money-input.mjs?v=44';
 installMoneyInputs();
 import { openWeighingReceipt, showWeighingHistory } from './receipt-weighing.mjs?v=19';
 import {inventoryPanel,bindInventory} from "./inventory-ui.mjs?v=45";
-import {opsPages,opsPage,bindOps,clearOrderDraft} from './operations-ui.mjs?v=50';
+import {opsPages,opsPage,bindOps,clearOrderDraft} from './operations-ui.mjs?v=51';
 import {
   navigation,
   mayLeave,
@@ -164,6 +164,8 @@ async function request(path, body, auth = true) {
       data.message || data.error_description || data.msg || "Koneksi gagal",
     );
     error.definitive = r.status < 500;
+    error.code = data.code;
+    error.status = r.status;
     throw error;
   }
   return data;
@@ -182,13 +184,17 @@ async function refresh() {
     toast("Pengiriman sebelumnya sudah tersimpan.");
   }
 }
-async function mutate(action, payload) {
-  if (busy) return false;
+async function mutate(action, payload, {throwOnError = false} = {}) {
+  if (busy) {
+    if (throwOnError) throw Error("Tunggu proses simpan selesai.");
+    return false;
+  }
   try {
     if(mode==="demo" && /^(order_|employee_|attendance_|sort$|recover$|inventory_loss$)/.test(action))throw Error("Fitur baru memerlukan login database versi 009.");
     Object.assign(payload, prepareRetry(action, payload));
   } catch (error) {
     toast(error.message);
+    if (throwOnError) throw error;
     return false;
   }
   stateRevision++;
@@ -214,12 +220,11 @@ async function mutate(action, payload) {
     return true;
   } catch (error) {
     settleRetry(action, mode === "live" && !error.definitive);
-    toast(
-      error.message +
-        (mode === "live" && !error.definitive
-          ? " · Status simpan belum pasti. Periksa stok atau kirim ulang data yang sama."
-          : ""),
-    );
+    error.message += mode === "live" && !error.definitive
+      ? " · Status simpan belum pasti. Periksa stok atau kirim ulang data yang sama."
+      : "";
+    toast(error.message);
+    if (throwOnError) throw error;
     return false;
   } finally {
     busy = false;

@@ -35,6 +35,10 @@ try{
   await db.exec(fs.readFileSync(process.env.POS_PREVIOUS_CATEGORY_SQL,'utf8'));
   const old=await read(),categoryId=id(),productIds=[water.id,fruit.id].sort();
   legacy=await save({id:id(),categoryId,name:'Kategori lama',expectedVersion:0,productIds,expectedAssignments:old.products.filter(p=>productIds.includes(p.id)).map(p=>({id:p.id,categoryId:p.posCategoryId})).sort((a,b)=>a.id.localeCompare(b.id))});
+  // A 050 web payload reaches this 046 function without expectedAssignments.
+  // Reproduce that rejection before applying the non-destructive SQL upgrade.
+  await assert.rejects(save(categoryPayload(legacy,{id:id(),categoryId,name:'Kategori lama',mode:'remove',productIds})),/Pilihan produk tidak valid atau terlalu banyak/);
+  assert.deepEqual(await read(),legacy,'Rejected modern payload cannot change legacy category membership');
  }
  await db.exec(migration);await db.exec(migration);
  const initial=await read(),cat=name=>initial.posCategories.find(c=>c.name===name).id,ids=(s,p)=>posCategoryIds(s,s.products.find(x=>x.id===p.id));

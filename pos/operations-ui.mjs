@@ -1,5 +1,5 @@
 import {posMenuEntries,updatePosCards,posVariantDialog} from './pos-menu.mjs?v=50';
-import {posCategoryTabs,posProductCards,posCategoryDialog,posCategoryManager} from './pos-categories-ui.mjs?v=50';
+import {posCategoryTabs,posProductCards,posCategoryDialog,posCategoryManager} from './pos-categories-ui.mjs?v=51';
 import {posVisible,menuCatalogChanged,posProductStatus} from './pos-categories.mjs?v=50';
 import {employeesPage,bindEmployees} from './employees-ui.mjs?v=25';
 import {checkOrder} from './order-stock.mjs?v=12';
