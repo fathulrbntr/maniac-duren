@@ -27,3 +27,8 @@
 .inv-card,.inv-filters{background:var(--surface);border-color:var(--line)}
 .inv-card:hover{background:var(--surface-raised);border-color:var(--line)}
 .inv-search,.inventory-workspace select,.inv-price{background:var(--surface-soft)}
+
+/* Shared POS categories in Master Barang and Stok. */
+.inv-shared-categories>label{display:block}.inv-shared-categories>small{display:block;margin-top:9px;color:var(--muted);font-size:11px;line-height:1.6}
+.inv-category-actions{display:grid;gap:7px;margin-top:12px}.inventory-workspace .inv-category-actions button{width:100%;padding:9px 10px;font-size:12px;border-radius:9px;background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+.inv-summary-categories{overflow-wrap:anywhere}

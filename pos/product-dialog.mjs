@@ -1,3 +1,4 @@
+import {posCategoryName} from './pos-categories.mjs?v=52';
 import { variantEditorMarkup, bindVariantEditor } from "./variant-editor.mjs?v=45";
 import {
   categories,
@@ -40,8 +41,9 @@ export function productDialog({
     editing ? "Edit produk / bahan" : "Tambah produk / bahan",
     `
  <div class="product-photo-editor"><img id="photo-preview" alt="Pratinjau foto produk" ${photo ? `src="${e(photo)}"` : "hidden"}><div>${field("Foto produk", '<input id="photo-file" type="file" accept="image/jpeg,image/png,image/webp">')}<small>JPG, PNG, WebP. Otomatis diperkecil; hasil maksimal 2 MB.</small><p id="photo-status" role="status"></p><button type="button" id="remove-photo">Hapus foto</button></div></div>
- <div class="form-grid">${field("Nama barang", `<input name="name" value="${e(p.name || "")}" required maxlength="100" placeholder="Contoh: Durian Musang King" ${p.variantGroupId?'readonly':''}>`)}${field("Jenis barang", `<select name="itemType" ${locked ? "disabled" : ""}>${options(itemTypes, p.itemType)}</select>`)}<div id="category-field">${field("Kategori jual", `<select name="category">${options(Object.fromEntries(categories.map((c) => [c, c])), p.category)}</select>`)}</div>${field("Satuan stok", `<select name="stockUnit" ${locked ? "disabled" : ""}>${options(stockUnits, p.stockUnit)}</select>`)}</div>
+ <div class="form-grid">${field("Nama barang", `<input name="name" value="${e(p.name || "")}" required maxlength="100" placeholder="Contoh: Durian Musang King" ${p.variantGroupId?'readonly':''}>`)}${field("Jenis barang", `<select name="itemType" ${locked ? "disabled" : ""}>${options(itemTypes, p.itemType)}</select>`)}<input type="hidden" name="category" value="${e(p.category||'')}">${field("Satuan stok", `<select name="stockUnit" ${locked ? "disabled" : ""}>${options(stockUnits, p.stockUnit)}</select>`)}</div>
  <p class="muted">${locked ? "Jenis dan satuan mengikuti barang yang sudah terdaftar." : "Gunakan gram untuk berat bahan dan ml untuk cairan."}</p>
+ <section class="product-shared-categories" aria-label="Kategori produk"><span>Kategori</span><strong data-product-category-names>${e(editing?posCategoryName(state,p):'Semua')}</strong><p data-product-category-help>Kategori mengikuti Master Barang, Stok, dan POS. Setelah menyimpan barang, gunakan Kelola kategori → pilih kategori → Tambah produk dari master.</p></section>
  ${editing ? (p.variantGroupId?`<p class="variant-notice">Varian dari <b>${e(p.variantGroupName)}</b>. Nama lengkap tetap digunakan dalam stok dan Olah Reject.</p>`:'') : '<label class="variant-toggle"><input type="checkbox" name="hasVariants"><span><b>Memiliki varian</b><small>Aktifkan jika barang memiliki pilihan ukuran, rasa, atau kondisi.</small></span></label>'}
  <fieldset id="single-product-fields"><div class="form-grid">${editing?field("Keterangan varian", `<input name="variant" value="${e(p.variant || "")}" maxlength="100" ${p.variantGroupId?'readonly':''}>`):''}${field("SKU", `<input name="sku" value="${e(p.sku || "")}" required maxlength="40" placeholder="Kode unik barang">`)}${field("Barcode (opsional)", `<input name="barcode" value="${e(p.barcode || "")}" maxlength="80" placeholder="Ketik atau scan barcode">`)}${field("Harga beli referensi (Rp / satuan; durian per kg)", `<input name="buyPrice" type="number" min="0" max="1000000000000" step="any" value="${e(p.buyPrice ?? "")}" placeholder="Opsional">`)}</div><p class="muted">Harga beli adalah referensi; harga jual berlaku di semua outlet.</p><div id="catalog-prices" class="form-grid"></div></fieldset>
  ${editing?'':`<fieldset id="variant-product-fields" hidden disabled>${variantEditorMarkup()}</fieldset>`}
@@ -116,7 +118,6 @@ export function productDialog({
     const type = c("itemType").value,
       unit = c("stockUnit"),
       material = ["raw", "prep"].includes(type);
-    d.querySelector("#category-field").hidden = material;
     c("category").disabled = material || !!p.variantGroupId;
     const allowed =
       type === "recipe"
@@ -126,13 +127,21 @@ export function productDialog({
             "g",
             "ml",
             "pcs",
-            ...(type === "direct" && c("category").value === "Buah"
+            ...(type === "direct"
               ? ["kg_butir"]
               : []),
           ];
     for (const option of unit.options)
       option.disabled = !allowed.includes(option.value);
     if (!allowed.includes(unit.value)) unit.value = allowed[0];
+    // Keep the operational category required by stock/recipe validation internal.
+    // Visible category membership is managed only through the shared POS flow.
+    c("category").value = material ? "" :
+      (editing && type === p.itemType && unit.value === p.stockUnit && categories.includes(p.category)) ? p.category :
+      unit.value === "kg_butir" ? "Buah" : type === "finished" ? "Olahan Duren" : type === "recipe" ? "Dessert" : "Minuman";
+    d.querySelector('[data-product-category-help]').textContent = material
+      ? 'Bahan internal tersedia di Master Barang dan Stok. Gunakan filter Jenis item untuk Bahan Baku atau Bahan Produksi.'
+      : 'Kategori mengikuti Master Barang, Stok, dan POS. Setelah menyimpan barang, gunakan Kelola kategori → pilih kategori → Tambah produk dari master.';
     d.querySelector("#catalog-prices").innerHTML = (
       material
         ? []
@@ -156,17 +165,6 @@ export function productDialog({
   }
   c("itemType").onchange = update;
   c("stockUnit").onchange = update;
-  c("category").onchange = () => {
-    if (
-      locked &&
-      p.stockUnit === "kg_butir" &&
-      c("category").value !== "Buah"
-    ) {
-      c("category").value = "Buah";
-      toast("Durian dengan stok kg + butir tetap kategori Buah");
-    }
-    update();
-  };
   c("adjustStock").onchange = toggleStock;
   if(state.opsVersion){c("adjustStock").disabled=true;c("adjustStock").closest("label")?.setAttribute("title","Gunakan Barang masuk atau Waste & penyusutan untuk jejak per penerimaan.");}
   update();
