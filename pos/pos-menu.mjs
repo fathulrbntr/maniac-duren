@@ -1,5 +1,5 @@
 import {escape as e,money,today} from './core.mjs?v=9';
-import {posVisible,posCategoryIds,posCategories,hasPosPrice,posProductStatus} from './pos-categories.mjs?v=49';
+import {posVisible,posCategoryIds,posCategories,hasPosPrice,posProductStatus} from './pos-categories.mjs?v=50';
 
 export const menuKey=p=>p.variantGroupId?'group:'+p.variantGroupId:'product:'+p.id;
 export const variantLabel=p=>p.variantOptions?.length?p.variantOptions.map(o=>`${o.name}: ${o.value}`).join(' · '):p.variant||p.name;
@@ -9,7 +9,7 @@ export function posMenuEntries(state,category='all',query=''){
  for(const p of state.products){
   if(!posVisible(p))continue;
   const ids=posCategoryIds(state,p);
-  if(category!=='all'&&(category==='unassigned'?ids.length:!ids.includes(category)))continue;
+  if(category!=='all'&&!ids.includes(category))continue;
   const key=menuKey(p);
   if(!groups.has(key))groups.set(key,{key,name:p.variantGroupId?(p.variantGroupName||p.name):p.name,hasVariants:!!p.variantGroupId||!!String(p.variant||'').trim()||!!p.variantOptions?.length,products:[]});
   groups.get(key).products.push(p);
@@ -33,11 +33,11 @@ function entryPrice(entry){
  return range(entry.products.map(p=>p.salePrice),entry.products[0].stockUnit||'pcs')||'Harga belum diisi';
 }
 const entryCategories=(s,entry)=>[...new Set(entry.products.flatMap(p=>posCategoryIds(s,p)))];
-const entryCategoryName=(s,entry)=>{const ids=entryCategories(s,entry);return posCategories(s).filter(c=>ids.includes(c.id)).map(c=>c.name).join(' · ')||'Belum dikategorikan';};
+const entryCategoryName=(s,entry)=>{const ids=entryCategories(s,entry);return posCategories(s).filter(c=>ids.includes(c.id)).map(c=>c.name).join(' · ')||'Semua';};
 export function posProductCards(s,store,draft=[]){
  return posMenuEntries(s).map(entry=>{
   const status=posEntryStatus(s,store,entry,draft),photo=entry.products.find(p=>p.photo)?.photo,ids=entryCategories(s,entry),p=entry.products[0];
-  return `<button type="button" class="order-product ${entry.hasVariants?'order-product-variants':''}" ${!entry.hasVariants&&!status.ok?'disabled':''} title="${e(status.reason)}" data-menu-key="${e(entry.key)}" ${entry.hasVariants?`data-order-group="${e(p.variantGroupId||p.id)}" aria-haspopup="dialog"`:`data-order-add="${e(p.id)}"`} data-categories="${e(ids.length?ids.join(' '):'unassigned')}"><span class="order-product-photo">${photo?`<img src="${e(photo)}" alt="" loading="lazy">`:`<span>${e(entry.name.split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase())}</span>`}</span><span class="order-product-info"><span class="order-product-category">${e(entryCategoryName(s,entry))}</span><strong>${e(entry.name)}</strong>${entry.hasVariants?`<span class="order-variant-count">${entry.products.length} pilihan varian</span>`:''}<span class="order-product-price">${e(entryPrice(entry))}</span></span><span class="order-stock-status">${e(status.reason)}</span><span class="order-product-add" aria-hidden="true">${entry.hasVariants?'›':'+'}</span></button>`;
+  return `<button type="button" class="order-product ${entry.hasVariants?'order-product-variants':''}" ${!entry.hasVariants&&!status.ok?'disabled':''} title="${e(status.reason)}" data-menu-key="${e(entry.key)}" ${entry.hasVariants?`data-order-group="${e(p.variantGroupId||p.id)}" aria-haspopup="dialog"`:`data-order-add="${e(p.id)}"`} data-categories="${e(['all',...ids].join(' '))}"><span class="order-product-photo">${photo?`<img src="${e(photo)}" alt="" loading="lazy">`:`<span>${e(entry.name.split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase())}</span>`}</span><span class="order-product-info"><span class="order-product-category">${e(entryCategoryName(s,entry))}</span><strong>${e(entry.name)}</strong>${entry.hasVariants?`<span class="order-variant-count">${entry.products.length} pilihan varian</span>`:''}<span class="order-product-price">${e(entryPrice(entry))}</span></span><span class="order-stock-status">${e(status.reason)}</span><span class="order-product-add" aria-hidden="true">${entry.hasVariants?'›':'+'}</span></button>`;
  }).join('')||'<div class="empty">Belum ada produk jual di Master Barang.</div>';
 }
 // Filtering and cart/stock updates keep the existing card images in place.

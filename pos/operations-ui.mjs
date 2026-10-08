@@ -1,6 +1,6 @@
-import {posMenuEntries,updatePosCards,posVariantDialog} from './pos-menu.mjs?v=49';
-import {posCategoryTabs,posProductCards,posCategoryDialog,posCategoryManager} from './pos-categories-ui.mjs?v=49';
-import {posVisible,menuCatalogChanged,posProductStatus} from './pos-categories.mjs?v=49';
+import {posMenuEntries,updatePosCards,posVariantDialog} from './pos-menu.mjs?v=50';
+import {posCategoryTabs,posProductCards,posCategoryDialog,posCategoryManager} from './pos-categories-ui.mjs?v=50';
+import {posVisible,menuCatalogChanged,posProductStatus} from './pos-categories.mjs?v=50';
 import {employeesPage,bindEmployees} from './employees-ui.mjs?v=25';
 import {checkOrder} from './order-stock.mjs?v=12';
 import {orderMargins} from './finance.mjs?v=9';
@@ -74,7 +74,7 @@ export function bindOps(view,s,store,ctx){
  bindActions(document);
  if(view==='orders'&&document.querySelector('#order-line')){
  const f=document.querySelector('#order-line');
- const categoryContext=()=>({...ctx,state:s,render:()=>{const note=document.querySelector('#order-note')?.value||'';ctx.render();const input=document.querySelector('#order-note');if(input)input.value=note;}});
+ const categoryContext=()=>({...ctx,state:s,render:updated=>{s=ctx.getState?.()||updated||s;refreshCatalog();showDraft();variantDialog?.refresh();}});
  document.querySelector('#add-pos-category')?.addEventListener('click',()=>posCategoryDialog(categoryContext()));
  document.querySelector('#manage-pos-categories')?.addEventListener('click',()=>posCategoryManager(categoryContext()));
  const container=document.querySelector('#order-draft');

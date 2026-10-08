@@ -2,7 +2,8 @@ import {menuStatus} from './order-stock.mjs?v=12';
 const defaults=[['b100b11f-4af2-ef03-19c8-9f8e8ae80233','Buah'],['5aa31598-4ca1-77b9-0ae7-412fd3c2d2ec','Durpas'],['f77d427f-63a9-e975-cfc2-8815e1ec1889','Coral'],['3277f318-03d0-caca-3422-1285f413fbc5','Makan'],['e13c2d41-d4da-7345-3206-9372e035a962','Minuman'],['87a7e78c-fe78-3a3e-6958-dde47bbda51b','Dessert']];
 export const defaultPosCategories=()=>defaults.map(([id,name],sortOrder)=>({id,name,sortOrder,version:1}));
 export const categoryEligible=p=>['direct','finished','recipe'].includes(p.itemType||'direct');
-// Category membership controls display. Price and stock only control ordering.
+// Semua includes every saleable master product. Categories only filter this catalog.
+// Price and stock only control ordering.
 export const posVisible=categoryEligible;
 export const hasPosPrice=p=>Number.isFinite(Number(p.salePrice))&&Number(p.salePrice)>0;
 export function posProductStatus(state,store,product,draft,date){
@@ -23,7 +24,7 @@ export const posCategories=s=>(Array.isArray(s.posCategories)?s.posCategories:de
 // Explicit empty membership must not fall back to the obsolete single category.
 export const posCategoryIds=(s,p)=>Array.isArray(p.posCategoryIds)?p.posCategoryIds:Array.isArray(s.posCategories)?(p.posCategoryId?[p.posCategoryId]:[]):[inferredCategoryId(p)].filter(Boolean);
 export const inPosCategory=(s,p,id)=>posCategoryIds(s,p).includes(id);
-export const posCategoryName=(s,p)=>posCategories(s).filter(c=>inPosCategory(s,p,c.id)).map(c=>c.name).join(' · ')||'Belum dikategorikan';
+export const posCategoryName=(s,p)=>posCategories(s).filter(c=>inPosCategory(s,p,c.id)).map(c=>c.name).join(' · ')||'Semua';
 export function categoryName(value){const name=String(value??'').trim().replace(/\s+/g,' ');if(!name||name.length>50)throw Error('Nama kategori wajib, maksimal 50 karakter.');if(['semua','belum dikategorikan'].includes(name.toLowerCase()))throw Error('Gunakan nama kategori lain.');return name;}
 export function categoryPayload(s,{id,categoryId,name,productIds=[],mode='add'}){
  name=categoryName(name);

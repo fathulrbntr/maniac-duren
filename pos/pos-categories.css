@@ -30,3 +30,8 @@
 .pos-category-group-heading>span{display:grid;gap:5px;min-width:0}.pos-category-group-heading b{font-size:13px;overflow-wrap:anywhere}.pos-category-group-heading small{font-size:11px;color:var(--muted)}
 .pos-category-modal .pos-category-group-heading input{width:18px;height:18px;margin:0;padding:0;flex:0 0 18px;accent-color:var(--green)}
 .pos-category-group-choices{display:grid;gap:7px;padding:8px}.pos-category-group-choices .pos-category-product{padding:11px;border-radius:9px}
+
+.pos-category-modal .pos-category-select-all{display:flex;align-items:center;gap:10px;margin:0;min-height:36px;padding:6px 0;cursor:pointer;font-size:13px;color:var(--text)}
+.pos-category-modal .pos-category-select-all input{width:18px;height:18px;flex:0 0 18px;padding:0;margin:0;accent-color:var(--green)}
+.pos-category-picker-tools .pos-category-select-all{margin-right:auto}
+.pos-category-select-all:has(input:disabled){opacity:.55;cursor:default}

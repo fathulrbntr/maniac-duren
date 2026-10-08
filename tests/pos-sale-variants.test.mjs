@@ -59,10 +59,15 @@ try{
  root.querySelector('#order-note').value='Meja 07';await root.querySelector('#save-order').fire('click');const payment=m.latest;await submit(payment);
  assert.equal(posted.length,1);assert.equal(posted[0].action,'order_create');assert.equal(posted[0].payload.note,'Meja 07');assert.deepEqual(posted[0].payload.lines.map(l=>l.productId),[bawor[1].id,bawor[0].id,recipes[0].id,water.id]);assert.deepEqual(posted[0].payload.lines.map(l=>l.price),[75000,40000,20000,5000]);assert.equal(cartSize(),0);
  // Removing the whole group from a category keeps it in All and keeps master rows.
+ await choose(cat('Durpas'));root.querySelector('#order-search').value='Bawor';await root.querySelector('#order-search').fire('input');
  const before=structuredClone(state.products);await root.querySelector('#manage-pos-categories').fire('click');await m.latest.querySelector(`[data-edit-pos-category="${cat('Durpas')}"]`).fire('click');
  const management=m.latest,removeGroup=management.querySelector('[data-category-group]');removeGroup.checked=true;await management.querySelector('[data-category-members]').listeners.change[0]({target:removeGroup});await management.querySelector('[data-category-remove]').fire('click');
  assert.equal(posted.at(-1).action,'pos_category_save');assert.equal(posted.at(-1).payload.mode,'remove');assert.deepEqual(new Set(posted.at(-1).payload.productIds),new Set(bawor.map(p=>p.id)));management.close();
  assert.equal(posMenuEntries(state,cat('Durpas')).length,0);assert(posMenuEntries(state).some(x=>x.key===menuKey(bawor[0])));assert.deepEqual(state.products.map(({posCategoryIds,...p})=>p),before.map(({posCategoryIds,...p})=>p));
+ assert.equal(root.querySelector(`[data-order-category="${cat('Durpas')}"]`).attrs['aria-pressed'],'true','Category save must preserve active filter');
+ assert.equal(root.querySelector('#order-search').value,'Bawor');assert.equal(card(bawor[0]).hidden,true,'Removed group must disappear from active category immediately');
+ await choose('all');assert.equal(card(bawor[0]).hidden,false,'Removed group remains available in Semua');
+ assert(!root.querySelector('[data-order-category="unassigned"]'),'No separate uncategorized tab');
  // State may change between polling and submit; confirmation revalidates it.
  // Legacy products with one free-text variant also require confirmation, without guessing groups by name.
  const legacy={...water,id:id(),name:'Pancake coklat',variant:'Coklat'};const legacyState={...state,products:[legacy],unitLots:[lot(legacy,2)]};

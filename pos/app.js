@@ -1,4 +1,4 @@
-import {savePosCategory} from './pos-categories.mjs?v=49';
+import {savePosCategory} from './pos-categories.mjs?v=50';
 import { variantGroupDialog, productVariantDialog } from "./variant-editor.mjs?v=45";
 import { saveVariantProducts } from "./product-variants.mjs?v=45";
 import {createSidebarController,sidebarIcon} from './sidebar.mjs?v=42';
@@ -7,7 +7,7 @@ import {installMoneyInputs} from './money-input.mjs?v=44';
 installMoneyInputs();
 import { openWeighingReceipt, showWeighingHistory } from './receipt-weighing.mjs?v=19';
 import {inventoryPanel,bindInventory} from "./inventory-ui.mjs?v=45";
-import {opsPages,opsPage,bindOps,clearOrderDraft} from './operations-ui.mjs?v=49';
+import {opsPages,opsPage,bindOps,clearOrderDraft} from './operations-ui.mjs?v=50';
 import {
   navigation,
   mayLeave,

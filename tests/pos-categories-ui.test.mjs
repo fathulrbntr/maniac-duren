@@ -19,7 +19,7 @@ const products=[
 ];products.forEach(p=>p.posCategoryId=inferredCategoryId(p));
 let state={...emptyState(),products,posCategories:cats,stores:[{id:'A',name:'Outlet A'},{id:'B',name:'Outlet B'}],orders:[],opsVersion:19,orderStockVersion:11,orderRoutingVersion:13,access:{master:true,sell:true},unitLots:[{id:'water-lot',productId:products[3].id,storeId:'A',qty:8,date:today()}]};
 const m=makeModal(),posted=[],ctx={modal:m.modal,mutate:async(action,p)=>{assert.equal(action,'pos_category_save');const next=structuredClone(state);savePosCategory(next,p);state=next;posted.push(p);return true;},render(){},toast(){},refresh(){},getState:()=>state};
-const tabs=posCategoryTabs(state);for(const name of ['Buah','Durpas','Coral','Makan','Minuman','Dessert'])assert(tabs.includes(name));assert(tabs.includes('Belum dikategorikan'));
+const tabs=posCategoryTabs(state);for(const name of ['Buah','Durpas','Coral','Makan','Minuman','Dessert'])assert(tabs.includes(name));assert(!tabs.includes('Belum dikategorikan'));assert(!tabs.includes('data-order-category="unassigned"'));
 assert.throws(()=>categoryPayload(state,{id:id(),categoryId:id(),name:'  BUAH ',productIds:[]}),/sudah digunakan/);
 assert.throws(()=>categoryPayload(state,{id:id(),categoryId:id(),name:'Raw salah',productIds:[products[5].id]}),/produk jual/);
 const unchanged=structuredClone(state.products);
@@ -27,8 +27,8 @@ const onlyStock=structuredClone(state);onlyStock.unitLots[0].qty=7;assert.equal(
 posCategoryDialog({...ctx,state});const d=m.latest;
 assert.equal(d.querySelector('[data-category-product-step]').hidden,true);d.querySelector('[data-category-name]').value='Paket Pilihan';await d.querySelector('[data-category-next]').fire('click');
 assert.equal(d.querySelector('[data-category-product-step]').hidden,false);assert.equal(d.querySelectorAll('[data-category-product]').length,6);assert(!d.querySelector('[data-category-picker]').textContent.includes('BB-GULA'));assert.match(d.querySelector('[data-category-picker]').textContent,/Harga belum diisi/);
-d.querySelector('[data-category-search]').value='899001';await d.querySelector('[data-category-search]').fire('input');assert.equal(d.querySelectorAll('[data-category-product]').length,1);await d.querySelector('[data-category-select-visible]').fire('click');
-d.querySelector('[data-category-search]').value='Durpas';await d.querySelector('[data-category-search]').fire('input');await d.querySelector('[data-category-select-visible]').fire('click');assert.match(d.querySelector('[data-category-selection-count]').textContent,/2 pilihan\/SKU dipilih/);
+d.querySelector('[data-category-search]').value='899001';await d.querySelector('[data-category-search]').fire('input');assert.equal(d.querySelectorAll('[data-category-product]').length,1);d.querySelector('[data-category-select-all-products]').checked=true;await d.querySelector('[data-category-select-all-products]').fire('change');
+d.querySelector('[data-category-search]').value='Durpas';await d.querySelector('[data-category-search]').fire('input');d.querySelector('[data-category-select-all-products]').checked=true;await d.querySelector('[data-category-select-all-products]').fire('change');assert.match(d.querySelector('[data-category-selection-count]').textContent,/2 pilihan\/SKU dipilih/);
 await d.querySelector('[data-category-back]').fire('click');await d.querySelector('[data-category-next]').fire('click');assert.match(d.querySelector('[data-category-selection-count]').textContent,/2 pilihan\/SKU dipilih/);
 assert.equal(posted.length,0,'Selecting alone must not write');
 await d.querySelector('form').fire('submit');assert.equal(posted.length,1);assert.equal(posted[0].productIds.length,2);assert.equal(posted[0].mode,'add');
@@ -41,7 +41,7 @@ posCategoryManager({...ctx,state});const manager=m.latest;assert.equal(manager.q
 assert.equal(edit.querySelector('[data-category-members-step]').hidden,false);assert.equal(edit.querySelector('[data-category-product-step]').hidden,true);
 await edit.querySelector('[data-category-add]').fire('click');
 assert.equal(edit.querySelectorAll('[data-category-product]').length,4);assert(!edit.querySelector(`[data-category-product="${products[3].id}"]`),'Existing members excluded from add picker');
-edit.querySelector('[data-category-search]').value='MK-F';await edit.querySelector('[data-category-search]').fire('input');await edit.querySelector('[data-category-select-visible]').fire('click');await edit.querySelector('form').fire('submit');
+edit.querySelector('[data-category-search]').value='MK-F';await edit.querySelector('[data-category-search]').fire('input');edit.querySelector('[data-category-select-all-products]').checked=true;await edit.querySelector('[data-category-select-all-products]').fire('change');await edit.querySelector('form').fire('submit');
 assert.equal(edit.querySelectorAll('[data-category-member]').length,3);assert(inPosCategory(state,product('MK-F'),cat('Buah')),'Fruit still in Buah');assert(inPosCategory(state,product('WATER'),target),'Add does not replace existing members');
 const toRemove=edit.querySelector(`[data-category-member="${products[3].id}"]`);toRemove.checked=true;await edit.querySelector('[data-category-members]').listeners.change[0]({target:toRemove});await edit.querySelector('[data-category-remove]').fire('click');
 assert.equal(posted.at(-1).mode,'remove');assert.deepEqual(posCategoryIds(state,product('WATER')),[cat('Minuman')]);assert(inPosCategory(state,product('DP-MK-F500'),target));assert.equal(edit.querySelectorAll('[data-category-member]').length,2);
