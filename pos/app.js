@@ -1,13 +1,11 @@
-import {savePosCategory} from './pos-categories.mjs?v=52';
 import { variantGroupDialog, productVariantDialog } from "./variant-editor.mjs?v=45";
-import { saveVariantProducts } from "./product-variants.mjs?v=45";
 import {createSidebarController,sidebarIcon} from './sidebar.mjs?v=42';
 const sidebar = createSidebarController();
 import {installMoneyInputs} from './money-input.mjs?v=44';
 installMoneyInputs();
 import { openWeighingReceipt, showWeighingHistory } from './receipt-weighing.mjs?v=19';
 import {inventoryPanel,bindInventory} from "./inventory-ui.mjs?v=45";
-import {opsPages,opsPage,bindOps,clearOrderDraft} from './operations-ui.mjs?v=52';
+import {opsPages,opsPage,bindOps,clearOrderDraft,hasOrderDraft} from './operations-ui.mjs?v=53';
 import {
   navigation,
   mayLeave,
@@ -35,10 +33,8 @@ import {
   escape as e,
   id,
   emptyState,
-  applyAction,
   saleRows,
   summarize,
-  demoState,
 } from "./core.mjs?v=10";
 import { isLegacyStock } from "./catalog.mjs?v=9";
 import { catalogPanel, productDialog } from "./catalog-ui.mjs?v=45";
@@ -126,18 +122,53 @@ const field = (label, html) =>
   `<div class="field"><label>${label}</label>${html}</div>`;
 function toast(text) {
   const t = document.querySelector("#toast");
-  t.textContent = text;
+  t.textContent = (mode === "stock-demo" ? "Demo · " : "") + text;
   t.style.display = "block";
   clearTimeout(toast.timer);
   toast.timer = setTimeout(() => (t.style.display = "none"), 5000);
 }
+let stockDemoModule,demoSource=null;
+const demoEngine=()=>stockDemoModule ||= import('./stock-demo.mjs?v=53').catch(error=>{stockDemoModule=null;throw error;});
+function assertDemoRequest(path,allowDemoRead){
+  if(mode==='stock-demo'&&!(allowDemoRead&&['/rest/v1/rpc/pos_read','/auth/v1/token?grant_type=refresh_token'].includes(path)))throw Error('Mode demo tidak mengirim perubahan ke database asli.');
+}
+async function switchStockDemo(reset=false){
+  if(busy||!['live','stock-demo'].includes(mode))return;
+  if(reset&&mode!=='stock-demo')return;
+  if(document.querySelector('dialog[open]'))return toast('Tutup pop-up sebelum mengganti mode.');
+  if(pendingRetry())return toast('Periksa pengiriman yang belum terkonfirmasi sebelum mengganti mode.');
+  if(!mayLeave(false))return;
+  if((cart.length||hasOrderDraft())&&!confirm('Pergantian mode akan mengosongkan keranjang yang belum disimpan. Lanjutkan?'))return;
+  if(reset&&!confirm('Ulangi demo dari data master asli dan stok 100? Semua perubahan demo akan dibuang.'))return;
+  busy=true;stateRevision++;
+  const switchingControls=[...document.querySelectorAll('button,input,select,textarea')].map(node=>({node,disabled:node.disabled}));
+  switchingControls.forEach(({node})=>node.disabled=true);
+  try{
+    if(mode==='live'||reset){
+      const engine=await demoEngine();const source=reset?demoSource:state;
+      const next=engine.createStockDemo(source);if(!reset)demoSource=source;
+      state=next;mode='stock-demo';
+    }else{
+      // Keep demo active and write-protected until the real read succeeds.
+      const fresh=await request('/rest/v1/rpc/pos_read',{},true,true);
+      if(!Array.isArray(fresh?.products)||!Array.isArray(fresh?.stores)||fresh.stockDemo)throw Error('Respons data asli tidak lengkap. Mode demo tetap aktif.');
+      state=fresh;mode='live';demoSource=null;
+    }
+    if(!state.stores.some(x=>x.id===store))store=state.stores[0]?.id||'';
+    cart=[];clearOrderDraft();lastSale=null;seenKitchen.clear();render();
+    toast(mode==='stock-demo'?'Stok uji 100 sudah siap di setiap outlet yang dapat diakses.':'Mode demo dimatikan. Data asli sudah dimuat kembali.');
+  }catch(err){toast(err.message);}
+  finally{busy=false;switchingControls.forEach(({node,disabled})=>{if(node.isConnected)node.disabled=disabled;});}
+}
 let refreshingToken;
-async function request(path, body, auth = true) {
+async function request(path, body, auth = true, allowDemoRead = false) {
+  assertDemoRequest(path,allowDemoRead);
   if (auth && refreshToken && Date.now() > expires - 60000) {
     refreshingToken ||= request(
       "/auth/v1/token?grant_type=refresh_token",
       { refresh_token: refreshToken },
       false,
+      allowDemoRead,
     )
       .then((d) => {
         token = d.access_token;
@@ -147,6 +178,7 @@ async function request(path, body, auth = true) {
       .finally(() => (refreshingToken = null));
     await refreshingToken;
   }
+  assertDemoRequest(path,allowDemoRead);
   const r = await fetch(config.url + path, {
     method: body ? "POST" : "GET",
     headers: {
@@ -172,8 +204,12 @@ async function request(path, body, auth = true) {
 }
 async function refresh() {
   if (busy) throw Error("Tunggu proses simpan selesai.");
+  if (mode === "stock-demo") return;
   if (mode === "live") {
-    state = await request("/rest/v1/rpc/pos_read", {});
+    const revision=stateRevision;
+    const fresh=await request("/rest/v1/rpc/pos_read", {});
+    if(mode!=="live"||busy||revision!==stateRevision)return;
+    state=fresh;
     if (!store || !state.stores.some((x) => x.id === store))
       store = state.stores[0]?.id || "";
   } else if (!store) store = state.stores[0]?.id || "";
@@ -190,8 +226,8 @@ async function mutate(action, payload, {throwOnError = false} = {}) {
     return false;
   }
   try {
-    if(mode==="demo" && /^(order_|employee_|attendance_|sort$|recover$|inventory_loss$)/.test(action))throw Error("Fitur baru memerlukan login database versi 009.");
-    Object.assign(payload, prepareRetry(action, payload));
+    if(!["live","stock-demo"].includes(mode))throw Error("Masuk ke POS sebelum menyimpan.");
+    if(mode === "live") Object.assign(payload, prepareRetry(action, payload));
   } catch (error) {
     toast(error.message);
     if (throwOnError) throw error;
@@ -204,22 +240,19 @@ async function mutate(action, payload, {throwOnError = false} = {}) {
   ].map((node) => ({ node, disabled: node.disabled }));
   controls.forEach(({ node }) => (node.disabled = true));
   try {
-    if (mode === "demo") {
-      const next = ["product_variants_save","pos_category_save"].includes(action) ? structuredClone(state) : applyAction(state, action, payload);
-      if(action === "product_variants_save") saveVariantProducts(next,payload);
-      if(action === "pos_category_save") savePosCategory(next,payload);
-      localStorage.setItem("maniac-pos-demo-v1", JSON.stringify(next));
-      state = next;
+    if (mode === "stock-demo") {
+      const engine=await demoEngine();state=engine.applyStockDemoAction(state,action,payload);
     } else
       state = action === "pos_category_save"
         ? await request("/rest/v1/rpc/pos_menu_category_save", {payload})
         : action === "product_variants_save"
         ? await request("/rest/v1/rpc/pos_product_variants_save", { payload })
         : await request("/rest/v1/rpc/pos_mutate_027", { action, payload });
-    settleRetry(action);
+    if(mode === "live") settleRetry(action);
     return true;
   } catch (error) {
-    settleRetry(action, mode === "live" && !error.definitive);
+    if(mode === "live") settleRetry(action, !error.definitive);
+    if(mode === "stock-demo"){const formError=document.querySelector('dialog[open] #form-error');if(formError)formError.textContent=error.message;}
     error.message += mode === "live" && !error.definitive
       ? " · Status simpan belum pasti. Periksa stok atau kirim ulang data yang sama."
       : "";
@@ -255,7 +288,7 @@ function login(message = "") {
       token = d.access_token;
       refreshToken = d.refresh_token;
       expires = Date.now() + d.expires_in * 1000;
-      mode = "live";
+      mode = "live";demoSource=null;
       setRetryScope(config.url + ":" + d.user.id);
       await refresh();
       view=state.access?.sell?"orders":state.access?.kitchen?"kitchen":state.access?.attendance?"attendance":"guide";
@@ -292,7 +325,7 @@ function shell(body) {
       <div class="sidebar-account">${accountProfile()}<button id="logout" class="sidebar-logout" type="button" aria-label="Logout" title="Logout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 4H4v16h5M14 8l4 4-4 4M8 12h10"/></svg><span>Logout</span></button></div>
     </aside>
     <button type="button" class="sidebar-backdrop" data-sidebar-close tabindex="-1" aria-label="Tutup sidebar"></button>
-    <main id="pos-main"><header class="topbar"><div class="workspace-heading"><button id="sidebar-toggle" type="button" class="sidebar-toggle" data-sidebar-toggle aria-controls="pos-sidebar" aria-label="Buka sidebar">${sidebarIcon}</button><h1>${e(title[view] || "Maniac Duren")}</h1></div><div class="workspace-tools"><span class="workspace-outlet">${icon("stores")}<span>${e(name("stores", store))}</span></span>${themeButton()}</div></header><div class="workspace-content">${body}<p class="page-foot">Maniac Duren · ${e(name("stores", store))}</p></div></main>
+    <main id="pos-main"><header class="topbar"><div class="workspace-heading"><button id="sidebar-toggle" type="button" class="sidebar-toggle" data-sidebar-toggle aria-controls="pos-sidebar" aria-label="Buka sidebar">${sidebarIcon}</button><h1>${e(title[view] || "Maniac Duren")}</h1></div><div class="workspace-tools"><span class="workspace-outlet">${icon("stores")}<span>${e(name("stores", store))}</span></span><button type="button" id="stock-demo-toggle" class="stock-demo-toggle" role="switch" aria-checked="${mode==='stock-demo'}"><span class="stock-demo-track" aria-hidden="true"></span>Mode demo</button>${themeButton()}</div></header><div class="workspace-content">${mode==='stock-demo'?'<aside class="stock-demo-banner" role="status"><div><b>MODE DEMO · Stok awal 100</b><p>Data uji hanya di tab ini. Semua penyimpanan demo terpisah dari database asli. Harga dan resep mengikuti master.</p><small>Buah: 100 kg + 100 butir. Bahan / produk stok: 100 sesuai satuannya. Menu resep mengikuti bahan.</small></div><button type="button" id="stock-demo-reset">Reset demo</button></aside>':''}${body}<p class="page-foot">Maniac Duren · ${e(name("stores", store))}</p></div></main>
   </div>`;
 }
 function dashboard() {
@@ -429,6 +462,8 @@ function render() {
   );
   syncThemeControls();
   sidebar.mount();
+  document.querySelector("#stock-demo-toggle")?.addEventListener("click",()=>switchStockDemo());
+  document.querySelector("#stock-demo-reset")?.addEventListener("click",()=>switchStockDemo(true));
   document.querySelectorAll("[data-view]").forEach(
     (b) =>
       (b.onclick = () => {
@@ -461,7 +496,7 @@ function render() {
     token = "";
     refreshToken = "";
     expires = 0;
-    mode = "";
+    mode = "";demoSource=null;lastSale=null;
     stateRevision++;
     seenKitchen.clear();
     cart = [];
@@ -477,7 +512,7 @@ function render() {
     const lot = state.lots.find(l => l.id === b.dataset.weighHistory);
     if (lot) showWeighingHistory(lot, { modal });
   });
-  const pending = pendingRetry();
+  const pending = mode === "live" ? pendingRetry() : null;
   if (pending) {
     const box = document.createElement("div");
     box.className = "notice";
@@ -505,6 +540,7 @@ function render() {
   bindOps(view,state,store,{modal,mutate,render,toast,refresh,getState:()=>state,employeeDocument:employeeId=>request("/rest/v1/rpc/pos_employee_document",{employee_id:employeeId}),createAccount:async(employeeId,password,action="create")=>{
     if(mode!=="live")throw Error("Akun hanya dapat dibuat saat login database.");
     await request("/rest/v1/rpc/pos_account_target",{employee_id:employeeId});
+    if(mode!=="live")throw Error("Akun hanya dapat dibuat saat login database.");
     const res=await fetch("/api/pos-employee",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+token},body:JSON.stringify({employeeId,password,action})});
     const data=await res.json();if(!res.ok)throw Error(data.error||"Gagal membuat akun");return data;
   }});
@@ -519,7 +555,7 @@ function render() {
     toast,
     refresh,
     loadEvidence: async (wasteId) =>
-      mode === "demo"
+      mode === "stock-demo"
         ? state.wasteRuns.find((x) => x.id === wasteId)?.evidence
         : request("/rest/v1/rpc/pos_waste_evidence", { waste_id: wasteId }),
   });
@@ -613,21 +649,13 @@ function render() {
     document
       .querySelectorAll("[data-master]")
       .forEach((b) => (b.onclick = () => addMaster(b.dataset.master)));
-    document.querySelector("#reset-demo")?.addEventListener("click", () => {
-      if (confirm("Reset seluruh data demo di browser ini?")) {
-        state = demoState();
-        localStorage.setItem("maniac-pos-demo-v1", JSON.stringify(state));
-        store = state.stores[0].id;
-        cart = [];
-        render();
-      }
-    });
+
   }
 }
 function modal(title, body, submitLabel = "Simpan") {
   const d = document.createElement("dialog");
   d.className = "modal";
-  d.innerHTML = `<div class="modal-head"><h2>${title}</h2><button type="button" class="close" aria-label="Tutup">×</button></div><form>${body}<p class="error" id="form-error"></p><div class="modal-actions"><button type="button" class="close">Batal</button><button class="primary" type="submit">${submitLabel}</button></div></form>`;
+  d.innerHTML = `<div class="modal-head"><h2>${mode==="stock-demo"?"DEMO · ":""}${title}</h2><button type="button" class="close" aria-label="Tutup">×</button></div><form>${body}<p class="error" id="form-error"></p><div class="modal-actions"><button type="button" class="close">Batal</button><button class="primary" type="submit">${submitLabel}</button></div></form>`;
   document.body.append(d);
   const canClose = () =>
     !busy &&
@@ -842,7 +870,7 @@ function exportCSV() {
   );
   const a = document.createElement("a");
   a.href = url;
-  a.download = `penjualan-${filter.from}-${filter.to}.csv`;
+  a.download = `${mode==="stock-demo"?"DEMO-":""}penjualan-${filter.from}-${filter.to}.csv`;
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
@@ -917,6 +945,6 @@ setInterval(async()=>{
   if(view==='kitchen'&&!document.querySelector('dialog[open]'))render();
   else document.querySelector('#order-products')?.dispatchEvent(new CustomEvent('stock-refresh',{detail:state}));
   const status=document.querySelector('#kitchen-sync');if(status)status.textContent='Terhubung · diperbarui '+new Date().toLocaleTimeString('id-ID');
- }catch(err){const status=document.querySelector('#kitchen-sync');if(status)status.textContent='Koneksi terputus. Mencoba lagi otomatis; tekan Perbarui untuk mencoba sekarang.';}
+ }catch(err){if(mode!=='live'||revision!==stateRevision||sessionToken!==token)return;const status=document.querySelector('#kitchen-sync');if(status)status.textContent='Koneksi terputus. Mencoba lagi otomatis; tekan Perbarui untuk mencoba sekarang.';}
  finally{polling=false;}
 },5000);

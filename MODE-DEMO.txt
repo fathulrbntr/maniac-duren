@@ -1,0 +1,69 @@
+MANIAC DUREN — PATCH 053: MODE DEMO STOK
+
+Paket tambahan di atas patch 052. Hanya file baru/berubah.
+Tidak ada SQL baru, migrasi, atau penghapusan data database.
+
+PASANG
+1. Ekstrak isi ZIP ke root proyek, timpa file dengan nama yang sama.
+2. Commit/push perubahan, tunggu deployment, lalu muat ulang POS.
+3. Login seperti biasa. Switch Mode demo ada di bar atas, dekat tombol tema.
+
+CARA PAKAI
+- Aktifkan Mode demo: seluruh produk stok/varian pada setiap outlet yang
+  dapat diakses mendapat stok awal 100 sesuai satuan master.
+- Buah: 100 kg DAN 100 butir per jenis/varian per outlet.
+- Bahan baku/produksi dan produk jadi: 100 gram/ml/kg/pcs sesuai satuan.
+- Menu resep tetap dibuat berdasarkan resep, menggunakan stok bahan demo.
+  Menu resep tidak diberi stok produk jadi 100 porsi. Jika resep membutuhkan
+  lebih dari 100 satuan bahan, jumlah pesanan tetap dibatasi stok bahan.
+- Harga mengikuti master. Produk yang belum diberi harga tetap perlu harga.
+- Jalankan uji kasir, pilihan varian, pembayaran, dan alur kitchen di tab
+  yang sama. Penjualan/pemakaian bahan mengurangi stok demo seperti biasa.
+- Reset demo: buang transaksi/perubahan demo dan mulai lagi dengan stok 100
+  serta master yang disalin saat pertama kali demo diaktifkan.
+- Matikan Mode demo: ambil ulang data asli terbaru dari database. Perubahan
+  demo dibuang, tidak digabung atau dikirim ke database.
+- Jika pembacaan data asli gagal, demo tetap aktif. Coba matikan lagi
+  setelah koneksi kembali tersedia.
+- Memuat ulang halaman, keluar akun, atau menutup tab membuang sesi demo.
+
+BATAS UJI
+Demo mendukung kasir/POS, antrean kitchen, pembatalan pesanan yang masih
+diproses, produk/varian, kategori dan resep. Hak akses akun tetap berlaku.
+Penerimaan, produksi bahan, olah reject, mutasi, keuangan, karyawan dan
+absensi belum disimulasikan; penyimpanannya ditolak selama demo aktif.
+Tidak ada sinkronisasi demo antartab/perangkat. Kitchen demo diperiksa
+dengan membuka menu Kitchen di tab demo yang sama.
+Demo tidak menghitung modal batch nyata; stok awal demo tidak berbiaya.
+Struk diberi penanda DEMO — BUKAN TRANSAKSI NYATA.
+
+PEMISAHAN DATA
+Sesi demo hanya berada di memori tab, tanpa localStorage/transaksi offline.
+Pemanggilan penyimpanan ke server diblokir selama demo. Antrean kirim ulang
+transaksi nyata tidak digunakan demo. Transaksi nyata yang belum terkonfirmasi
+perlu diperiksa sebelum switch dapat diaktifkan.
+Respons pembaruan stok nyata yang terlambat dibuang setelah pergantian mode.
+Saat demo aktif tidak ada polling stok database. Modul simulasi dimuat hanya
+saat diperlukan, tanpa menambah permintaan data database ketika login.
+
+VERIFIKASI LOKAL
+node tests/stock-demo.test.mjs
+node tests/stock-demo-isolation.test.mjs
+node tests/stock-demo-ui.test.mjs
+node tests/rollback-startup.test.mjs
+node tests/pos-sale-variants.test.mjs
+node tests/pos-category-errors.test.mjs
+node tests/order-stock.test.mjs
+
+Lulus uji engine, fungsi aplikasi asli dan handler UI dengan adapter DOM:
+stok tiap outlet/varian, reservasi/pemakaian bahan, pembatalan, reset,
+tidak mengubah sumber asli, tidak mengirim mutasi demo, kembali ke data
+terbaru, kegagalan koneksi, sesi kedaluwarsa, respons lama dan klik ganda.
+Regresi login/navigasi serta kategori/varian lulus.
+Belum diuji visual di browser atau diterapkan ke server produksi oleh asisten.
+
+GIT (jalankan dari root proyek setelah menyalin file)
+git add pos/app.js pos/index.html pos/operations-ui.mjs pos/stock-demo.mjs pos/stock-demo.css
+git add tests/stock-demo*.mjs MODE-DEMO.txt
+git commit -m "Add isolated POS stock demo toggle"
+git push

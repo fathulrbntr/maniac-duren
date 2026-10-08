@@ -1,0 +1,41 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import * as engine from '../pos/stock-demo.mjs';
+import {fixture,line,order,qty} from './stock-demo-fixture.mjs';
+const app=fs.readFileSync(new URL('../pos/app.js',import.meta.url),'utf8');
+// Exercise the actual application switch, request guard, refresh and mutation functions.
+const source=app.slice(app.indexOf('let stockDemoModule,demoSource=null;'),app.indexOf('\nfunction login(')).replace('let stockDemoModule,demoSource=null;','let stockDemoModule=Promise.resolve(env.engine),demoSource=null;');
+const pollSource=app.slice(app.indexOf('setInterval(async()=>{'));
+const build=new Function('env',`let {state,mode='live',busy=false,document,fetch,config,token='token',refreshToken='',expires=Infinity,store,toast,render,pendingRetry,prepareRetry,settleRetry,reconcileRetry,confirm,mayLeave,hasOrderDraft,clearOrderDraft}=env;
+let stateRevision=0,cart=[],lastSale=null,seenKitchen=new Map(),polling=false,view='kitchen';const observeKitchen=()=>{};let poll;const setInterval=fn=>{poll=fn};
+${source}\n${pollSource}\nreturn {switchStockDemo,request,refresh,mutate,poll,getState:()=>state,getMode:()=>mode,isBusy:()=>busy};`);
+const defer=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return {promise,resolve,reject};};
+const response=(value,status=200)=>({ok:status<400,status,json:async()=>structuredClone(value)});
+function harness(options={}){
+ const f=fixture(),requests=[],messages=[],retry=[],control={disabled:false,isConnected:true},status={textContent:'Mode demo'},ui={dialog:false,pending:null,draft:false,renders:0,clears:0};let handler=async()=>response(f.state);
+ const api=build({engine,state:f.state,store:f.store,config:{url:'https://test.invalid',key:'test-key'},document:{querySelector:q=>q==='dialog[open]'?ui.dialog:q==='#kitchen-sync'?status:null,querySelectorAll:()=>[control]},fetch:async(url,init)=>{requests.push({path:url.replace('https://test.invalid',''),body:JSON.parse(init.body||'null')});return handler(url,init);},toast:message=>messages.push(message),render:()=>ui.renders++,pendingRetry:()=>ui.pending,prepareRetry:(a,p)=>{retry.push(['prepare',a]);return p;},settleRetry:(...args)=>retry.push(['settle',...args]),reconcileRetry:()=>{retry.push(['reconcile']);return false;},confirm:()=>true,mayLeave:()=>true,hasOrderDraft:()=>ui.draft,clearOrderDraft:()=>{ui.clears++;ui.draft=false;},...options});
+ return {...api,f,requests,messages,retry,control,status,ui,handle:fn=>handler=fn};
+}
+const h=harness(),original=structuredClone(h.f.state);h.ui.draft=true;
+await h.switchStockDemo();assert.equal(h.getMode(),'stock-demo');assert.equal(qty(h.getState(),h.f.small,h.f.store),100);assert(!h.ui.draft);assert.equal(h.requests.length,0);assert.equal(h.retry.length,0);
+await h.mutate('order_create',order(h.f.store,[line(h.f.small,3)]),{throwOnError:true});assert.equal(qty(h.getState(),h.f.small,h.f.store),97);assert.equal(h.requests.length,0);assert.equal(h.retry.length,0);
+await h.mutate('product_update',{...h.f.water,salePrice:6500},{throwOnError:true});assert.equal(h.getState().products.find(p=>p.id===h.f.water.id).salePrice,6500);
+for(const path of ['/rest/v1/rpc/pos_mutate_027','/rest/v1/rpc/pos_menu_category_save','/rest/v1/rpc/pos_product_variants_save','/rest/v1/rpc/pos_account_target','/rest/v1/rpc/pos_employee_document'])for(const allow of [false,true])await assert.rejects(h.request(path,{},true,allow),/tidak mengirim/);
+await h.refresh();await h.poll();assert.equal(h.requests.length,0);assert.equal(h.retry.length,0);assert.deepEqual(h.f.state,original);
+await h.switchStockDemo(true);assert.equal(qty(h.getState(),h.f.small,h.f.store),100);assert.equal(h.getState().orders.length,0);assert.equal(h.getState().products.find(p=>p.id===h.f.water.id).salePrice,5000);assert.equal(h.requests.length,0);
+const fresh=structuredClone(original);fresh.unitLots[0].qty=5;h.handle(async()=>response(fresh));await h.switchStockDemo();assert.equal(h.getMode(),'live');assert.deepEqual(h.getState(),fresh,'Return to fresh database data, not the old snapshot');assert.deepEqual(h.requests.map(r=>r.path),['/rest/v1/rpc/pos_read']);assert(!h.isBusy());assert(!h.control.disabled);assert.equal(h.retry.length,0);
+await h.mutate('product_update',{...h.f.water,salePrice:7500});assert.equal(h.requests.at(-1).path,'/rest/v1/rpc/pos_mutate_027');assert.equal(h.requests.at(-1).body.action,'product_update');assert.deepEqual(h.retry,[['prepare','product_update'],['settle','product_update']]);
+const failed=harness();await failed.switchStockDemo();const demo=failed.getState();failed.handle(async()=>response({message:'Server unavailable'},503));await failed.switchStockDemo();assert.equal(failed.getMode(),'stock-demo');assert.equal(failed.getState(),demo);assert(!failed.isBusy());assert(!failed.control.disabled);assert.match(failed.messages.at(-1),/Server unavailable/);
+failed.handle(async()=>response({stores:[]}));await failed.switchStockDemo();assert.equal(failed.getMode(),'stock-demo');assert.equal(failed.getState(),demo);assert.match(failed.messages.at(-1),/tidak lengkap/);
+const blocked=harness();blocked.ui.pending={id:'uncertain-real-operation'};await blocked.switchStockDemo();assert.equal(blocked.getMode(),'live');assert.equal(blocked.requests.length,0);blocked.ui.pending=null;blocked.ui.dialog=true;await blocked.switchStockDemo();assert.equal(blocked.getMode(),'live');blocked.ui.dialog=false;await blocked.switchStockDemo(true);assert.equal(blocked.getMode(),'live');
+const cancelling=harness({confirm:()=>false});cancelling.ui.draft=true;await cancelling.switchStockDemo();assert.equal(cancelling.getMode(),'live');assert(cancelling.ui.draft);
+const expiring=harness({refreshToken:'refresh-token',expires:0});await expiring.switchStockDemo();expiring.handle(async url=>response(url.includes('/auth/')?{access_token:'renewed',refresh_token:'new-refresh',expires_in:3600}:expiring.f.state));await expiring.switchStockDemo();assert.equal(expiring.getMode(),'live');assert.deepEqual(expiring.requests.map(r=>r.path),['/auth/v1/token?grant_type=refresh_token','/rest/v1/rpc/pos_read']);
+const liveRefresh=harness({refreshToken:'refresh-token',expires:0});const updated=structuredClone(liveRefresh.f.state);updated.unitLots[0].qty=3;liveRefresh.handle(async url=>response(url.includes('/auth/')?{access_token:'renewed',refresh_token:'new-refresh',expires_in:3600}:updated));await liveRefresh.refresh();assert.deepEqual(liveRefresh.getState(),updated,'Token renewal must still accept the live manual refresh');
+// A database read already in flight must never replace a new demo session.
+for(const method of ['refresh','poll']){
+ const race=harness(),gate=defer();race.handle(()=>gate.promise);const reading=race[method]();await race.switchStockDemo();const local=race.getState();gate.resolve(response(race.f.state));await reading;assert.equal(race.getMode(),'stock-demo');assert.equal(race.getState(),local,method+' must discard stale response');
+}
+const rejectedPoll=harness(),pollGate=defer();rejectedPoll.handle(()=>pollGate.promise);const running=rejectedPoll.poll();await rejectedPoll.switchStockDemo();pollGate.reject(Error('Offline'));await running;assert.equal(rejectedPoll.status.textContent,'Mode demo','Old real-poll error must not mark demo offline');
+const switching=harness();await switching.switchStockDemo();const load=defer();switching.handle(()=>load.promise);const exiting=switching.switchStockDemo();assert(switching.isBusy());await switching.switchStockDemo();assert.equal(await switching.mutate('order_create',order(switching.f.store,[line(switching.f.water)])),false);load.resolve(response(switching.f.state));await exiting;assert.equal(switching.requests.length,1);assert.equal(switching.getMode(),'live');
+assert(!/localStorage|fetch\(/.test(fs.readFileSync(new URL('../pos/stock-demo.mjs',import.meta.url),'utf8')),'Engine has no persistence/network');
+console.log('PASS actual app isolation: zero demo requests/retry writes, all mutation endpoints blocked, real state untouched, reset, fresh restore, failed restore protected, pending/modal/draft gates, token refresh, busy/double switch, stale manual/poll responses ignored.');
