@@ -1,0 +1,110 @@
+MANIAC DUREN — PATCH 054: KASIR, DISKON OWNER, DAN VOID
+
+Paket file baru/berubah di atas patch 053. Tidak menghapus data lama.
+
+PASANG
+1. Ekstrak isi ZIP ke root proyek, timpa file dengan nama yang sama.
+2. Buka database/pos-cashier-controls.sql di VS Code.
+3. Ctrl+A, Ctrl+C. Supabase > SQL Editor > New query.
+   Tempel SELURUH isi file, termasuk begin; dan commit; lalu Run.
+   File ini aman dijalankan ulang dan mempertahankan transaksi/master lama.
+   Cukup SQL 054 ini; tidak perlu menjalankan ulang SQL rollback/migrasi lama.
+4. Commit/push, tunggu deployment, lalu muat ulang POS.
+   Kasir baru meminta SQL 054 sebelum menerima transaksi nyata.
+
+NOMOR MEJA
+- Pilihan Meja 1–50 atau Tanpa meja / takeaway.
+- Catatan pesanan memiliki kolom terpisah.
+- Meja dan catatan tersimpan serta ditampilkan di antrean, kitchen, struk.
+
+DISKON
+- Sidebar Manajemen > Diskon & Persetujuan hanya untuk akun owner.
+- Tambah/ubah nama, jenis persen/nominal rupiah, nilai, dan status aktif.
+- Pengaturan berlaku untuk semua outlet.
+- Kasir hanya memilih diskon yang aktif, lalu Minta persetujuan owner.
+- Owner login dengan akunnya sendiri dan membuka Diskon & Persetujuan.
+  Periksa outlet, kasir, isi pesanan, potongan, lalu Setujui atau Tolak.
+- Halaman owner dan kasir memperbarui data otomatis setiap 5 detik.
+- Setelah disetujui, kasir dapat melanjutkan pembayaran dengan total neto.
+- Jika owner sendiri menggunakan kasir, tombol Setujui diskon untuk pesanan
+  ini mencatat persetujuannya sebelum pembayaran.
+- Setiap persetujuan berlaku satu kali, paling lama 30 menit sejak diminta.
+  Perubahan produk/jumlah/harga/resep, meja, catatan, tanggal, outlet, atau
+  versi pengaturan diskon memerlukan persetujuan baru.
+- Harga satuan mengikuti master; kasir tidak dapat menurunkan harga di
+  transaksi untuk melewati persetujuan. Aturan diperiksa juga di server.
+- Diskon nominal dibatasi subtotal; diskon persen maksimal 100%.
+- Struk menyebut subtotal, diskon, total neto dan pemberi persetujuan.
+  Omzet dan laporan margin menggunakan nilai setelah diskon.
+
+PEMBAYARAN DAN CETAK
+1. Pilih menu/varian, meja, catatan, dan diskon bila diperlukan.
+2. Bayar sekarang > pilih Tunai, QRIS, atau Transfer dan uang diterima.
+3. Lanjut konfirmasi > periksa rincian akhir, diskon dan kembalian.
+4. Konfirmasi & cetak struk menyimpan transaksi dahulu, kemudian membuka
+   dialog cetak browser. Pop-up Pesanan berhasil menampilkan struk.
+5. Cancel sebelum konfirmasi akhir tidak membuat transaksi. Pop-up
+   Pembayaran dibatalkan muncul dan keranjang tetap tersedia.
+6. Cancel di dialog PRINTER hanya membatalkan pencetakan. Transaksi sudah
+   tersimpan; gunakan Void jika ingin membatalkan transaksi tersebut.
+7. Struk dapat dicetak lagi lewat Detail / struk tanpa membuat transaksi baru.
+
+QRIS/transfer dan refund tetap dicatat manual; tidak ada integrasi payment
+provider baru. Cetak memakai printer yang dipilih pada dialog browser.
+Jika hasil kirim belum pasti karena koneksi terputus, UI menunjukkan status
+belum pasti. Periksa pengiriman tertunda; jangan input pembayaran baru.
+
+VOID
+- Tombol Void tersedia pada transaksi yang belum dibatalkan, termasuk
+  transaksi produk siap jual yang sudah selesai. Void seluruh transaksi,
+  bukan sebagian item.
+- Kasir mengisi alasan dan kondisi barang, lalu meminta persetujuan owner.
+- Setelah owner menyetujui, kasir membuka Void lagi dan mengonfirmasi refund.
+- Owner yang memulai void tetap melewati konfirmasi refund terpisah.
+- Barang siap jual yang kembali dan layak dijual dapat dikembalikan tepat
+  ke lot/batch asal. Barang tidak kembali tetap dicatat sebagai kehilangan.
+- Bahan resep yang belum digunakan dilepas dari cadangan. Bahan yang sudah
+  digunakan kitchen tidak dikembalikan sebagai bahan mentah; dicatat sebagai
+  kerugian. Ini juga berlaku pada transaksi campuran buah/produk/menu resep.
+- Refund memakai total yang benar-benar dibayar sesudah diskon.
+- Data transaksi tidak dihapus: alasan, kasir, owner, tanggal, stok kembali,
+  jurnal pembalik dan struk berstatus VOID tetap tersedia.
+- Kirim ulang operasi yang sama tidak menggandakan pengembalian stok/refund.
+
+MODE DEMO
+- Fitur kasir baru bekerja dengan mode demo patch 053.
+- Gunakan akun owner untuk menguji pengaturan diskon, persetujuan dan void
+  seluruhnya dalam satu tab. Hak akses tetap mengikuti akun login.
+- Sesi demo tidak tersinkron antar akun/tab/perangkat. Persetujuan lintas
+  akun menggunakan database hanya berlaku pada mode nyata.
+- Pengaturan, persetujuan, transaksi dan void demo tidak ditulis ke server.
+- Reset / keluar demo membuang perubahan demo; mode nyata membaca database.
+
+VALIDASI
+node tests/cashier-sql.test.mjs
+POS_TEST_LATER_MUTATION=1 node tests/cashier-sql.test.mjs
+node tests/cashier-ui.test.mjs
+node tests/stock-demo.test.mjs
+node tests/stock-demo-isolation.test.mjs
+node tests/stock-demo-ui.test.mjs
+node tests/pos-sale-variants.test.mjs
+node tests/pos-category-errors.test.mjs
+node tests/rollback-startup.test.mjs
+node tests/retry.test.mjs
+node tests/order-stock.test.mjs
+node tests/sidebar.test.mjs
+
+Lulus pengujian SQL lokal PGlite serta fungsi/handler UI melalui adapter DOM.
+Mencakup instalasi ulang, jalur kompatibilitas SQL 019/endpoint versi lanjutan,
+hak akses, persetujuan ditolak/kedaluwarsa/dipakai ulang, perubahan pesanan,
+harga master, diskon 100%, kehabisan stok, void produk/buah/menu resep,
+nomor meja/catatan, jurnal neto, refund, gagal koneksi, klik ganda, regresi
+login/kategori/varian dan isolasi demo.
+Belum diuji visual/cetak fisik di browser atau diterapkan ke Supabase/website
+produksi oleh asisten.
+
+GIT (root proyek setelah menyalin file)
+git add pos/app.js pos/index.html pos/navigation.mjs pos/operations-ui.mjs pos/retry.mjs pos/finance.mjs pos/stock-demo.mjs pos/cashier*.mjs pos/cashier.css
+git add database/pos-cashier-controls.sql tests/cashier*.test.mjs tests/stock-demo*.mjs tests/pos-sale-variants.test.mjs tests/pos-category-errors.test.mjs tests/retry.test.mjs KASIR-POS.txt
+git commit -m "Add cashier tables, owner-approved discounts, void and payment confirmation"
+git push

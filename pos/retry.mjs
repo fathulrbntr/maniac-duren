@@ -10,6 +10,7 @@ export function setRetryScope(scope) {
   }
 }
 const tracked = new Set([
+  "order_void", "discount_save", "cashier_approval_request", "cashier_approval_decide",
   "product_variants_save", "pos_category_save",
   "order_direct", "order_complete", "order_create", "order_start", "order_ready", "order_pay", "order_cancel", "sort", "inventory_loss", "recover", "employee_save", "attendance_in", "attendance_out", "work_hours_save",
   "sale",
@@ -65,8 +66,9 @@ export function reconcileRetry(state) {
       unit_receipt: state.unitLots,
       produce: state.productions,
       waste_process: state.wasteRuns,
+      cashier_approval_request: state.cashierApprovals,
     }[pending.action] || state.events || [];
-  if (rows.some((row) => row.id === pending.id)) {
+  if (rows.some((row) => row.id === pending.id) || (['order_void','order_cancel'].includes(pending.action)&&(state.orders||[]).some(o=>o.void_meta?.eventId===pending.id))) {
     pending = null;
     persist();
     return true;

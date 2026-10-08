@@ -21,7 +21,7 @@ assert.equal(apply(s,'order_create',paid),s,'Same request cannot consume twice')
 const mixed=order(store,[line(water,2),line(menu,2)]);s=apply(s,'order_create',mixed);
 assert.equal(qty(s,water,store),98);assert.equal(qty(s,prep,store),100);assert.equal(availableStock(s,store,day).get('product:'+prep.id).qty,40);
 assert.throws(()=>apply(s,'order_create',order(store,[line(otherMenu,3)])),/Stok kurang/);
-const action=(actionName,orderId,extra={})=>{s=apply(s,actionName,{id:id(),storeId:store,date:day,orderId,...extra});};
+const action=(actionName,orderId,extra={})=>{if(actionName==='order_cancel'){const requestId=id();s=apply(s,'cashier_approval_request',{id:requestId,kind:'void',storeId:store,date:day,orderId,reason:extra.reason,returnStock:false});extra.approvalId=requestId;}s=apply(s,actionName,{id:id(),storeId:store,date:day,orderId,...extra});};
 action('order_start',mixed.id);assert.equal(qty(s,prep,store),40);assert.equal(qty(s,raw,store),80);assert.deepEqual(s.orders.at(-1).reserved,{});
 action('order_ready',mixed.id);action('order_complete',mixed.id);assert.equal(s.orders.at(-1).status,'paid');assert.equal(qty(s,prep,store),40);
 const queued=order(store,[line(otherMenu)]);s=apply(s,'order_create',queued);action('order_cancel',queued.id,{reason:'Uji batal',refundConfirmed:true});assert.equal(qty(s,prep,store),40);assert.equal(availableStock(s,store,day).get('product:'+prep.id).qty,40);

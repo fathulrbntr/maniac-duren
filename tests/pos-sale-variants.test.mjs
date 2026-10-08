@@ -15,7 +15,7 @@ const one=family('Pancake','direct','pcs',cat('Makan'),[['Original',15000]]);
 const water={id:id(),name:'Crystaline',sku:'WATER',itemType:'direct',stockUnit:'pcs',salePrice:5000,posCategoryIds:[cat('Minuman')]};
 const prep={id:id(),name:'Cendol prepare',itemType:'prep',stockUnit:'g'},raw={id:id(),name:'Gula',itemType:'raw',stockUnit:'g'};
 const lot=(p,qty)=>({id:id(),productId:p.id,storeId:'A',qty,date:today()});
-let state={...emptyState(),products:[...bawor,...fruit,...recipes,...coral,...one,water,prep,raw],posCategories:cats,posCategoryMembershipVersion:2,stores:[{id:'A',name:'Outlet A'}],suppliers:[{id:'supplier',name:'Supplier A'}],orders:[],opsVersion:19,orderStockVersion:11,orderRoutingVersion:13,access:{master:true,sell:true},unitLots:[lot(bawor[0],2),lot(bawor[1],1),lot(one[0],3),lot(water,5),lot(prep,30)],lots:[{id:id(),productId:fruit[0].id,storeId:'A',supplierId:'supplier',kg:10,pieces:4,quality:'ready',date:today()}],recipes:recipes.map((p,i)=>({id:id(),outputId:p.id,yieldQty:1,ingredients:[{productId:prep.id,qty:i?40:20}]}))};
+let state={...emptyState(),products:[...bawor,...fruit,...recipes,...coral,...one,water,prep,raw],posCategories:cats,posCategoryMembershipVersion:2,stores:[{id:'A',name:'Outlet A'}],suppliers:[{id:'supplier',name:'Supplier A'}],orders:[],cashierVersion:54,discounts:[],opsVersion:19,orderStockVersion:11,orderRoutingVersion:13,access:{master:true,sell:true},unitLots:[lot(bawor[0],2),lot(bawor[1],1),lot(one[0],3),lot(water,5),lot(prep,30)],lots:[{id:id(),productId:fruit[0].id,storeId:'A',supplierId:'supplier',kg:10,pieces:4,quality:'ready',date:today()}],recipes:recipes.map((p,i)=>({id:id(),outputId:p.id,yieldQty:1,ingredients:[{productId:prep.id,qty:i?40:20}]}))};
 assert.equal(posMenuEntries(state).length,6);assert.equal(posMenuEntries(state,cat('Durpas')).length,1);assert.equal(posMenuEntries(state,promo)[0].products.length,1);
 const renamed=structuredClone(state);renamed.products[0].variantGroupName='New label';assert(menuCatalogChanged(state,renamed));
 const newOptions=structuredClone(state);newOptions.products[0].variantOptions[0].value='New option';assert(menuCatalogChanged(state,newOptions));
@@ -55,8 +55,10 @@ try{
  await choose(cat('Buah'));d=await open(fruit[0]);assert(d.querySelector(`[data-sale-variant="${fruit[1].id}"]`).disabled);await pick(d,fruit[0]);await submit(d);assert.equal(root.querySelector('#order-line').hidden,false);assert.equal(root.querySelector('#order-line').elements.productId.value,fruit[0].id);assert.equal(cartSize(),3,'Fruit still needs actual weight/pieces');
  await choose(cat('Makan'));d=await open(one[0]);assert.equal(d.querySelectorAll('[data-sale-variant]').length,1,'Single remaining variant still confirms');d.close();
  await choose(cat('Minuman'));await open(water);assert.equal(cartSize(),4,'Nonvariant direct product keeps existing flow');
+ // Restore the fixture master price before paying an older draft; the new checkout rejects stale prices.
+ const aligned=structuredClone(state);aligned.products.find(p=>p.id===bawor[0].id).salePrice=40000;await poll(aligned);
  // Actual payment payload retains leaf IDs/prices; group IDs never enter stock logic.
- root.querySelector('#order-note').value='Meja 07';await root.querySelector('#save-order').fire('click');const payment=m.latest;await submit(payment);
+ root.querySelector('#order-note').value='Meja 07';await root.querySelector('#save-order').fire('click');const payment=m.latest;await submit(payment);assert.equal(posted.length,0);await submit(m.latest);
  assert.equal(posted.length,1);assert.equal(posted[0].action,'order_create');assert.equal(posted[0].payload.note,'Meja 07');assert.deepEqual(posted[0].payload.lines.map(l=>l.productId),[bawor[1].id,bawor[0].id,recipes[0].id,water.id]);assert.deepEqual(posted[0].payload.lines.map(l=>l.price),[75000,40000,20000,5000]);assert.equal(cartSize(),0);
  // Removing the whole group from a category keeps it in All and keeps master rows.
  await choose(cat('Durpas'));root.querySelector('#order-search').value='Bawor';await root.querySelector('#order-search').fire('input');

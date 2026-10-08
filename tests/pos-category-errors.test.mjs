@@ -15,7 +15,7 @@ const initial={...emptyState(),products:[product],posCategories:[category],posCa
 const serverError=(message,code,definitive=true)=>Object.assign(Error(message),{code,definitive});
 function harness(failure,extra={}){
  const control={disabled:false,isConnected:true},settled=[],messages=[],requests=[];
- const api=build({state:structuredClone(initial),document:{querySelectorAll:()=>[control]},prepareRetry:(a,p)=>p,settleRetry:(...x)=>settled.push(x),request:async(path,body)=>{requests.push({path,body});if(failure)throw failure;return structuredClone(initial);},toast:s=>messages.push(s),...extra});
+ const api=build({state:structuredClone(initial),document:{querySelectorAll:()=>[control],querySelector:()=>null},prepareRetry:(a,p)=>p,settleRetry:(...x)=>settled.push(x),request:async(path,body)=>{requests.push({path,body});if(failure)throw failure;return structuredClone(initial);},toast:s=>messages.push(s),...extra});
  return {...api,settled,messages,requests,control};
 }
 for(const failure of [

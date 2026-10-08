@@ -5,19 +5,19 @@ import {installMoneyInputs} from './money-input.mjs?v=44';
 installMoneyInputs();
 import { openWeighingReceipt, showWeighingHistory } from './receipt-weighing.mjs?v=19';
 import {inventoryPanel,bindInventory} from "./inventory-ui.mjs?v=45";
-import {opsPages,opsPage,bindOps,clearOrderDraft,hasOrderDraft} from './operations-ui.mjs?v=53';
+import {opsPages,opsPage,bindOps,clearOrderDraft,hasOrderDraft} from './operations-ui.mjs?v=54';
 import {
   navigation,
   mayLeave,
   trackForms,
-} from "./navigation.mjs?v=42";
+} from "./navigation.mjs?v=54";
 import {
   prepareRetry,
   settleRetry,
   reconcileRetry,
   pendingRetry,
   setRetryScope,
-} from "./retry.mjs?v=47";
+} from "./retry.mjs?v=54";
 import { wastePage, bindWaste } from "./waste-ui.mjs?v=43";
 import {
   recipesPage,
@@ -81,7 +81,7 @@ let state = emptyState(),
 const app = document.querySelector("#app"),
   filter = { from: today(), to: today(), store: "", supplier: "" };
 const title = {
-  dashboard: "Dashboard", orders: "Kasir / POS", kitchen: "Kitchen Display",
+  discounts: "Diskon & Persetujuan", dashboard: "Dashboard", orders: "Kasir / POS", kitchen: "Kitchen Display",
   products: "Master Barang", stock: "Stok & Penerimaan", losses: "Waste & Penyusutan", waste: "Olah Reject",
   recipes: "Master Resep", production: "Produksi & Persiapan",
   finance: "Petty Cash & Keuangan", salesreport: "Laporan Penjualan", trace: "Jejak Stok & Produksi", reports: "Rincian Penjualan Buah",
@@ -89,6 +89,7 @@ const title = {
   cashier: "Kasir buah cepat",
 };
 const paths = {
+  discounts: "M19 5L5 19 M7 7h.01 M17 17h.01 M9 7a2 2 0 1 1-4 0 2 2 0 0 1 4 0 M19 17a2 2 0 1 1-4 0 2 2 0 0 1 4 0",
   dashboard: "M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z",
   orders: "M7 4H5v17l3-2 4 2 4-2 3 2V4h-2 M9 3h6v4H9z M8 11h8 M8 15h5",
   kitchen: "M4 4h16v17H4z M8 2v4 M16 2v4 M8 10h8 M8 14h8 M8 18h4",
@@ -128,7 +129,7 @@ function toast(text) {
   toast.timer = setTimeout(() => (t.style.display = "none"), 5000);
 }
 let stockDemoModule,demoSource=null;
-const demoEngine=()=>stockDemoModule ||= import('./stock-demo.mjs?v=53').catch(error=>{stockDemoModule=null;throw error;});
+const demoEngine=()=>stockDemoModule ||= import('./stock-demo.mjs?v=54').catch(error=>{stockDemoModule=null;throw error;});
 function assertDemoRequest(path,allowDemoRead){
   if(mode==='stock-demo'&&!(allowDemoRead&&['/rest/v1/rpc/pos_read','/auth/v1/token?grant_type=refresh_token'].includes(path)))throw Error('Mode demo tidak mengirim perubahan ke database asli.');
 }
@@ -252,7 +253,7 @@ async function mutate(action, payload, {throwOnError = false} = {}) {
     return true;
   } catch (error) {
     if(mode === "live") settleRetry(action, !error.definitive);
-    if(mode === "stock-demo"){const formError=document.querySelector('dialog[open] #form-error');if(formError)formError.textContent=error.message;}
+    {const formError=document.querySelector('dialog[open] #form-error');if(formError)formError.textContent=error.message;}
     error.message += mode === "live" && !error.definitive
       ? " · Status simpan belum pasti. Periksa stok atau kirim ulang data yang sama."
       : "";
@@ -321,7 +322,7 @@ function shell(body) {
         <div class="sidebar-brand-row"><div class="brand"><img src="logo.png" alt=""><div><strong>Maniac Duren</strong><span>Operations / POS</span></div></div><button type="button" class="sidebar-toggle" data-sidebar-toggle aria-controls="pos-sidebar" aria-label="Tutup sidebar">${sidebarIcon}</button></div>
         <div class="sidebar-store"><label for="active-store">Outlet aktif</label><div class="store-select-wrap">${icon("stores")}<select id="active-store" aria-label="Outlet aktif" title="${e(name("stores", store))}">${options("stores", store)}</select></div></div>
       </div>
-      <nav class="nav" id="pos-navigation" aria-label="Navigasi POS">${navigation(title, view, icon, state.access, sidebar.closedGroups)}</nav>
+      <nav class="nav" id="pos-navigation" aria-label="Navigasi POS">${navigation(title, view, icon, {...state.access,cashierOwner:state.me?.role==='owner'}, sidebar.closedGroups)}</nav>
       <div class="sidebar-account">${accountProfile()}<button id="logout" class="sidebar-logout" type="button" aria-label="Logout" title="Logout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 4H4v16h5M14 8l4 4-4 4M8 12h10"/></svg><span>Logout</span></button></div>
     </aside>
     <button type="button" class="sidebar-backdrop" data-sidebar-close tabindex="-1" aria-label="Tutup sidebar"></button>
@@ -936,13 +937,13 @@ function observeKitchen(){
  if(incoming.length){toast(`${incoming.length} pesanan baru masuk ke kitchen`);beepKitchen();}
 }
 setInterval(async()=>{
- if(mode!=='live'||busy||polling||!['orders','kitchen'].includes(view))return;
+ if(mode!=='live'||busy||polling||!['orders','kitchen','discounts'].includes(view))return;
  polling=true;const revision=stateRevision,sessionToken=token;
  try{
   const fresh=await request('/rest/v1/rpc/pos_read',{});
   if(mode!=='live'||busy||revision!==stateRevision||sessionToken!==token)return;
   state=fresh;observeKitchen();
-  if(view==='kitchen'&&!document.querySelector('dialog[open]'))render();
+  if(['kitchen','discounts'].includes(view)&&!document.querySelector('dialog[open]'))render();
   else document.querySelector('#order-products')?.dispatchEvent(new CustomEvent('stock-refresh',{detail:state}));
   const status=document.querySelector('#kitchen-sync');if(status)status.textContent='Terhubung · diperbarui '+new Date().toLocaleTimeString('id-ID');
  }catch(err){if(mode!=='live'||revision!==stateRevision||sessionToken!==token)return;const status=document.querySelector('#kitchen-sync');if(status)status.textContent='Koneksi terputus. Mencoba lagi otomatis; tekan Perbarui untuk mencoba sekarang.';}

@@ -17,7 +17,8 @@ export function orderMargins(state,orders){
  const ancestry=consumption.flatMap(c=>sources(state,c.lotId,c.qty));
  const known=consumption.length>0&&consumption.every(c=>c.unitCost!=null);
  const cost=known?consumption.reduce((n,c)=>n+c.qty*c.unitCost,0):null;
- const revenue=line.qty*line.price;
+ const gross=order.subtotal??order.lines.reduce((n,l)=>n+l.qty*l.price,0);
+ const revenue=gross>0?line.qty*line.price*order.total/gross:0;
  const recovered=ancestry.some(x=>x.recovered);
  return {orderId:order.id,line,name:line.name,revenue,cost,profit:cost==null?null:revenue-cost,recovered,sources:ancestry};
  }));

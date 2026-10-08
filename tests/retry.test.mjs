@@ -39,6 +39,9 @@ assert.equal(reconcileRetry({ sales: [{ id: "one" }] }), true);
 assert.equal(pendingRetry(), null);
 for (const [action, table] of [
   ["order_create", "orders"],
+  ["discount_save", "events"],
+  ["cashier_approval_request", "cashierApprovals"],
+  ["cashier_approval_decide", "events"],
   ["order_complete", "events"],
   ["receipt", "lots"],
   ["movement", "movements"],
@@ -54,6 +57,7 @@ for (const [action, table] of [
   settleRetry(action, false);
   assert.equal(pendingRetry(), null);
 }
+prepareRetry("order_void", {id:"void-retry", orderId:"order"});settleRetry("order_void",true);assert(reconcileRetry({events:[],orders:[{id:"order",void_meta:{eventId:"void-retry"}}]}));
 const state = demoState(),
   source = state.lots.find((l) => l.kg > 2 && l.pieces > 1),
   to = state.stores.find((s) => s.id !== source.storeId);
