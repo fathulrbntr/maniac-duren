@@ -17,7 +17,7 @@ import {
   pendingRetry,
   setRetryScope,
 } from "./retry.mjs?v=16.1";
-import { wastePage, bindWaste } from "./waste-ui.mjs?v=9";
+import { wastePage, bindWaste } from "./waste-ui.mjs?v=43";
 import {
   recipesPage,
   productionPage,

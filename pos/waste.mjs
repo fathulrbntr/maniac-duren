@@ -1,11 +1,8 @@
 import { photoValue } from "./product-details.mjs?v=9";
 import { isLegacyStock } from "./catalog.mjs?v=9";
 import { quantity } from "./production.mjs?v=9";
-export const wasteOutputs = [
-  { key: "durpas500", label: "Durpas 500 gr", unit: "pcs", weight: 0.5 },
-  { key: "durpas1000", label: "Durpas 1 kg", unit: "pcs", weight: 1 },
-  { key: "coral", label: "Coral", unit: "kg", weight: 1 },
-];
+import { wasteOutputs, wasteOutputProducts } from "./waste-products.mjs?v=43";
+export { wasteOutputs } from "./waste-products.mjs?v=43";
 const round = (n) => Math.round(n * 1e6) / 1e6;
 const today = () =>
   new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Jakarta" });
@@ -46,7 +43,8 @@ export function wastePlan(s, p) {
     throw Error("Isi tiga jenis hasil olahan");
   const seen = new Set(),
     lotIds = new Set(),
-    outputs = [];
+    outputs = [],
+    linkedOutputs = wasteOutputProducts(s, product.id);
   for (const spec of wasteOutputs) {
     const line = p.outputs.find((x) => x.key === spec.key);
     if (!line) throw Error("Jenis hasil tidak lengkap");
@@ -69,6 +67,10 @@ export function wastePlan(s, p) {
           " untuk " +
           spec.label,
       );
+    const linked = linkedOutputs.find((x) => x.key === spec.key);
+    if (linked.error) throw Error(linked.error);
+    if (output.id !== linked.product.id)
+      throw Error(`Produk hasil berbeda dari turunan ${product.name}. Gunakan ${linked.product.name}.`);
     if (
       !line.lotId ||
       lotIds.has(line.lotId) ||

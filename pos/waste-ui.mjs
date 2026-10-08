@@ -3,10 +3,11 @@ import {
   bindEvidence,
   evidenceButton,
   bindEvidenceHistory,
-} from "./waste-evidence.mjs?v=9";
+} from "./waste-evidence.mjs?v=43";
 import { escape as e, num, today, id } from "./core.mjs?v=9";
 import { isLegacyStock } from "./catalog.mjs?v=9";
-import { wasteOutputs, wastePlan } from "./waste.mjs?v=9";
+import { wasteOutputs, wastePlan } from "./waste.mjs?v=43";
+import { wasteOutputProducts } from "./waste-products.mjs?v=43";
 const field = (label, body) => `<label class="field">${label}${body}</label>`;
 const choices = (rows, selected = "") =>
   rows
@@ -28,24 +29,10 @@ export function wastePage(s, store) {
  <h3>Hasil olahan</h3><p class="muted">Durpas dihitung per kemasan. Coral ditimbang dalam kg. Isi 0 untuk hasil yang tidak dibuat. Semua hasil 0 berarti waste total.</p>
  <div class="waste-output-grid">${wasteOutputs
    .map((spec) => {
-     const products = s.products.filter(
-         (p) =>
-           p.stockUnit === spec.unit &&
-           ["finished", "direct"].includes(p.itemType),
-       ),
-       preferred = products.find(
-         (p) =>
-           p.name.toLowerCase().replaceAll(" ", "") ===
-           (spec.key === "durpas500"
-             ? "durpas500gr"
-             : spec.key === "durpas1000"
-               ? "durpas1kg"
-               : "coral"),
-       );
-     return `<fieldset class="waste-output waste-output-card"><legend>${spec.label}</legend><select class="sr-only" name="${spec.key}_productId" aria-label="Produk ${spec.label}"><option value="">Pilih produk ${spec.unit}</option>${choices(products, preferred?.id)}</select>${field(spec.unit === "pcs" ? "Jumlah (pcs)" : "Jumlah (kg)", `<input name="${spec.key}_qty" type="number" min="0" step="${spec.unit === "pcs" ? "1" : "0.000001"}" value="0" required>`)}${field("Bukti (input foto)", `<input data-proof-file="${spec.key}" type="file" accept="image/jpeg,image/png,image/webp"><small data-proof-status="${spec.key}">Opsional · maksimal 2 MB setelah kompresi</small>`)}</fieldset>`;
+     return `<fieldset class="waste-output waste-output-card"><legend>${spec.label}</legend><input type="hidden" name="${spec.key}_productId">${field("Produk hasil otomatis", `<output name="${spec.key}_productName" aria-label="Produk ${spec.label}">Pilih durian asal terlebih dahulu</output>`)}${field(spec.unit === "pcs" ? "Jumlah (pcs)" : "Jumlah (kg)", `<input name="${spec.key}_qty" type="number" min="0" step="${spec.unit === "pcs" ? "1" : "0.000001"}" value="0" required>`)}${field("Bukti (input foto)", `<input data-proof-file="${spec.key}" type="file" accept="image/jpeg,image/png,image/webp"><small data-proof-status="${spec.key}">Wajib jika hasil lebih dari 0</small>`)}</fieldset>`;
    })
    .join("")}
- <p class="muted">Produk hasil diambil otomatis dari master: Durpas 500 gr, Durpas 1 kg, dan Coral.</p><button type="button" data-view="products">Buka Product</button>
+ <p class="muted" id="waste-products-status" aria-live="polite">Pilih durian asal. Durpas dan coral akan mengikuti jenis durian tersebut.</p><button type="button" data-view="products">Buka Master Barang</button>
  ${field("Alasan waste / catatan", '<input name="reason" required maxlength="300" placeholder="Contoh: sortasi durian untuk olahan">')}<div class="callout" id="waste-preview">Pilih batch dan isi berat durian.</div><p id="waste-error" class="error" role="alert"></p><button class="primary" type="submit" ${store ? "" : "disabled"}>Simpan waste & masukkan stok olahan</button></form></section>
  <section class="panel"><h3>Riwayat waste · store aktif</h3><div class="table-wrap"><table><thead><tr><th>TANGGAL WASTE</th><th>ASAL / PENGOLAH</th><th>HASIL OLAHAN</th><th>BUKTI FOTO</th><th>STATUS / ACTION</th></tr></thead><tbody>${runs.flatMap((r) => (r.outputs?.length ? r.outputs : [{ key: "total", name: "Waste total", qty: 0, unit: "kg" }]).map((o, i) => `<tr><td>${e(r.date)}<small class="catalog-meta">${e(r.id.slice(0, 8))}</small></td><td>${e(r.receivedDate)}<br><b>${e(r.sourceName)}</b><br>${e(r.supplierName)}<small class="catalog-meta">Pengolah: ${e(r.processedBy || "—")}</small></td><td>${e(o.name)}<br>${o.key === "total" ? `${num(r.kg)} kg input · ${num(r.lossKg)} kg waste` : `${num(o.qty)} ${e(o.unit)}`}</td><td>${o.key === "total" ? evidenceButton(r, "reject") : evidenceButton(r, o.key)}</td><td>${i === 0 && r.voided ? `<b>Dihapus / dibatalkan</b><small class="catalog-meta">${e(r.voidReason)}</small>` : i === 0 ? `<button class="small danger" data-waste-void="${e(r.id)}">Hapus</button>` : ""}</td></tr>`)).join("") || '<tr><td colspan="5" class="empty">Belum ada pencatatan waste.</td></tr>'}</tbody></table></div></section>`;
 }
@@ -55,7 +42,8 @@ export function bindWaste(view, s, store, ctx) {
     c = (n) => f.elements.namedItem(n),
     requestId = id(),
     lotIds = Object.fromEntries(wasteOutputs.map((x) => [x.key, id()]));
-  const proof = bindEvidence(f, wasteOutputs.map((spec) => spec.key));
+  const proof = bindEvidence(f, ["reject", ...wasteOutputs.map((spec) => spec.key)]);
+  let selectedSource = "", selectedLot = "";
   bindEvidenceHistory(s, ctx);
   const sourceLots = () =>
     s.lots.filter(
@@ -98,7 +86,37 @@ export function bindWaste(view, s, store, ctx) {
     document.querySelector("#waste-preview").textContent =
       `Total hasil olahan: ${num(weight)} kg · Sisa / susut: ${num(kg - weight)} kg (termasuk kulit, biji, atau bagian tidak terpakai).`;
   }
+  function selectOutputs() {
+    const sourceId = c("sourceProductId").value;
+    if (selectedSource && selectedSource !== sourceId) resetBatchInputs();
+    selectedSource = sourceId;
+    const outputs = wasteOutputProducts(s, sourceId);
+    for (const output of outputs) {
+      c(output.key + "_productId").value = output.product?.id || "";
+      c(output.key + "_productName").value = output.product?.name || (sourceId ? "Belum tersedia" : "Pilih durian asal terlebih dahulu");
+      c(output.key + "_productName").title = output.error;
+    }
+    const message = document.querySelector("#waste-products-status");
+    const errors = outputs.filter((o) => o.error).map((o) => o.error);
+    message.textContent = !sourceId ? "Pilih durian asal. Durpas dan coral akan mengikuti jenis durian tersebut."
+      : errors.length ? errors.join(" ")
+      : `Hasil mengikuti ${s.products.find((p) => p.id === sourceId).name}. Fresh dan Nitrogen dicatat terpisah.`;
+    message.classList.toggle("error", !!sourceId && errors.length > 0);
+  }
+  function resetBatchInputs() {
+    for (const spec of wasteOutputs) c(spec.key + "_qty").value = "0";
+    c("kg").value = "";
+    c("pieces").value = "";
+    proof.reset();
+  }
+  function selectLot() {
+    const current = c("sourceLotId").value;
+    if (selectedLot && selectedLot !== current) resetBatchInputs();
+    selectedLot = current;
+    preview();
+  }
   function batches() {
+    selectOutputs();
     const rows = sourceLots().filter(
       (l) => l.productId === c("sourceProductId").value,
     );
@@ -111,7 +129,7 @@ export function bindWaste(view, s, store, ctx) {
         })),
       );
     if (rows.length === 1) c("sourceLotId").value = rows[0].id;
-    preview();
+    selectLot();
   }
   c("receivedDate").onchange = () => {
     const ids = new Set(sourceLots().map((l) => l.productId));
@@ -123,8 +141,10 @@ export function bindWaste(view, s, store, ctx) {
     batches();
   };
   c("sourceProductId").onchange = batches;
+  c("sourceLotId").onchange = selectLot;
   f.addEventListener("input", preview);
   f.addEventListener("change", preview);
+  selectOutputs();
   preview();
   document.querySelector("#waste-refresh").onclick = async () => {
     if (!mayLeave(false)) return;

@@ -11,11 +11,16 @@ export function evidenceValues(value = {}) {
   return Object.fromEntries(Object.keys(proofLabels).map((key) => [key, photoValue(value?.[key])]));
 }
 export function bindEvidence(form, keys = ["reject", "processed"]) {
+  const inputs = [...form.querySelectorAll("[data-proof-file]")];
+  keys = [...new Set([...keys, ...inputs.map((input) => input.dataset.proofFile)])];
   const evidence = Object.fromEntries(keys.map((key) => [key, ""])),
     versions = Object.fromEntries(keys.map((key) => [key, 0])),
     pending = new Set();
-  const draw = () => {};
-  form.querySelectorAll("[data-proof-file]").forEach((input) => (input.onchange = async (ev) => {
+  const initialStatus = Object.fromEntries(inputs.map((input) => {
+    const key = input.dataset.proofFile;
+    return [key, form.querySelector(`[data-proof-status="${key}"]`).textContent];
+  }));
+  inputs.forEach((input) => (input.onchange = async (ev) => {
     const file = ev.target.files[0];
     if (!file) return;
     const key = input.dataset.proofFile,
@@ -31,15 +36,23 @@ export function bindEvidence(form, keys = ["reject", "processed"]) {
         status.textContent = "Foto siap disimpan · " + Math.ceil(result.bytes / 1024) + " KB";
       }
     } catch (err) {
-      status.textContent = err.message;
+      if (version === versions[key]) status.textContent = err.message;
     } finally {
       pending.delete(ticket);
-      ev.target.value = "";
+      if (version === versions[key]) ev.target.value = "";
     }
   }));
   return {
     values: () => evidenceValues(evidence),
     busy: () => pending.size > 0,
+    reset: () => {
+      for (const key of keys) { versions[key]++; evidence[key] = ""; }
+      for (const input of inputs) {
+        input.value = "";
+        const key = input.dataset.proofFile;
+        form.querySelector(`[data-proof-status="${key}"]`).textContent = initialStatus[key];
+      }
+    },
   };
 }
 export function evidenceButton(run, key = "") {

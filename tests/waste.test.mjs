@@ -52,6 +52,8 @@ for (const [id, storeId, supplierId, date] of [
     kg: 100,
     pieces: 40,
   });
+for (const [id, key] of [["half", "durpas500"], ["one", "durpas1000"], ["coral", "coral"]])
+  Object.assign(s.products.find((p) => p.id === id), { durianSourceId: "durian", durianOutput: key });
 const photo = "data:image/png;base64,iVBORw0KGgo=";
 const p = {
   id: "w1",

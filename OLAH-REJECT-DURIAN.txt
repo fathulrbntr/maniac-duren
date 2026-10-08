@@ -1,0 +1,61 @@
+MANIAC DUREN — OLAH REJECT PER JENIS DURIAN (043)
+
+Pemasangan
+1. Ekstrak ZIP ke folder proyek, timpa file dengan nama yang sama.
+2. Jika 75 master durian belum diimpor, jalankan seluruh isi
+   database/seeds/import-durian-dan-turunan.sql di Supabase SQL Editor.
+   Jika sudah diimpor, lewati langkah ini.
+3. Jalankan seluruh isi database/link-durian-reject.sql di SQL Editor.
+   Hasil pemasangan awal: jenis_durian=15, hasil_olah_reject=45, master_daging=15.
+4. Commit dan push perubahan web. Setelah deployment selesai, refresh POS
+   dengan Ctrl+Shift+R. Buka Inventory > Olah Reject.
+
+Perilaku
+- Pilih tanggal penerimaan, produk durian, lalu batch/supplier asal.
+- Nama produk hasil tampil otomatis pada tiga kartu: durpas 500 gr,
+  durpas 1 kg, dan coral. Pengguna cukup mengisi jumlah dan bukti foto.
+- Contoh Durian Musang King Fresh menghasilkan Durpas Musang King Fresh
+  500 gr, Durpas Musang King Fresh 1 kg, dan Coral Musang King Fresh.
+- Musang King Nitrogen, Black Thorn Fresh/Nitrogen, Monthong, dan jenis
+  lainnya masing-masing menggunakan produk turunannya sendiri.
+- Hubungan memakai ID produk. Mengganti nama/SKU tidak memutus hubungan.
+- Jika produk hasil belum terhubung, form menjelaskan hasil yang kurang;
+  hasil dengan jumlah positif tidak dapat disimpan sampai hubungan tersedia.
+- Saat pindah buah atau batch, berat, butir, jumlah hasil, dan foto dibersihkan
+  agar bukti serta jumlah dari batch sebelumnya tidak ikut tersimpan.
+- Foto reject awal dan foto setiap hasil positif wajib diunggah. Bug foto
+  reject tidak tersimpan dan foto lama selesai diproses setelah pindah batch
+  sudah diperbaiki.
+- Server menolak produk hasil dari jenis durian/ukuran kemasan lain.
+- Supplier, batch asal, perhitungan modal, bukti, retry, serta pembatalan
+  mengikuti alur POS yang sudah ada. Riwayat olahan umum lama tidak diubah.
+- Master daging durian ikut diberi hubungan asal. Form ini tetap hanya
+  mencatat durpas dan coral; proses coral menjadi daging tidak diubah.
+
+Database
+- Menambah durian_source_id dan durian_output pada md_pos_products,
+  dengan foreign key, validasi jenis/satuan, dan satu hasil per jenis buah.
+- Menambahkan dua metadata pada pembacaan produk yang sudah berjalan;
+  tidak menambah permintaan jaringan saat login atau membuka menu.
+- Menggunakan pos_waste_action yang sama pada jalur rollback 027 dan POS baru.
+- SQL dapat dijalankan ulang tanpa menggandakan hubungan. Produk baru di luar
+  15 jenis ini memerlukan hubungan master terlebih dahulu; nama serupa tidak
+  dipakai sebagai pengganti otomatis.
+- Jangan menjalankan database/pos.sql untuk memasang patch pada DB aktif;
+  cukup gunakan link-durian-reject.sql di atas.
+
+Pengujian lokal
+node tests/reject-family-ui.test.mjs
+node tests/reject-family-sql.test.mjs
+node tests/waste.test.mjs
+node tests/rollback-startup.test.mjs
+
+Lulus uji handler form, foto, validasi, unit, ID, supplier, modal, retry,
+pembatalan, riwayat lama, akses kasir, dan isolasi Fresh/Nitrogen di PGlite.
+Jalur SQL diuji pada baseline 027 dan skema terbaru dengan optimasi foto 040/041.
+Belum dijalankan di Supabase aktif; tampilan belum diverifikasi melalui browser.
+
+Git
+git add -A
+git commit -m "Match reject outputs to their source durian variety"
+git push
