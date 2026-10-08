@@ -1,5 +1,5 @@
 import { escape as e } from './core.mjs?v=9';
-import { variantAxes, buildVariantRows, variantPayload } from './product-variants.mjs?v=44';
+import { variantAxes, buildVariantRows, variantPayload, variantSourceSnapshot } from './product-variants.mjs?v=45';
 const field = (label,html) => `<label class="field">${label}${html}</label>`;
 export const variantEditorMarkup = () => `<section class="variant-editor" aria-label="Pilihan varian">
  <div class="variant-heading"><b>1. Tentukan pilihan varian</b><small>Satu pilihan per kolom. Pisahkan nilainya dengan koma.</small></div>
@@ -8,14 +8,17 @@ export const variantEditorMarkup = () => `<section class="variant-editor" aria-l
  <p class="muted">Contoh: Kondisi → Fresh, Nitrogen. Ukuran → 500 gr, 1 kg. Keduanya menghasilkan 4 varian.</p>
  <p data-variant-status role="status" aria-live="polite"></p><div data-variant-results></div>
 </section>`;
-export function bindVariantEditor(root,{getCommon,state,groupId,operationId,existing=[],error}) {
+export function bindVariantEditor(root,{getCommon,state,groupId,operationId,existing=[],source=null,error}) {
   const axesBox = root.querySelector('[data-variant-axes]'), results = root.querySelector('[data-variant-results]'), status = root.querySelector('[data-variant-status]');
   let rows = [], builtSignature = '', axes = variantAxes(existing);
-  if (!axes.length) axes = [{name:'Ukuran',values:[]}];
-  const readAxes = () => [...axesBox.querySelectorAll('[data-axis-row]')].map(row=>({name:row.querySelector('[data-axis-name]').value,values:row.querySelector('[data-axis-values]').value}));
+  if (!axes.length) axes = source?[{name:'Varian',values:[],current:source.variant||'Original'}]:[{name:'Ukuran',values:[]}];
+  const readAxes = () => [...axesBox.querySelectorAll('[data-axis-row]')].map(row=>({name:row.querySelector('[data-axis-name]').value,values:row.querySelector('[data-axis-values]').value,...(source?{current:row.querySelector('[data-axis-current]').value}:{})}));
+  const currentOptions=()=>readAxes().map(a=>({name:a.name.trim().replace(/\s+/g,' '),value:a.current.trim().replace(/\s+/g,' ')}));
+  const registered=()=>source?[{...source,variantOptions:currentOptions()}]:existing;
+  const allAxes=()=>readAxes().map(a=>source?{name:a.name,values:[a.current,...a.values.split(',').map(v=>v.trim()).filter(Boolean)]}:a);
   const signature = () => JSON.stringify({axes:readAxes(),...getCommon()});
   function drawAxes() {
-    axesBox.innerHTML = axes.map((a,i)=>`<div class="variant-axis" data-axis-row>${field('Nama pilihan',`<input data-axis-name list="variant-axis-names" maxlength="30" value="${e(a.name)}" placeholder="Ukuran, rasa, kondisi…" ${existing.length?'readonly':''}>`)}${field('Nilai pilihan',`<input data-axis-values value="${e(Array.isArray(a.values)?a.values.join(', '):a.values)}" placeholder="Contoh: 500 gr, 1 kg">`)}${existing.length?'':`<button type="button" data-remove-axis="${i}" aria-label="Hapus pilihan ${i+1}">×</button>`}</div>`).join('');
+    axesBox.innerHTML = axes.map((a,i)=>`<div class="variant-axis ${source?'is-adopting':''}" data-axis-row>${field('Nama pilihan',`<input data-axis-name list="variant-axis-names" maxlength="30" value="${e(a.name)}" placeholder="Ukuran, rasa, kondisi…" ${existing.length?'readonly':''}>`)}${source?field('Varian barang saat ini',`<input data-axis-current value="${e(a.current||'')}" maxlength="40" placeholder="Contoh: Original" required>`):''}${field(source?'Varian baru (pisahkan koma)':'Nilai pilihan',`<input data-axis-values value="${e(Array.isArray(a.values)?a.values.join(', '):a.values)}" placeholder="Contoh: 500 gr, 1 kg">`)}${existing.length?'':`<button type="button" data-remove-axis="${i}" aria-label="Hapus pilihan ${i+1}">×</button>`}</div>`).join('');
     root.querySelector('[data-add-axis]').hidden = !!existing.length || axes.length >= 3;
     axesBox.querySelectorAll('[data-remove-axis]').forEach(button=>button.onclick=()=>{axes=readAxes().filter((_,i)=>i!==Number(button.dataset.removeAxis));if(!axes.length)axes=[{name:'Ukuran',values:[]}];drawAxes();markDirty();});
     axesBox.querySelectorAll('input').forEach(input=>input.addEventListener('input',markDirty));
@@ -44,11 +47,12 @@ export function bindVariantEditor(root,{getCommon,state,groupId,operationId,exis
   function build() {
     error('');capture();
     try {
-      rows=buildVariantRows({name:getCommon().name,axes:readAxes(),previous:rows,existing,products:state.products,groupId});
+      if(source && currentOptions().some(o=>!o.name||!o.value))throw Error('Isi nama pilihan dan varian barang saat ini.');
+      rows=buildVariantRows({name:getCommon().name,axes:allAxes(),previous:rows,existing:registered(),products:state.products,groupId});
       builtSignature=signature();drawRows();
     }catch(err){error(err.message);}
   }
-  root.querySelector('[data-add-axis]').onclick=()=>{axes=readAxes();if(axes.length<3)axes.push({name:'',values:[]});drawAxes();markDirty();};
+  root.querySelector('[data-add-axis]').onclick=()=>{axes=readAxes();if(axes.length<3)axes.push({name:'',values:[],current:''});drawAxes();markDirty();};
   root.querySelector('[data-build-variants]').onclick=build;
   drawAxes();
   if(existing.length)build();
@@ -57,7 +61,9 @@ export function bindVariantEditor(root,{getCommon,state,groupId,operationId,exis
     payload() {
       if(!rows.length || builtSignature!==signature())throw Error('Klik “Susun daftar varian” setelah mengubah nama, jenis, satuan, atau pilihan varian.');
       capture();
-      return variantPayload({id:operationId,groupId,name:getCommon().name,common:getCommon(),rows,existing,products:state.products});
+      const payload=variantPayload({id:operationId,groupId,name:getCommon().name,common:getCommon(),rows,existing:registered(),products:state.products});
+      if(source)payload.adopt={productId:source.id,expected:variantSourceSnapshot(source),variantOptions:currentOptions()};
+      return payload;
     },
   };
 }
@@ -70,4 +76,17 @@ export function variantGroupDialog({groupId,state,modal,mutate,render,toast}) {
   const editor=bindVariantEditor(d,{state,groupId,operationId:crypto.randomUUID(),existing,error,getCommon:()=>({name:first.variantGroupName,itemType:first.itemType,category:first.category,stockUnit:first.stockUnit})});
   let saving=false;
   d.querySelector('form').onsubmit=async ev=>{ev.preventDefault();if(saving)return;error('');try{const payload=editor.payload();saving=true;if(await mutate('product_variants_save',payload)){d.close();render();toast('Varian baru tersimpan');}}catch(err){error(err.message);}finally{saving=false;}};
+}
+
+export function productVariantDialog({productId,state,modal,mutate,render,toast}) {
+  const source=state.products.find(p=>p.id===productId);
+  if(!source)return;
+  if(source.variantGroupId)return variantGroupDialog({groupId:source.variantGroupId,state,modal,mutate,render,toast});
+  const d=modal('Tambah varian',`${field('Nama kelompok barang',`<input data-variant-group-name value="${e(source.name)}" maxlength="100" required>`)}<p class="variant-notice"><b>${e(source.name)}</b> menjadi varian pertama. Tentukan pilihannya di “Varian barang saat ini”, lalu isi varian baru.</p>${variantEditorMarkup()}`,'Simpan varian baru');
+  d.classList.add('product-modal','variants-modal');
+  const error=message=>d.querySelector('#form-error').textContent=message;
+  const editor=bindVariantEditor(d,{state,groupId:crypto.randomUUID(),operationId:crypto.randomUUID(),source,error,getCommon:()=>({...variantSourceSnapshot(source),name:d.querySelector('[data-variant-group-name]').value})});
+  d.querySelector('[data-variant-group-name]').addEventListener('input',editor.markDirty);
+  let saving=false;
+  d.querySelector('form').onsubmit=async ev=>{ev.preventDefault();if(saving)return;error('');try{const payload=editor.payload();saving=true;if(await mutate('product_variants_save',payload)){d.close();render();toast('Varian ditambahkan ke barang');}}catch(err){error(err.message);}finally{saving=false;}};
 }

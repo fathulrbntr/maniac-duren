@@ -1,4 +1,4 @@
-import { variantEditorMarkup, bindVariantEditor } from "./variant-editor.mjs?v=44";
+import { variantEditorMarkup, bindVariantEditor } from "./variant-editor.mjs?v=45";
 import {
   categories,
   itemTypes,

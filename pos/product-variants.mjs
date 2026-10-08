@@ -1,4 +1,4 @@
-import { normalizeProduct, saveProduct } from './catalog.mjs?v=9';
+import { normalizeProduct, saveProduct, productDefaults } from './catalog.mjs?v=9';
 export const MAX_VARIANTS = 60;
 const clean = value => String(value ?? '').trim().replace(/\s+/g, ' ');
 const key = value => clean(value).toLowerCase();
@@ -37,15 +37,15 @@ export function buildVariantRows({name,axes,previous=[],existing=[],products=[],
   let serial = 0;
   return combos.map(variantOptions => {
     const fullName = variantName(name,variantOptions);
-    if (!clean(name) || fullName.length > 100 || variantLabel(variantOptions).length > 100) throw Error('Nama barang beserta varian wajib diisi dan maksimal 100 karakter.');
-    const old = cache.get(optionKey(variantOptions));
+    const old = cache.get(optionKey(variantOptions)), registered = existing.some(p => p.id === old?.id);
+    if (!clean(name) || (!registered && fullName.length > 100) || variantLabel(variantOptions).length > 100) throw Error('Nama barang beserta varian wajib diisi dan maksimal 100 karakter.');
     let sku = old?.sku;
     if (!sku) {
       const prefix = clean(name).toUpperCase().replace(/[^A-Z0-9]+/g,'-').slice(0,16) || 'ITEM';
       do { sku = `${prefix}-${groupId.replace(/-/g,'').slice(0,10)}-${++serial}`; } while (used.has(key(sku)));
       used.add(key(sku));
     }
-    return {...old, id:old?.id || crypto.randomUUID(), name:fullName, variant:variantLabel(variantOptions), variantOptions, sku, barcode:old?.barcode || '', existing:existing.some(p => p.id === old?.id)};
+    return {...old, id:old?.id || crypto.randomUUID(), name:registered?old.name:fullName, variant:registered?old.variant:variantLabel(variantOptions), variantOptions, sku, barcode:old?.barcode || '', existing:registered};
   });
 }
 export function variantPayload({id,groupId,name,common,rows,existing=[],products=[]}) {
@@ -63,8 +63,18 @@ export function variantPayload({id,groupId,name,common,rows,existing=[],products
   });
   return {id,groupId,name:clean(name),expectedIds:existing.map(p=>p.id).sort(),variants};
 }
+export function variantSourceSnapshot(product) {
+  const p=productDefaults(product);
+  return {name:p.name,sku:p.sku,itemType:p.itemType,stockUnit:p.stockUnit,category:p.category??null,variant:p.variant||''};
+}
 export function saveVariantProducts(state,payload) {
   if ((state.events || []).some(e => e.id === payload.id && e.action === 'product_variants_save')) return;
+  if(payload.adopt) {
+    const source=state.products.find(p=>p.id===payload.adopt.productId);
+    if(!source || source.variantGroupId || JSON.stringify(variantSourceSnapshot(source))!==JSON.stringify(payload.adopt.expected))throw Error('Barang sudah berubah. Tutup form dan perbarui data.');
+    if(state.products.some(p=>p.variantGroupId===payload.groupId || key(p.variantGroupName)===key(payload.name)))throw Error('Kelompok barang sudah ada.');
+    Object.assign(source,{variantGroupId:payload.groupId,variantGroupName:payload.name,variantOptions:payload.adopt.variantOptions});
+  }
   const existing = state.products.filter(p => p.variantGroupId === payload.groupId);
   if (JSON.stringify(existing.map(p=>p.id).sort()) !== JSON.stringify([...payload.expectedIds].sort())) throw Error('Daftar varian sudah berubah. Tutup form dan perbarui data.');
   for (const p of payload.variants) {

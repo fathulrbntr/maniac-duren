@@ -1,88 +1,82 @@
-MANIAC DUREN — INPUT VARIAN / PATCH 044
+MANIAC DUREN — KARTU PRODUK SERAGAM / PATCH 045
 
-Paket ini hanya berisi file baru dan file yang berubah.
-Basis: POS rollback 027 + sidebar 042 + Olah Reject per jenis 043.
-Belum diterapkan ke website atau Supabase produksi.
+Paket perubahan untuk project yang sudah memakai patch input varian 044.
+Hanya file baru/berubah yang disertakan. Belum diterapkan ke server produksi.
 
 PASANG
-1. Ekstrak isi ZIP ke root project Maniac Duren, timpa file dengan nama sama.
-2. Buka Supabase SQL Editor pada project POS yang benar.
-   Jalankan SELURUH database/product-variants.sql sekali sebelum deploy web.
-   Script dapat dijalankan ulang. Gagal validasi berarti seluruh perubahan
-   pada pemasangan tersebut dibatalkan.
-3. Commit dan push perubahan untuk deployment Vercel. Buka ulang /pos/.
-   Nomor versi import/CSS sudah diperbarui; tidak perlu menghapus data browser.
+1. Ekstrak ZIP ke root project dan timpa file dengan nama yang sama.
+2. Jalankan SELURUH database/product-variants.sql yang ada di ZIP ini melalui
+   Supabase SQL Editor. Tetap jalankan meskipun versi 044 pernah dipasang:
+   file terbaru menambah dukungan varian pada barang yang sudah terdaftar.
+   Tidak perlu menghapus tabel atau data. Script boleh dijalankan ulang.
+3. Commit/push untuk deploy, lalu buka ulang halaman POS.
+   Versi import/CSS sudah dinaikkan ke 45. Data browser tidak perlu dihapus.
 
-CARA INPUT
-- Buka Master Barang > Tambah barang.
-- Isi nama barang, jenis, kategori bila diperlukan, dan satuan stok.
-- Barang biasa: biarkan “Memiliki varian” mati, isi SKU dan harga, lalu Simpan.
-- Barang bervarian: aktifkan “Memiliki varian”.
-  Isi nama pilihan (misalnya Ukuran, Rasa, Kondisi) dan nilai dipisahkan koma.
-  Tambah pilihan kedua bila diperlukan, lalu klik “Susun daftar varian”.
-- Periksa nama lengkap, SKU otomatis, barcode opsional, dan harga setiap varian.
-  “Terapkan ke varian baru” mengisi harga yang sama sekaligus.
-  Harga tetap dapat dikoreksi pada masing-masing baris.
-- Klik “Simpan semua varian”. Seluruh baris disimpan dalam satu transaksi.
-- Setelah mengubah nama/jenis/satuan/pilihan, susun ulang daftar sebelum simpan.
-  SKU dan harga yang sudah diketik dipertahankan untuk kombinasi yang tetap sama.
-- Stok dicatat di Barang masuk. Foto dapat ditambahkan lewat Edit per varian.
+TAMPILAN
+- Semua barang di Master Barang memakai kartu ringkas yang bisa dibuka.
+  Bentuk, latar, batas, dan jarak sama pada daftar maupun grid.
+- Barang bervarian: jumlah varian dan pilihan “Lihat varian”.
+- Barang tanpa varian: “Belum memiliki varian” dan tombol “+ Tambah varian”.
+- Klik nama/kartu untuk membuka detail dan tombol Edit. Detail stok, harga,
+  SKU, barcode, serta foto berada di dalam kartu.
+- Halaman Stok tetap menampilkan setiap SKU secara terpisah.
 
-CONTOH
-Nama: Durpas Musang King
-Pilihan 1: Kondisi -> Fresh, Nitrogen
-Pilihan 2: Ukuran -> 500 gr, 1 kg
-Hasil:
-  Durpas Musang King Fresh 500 gr
-  Durpas Musang King Fresh 1 kg
-  Durpas Musang King Nitrogen 500 gr
-  Durpas Musang King Nitrogen 1 kg
-Satuan stok tetap pcs; 500 gr/1 kg adalah pilihan kemasan.
+TAMBAH VARIAN DARI BARANG LAMA
+1. Klik “+ Tambah varian” pada barang yang belum memiliki varian.
+2. Nama kelompok terisi dari barang lama; bisa disesuaikan sebelum menyimpan.
+3. Isi nama pilihan, varian barang saat ini, dan varian baru.
+   Contoh:
+   Nama kelompok: Bubuk minuman
+   Nama pilihan: Rasa
+   Varian barang saat ini: Original
+   Varian baru: Cokelat, Matcha
+4. Klik “Susun daftar varian”, lengkapi SKU/harga varian baru, lalu Simpan.
+   Barang lama ditampilkan sebagai “Sudah tersimpan”.
+5. Bila perlu ukuran sekaligus rasa, klik “Tambah pilihan”, isi pilihan
+   barang saat ini dan nilai baru pada setiap baris, lalu susun kombinasi.
 
-BARANG YANG SUDAH ADA
-- Master Barang menampilkan satu kelompok, dapat dibuka untuk melihat variannya.
-- Klik “Tambah varian” untuk menambah nilai pada pilihan kelompok tersebut.
-  Varian lama tidak dibuat ulang dan tidak ditimpa.
-- Klik tombol Edit pada varian untuk harga, SKU, barcode, dan foto.
-  Nama, susunan pilihan, jenis, dan satuan kelompok yang tersimpan dikunci.
-- Maksimal 3 pilihan dan 60 kombinasi per kelompok.
-- Skrip mengelompokkan data impor durian yang namanya cocok persis:
-  Musang King/Black Thorn Fresh-Nitrogen, kemasan durpas, serta coral/daging
-  Fresh-Nitrogen. Dengan 75 master lengkap sebelumnya: 19 kelompok / 42 SKU.
-  Barang lainnya tetap terpisah sampai dibuat sebagai barang bervarian baru.
-  Kelompok yang master-nya belum lengkap dilewati. Nama ganda membatalkan skrip.
-- ID, SKU lama, nama lengkap, harga, foto, stok, batch, resep, riwayat, dan
-  durian_source_id/durian_output tidak diganti oleh pengelompokan.
-- Stok, kasir, dan Olah Reject tetap memilih SKU dan nama lengkap tiap varian.
-  Hubungan hasil reject yang sudah dipasang oleh patch 043 tetap dipakai.
-  Membuat barang/varian baru tidak otomatis membuat resep atau hubungan olahan
-  reject untuk jenis durian baru; itu tetap membutuhkan konfigurasi turunannya.
+Barang lama menjadi varian pertama memakai ID, nama, SKU, barcode, harga,
+foto, stok, batch, resep, supplier, modal, dan hubungan reject yang sama.
+Nama operasional barang lama tidak ditambahkan “Original” secara otomatis.
+Nilai pilihan hanya menjadi metadata kelompoknya. Hanya varian baru yang
+mendapat ID dan nama lengkap baru. Stok awal varian baru dicatat lewat Barang
+masuk. Harga/foto barang lama tetap diubah lewat tombol Edit.
 
-TEKNIS DAN UJI
-- Metadata kecil ditambahkan ke md_pos_products; tidak ada pembacaan baru
-  saat login, membuka menu, atau membuat pratinjau kombinasi.
-- Satu RPC pos_product_variants_save untuk seluruh varian baru; satu pos_read
-  di akhir. Akses master, transaksi atomik, audit, serta ID retry diperiksa.
-- Menolak SKU/barcode yang bentrok saat pembuatan, kombinasi ganda, nama hasil
-  yang tidak sesuai, ID terpakai, dan daftar kelompok yang sudah berubah.
-- Tidak menyimpan salinan foto yang sama pada semua varian baru.
-- Uji PGlite lulus pada schema 027/019 dan schema terbaru 035 dengan perbaikan
-  foto 040/041: migrasi berulang, metadata, izin akses, semua jenis item,
-  rollback atomik, retry, duplikat, edit barang, serta hubungan reject.
-- Handler form diuji memakai adaptor DOM: toggle, kombinasi, harga massal,
-  simpan, tambah varian, edit per varian, input biasa, pencarian, dan retry.
-- Regresi produk, produksi, waste, retry, startup/login, perpindahan menu,
-  serta input nominal lulus. Pemeriksaan visual browser belum dilakukan.
-- Tidak ada pengujian atau perubahan data di server produksi.
+Barang baru tetap memakai form patch 044: toggle “Memiliki varian”, hingga
+3 pilihan/60 kombinasi, SKU otomatis dan harga sekaligus. Penambahan ke
+kelompok yang sudah ada dilakukan melalui tombol “Tambah varian” di dalam
+kartu. Varian lama tetap disertakan dan tidak dibuat ulang.
+
+PERILAKU SIMPAN
+- Satu RPC untuk pengelompokan barang lama dan seluruh varian barunya.
+- Gagal pada salah satu baris membatalkan seluruh perubahan pengiriman.
+- Perubahan nama/SKU/jenis/satuan barang oleh pengguna lain saat form terbuka
+  ditolak dengan pesan untuk memperbarui data. Perubahan harga yang terjadi
+  di waktu yang sama dipertahankan, karena harga lama tidak ditulis ulang.
+- Akses Master, duplikat SKU/barcode/kombinasi, dan ID retry diperiksa.
+- Tidak menambah permintaan data saat login, membuka kartu, atau membuka menu.
+- Foto tidak digandakan ke semua varian baru.
+- Hubungan hasil reject yang sudah ada tetap tersambung ke ID lama.
+  Varian durian baru belum otomatis memperoleh resep/turunan reject;
+  hubungan olahannya memerlukan konfigurasi seperti pada patch 044.
+
+VERIFIKASI
+Lulus uji lokal: kartu produk tunggal/bervarian, tombol ke produk yang benar,
+form tambah varian dari produk lama, beberapa pilihan, tambah varian lanjutan,
+input/edit sebelumnya, stok tetap per SKU, retry, izin, duplikat, transaksi
+atomik, data usang, serta stok/modal/supplier/resep/hubungan reject terjaga.
+Pengujian database menggunakan PGlite pada schema 027/019 dan 035 dengan
+perbaikan foto 040/041. Startup/login dan navigasi tetap lulus tanpa read baru.
+Pemeriksaan visual browser dan pengujian server produksi belum dilakukan.
 
 UJI LOKAL
-npm test
+node tests/variants-unified-ui.test.mjs
 node tests/product-variants-ui.test.mjs
 node tests/product-variants-sql.test.mjs
+npm test
 node tests/rollback-startup.test.mjs
 
-GIT
-Jalankan dari root project setelah ekstraksi dan pemeriksaan file:
+GIT (dari root project)
 git add -A
-git commit -m "Add product variant input and grouped catalog"
+git commit -m "Unify product cards and add variants to existing products"
 git push

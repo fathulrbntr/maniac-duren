@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {randomUUID as id} from 'node:crypto';
 import {PGlite} from '@electric-sql/pglite';
-import {buildVariantRows,variantPayload} from '../pos/product-variants.mjs';
+import {buildVariantRows,variantPayload,variantSourceSnapshot} from '../pos/product-variants.mjs';
 const db=new PGlite();
 const migration=fs.readFileSync('database/product-variants.sql','utf8');
 try {
@@ -75,5 +75,52 @@ try {
  const fetched=(await read()).products.find(p=>p.id===old.id);assert.equal(fetched.buyPrice,35000);assert.equal(fetched.variantGroupId,initial.groupId);
  await db.exec(migration);assert.equal((await read()).products.find(p=>p.id===old.id).sku,'CUSTOM-SKU');
  for(const [name,extra] of [['Buah baru',{itemType:'direct',stockUnit:'kg_butir',category:'Buah',priceKg:50000,pricePiece:100000}],['Olahan baru',{itemType:'finished',stockUnit:'pcs',category:'Olahan Duren'}],['Bahan produksi',{itemType:'prep',stockUnit:'ml'}],['Menu baru',{itemType:'recipe',stockUnit:'porsi',category:'Dessert',salePrice:25000}],['Minuman botol',{itemType:'direct',stockUnit:'ml',category:'Minuman',salePrice:15000}]])await save(make(name,[],extra));
- console.log('PASS SQL: 19 groups / 42 existing IDs preserved, atomic writes, duplicate SKU/barcode/combination guards, permissions, replay, stale additions, all item types, old product editing, reject links, photo/read contract and idempotent installation.');
+
+ // Existing products can acquire siblings atomically, preserving operational IDs.
+ const supplier=id(),fruitLot=id(),unitLot=id(),recipe=id(),date=new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Jakarta'});
+ await db.query("insert into public.md_pos_suppliers(id,name) values($1,'Supplier Cumasi')",[supplier]);
+ const loaded=await read(),fruit=loaded.products.find(p=>p.sku==='MD-CUMASI-BUAH'),coral=loaded.products.find(p=>p.sku==='MD-CUMASI-CORAL');
+ await db.query("insert into public.md_pos_lots(id,store_id,supplier_id,product_id,received_date,received_kg,received_pieces,kg,pieces,quality,unit_cost) values($1,$2,$3,$4,$5,100,40,100,40,'ready',10000)",[fruitLot,store,supplier,fruit.id,date]);
+ await db.query("insert into public.md_pos_unit_lots(id,product_id,store_id,unit,received_qty,qty,received_date,kind,supplier_id,unit_cost) values($1,$2,$3,'kg',10,8,$4,'opening',$5,30000)",[unitLot,coral.id,store,date,supplier]);
+ await db.query("insert into public.md_pos_recipes(id,name,output_id,yield_qty) values($1,'Resep Cumasi',$2,1)",[recipe,loaded.products.find(p=>p.sku==='MD-CUMASI-DAGING').id]);
+ await db.query('insert into public.md_pos_recipe_items(recipe_id,product_id,qty) values($1,$2,0.5)',[recipe,coral.id]);
+ const adopt=source=>{
+  const groupId=id(),opts=[{name:'Kualitas',value:'Reguler'}],existing=[{...source,variantOptions:opts}];
+  const rows=buildVariantRows({name:source.name,axes:[{name:'Kualitas',values:['Reguler','Premium','Pilihan']}],existing,groupId,products:loaded.products});
+  for(const row of rows)if(!row.existing)Object.assign(row,{priceKg:60000,pricePiece:150000});
+  return {...variantPayload({id:id(),groupId,name:source.name,common:source,rows,existing,products:loaded.products}),adopt:{productId:source.id,expected:variantSourceSnapshot(source),variantOptions:opts}};
+ };
+ const stockState=async()=>({lots:(await db.query('select * from public.md_pos_lots order by id')).rows,units:(await db.query('select * from public.md_pos_unit_lots order by id')).rows,recipes:(await db.query('select * from public.md_pos_recipe_items order by recipe_id,product_id')).rows});
+ const stockBefore=await stockState();
+ const sourceBefore=(await db.query('select * from public.md_pos_products where id=$1',[coral.id])).rows[0];
+ const good=adopt(coral),sizeBefore=await counts();
+ await as(cashier);await assert.rejects(save(good),/Hak akses/);await as(owner);
+ await db.exec('set role authenticated');await assert.rejects(db.query('select public.pos_variant_option_labels($1)',[[{name:'X',value:'Y'}]]),/permission denied/);await db.exec('reset role');
+ for(const kind of ['duplicate-sku','duplicate-option','empty-option','duplicate-axis','stale-name','stale-type','wrong-ids','existing-group','different-unit']){
+  const bad=adopt(coral);
+  if(kind==='duplicate-sku')bad.variants[1].sku=bad.variants[0].sku;
+  if(kind==='duplicate-option'){bad.adopt.variantOptions=bad.variants[0].variantOptions;}
+  if(kind==='empty-option')bad.adopt.variantOptions=[];
+  if(kind==='duplicate-axis')bad.adopt.variantOptions=[...bad.adopt.variantOptions,...bad.adopt.variantOptions];
+  if(kind==='stale-name')bad.adopt.expected.name='Wrong name';
+  if(kind==='stale-type')bad.adopt.expected.itemType='raw';
+  if(kind==='wrong-ids')bad.expectedIds=[];
+  if(kind==='existing-group')bad.groupId=initial.groupId;
+  if(kind==='different-unit')bad.variants[1].stockUnit='pcs';
+  await assert.rejects(save(bad));assert.deepEqual(await counts(),sizeBefore);assert.deepEqual((await db.query('select * from public.md_pos_products where id=$1',[coral.id])).rows[0],sourceBefore,'No partial adoption on '+kind);
+ }
+ await db.exec('set role authenticated');await save(good);await save(good);await db.exec('reset role');
+ const adopted=(await db.query('select * from public.md_pos_products where id=$1',[coral.id])).rows[0];
+ const {variant_group_id,variant_group_name,variant_options,...preserved}=adopted;
+ assert.deepEqual({...preserved,variant_group_id:null,variant_group_name:null,variant_options:[]},sourceBefore);
+ assert.equal(variant_group_id,good.groupId);assert.equal(variant_group_name,coral.name);
+ assert.equal((await db.query('select count(*) n from public.md_pos_events where id=$1',[good.id])).rows[0].n,1);
+ const again=adopt(coral);await assert.rejects(save(again),/sudah berubah/);
+ await save(adopt(fruit));assert.deepEqual(await stockState(),stockBefore,'Lots, suppliers, costs and recipes unchanged');
+ assert.equal((await db.query("select public.pos_waste_output_product($1,'coral') id",[fruit.id])).rows[0].id,coral.id);
+ // Later product price changes stay independent from the original stale modal.
+ const another=(await read()).products.find(p=>p.sku==='MD-MIMANG-CORAL');const pending=adopt(another);
+ await db.query('update public.md_pos_products set buy_price=56789 where id=$1',[another.id]);await save(pending);assert.equal((await db.query('select buy_price from public.md_pos_products where id=$1',[another.id])).rows[0].buy_price,'56789');
+ await db.exec(migration);assert.deepEqual(await stockState(),stockBefore);
+ console.log('PASS SQL: 19 groups / 42 existing IDs preserved, atomic writes, duplicate SKU/barcode/combination guards, permissions, replay, stale additions, all item types, old product editing, reject links, photo/read contract, idempotent installation, existing-product adoption, rollback, stale data, original names/SKUs/photos, stock/cost/supplier/recipe/reject lineage and price edits preserved.');
 }finally{await db.close();}

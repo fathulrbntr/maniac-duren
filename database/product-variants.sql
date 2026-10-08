@@ -1,4 +1,4 @@
--- Maniac Duren · patch 044. Jalankan seluruh file sebelum mengunggah UI.
+-- Maniac Duren · patch 045. Jalankan seluruh file sebelum mengunggah UI.
 -- Menambah metadata kelompok; tidak menggabungkan ID, stok, batch, atau HPP.
 begin;
 set local lock_timeout='5s';
@@ -79,13 +79,35 @@ create trigger md_pos_variant_identity_guard before update on public.md_pos_prod
 
 -- RPC atomik: seluruh varian berhasil atau seluruh perubahan dibatalkan.
 -- Hanya satu pos_read di akhir; tidak membaca data outlet untuk setiap SKU.
+-- Satu validator privat digunakan untuk opsi produk lama maupun varian baru.
+create or replace function public.pos_variant_option_labels(options jsonb) returns jsonb
+language plpgsql immutable set search_path='' as $$
+declare opt jsonb;names jsonb:='[]';seen text[]:=array[]::text[];suffix text:='';label text:='';
+begin
+ if jsonb_typeof(options) is distinct from 'array' or jsonb_array_length(options) not between 1 and 3 then raise exception 'Isi 1–3 pilihan varian';end if;
+ for opt in select value from jsonb_array_elements(options) loop
+  if jsonb_typeof(opt) is distinct from 'object' then raise exception 'Pilihan varian tidak valid';end if;
+  if jsonb_typeof(opt->'name') is distinct from 'string' or jsonb_typeof(opt->'value') is distinct from 'string'
+     or length(btrim(opt->>'name')) not between 1 and 30 or length(btrim(opt->>'value')) not between 1 and 40
+     or opt->>'name'<>btrim(opt->>'name') or opt->>'value'<>btrim(opt->>'value')
+     or lower(opt->>'name')=any(seen) or (select count(*) from jsonb_object_keys(opt))<>2 then raise exception 'Nama atau nilai pilihan varian tidak valid';end if;
+  seen:=array_append(seen,lower(opt->>'name'));names:=names||jsonb_build_array(lower(opt->>'name'));
+  suffix:=suffix||case when suffix='' then '' else ' ' end||(opt->>'value');
+  label:=label||case when label='' then '' else ' / ' end||(opt->>'value');
+ end loop;
+ if length(label)>100 then raise exception 'Keterangan varian maksimal 100 karakter';end if;
+ return jsonb_build_object('suffix',suffix,'label',label,'names',names);
+end$$;
+revoke all on function public.pos_variant_option_labels(jsonb) from public,anon,authenticated;
+
 create or replace function public.pos_product_variants_save(payload jsonb) returns jsonb
 language plpgsql security definer set search_path='' as $$
 declare
  op uuid:=(payload->>'id')::uuid;gid uuid:=(payload->>'groupId')::uuid;
- base text:=btrim(payload->>'name');entry jsonb;opt jsonb;options jsonb;option_names jsonb;group_option_names jsonb;
- full_name text;label text;seen_names text[];pid uuid;v_barcode text;
+ base text:=btrim(payload->>'name');entry jsonb;options jsonb;option_names jsonb;group_option_names jsonb;
+ full_name text;label text;pid uuid;v_barcode text;
  current_ids jsonb;expected_ids jsonb;group_row public.md_pos_products%rowtype;
+ source_row public.md_pos_products%rowtype;source_expected jsonb;labels jsonb;
  employee uuid;prior public.md_pos_events%rowtype;first_type text;first_unit text;first_category text;
 begin
  if auth.uid() is null then raise exception 'Login diperlukan';end if;
@@ -104,6 +126,18 @@ begin
   if prior.action<>'product_variants_save' or prior.actor is distinct from auth.uid() or prior.payload is distinct from payload then raise exception 'ID pengiriman sudah digunakan untuk data lain';end if;
   return public.pos_read();
  end if;
+ -- MD_POS_EXISTING_VARIANTS_045: enroll one existing product without rewriting it.
+ if payload ? 'adopt' then
+  if jsonb_typeof(payload->'adopt') is distinct from 'object' or jsonb_typeof(payload#>'{adopt,expected}') is distinct from 'object' then raise exception 'Data barang asal tidak valid';end if;
+  select * into source_row from public.md_pos_products where id=(payload#>>'{adopt,productId}')::uuid for update;
+  if not found or source_row.variant_group_id is not null then raise exception 'Barang sudah berubah atau sudah memiliki varian. Perbarui data.';end if;
+  source_expected:=jsonb_build_object('name',source_row.name,'sku',source_row.sku,'variant',source_row.variant,'itemType',source_row.item_type,'stockUnit',source_row.stock_unit,'category',source_row.category);
+  if source_expected is distinct from payload#>'{adopt,expected}' then raise exception 'Barang sudah berubah. Tutup form dan perbarui data.';end if;
+  if exists(select 1 from public.md_pos_products where variant_group_id=gid or lower(variant_group_name)=lower(base)) then raise exception 'Kelompok barang sudah ada. Gunakan Tambah varian pada barang tersebut.';end if;
+  options:=payload#>'{adopt,variantOptions}';
+  perform public.pos_variant_option_labels(options);
+  update public.md_pos_products set variant_group_id=gid,variant_group_name=base,variant_options=options where id=source_row.id;
+ end if;
  select coalesce(jsonb_agg(id::text order by id::text),'[]') into current_ids from public.md_pos_products where variant_group_id=gid;
  select coalesce(jsonb_agg(value order by value),'[]') into expected_ids from jsonb_array_elements_text(payload->'expectedIds');
  if current_ids<>expected_ids then raise exception 'Daftar varian sudah berubah. Tutup form dan perbarui data.';end if;
@@ -121,17 +155,8 @@ begin
   if pid is null or exists(select 1 from public.md_pos_products where id=pid) then raise exception 'ID barang sudah digunakan atau tidak valid';end if;
   if coalesce(entry->>'photo','')<>'' or entry ? 'stock' then raise exception 'Foto dan stok dicatat terpisah setelah varian dibuat';end if;
   if v_barcode<>'' and exists(select 1 from public.md_pos_products where lower(btrim(md_pos_products.barcode))=lower(v_barcode)) then raise exception 'Barcode % sudah digunakan',v_barcode;end if;
-  options:=entry->'variantOptions';
-  if jsonb_typeof(options) is distinct from 'array' or jsonb_array_length(options) not between 1 and 3 then raise exception 'Isi 1–3 pilihan varian';end if;
-  full_name:=base;label:='';seen_names:=array[]::text[];option_names:='[]';
-  for opt in select value from jsonb_array_elements(options) loop
-   if jsonb_typeof(opt->'name') is distinct from 'string' or jsonb_typeof(opt->'value') is distinct from 'string'
-      or length(btrim(opt->>'name')) not between 1 and 30 or length(btrim(opt->>'value')) not between 1 and 40
-      or opt->>'name'<>btrim(opt->>'name') or opt->>'value'<>btrim(opt->>'value')
-      or lower(opt->>'name')=any(seen_names) or (select count(*) from jsonb_object_keys(opt))<>2 then raise exception 'Nama atau nilai pilihan varian tidak valid';end if;
-   seen_names:=array_append(seen_names,lower(opt->>'name'));option_names:=option_names||jsonb_build_array(lower(opt->>'name'));
-   full_name:=full_name||' '||(opt->>'value');label:=label||case when label='' then '' else ' / ' end||(opt->>'value');
-  end loop;
+  options:=entry->'variantOptions';labels:=public.pos_variant_option_labels(options);
+  full_name:=base||' '||(labels->>'suffix');label:=labels->>'label';option_names:=labels->'names';
   if group_option_names is null then group_option_names:=option_names;end if;
   if option_names<>group_option_names then raise exception 'Urutan dan nama pilihan varian harus sama';end if;
   if entry->>'name' is distinct from full_name or entry->>'variant' is distinct from label then raise exception 'Nama lengkap varian tidak sesuai pilihan';end if;
