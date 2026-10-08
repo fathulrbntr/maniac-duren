@@ -1,3 +1,4 @@
+import { itemTypes } from "./catalog.mjs?v=59";
 import { mayLeave } from "./navigation.mjs?v=9";
 import { escape as e, num, today, id } from "./core.mjs?v=9";
 import {
@@ -8,7 +9,7 @@ import {
   recipeValues,
   productionPreview,
   stockQty,
-} from "./production.mjs?v=9";
+} from "./production.mjs?v=59";
 const inputCost = () => '<input name="totalCost" type="number" min="0" step="any" required placeholder="Harga beli + ongkos masuk">';
 const field = (label, body) => `<label class="field">${label}${body}</label>`;
 const opts = (items, selected) =>
@@ -45,7 +46,7 @@ export function productionPage(s, store) {
 }
 export function unitStockPanel(s, store) {
   const lots = (s.unitLots || []).filter((l) => l.storeId === store);
-  return `<section class="panel"><div class="header-row"><h3>Stok bahan & hasil produksi</h3></div><p class="muted">Bahan siap dipakai produksi. Produk jual langsung dan menu pesanan dijual melalui Kasir & pesanan.</p><div class="table-wrap"><table><thead><tr><th>ITEM</th><th>STOK FISIK TERCATAT</th><th>LAYAK PAKAI HARI INI</th></tr></thead><tbody>${
+  return `<section class="panel"><div class="header-row"><h3>Stok bahan & hasil produksi</h3></div><p class="muted">Bahan siap dipakai produksi. ${e(itemTypes.direct)}, ${e(itemTypes.finished)}, dan ${e(itemTypes.recipe)} dijual melalui Kasir & pesanan.</p><div class="table-wrap"><table><thead><tr><th>ITEM</th><th>STOK FISIK TERCATAT</th><th>LAYAK PAKAI HARI INI</th></tr></thead><tbody>${
     s.products
       .filter(scalar)
       .map(

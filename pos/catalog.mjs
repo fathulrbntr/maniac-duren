@@ -1,11 +1,11 @@
 import { productDetails } from "./product-details.mjs?v=9";
 export const categories = ["Buah", "Dessert", "Minuman", "Olahan Duren"];
 export const itemTypes = {
-  direct: "Produk jual langsung",
-  raw: "Bahan baku pembelian",
-  prep: "Bahan produksi sendiri",
-  recipe: "Menu dengan resep",
-  finished: "Produk jadi hasil produksi",
+  direct: "Product Jual Langsung",
+  raw: "Bahan Baku",
+  prep: "Bahan Produksi",
+  recipe: "Product Menu",
+  finished: "Pruduct Olahan",
 };
 export const stockUnits = {
   kg_butir: "Kg + butir",
@@ -46,11 +46,11 @@ export function normalizeProduct(p) {
     x.stockUnit === "kg_butir" &&
     (x.itemType !== "direct" || x.category !== "Buah")
   )
-    throw Error("Kg + butir khusus produk jual langsung kategori Buah");
+    throw Error(`Kg + butir khusus ${itemTypes.direct} kategori Buah`);
   if (x.itemType === "recipe" && x.stockUnit !== "porsi")
-    throw Error("Menu resep memakai satuan porsi");
+    throw Error(`${itemTypes.recipe} memakai satuan porsi`);
   if (x.itemType !== "recipe" && x.stockUnit === "porsi")
-    throw Error("Satuan porsi khusus menu resep");
+    throw Error(`Satuan porsi khusus ${itemTypes.recipe}`);
   const price = (v, label) => {
     const n = Number(v);
     if (!Number.isFinite(n) || n <= 0)

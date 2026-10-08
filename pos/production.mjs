@@ -1,3 +1,4 @@
+import { itemTypes } from "./catalog.mjs?v=59";
 const SCALE = 1000000;
 export const unitLabel = {
   kg: "kg",
@@ -57,7 +58,7 @@ export function recipeValues(s, p) {
   const output = product(s, p.outputId);
   if (!outputTypes.includes(output.itemType))
     throw Error(
-      "Hasil resep harus bahan produksi, produk jadi, atau menu resep",
+      `Hasil resep harus ${itemTypes.prep}, ${itemTypes.finished}, atau ${itemTypes.recipe}`,
     );
   const yieldQty = quantity(p.yieldQty, output.stockUnit);
   if (
@@ -143,7 +144,7 @@ export function productionAction(s, action, p) {
         !s.suppliers.some((x) => x.id === p.supplierId))
     )
       throw Error(
-        "Pembelian hanya untuk bahan pembelian / produk jual langsung dan wajib supplier",
+        `Pembelian hanya untuk ${itemTypes.raw} / ${itemTypes.direct} dan wajib supplier`,
       );
     if (p.kind === "opening" && !p.note?.trim())
       throw Error("Catatan stok awal wajib");

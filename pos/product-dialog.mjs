@@ -6,7 +6,7 @@ import {
   productDefaults,
   isLegacyStock,
   normalizeProduct,
-} from "./catalog.mjs?v=9";
+} from "./catalog.mjs?v=59";
 import { escape as e, id, num, money } from "./core.mjs?v=9";
 import { preparePhoto } from "./product-details.mjs?v=9";
 import { productStock, productUsed } from "./product-stock.mjs?v=9";

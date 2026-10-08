@@ -4,8 +4,8 @@ const sidebar = createSidebarController();
 import {installMoneyInputs} from './money-input.mjs?v=44';
 installMoneyInputs();
 import { openWeighingReceipt, showWeighingHistory } from './receipt-weighing.mjs?v=19';
-import {inventoryPanel,bindInventory} from "./inventory-ui.mjs?v=45";
-import {opsPages,opsPage,bindOps,clearOrderDraft,hasOrderDraft} from './operations-ui.mjs?v=58';
+import {inventoryPanel,bindInventory} from "./inventory-ui.mjs?v=59";
+import {opsPages,opsPage,bindOps,clearOrderDraft,hasOrderDraft} from './operations-ui.mjs?v=59';
 import {printReceipt} from './receipt-printer.mjs?v=58';
 import {
   navigation,
@@ -26,7 +26,7 @@ import {
   unitStockPanel,
   receiptDialog,
   bindProduction,
-} from "./production-ui.mjs?v=9";
+} from "./production-ui.mjs?v=59";
 import {
   today,
   money,
@@ -37,8 +37,8 @@ import {
   saleRows,
   summarize,
 } from "./core.mjs?v=10";
-import { isLegacyStock } from "./catalog.mjs?v=9";
-import { catalogPanel, productDialog } from "./catalog-ui.mjs?v=45";
+import { isLegacyStock, itemTypes } from "./catalog.mjs?v=59";
+import { catalogPanel, productDialog } from "./catalog-ui.mjs?v=59";
 const themeKey = "maniac-pos-theme";
 function themeButton(extraClass = "") {
   return `<button type="button" class="small theme-toggle ${extraClass}" data-theme-toggle aria-label="Ganti tema"><svg class="theme-light-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></svg><svg class="theme-dark-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M20 15.5A9 9 0 0 1 8.5 4 9 9 0 1 0 20 15.5Z"/></svg><span data-theme-label></span></button>`;
@@ -329,7 +329,7 @@ function shell(body) {
       <div class="sidebar-account">${accountProfile()}<button id="logout" class="sidebar-logout" type="button" aria-label="Logout" title="Logout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 4H4v16h5M14 8l4 4-4 4M8 12h10"/></svg><span>Logout</span></button></div>
     </aside>
     <button type="button" class="sidebar-backdrop" data-sidebar-close tabindex="-1" aria-label="Tutup sidebar"></button>
-    <main id="pos-main"><header class="topbar"><div class="workspace-heading"><button id="sidebar-toggle" type="button" class="sidebar-toggle" data-sidebar-toggle aria-controls="pos-sidebar" aria-label="Buka sidebar">${sidebarIcon}</button><h1>${e(title[view] || "Maniac Duren")}</h1></div><div class="workspace-tools"><span class="workspace-outlet">${icon("stores")}<span>${e(name("stores", store))}</span></span><button type="button" id="stock-demo-toggle" class="stock-demo-toggle" role="switch" aria-checked="${mode==='stock-demo'}"><span class="stock-demo-track" aria-hidden="true"></span>Mode demo</button>${themeButton()}</div></header><div class="workspace-content">${mode==='stock-demo'?'<aside class="stock-demo-banner" role="status"><div><b>MODE DEMO · Stok awal 100</b><p>Data uji hanya di tab ini. Semua penyimpanan demo terpisah dari database asli. Harga dan resep mengikuti master.</p><small>Buah: 100 kg + 100 butir. Bahan / produk stok: 100 sesuai satuannya. Menu resep mengikuti bahan.</small></div><button type="button" id="stock-demo-reset">Reset demo</button></aside>':''}${body}<p class="page-foot">Maniac Duren · ${e(name("stores", store))}</p></div></main>
+    <main id="pos-main"><header class="topbar"><div class="workspace-heading"><button id="sidebar-toggle" type="button" class="sidebar-toggle" data-sidebar-toggle aria-controls="pos-sidebar" aria-label="Buka sidebar">${sidebarIcon}</button><h1>${e(title[view] || "Maniac Duren")}</h1></div><div class="workspace-tools"><span class="workspace-outlet">${icon("stores")}<span>${e(name("stores", store))}</span></span><button type="button" id="stock-demo-toggle" class="stock-demo-toggle" role="switch" aria-checked="${mode==='stock-demo'}"><span class="stock-demo-track" aria-hidden="true"></span>Mode demo</button>${themeButton()}</div></header><div class="workspace-content">${mode==='stock-demo'?'<aside class="stock-demo-banner" role="status"><div><b>MODE DEMO · Stok awal 100</b><p>Data uji hanya di tab ini. Semua penyimpanan demo terpisah dari database asli. Harga dan resep mengikuti master.</p><small>Buah: 100 kg + 100 butir. Bahan / produk stok: 100 sesuai satuannya. ${e(itemTypes.recipe)} mengikuti bahan.</small></div><button type="button" id="stock-demo-reset">Reset demo</button></aside>':''}${body}<p class="page-foot">Maniac Duren · ${e(name("stores", store))}</p></div></main>
   </div>`;
 }
 function dashboard() {
