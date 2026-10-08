@@ -1,0 +1,70 @@
+import assert from 'node:assert/strict';
+import {defaultDeviceSettings,readDeviceSettings,saveDeviceSettings,validateDeviceSettings,deviceSettingsKey} from '../pos/device-settings.mjs?v=58';
+import {normalizeBarcode,barcodeProduct} from '../pos/barcode-scanner.mjs?v=58';
+import {opsPage,bindOps,clearOrderDraft,hasOrderDraft} from '../pos/operations-ui.mjs';
+import {devicesPage} from '../pos/devices-ui.mjs?v=58';
+import {visibleSections} from '../pos/navigation.mjs';
+import {Node,makeModal,FormDataAdapter} from './variant-dom.mjs';
+import {printDocument} from './receipt-print-dom.mjs';
+import {fixture,qty} from './stock-demo-fixture.mjs';
+import {createStockDemo,applyStockDemoAction} from '../pos/stock-demo.mjs';
+const original=Object.fromEntries(['document','window','localStorage','requestAnimationFrame','fetch','FormData'].map(k=>[k,globalThis[k]]));
+const descriptors=Object.fromEntries(['elements','className','focus','scrollIntoView','dispatchEvent'].map(k=>[k,Object.getOwnPropertyDescriptor(Node.prototype,k)]));
+Object.defineProperty(Node.prototype,'elements',{configurable:true,get(){return new Proxy({namedItem:name=>this.querySelector(`[name="${name}"]`)},{get:(t,k)=>k in t?t[k]:this.querySelector(`[name="${k}"]`)});}});
+Object.defineProperty(Node.prototype,'className',{configurable:true,get(){return this.attrs.class||''},set(value){this.attrs.class=value}});
+Node.prototype.focus=function(){this.focused=true;};Node.prototype.scrollIntoView=function(){};
+Node.prototype.dispatchEvent=function(ev){return this['on'+ev.type]?.({target:this,currentTarget:this,preventDefault(){}});};
+const data=new Map();let storageFails=false;
+globalThis.localStorage={getItem:key=>data.get(key)||null,setItem:(key,value)=>{if(storageFails)throw Error('Storage unavailable');data.set(key,value);}};
+globalThis.requestAnimationFrame=fn=>fn();globalThis.window={print(){throw Error('Use the isolated print document');}};
+globalThis.fetch=()=>{throw Error('Device settings must not access server');};globalThis.FormData=FormDataAdapter;
+const root=new Node(),modal=makeModal(),f=fixture();f.water.barcode='0012345';f.small.barcode='001500';f.fruit.barcode='FRUIT001';f.raw.barcode='RAW001';
+let state=createStockDemo(f.state),view='devices';const messages=[],actions=[];
+const printing=printDocument({base:{querySelector:q=>root.querySelector(q)||(q==='dialog[open]'&&modal.latest?.hasAttribute('open')?modal.latest:null),querySelectorAll:q=>root.querySelectorAll(q),createElement:tag=>{const n=new Node(tag);if(tag==='template')n.content=n;return n;}},height:()=>480});
+globalThis.document=printing.document;
+const ctx={getState:()=>state,modal:modal.modal,toast:message=>messages.push(message),render,refresh(){throw Error('Devices must not refresh server data');},mutate:async(action,payload)=>{actions.push({action,payload});state=applyStockDemoAction(state,action,payload);return true;}};
+function render(){root.innerHTML=opsPage(view,state,f.store);bindOps(view,state,f.store,ctx);}
+const field=name=>root.querySelector(`[name="${name}"]`);
+async function key(node,key,extra={}){let prevented=false;for(const fn of node.listeners.keydown||[])await fn({key,preventDefault(){prevented=true},...extra});return prevented;}
+async function scan(code){const input=root.querySelector('#order-scan');input.value=code;await key(input,'Enter');}
+try{
+ assert.deepEqual(readDeviceSettings(),defaultDeviceSettings());data.set(deviceSettingsKey,'bad-json');assert.deepEqual(readDeviceSettings(),defaultDeviceSettings());data.clear();
+ for(const value of [{printer:{paperWidth:42}},{printer:{fontSize:99}},{scanner:{terminator:'Escape'}},{scanner:{prefix:'\n'}},{printer:{autoPrint:'false'}}])assert.throws(()=>validateDeviceSettings(value));
+ assert.equal(normalizeBarcode('0012345\r\n'),'0012345');assert.equal(barcodeProduct(state,'0012345').product.id,f.water.id);
+ assert.throws(()=>barcodeProduct(state,'RAW001'),/tidak dijual/);assert.throws(()=>barcodeProduct(state,'unknown'),/belum terdaftar/);
+ state.products.push({...f.water,id:'duplicate'});assert.throws(()=>barcodeProduct(state,'0012345'),/lebih dari satu/);state.products.pop();
+ for(const access of [{sell:true},{master:true},{cashierOwner:true}])assert(visibleSections(access).flatMap(x=>x.pages).includes('devices'));
+ assert(!visibleSections({attendance:true}).flatMap(x=>x.pages).includes('devices'));
+ assert(!devicesPage({access:{attendance:true},me:{role:'staff'}}).includes('device-settings'));
+ render();assert(root.querySelector('#device-settings'));
+ field('paperWidth').value='58';field('fontSize').value='12';field('padding').value='2';field('footer').value='Terima kasih <b>bukan HTML</b>';field('autoPrint').checked=false;field('prefix').value='MD:';field('suffix').value='#';field('terminator').value='Tab';
+ const snapshot=JSON.stringify(state);
+ await root.querySelector('#device-settings').fire('submit');assert.equal(readDeviceSettings().printer.paperWidth,58);assert.equal(readDeviceSettings().printer.autoPrint,false);assert.equal(root.querySelector('#device-settings').dataset.dirty,'false');
+ const saved=data.get(deviceSettingsKey);storageFails=true;field('paperWidth').value='80';await root.querySelector('#device-settings').fire('submit');assert.match(root.querySelector('#device-save-status').textContent,/belum tersimpan/);assert.equal(data.get(deviceSettingsKey),saved);storageFails=false;field('paperWidth').value='58';
+ const input=root.querySelector('#device-scan-input');input.value='MD:0012345#';assert.equal(await key(input,'Enter'),false);assert.equal(await key(input,'Tab'),true);assert.match(root.querySelector('#device-scan-status').textContent,/Air mineral/);assert.equal(input.value,'');
+ input.value='0012345';await key(input,'Tab');assert.match(root.querySelector('#device-scan-status').textContent,/Awalan/);
+ input.value='MD:0012345#';field('scannerEnabled').checked=false;await key(input,'Tab');assert.match(root.querySelector('#device-scan-status').textContent,/dinonaktifkan/);field('scannerEnabled').checked=true;
+ await root.querySelector('#device-print-test').fire('click');const printed=printing.printed.at(-1);
+ assert.match(printed.text,/UJI PRINTER/);assert.match(printed.text,/Terima kasih <b>bukan HTML<\/b>/);assert.equal(printed.frame.contentDocument.body.querySelectorAll('.receipt-footer b').length,0);
+ assert.match(printed.css,/size: 58mm 128mm/);assert.match(printed.css,/font: 12px/);assert.match(printed.css,/padding: 2mm 2mm 2mm/);
+ assert.equal(JSON.stringify(state),snapshot);assert.equal(actions.length,0);assert(!hasOrderDraft());
+ await root.querySelector('#device-reset').fire('click');assert.equal(field('paperWidth').value,'80');assert.equal(readDeviceSettings().printer.paperWidth,58,'Reset requires save');assert.equal(root.querySelector('#device-settings').dataset.dirty,'true');
+ // Keep printer settings but clear the scanner framing for live POS integration.
+ saveDeviceSettings({...readDeviceSettings(),scanner:defaultDeviceSettings().scanner});
+ view='orders';clearOrderDraft();render();
+ await scan('FRUIT001');assert(!hasOrderDraft(),'Fruit scan opens required weight/batch form, without creating a stock line');assert.equal(root.querySelector('#order-line').hidden,false);assert.equal(field('productId').value,f.fruit.id);assert.equal(field('kg').value,'');assert.equal(field('pieces').value,'');assert(field('kg').focused);
+ await root.querySelector('#close-fruit-editor').fire('click');
+ await scan('0012345');await scan('0012345');assert(hasOrderDraft());assert.match(root.querySelector('#order-draft').textContent,/2 pcs/);assert.equal(root.querySelector('#order-scan').value,'');assert(root.querySelector('#order-scan').focused);
+ await scan('001500');assert.match(root.querySelector('#order-draft').textContent,/Durpas Bawor 500 gr/);assert(!modal.latest,'Exact variant barcode bypasses choosing an unrelated variant');
+ const before=root.querySelector('#order-draft').textContent;
+ await scan('RAW001');assert.match(root.querySelector('#order-scan-status').textContent,/tidak dijual/);assert.equal(root.querySelector('#order-draft').textContent,before);
+ const lot=state.unitLots.find(l=>l.productId===f.water.id&&l.storeId===f.store),stock=lot.qty;lot.qty=0;await scan('0012345');assert.equal(root.querySelector('#order-draft').textContent,before);assert.match(root.querySelector('#order-scan-status').textContent,/Belum ditambahkan/);lot.qty=stock;
+ const scanInput=root.querySelector('#order-scan');scanInput.value='0012345';await key(scanInput,'Enter',{repeat:true});await key(scanInput,'Enter',{isComposing:true});assert.equal(root.querySelector('#order-draft').textContent,before);
+ const blocking=modal.modal('Test modal','');await scan('0012345');assert.equal(root.querySelector('#order-draft').textContent,before);assert.match(root.querySelector('#order-scan-status').textContent,/Tutup pop-up/);blocking.close();
+ const printCount=printing.printed.length;
+ await root.querySelector('#save-order').fire('click');await modal.latest.querySelector('form').fire('submit');assert.match(modal.latest.textContent,/Konfirmasi pembayaran/);await modal.latest.querySelector('form').fire('submit');
+ assert.equal(actions.filter(x=>x.action==='order_create').length,1);assert.equal(printing.printed.length,printCount,'Auto print off is respected after payment');assert.match(modal.latest.textContent,/Pesanan berhasil/);assert.equal(qty(state,f.water,f.store),98);assert(!hasOrderDraft());
+ await modal.latest.querySelector('#result-receipt').fire('click');await modal.latest.querySelector('#print-order').fire('click');assert.equal(printing.printed.length,printCount+1);assert.match(printing.printed.at(-1).css,/size: 58mm/);assert.equal(actions.length,1,'Manual reprint must not post another transaction');
+ modal.latest.close();saveDeviceSettings({...readDeviceSettings(),scanner:{...defaultDeviceSettings().scanner,enabled:false}});render();assert(root.querySelector('#order-scan').disabled);assert(root.querySelector('#order-scan-add').disabled);
+ console.log('PASS device settings: validation/storage errors, local persistence, access, harmless scanner/print tests, 58 mm/font/margin/footer, exact variants, leading zeros, prefix/suffix and Tab, raw/unknown/duplicate rejection, fruit confirmation, stock/modal checks, repeat/IME, auto-print off and manual reprint. No physical hardware/render test.');
+}finally{clearOrderDraft();Object.assign(globalThis,original);for(const [key,value]of Object.entries(descriptors)){if(value)Object.defineProperty(Node.prototype,key,value);else delete Node.prototype[key];}}

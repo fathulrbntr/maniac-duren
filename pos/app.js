@@ -5,12 +5,13 @@ import {installMoneyInputs} from './money-input.mjs?v=44';
 installMoneyInputs();
 import { openWeighingReceipt, showWeighingHistory } from './receipt-weighing.mjs?v=19';
 import {inventoryPanel,bindInventory} from "./inventory-ui.mjs?v=45";
-import {opsPages,opsPage,bindOps,clearOrderDraft,hasOrderDraft} from './operations-ui.mjs?v=56';
+import {opsPages,opsPage,bindOps,clearOrderDraft,hasOrderDraft} from './operations-ui.mjs?v=58';
+import {printReceipt} from './receipt-printer.mjs?v=58';
 import {
   navigation,
   mayLeave,
   trackForms,
-} from "./navigation.mjs?v=54";
+} from "./navigation.mjs?v=58";
 import {
   prepareRetry,
   settleRetry,
@@ -81,6 +82,7 @@ let state = emptyState(),
 const app = document.querySelector("#app"),
   filter = { from: today(), to: today(), store: "", supplier: "" };
 const title = {
+  devices: "Printer & Scanner",
   discounts: "Diskon & Persetujuan", dashboard: "Dashboard", orders: "Kasir / POS", kitchen: "Kitchen Display",
   products: "Master Barang", stock: "Stok & Penerimaan", losses: "Waste & Penyusutan", waste: "Olah Reject",
   recipes: "Master Resep", production: "Produksi & Persiapan",
@@ -89,6 +91,7 @@ const title = {
   cashier: "Kasir buah cepat",
 };
 const paths = {
+  devices: "M6 9V3h12v6 M6 17H3V9h18v8h-3 M6 14h12v7H6z M17 12h1",
   discounts: "M19 5L5 19 M7 7h.01 M17 17h.01 M9 7a2 2 0 1 1-4 0 2 2 0 0 1 4 0 M19 17a2 2 0 1 1-4 0 2 2 0 0 1 4 0",
   dashboard: "M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z",
   orders: "M7 4H5v17l3-2 4 2 4-2 3 2V4h-2 M9 3h6v4H9z M8 11h8 M8 15h5",
@@ -807,14 +810,17 @@ function receipt(saleId) {
     "KEMBALIAN   " + money(s.change),
     ...(s.voided ? ["DIBATALKAN: " + s.voidReason] : []),
   ];
-  d.innerHTML = `<div class="modal-head"><h2>Struk transaksi</h2><button id="close-receipt" aria-label="Tutup">×</button></div><div class="receipt-print">${e(lines.join("\n"))}</div><div class="modal-actions">${!s.voided ? '<button class="danger" id="void-sale">Batalkan transaksi</button>' : ""}<button class="primary" id="print">Cetak</button></div>`;
+  d.innerHTML = `<div class="modal-head"><h2>Struk transaksi</h2><button id="close-receipt" aria-label="Tutup">×</button></div><div class="receipt-print receipt-plain">${e(lines.join("\n"))}</div><div class="modal-actions">${!s.voided ? '<button class="danger" id="void-sale">Batalkan transaksi</button>' : ""}<button class="primary" id="print">Cetak</button></div>`;
   document.body.append(d);
   d.oncancel = (ev) => {
     if (busy) ev.preventDefault();
   };
   d.onclose = () => d.remove();
   d.querySelector("#close-receipt").onclick = () => d.close();
-  d.querySelector("#print").onclick = () => window.print();
+  d.querySelector("#print").onclick = async () => {
+    const button=d.querySelector("#print");if(button.disabled)return;button.disabled=true;
+    try{await printReceipt(d.querySelector('.receipt-print'));}catch(error){toast(error.message);}finally{button.disabled=false;}
+  };
   d.querySelector("#void-sale")?.addEventListener("click", async () => {
     const reason = prompt("Alasan pembatalan (stok akan dikembalikan):");
     if (!reason?.trim()) return;

@@ -1,6 +1,6 @@
 // Use a separate, local print document so the POS dialog/viewport cannot add
 // height to the roll. Measurement and printing use exactly the same CSS.
-const paperWidthMm = 80;
+import {readDeviceSettings,validateDeviceSettings} from './device-settings.mjs?v=58';
 let lastFrame = null;
 let preparing = false;
 
@@ -13,15 +13,17 @@ export function receiptHeightMm(heightPx) {
   return Math.ceil((heightPx * 25.4 / 96 + 1) * 10) / 10;
 }
 
-const receiptCss = `
+const receiptCss = ({paperWidth,fontSize,padding}) => `
   :root { color-scheme: light; }
   * { box-sizing: border-box; }
-  html, body { width: ${paperWidthMm}mm; height: auto; min-height: 0;
+  html, body { width: ${paperWidth}mm; height: auto; min-height: 0;
     margin: 0; padding: 0; overflow: visible; background: #fff; color: #000; }
   .receipt-print { display: flow-root; width: 100%; height: auto; min-height: 0;
-    margin: 0; padding: 3mm 3mm 2mm; white-space: normal; overflow-wrap: anywhere;
-    font: 11px/1.35 'Courier New', monospace; }
-  h3 { margin: 0 0 6px; font-size: 13px; line-height: 1.35; }
+    margin: 0; padding: ${padding}mm ${padding}mm 2mm; white-space: normal; overflow-wrap: anywhere;
+    font: ${fontSize}px/1.35 'Courier New', monospace; }
+  h3 { margin: 0 0 6px; font-size: ${fontSize+2}px; line-height: 1.35; }
+  .receipt-plain { white-space: pre-wrap; }
+  .receipt-footer { white-space: pre-line; text-align: center; border-top: 1px dashed #777; padding-top: 6px; }
   p { margin: 6px 0; }
   .receipt-print > :last-child { margin-bottom: 0; }
   table { width: 100%; table-layout: fixed; border-collapse: collapse; font: inherit; }
@@ -34,7 +36,9 @@ const receiptCss = `
   tr { break-inside: avoid; }
 `;
 
-export async function printReceipt(receipt) {
+export async function printReceipt(receipt, settings = readDeviceSettings()) {
+  const printer = validateDeviceSettings(settings).printer;
+  const paperWidthMm = printer.paperWidth;
   if (preparing) throw Error('Struk sedang disiapkan. Tunggu sebentar.');
   if (!receipt?.textContent?.trim()) throw Error('Isi struk kosong. Buka ulang struk transaksi.');
   preparing = true;
@@ -56,10 +60,16 @@ export async function printReceipt(receipt) {
     doc.write('<!doctype html><html lang="id"><head><meta charset="utf-8"><title>Struk Maniac Duren</title></head><body></body></html>');
     doc.close();
     const style = doc.createElement('style');
-    style.textContent = receiptCss;
+    style.textContent = receiptCss(printer);
     doc.head.append(style);
     // Clone the rendered, escaped receipt only, without form controls/messages.
     const copy = doc.importNode(receipt, true);
+    if (printer.footer) {
+      const footer = doc.createElement('p');
+      footer.className = 'receipt-footer';
+      footer.textContent = printer.footer;
+      copy.append(footer);
+    }
     doc.body.append(copy);
     await doc.fonts?.ready;
     await new Promise(resolve => requestAnimationFrame(resolve));

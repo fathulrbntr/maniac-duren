@@ -1,7 +1,8 @@
 import {id,today,money,num,escape as e} from './core.mjs?v=10';
 import {isOwner,tableLabel,cashierQuote,checkoutTotals,findDiscountApproval,validPayment} from './cashier.mjs?v=54';
 import {checkOrder} from './order-stock.mjs?v=12';
-import {printReceipt} from './receipt-printer.mjs?v=56';
+import {printReceipt} from './receipt-printer.mjs?v=58';
+import {readDeviceSettings} from './device-settings.mjs?v=58';
 const statusName={pending:'Menunggu owner',approved:'Disetujui',rejected:'Ditolak',used:'Sudah dipakai'};
 const err=(d,error)=>{d.querySelector('#form-error').textContent=error.message;};
 const submitted=d=>d.querySelector('[type=submit]');
@@ -83,7 +84,8 @@ function paymentDialog(ctx,p,t,onSaved){
  f.onsubmit=ev=>{ev.preventDefault();try{const payment={...p,payment:method.value,paid:amount.value};validPayment(payment,t.total);advanced=true;d.close();confirmPayment(ctx,payment,t,onSaved);}catch(error){err(d,error);}};
 }
 function confirmPayment(ctx,p,t,onSaved){
- const s=ctx.getState(),d=ctx.modal('Konfirmasi pembayaran',`<p><b>${e(tableLabel(p.tableNo))}</b> · ${e(p.note||'Tanpa catatan')}</p><div class="checkout-review">${p.lines.map(l=>`<p>${e(s.products.find(x=>x.id===l.productId)?.name)} × ${num(l.qty)} <b>${money(l.qty*l.price)}</b></p>`).join('')}<hr><p>Subtotal <b>${money(t.subtotal)}</b></p><p>Diskon <b>−${money(t.discountAmount)}</b></p><p>Total dibayar <b>${money(t.total)}</b></p><p>${e(p.payment)} <b>${money(p.paid)}</b></p><p>Kembalian <b>${money(Number(p.paid)-t.total)}</b></p></div><p class="muted">${s.stockDemo?'Ini transaksi demo.':'Konfirmasi menyimpan transaksi dan membuka dialog cetak struk.'}</p><p id="confirmation-status" role="status"></p>`,'Konfirmasi & cetak struk');
+ const autoPrint=readDeviceSettings().printer.autoPrint;
+ const s=ctx.getState(),d=ctx.modal('Konfirmasi pembayaran',`<p><b>${e(tableLabel(p.tableNo))}</b> · ${e(p.note||'Tanpa catatan')}</p><div class="checkout-review">${p.lines.map(l=>`<p>${e(s.products.find(x=>x.id===l.productId)?.name)} × ${num(l.qty)} <b>${money(l.qty*l.price)}</b></p>`).join('')}<hr><p>Subtotal <b>${money(t.subtotal)}</b></p><p>Diskon <b>−${money(t.discountAmount)}</b></p><p>Total dibayar <b>${money(t.total)}</b></p><p>${e(p.payment)} <b>${money(p.paid)}</b></p><p>Kembalian <b>${money(Number(p.paid)-t.total)}</b></p></div><p class="muted">${s.stockDemo?'Ini transaksi demo.':(autoPrint?'Konfirmasi menyimpan transaksi dan membuka proses cetak struk.':'Konfirmasi menyimpan transaksi. Struk dapat dicetak dari detail pesanan.')}</p><p id="confirmation-status" role="status"></p>`,autoPrint?'Konfirmasi & cetak struk':'Konfirmasi pembayaran');
  let saving=false,done=false,cancelled=false,uncertain=false;const cancel=()=>{if(done||cancelled)return;cancelled=true;resultPopup(ctx,{success:false,title:uncertain?'Status pembayaran belum pasti':'Pembayaran dibatalkan',message:uncertain?'Periksa transaksi / pengiriman tertunda sebelum mencoba pembayaran lagi.':'Pesanan belum disimpan. Keranjang tetap tersedia.'});};
  d.addEventListener('close',cancel);d.querySelectorAll('.modal-actions .close').forEach(b=>b.textContent='Cancel');
  d.querySelector('form').onsubmit=async ev=>{
@@ -94,7 +96,7 @@ function confirmPayment(ctx,p,t,onSaved){
    const current=existing?{total:existing.total}:checkoutTotals(ctx.getState(),p);validPayment(p,current.total);
    if(current.total!==t.total)throw Error('Total berubah. Tutup dan periksa kembali pesanan');
    sent=true;const ok=await ctx.mutate(p.orderId?'order_pay':'order_create',p,{throwOnError:true});if(!ok)throw Error('Transaksi belum tersimpan');
-   done=true;onSaved();d.close();ctx.render();resultPopup(ctx,{success:true,title:'Pesanan berhasil',message:'Pembayaran tersimpan. Struk siap dicetak.',orderId:p.orderId||p.id,print:true});
+   done=true;onSaved();d.close();ctx.render();resultPopup(ctx,{success:true,title:'Pesanan berhasil',message:'Pembayaran tersimpan. Struk siap dicetak.',orderId:p.orderId||p.id,print:autoPrint});
   }catch(error){uncertain=uncertain||(!s.stockDemo&&sent&&!error.definitive);err(d,error);d.querySelector('#confirmation-status').textContent=uncertain?'Status belum pasti. Periksa transaksi sebelum membayar lagi.':'';}
   finally{saving=false;if(!done)submitted(d).disabled=false;}
  };

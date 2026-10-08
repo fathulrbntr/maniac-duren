@@ -4,11 +4,12 @@ export const sections = [
   { id: 'produksi', label: 'Produksi', pages: ['recipes', 'production'] },
   { id: 'laporan', label: 'Keuangan & Laporan', pages: ['finance', 'salesreport', 'trace', 'reports'] },
   { id: 'manajemen', label: 'Manajemen', pages: ['discounts', 'employees', 'attendance', 'stores', 'suppliers'] },
+  { id: 'pengaturan', label: 'Pengaturan', pages: ['devices'] },
   { id: 'bantuan', label: 'Bantuan', pages: ['guide'] },
 ];
 export function visibleSections(access) {
   const allowed = access ? {
-    discounts: access.cashierOwner, salesreport: access.reports, orders: access.sell, kitchen: access.kitchen || access.sell,
+    devices: access.cashierOwner || access.sell || access.master, discounts: access.cashierOwner, salesreport: access.reports, orders: access.sell, kitchen: access.kitchen || access.sell,
     dashboard: access.reports, stock: access.stock || access.produce,
     production: access.produce, waste: access.waste, losses: access.waste,
     reports: access.reports, finance: access.finance, trace: access.trace,

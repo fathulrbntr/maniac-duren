@@ -1,0 +1,83 @@
+MANIAC DUREN - PATCH 058: PRINTER & BARCODE SCANNER
+
+Pasang di atas web patch 056. Paket berisi file baru/berubah saja.
+Pembuka Windows dari paket 057 ikut disertakan agar tombol unduh bisa dipakai.
+Tidak ada SQL baru, dependensi baru, atau perubahan data stok/transaksi.
+
+MENU BARU
+Sidebar > Pengaturan > Printer & Scanner.
+Tersedia untuk owner, akun yang memiliki akses kasir, atau pengelola master.
+Pengaturan bersifat lokal untuk browser/profil komputer tersebut, berlaku
+pada seluruh outlet yang dibuka di perangkat itu. Komputer kasir lain dapat
+memakai pengaturan berbeda. Simpan ulang jika pindah profil browser.
+
+PRINTER
+- Kertas 58 / 80 mm.
+- Ukuran teks 10-14 px, margin isi 2-4 mm, dan pesan penutup maksimal 200 karakter.
+- Panjang halaman mengikuti tinggi isi termasuk pesan penutup.
+- Cetak setelah pembayaran ON: transaksi berhasil disimpan, lalu proses cetak
+  dibuka. OFF: tampil hasil berhasil; cetak manual tersedia pada detail struk.
+- Tombol Uji cetak memakai isian saat ini tanpa perlu menyimpan terlebih dahulu.
+  Hasil bertanda UJI PRINTER, tidak membuat transaksi dan tidak memotong stok.
+- Berlaku untuk cetak otomatis, cetak ulang pesanan, dan struk transaksi buah lama.
+- Browser biasa tetap menampilkan dialog cetak. Pengaturan ON tidak memberi
+  browser izin baru untuk melewati dialog tersebut. Mode cetak langsung tetap
+  menggunakan pembuka Windows dari 057 (tersedia pada bagian bantuan printer).
+- Browser tidak dapat membaca daftar printer Windows atau memastikan bahwa
+  kertas sudah benar-benar tercetak. Pilih printer melalui dialog browser atau
+  printer default Windows untuk pembuka cetak otomatis.
+- Gunakan tombol Cetak struk pada aplikasi, bukan Ctrl+P halaman utama.
+
+BARCODE SCANNER
+- USB/Bluetooth dengan mode keyboard (HID). Bluetooth dipasangkan di Windows.
+- Aktif/nonaktif, tombol akhir Enter atau Tab, awalan/akhiran tambahan opsional.
+- Uji scanner menampilkan kode dan produk yang cocok tanpa mengubah keranjang.
+- Di kasir tersedia kolom Scan barcode / SKU. Klik kolom itu lalu scan.
+- Barcode dicocokkan persis; nol di depan tetap dipertahankan. Bila tidak cocok
+  dengan barcode, sistem mencoba SKU tanpa membedakan huruf besar/kecil.
+- Kode suatu varian memilih varian itu secara langsung.
+- Produk biasa ditambahkan 1 sesuai satuan produknya. Scan ulang menambah 1 lagi.
+- Harga dan stok tetap diperiksa memakai alur kasir yang sudah ada.
+- Kategori yang sedang dipilih tidak membatasi hasil scan barcode.
+- Buah membuka form asal penerimaan, berat, dan butir; belum masuk keranjang
+  sampai kasir melengkapi dan mengonfirmasi form tersebut.
+- Kode tidak dikenal, kode ganda, bahan baku/produksi, dan stok tidak cukup
+  ditolak. Scanner tidak menangkap ketikan pada catatan/password/kolom lain.
+- Barcode timbangan yang menyimpan berat/harga belum didekode otomatis.
+  Fitur ini mencocokkan barcode produk dan SKU, bukan menebak pola label buah.
+
+PASANG
+1. Ekstrak ZIP ke root proyek dan timpa file yang sama.
+2. Commit/push, tunggu deployment, lalu Ctrl+Shift+R pada POS.
+3. Buka Pengaturan > Printer & Scanner. Pilih isian, uji, lalu Simpan pengaturan.
+4. Coba scan satu barcode yang terdaftar di Master Barang pada halaman Kasir.
+5. Coba cetak ulang transaksi tersimpan. Tidak perlu pembayaran baru.
+
+CETAK LANGSUNG WINDOWS
+Pada halaman pengaturan printer, buka bantuan lalu Unduh pembuka cetak otomatis.
+Pastikan POS-80C menjadi printer default Windows; matikan Let Windows manage
+my default printer. Jalankan file CMD dan login POS pada jendela barunya.
+Simpan pengaturan Printer & Scanner pada jendela itu karena profilnya terpisah.
+Jika nama printer berbeda, edit MD_POS_EXPECTED_PRINTER pada awal file CMD.
+Atur kertas thermal yang cocok pada Printing preferences printer. Jika driver
+menggunakan panjang kertas tetap, setelan roll/continuous/auto length tetap
+perlu dipilih bila tersedia. Matikan header/footer browser bila masih muncul.
+
+UJI LOKAL - LULUS
+node tests/devices.test.mjs
+node tests/receipt-print.test.mjs
+node tests/cashier-ui.test.mjs
+node tests/stock-demo-ui.test.mjs
+node tests/rollback-startup.test.mjs
+
+Mencakup validasi/simpan lokal, penyimpanan gagal, hak akses menu, kertas 58 mm,
+font/margin/pesan penutup, uji tanpa transaksi, awalan/akhiran/Tab/nol depan,
+varian tepat, input buah, pengecekan stok, popup aktif, repeat/IME, cetak otomatis
+OFF, cetak ulang manual, serta navigasi pengaturan tanpa pembacaan server baru.
+Uji melalui adapter DOM/pengukuran simulasi. Printer/scanner fisik dan tampilan
+browser belum diuji langsung pada perangkat pengguna.
+
+GIT
+git add pos tests scripts/windows PERANGKAT-POS.txt
+git commit -m "Add POS printer and barcode scanner settings"
+git push

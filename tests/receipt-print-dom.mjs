@@ -2,7 +2,7 @@
 import {Node} from './variant-dom.mjs';
 const container=tag=>{const n=new Node(tag);n.append=child=>{child.parent=n;n.children.push(child);};return n;};
 function clone(node){
- const copy=new Node(node.tagName,{...node.attrs});copy._text=node._text;
+ const copy=new Node(node.tagName,{...node.attrs});copy._text=node._text;copy.append=child=>{child.parent=copy;copy.children.push(child);};
  copy.children=node.children.map(child=>{const c=clone(child);c.parent=copy;return c;});return copy;
 }
 export function printDocument({base={},height=()=>384,onPrint=()=>{},fontsReady=Promise.resolve()}={}){

@@ -5,7 +5,7 @@ const form={querySelector:()=>button,setAttribute(){},removeAttribute(){}};
 const label={textContent:''};
 const themeButton={setAttribute(){},querySelector:()=>label};
 const app={innerHTML:''};
-const nav=['stores','suppliers'].map(view=>({dataset:{view}}));
+const nav=['stores','suppliers','devices'].map(view=>({dataset:{view}}));
 const elements={'#active-store':{value:'A'},'#logout':{}};
 const original={document:globalThis.document,window:globalThis.window,localStorage:globalThis.localStorage,fetch:globalThis.fetch,FormData:globalThis.FormData,setInterval:globalThis.setInterval};
 globalThis.HTMLInputElement=class {get value(){return this.raw||""}set value(v){this.raw=v}};
@@ -40,6 +40,7 @@ try{
  assert.equal(reads,1);
  nav[0].onclick();assert.match(app.innerHTML,/Master Store/);
  nav[1].onclick();assert.match(app.innerHTML,/Master Supplier/);
+ nav[2].onclick();assert.match(app.innerHTML,/Pengaturan perangkat/);assert.match(app.innerHTML,/device-scan-input/);
  assert.equal(reads,1,'menu navigation reuses loaded data without waiting for another request');
  assert(!app.innerHTML.includes('Membuka menu'));
  elements['#active-store'].onchange({target:{value:'B'}});

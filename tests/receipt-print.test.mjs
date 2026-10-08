@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {makeModal,Node} from './variant-dom.mjs';
 import {printDocument} from './receipt-print-dom.mjs';
-import {receiptHeightMm,printReceipt} from '../pos/receipt-printer.mjs?v=56';
+import {receiptHeightMm,printReceipt} from '../pos/receipt-printer.mjs?v=58';
 const {showReceipt}=await import(process.env.RECEIPT_UI_MODULE||'../pos/cashier-ui.mjs');
 const css=fs.readFileSync(new URL('../pos/pos.css',import.meta.url),'utf8');
 const exception=css.match(/body\s*>\s*(dialog\.[\w-]+)\s*\{\s*display:\s*block\s*!important/)[1];
