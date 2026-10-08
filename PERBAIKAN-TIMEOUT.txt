@@ -1,0 +1,73 @@
+MANIAC DUREN — PERBAIKAN PEMBACAAN FOTO SAAT LOGIN
+
+Pesan screenshot: canceling statement due to statement timeout.
+Pesan ini berasal dari query database yang melewati batas waktu. Pesan tersebut
+bukan bukti adanya transaksi gantung. Jumlah antrean kasir belum diverifikasi.
+
+TEMUAN YANG TERVERIFIKASI
+File app.js yang tersedia di maniacduren.com saat pemeriksaan cocok dengan
+rollback 027. Login menunggu RPC pos_read; setelah itu menu memakai data yang
+sudah diterima. Kode SQL yang tersedia membentuk JSON berisi foto produk dan
+profil karyawan sejak lapisan awal, kemudian memproses JSON besar tersebut
+berulang melalui wrapper pos_read_v8, v10, v14, v16, v18, v19, dan versi lanjut.
+
+PERUBAHAN
+Metadata produk dan karyawan disusun dahulu tanpa foto di lapisan awal.
+Foto asli disatukan kembali sekali di akhir pembacaan, setelah pembatasan akses.
+Respons akhir tetap sama, termasuk foto, urutan daftar, seluruh riwayat, dan
+batas akses per karyawan/outlet. Tampilan dan alur POS 027 tidak diubah.
+Tidak menghapus data, tidak menaikkan batas timeout, tidak memotong laporan,
+dan tidak mengaktifkan ulang PWA atau loading per menu.
+
+CARA PASANG
+1. Ekstrak ZIP ke folder utama proyek, sejajar package.json.
+2. Buka database/fix-pos-read-photos.sql di VS Code. Salin SELURUH isinya.
+3. Supabase > SQL Editor > New query > tempel > Run.
+   Jalankan hanya file perbaikan ini. Jangan menjalankan ulang database/pos.sql
+   atau file reset pada database aktif.
+4. Setelah SQL berhasil, coba login lagi. Perubahan database berlaku langsung;
+   tidak perlu menunggu deployment web untuk mencoba hasilnya.
+5. Simpan file perbaikan ke Git:
+
+   git add database/fix-pos-read-photos.sql database/undo-pos-read-photos.sql database/check-pos-read.sql tests/read-photos.test.mjs PERBAIKAN-TIMEOUT.txt
+   git commit -m "Reduce repeated photo processing in POS database reads"
+   git push
+
+JIKA SQL MENOLAK ATAU LOGIN MASIH TIMEOUT
+Jalankan database/check-pos-read.sql di SQL Editor dan kirim seluruh hasilnya.
+File ini hanya membaca ukuran foto, jumlah record, status pemasangan perbaikan,
+alur panggilan fungsi dan query yang sedang menunggu. Tidak membaca isi foto,
+tidak mencantumkan kredensial dan tidak mengubah transaksi.
+SQL perbaikan menolak struktur fungsi yang tidak sesuai dan membatalkan perubahan
+secara atomik. Perbaikan dapat dijalankan ulang.
+
+OPSIONAL: BATALKAN PERBAIKAN INI
+Hanya jika ingin membatalkan perubahan pembaca foto ini, jalankan SELURUH
+isi database/undo-pos-read-photos.sql. Jangan jalankan file undo saat pemasangan.
+Fungsi asal sudah dicadangkan sebelum penggantian; data operasional tetap utuh.
+
+HASIL UJI LOKAL
+- Respons sebelum/sesudah identik untuk owner dan kasir, termasuk foto.
+- Akun tanpa login serta akses helper privat tetap ditolak sesuai
+  pemeriksaan autentikasi; pembatasan karyawan/outlet/biaya tidak berubah.
+- Aman dijalankan ulang; undo dan pemasangan kembali lulus.
+- Stok, biaya, pesanan kasir/kitchen, waste, pengiriman ulang, hak akses/outlet
+  serta absensi lulus pada skema 027 dan skema paket terbaru.
+- Data uji 20 karyawan dan 5 produk dengan foto menghasilkan respons sekitar
+  6,56 MB. Pengukuran query lokal pada skema terbaru: 92 ms sebelum, 34 ms sesudah
+  (sekitar 2,7 kali lebih cepat). Angka ini bukan pengukuran server produksi.
+- Diagnosis read-only diperiksa pada PostgreSQL lokal (PGlite).
+
+BATAS VERIFIKASI
+Tidak ada akses langsung ke sesi kasir atau database Supabase produksi. SQL ini
+belum dijalankan di server Anda. Pemrosesan foto berulang telah dibuktikan pada
+kode dan uji lokal; beban server, antrean lock, jumlah record sebenarnya dan
+seluruh penyebab timeout produksi masih memerlukan hasil diagnosis server.
+
+Pengujian setelah npm ci:
+  node tests/read-photos.test.mjs
+Gunakan POS_BASELINE_SQL untuk memilih file instalasi skema lain pada fixture uji.
+Jangan menjalankan file instalasi fixture di database operasional.
+
+Referensi pesan error Supabase:
+https://supabase.com/docs/guides/troubleshooting/canceling-statement-due-to-statement-timeout-581wFv
