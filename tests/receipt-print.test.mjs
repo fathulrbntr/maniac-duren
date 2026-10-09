@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {makeModal,Node} from './variant-dom.mjs';
 import {printDocument} from './receipt-print-dom.mjs';
-import {receiptHeightMm,printReceipt} from '../pos/receipt-printer.mjs?v=58';
+import {receiptHeightMm,printReceipt} from '../pos/receipt-printer.mjs?v=64';
 const {showReceipt}=await import(process.env.RECEIPT_UI_MODULE||'../pos/cashier-ui.mjs');
 const css=fs.readFileSync(new URL('../pos/pos.css',import.meta.url),'utf8');
 const exception=css.match(/body\s*>\s*(dialog\.[\w-]+)\s*\{\s*display:\s*block\s*!important/)[1];
@@ -12,7 +12,7 @@ const order={id:'receipt-order',store_id:'store',business_date:'2026-10-08',stat
 const state={stores:[{id:'store',name:'Depok'}],orders:[order]};
 let measuredHeight=384,printerError=false;
 const printDom=printDocument({height:()=>measuredHeight,onPrint:({text,css})=>{
- assert.match(text,/MANIAC DUREN/);assert(!text.includes('Cetak struk'));assert(!text.includes('Transaksi sudah tersimpan'));
+ assert.match(text,/Depok/);assert(!text.includes('Cetak struk'));assert(!text.includes('Transaksi sudah tersimpan'));
  assert.match(css,new RegExp(`size: 80mm ${receiptHeightMm(measuredHeight)}mm; margin: 0;`));
  if(printerError)throw Error('Printer tidak tersedia');
 }});

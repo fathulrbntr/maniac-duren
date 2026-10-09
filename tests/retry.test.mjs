@@ -79,3 +79,8 @@ assert.equal(state.lots.find((x) => x.id === source.id).kg, source.kg);
 console.log(
   "PASS: uncertain retry, stable IDs, session/account isolation, reconciliation, definitive failure, transfer availability date.",
 );
+
+setRetryScope('store-profile');
+prepareRetry('store_save',{id:'edit-store',storeId:'depok',name:'Outlet Depok',address:'Depok',phone:'0812'});
+assert(reconcileRetry({stores:[{id:'depok',profileVersion:'edit-store'}],events:[]}),'Reconcile profile save even without trace permission');
+assert.equal(pendingRetry(),null);

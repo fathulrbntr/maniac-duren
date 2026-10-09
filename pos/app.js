@@ -5,8 +5,11 @@ import {installMoneyInputs} from './money-input.mjs?v=44';
 installMoneyInputs();
 import { openWeighingReceipt, showWeighingHistory } from './receipt-weighing.mjs?v=19';
 import {inventoryPanel,bindInventory} from "./inventory-ui.mjs?v=62";
-import {opsPages,opsPage,bindOps,clearOrderDraft,hasOrderDraft} from './operations-ui.mjs?v=63';
-import {printReceipt} from './receipt-printer.mjs?v=58';
+import {opsPages,opsPage,bindOps,clearOrderDraft,hasOrderDraft} from './operations-ui.mjs?v=64';
+import {printReceipt} from './receipt-printer.mjs?v=64';
+import {storesPage,storeDialog} from './store-settings.mjs?v=64';
+import {receiptHeader,fillReceiptLogo} from './store-profile.mjs?v=64';
+const storeContext=()=>({modal,mutate,render,toast,demo:mode==='stock-demo',loadStoreLogo:(storeId,version)=>request('/rest/v1/rpc/pos_store_logo',{store_id:storeId,expected_version:version||null})});
 import {
   navigation,
   mayLeave,
@@ -18,7 +21,7 @@ import {
   reconcileRetry,
   pendingRetry,
   setRetryScope,
-} from "./retry.mjs?v=63";
+} from "./retry.mjs?v=64";
 import {batchReportPage,bindBatchReport} from './batch-report-ui.mjs?v=63';
 import { wastePage, bindWaste } from "./waste-ui.mjs?v=63";
 import {
@@ -134,7 +137,7 @@ function toast(text) {
   toast.timer = setTimeout(() => (t.style.display = "none"), 5000);
 }
 let stockDemoModule,demoSource=null;
-const demoEngine=()=>stockDemoModule ||= import('./stock-demo.mjs?v=63').catch(error=>{stockDemoModule=null;throw error;});
+const demoEngine=()=>stockDemoModule ||= import('./stock-demo.mjs?v=64').catch(error=>{stockDemoModule=null;throw error;});
 function assertDemoRequest(path,allowDemoRead){
   if(mode==='stock-demo'&&!(allowDemoRead&&['/rest/v1/rpc/pos_read','/auth/v1/token?grant_type=refresh_token'].includes(path)))throw Error('Mode demo tidak mengirim perubahan ke database asli.');
 }
@@ -445,6 +448,7 @@ function productsPage() {
   return catalogPanel(state.products,catalogFilter,state,store);
 }
 function directoryPage(kind) {
+  if(kind === "stores")return storesPage(state);
   const isStore = kind === "stores",
     label = isStore ? "Store" : "Supplier";
   return `<div class="intro"><div><h2>Master ${label}</h2><p class="muted">${isStore ? "Ubah nama toko dan lokasi melalui tombol Edit toko." : "Kelola supplier, nomor telepon, dan alamat."}</p></div><button class="primary" data-master="${kind}">Tambah ${label}</button></div><section class="panel"><div class="table-wrap"><table><thead><tr><th>NAMA</th>${isStore ? "<th>LOKASI</th>" : "<th>NOMOR TELEPON</th><th>ALAMAT</th>"}<th>ACTION</th></tr></thead><tbody>${state[kind].map((p) => `<tr><td><b>${e(p.name)}</b></td>${isStore ? `<td>${e(p.location || "—")}</td>` : `<td>${e(p.phone || "—")}</td><td>${e(p.address || "—")}</td>`}<td><button class="small" data-edit-kind="${kind}" data-edit-id="${e(p.id)}">${icon("edit")}${isStore ? "Edit toko" : "Edit"}</button></td></tr>`).join("") || `<tr><td colspan="${isStore ? 3 : 4}" class="empty">Belum ada ${label.toLowerCase()}.</td></tr>`}</tbody></table></div></section>`;
@@ -545,7 +549,7 @@ function render() {
       }
     };
   }
-  bindOps(view,state,store,{modal,mutate,render,toast,refresh,getState:()=>state,employeeDocument:employeeId=>request("/rest/v1/rpc/pos_employee_document",{employee_id:employeeId}),createAccount:async(employeeId,password,action="create")=>{
+  bindOps(view,state,store,{...storeContext(),refresh,getState:()=>state,employeeDocument:employeeId=>request("/rest/v1/rpc/pos_employee_document",{employee_id:employeeId}),createAccount:async(employeeId,password,action="create")=>{
     if(mode!=="live")throw Error("Akun hanya dapat dibuat saat login database.");
     await request("/rest/v1/rpc/pos_account_target",{employee_id:employeeId});
     if(mode!=="live")throw Error("Akun hanya dapat dibuat saat login database.");
@@ -771,6 +775,7 @@ function movement() {
   };
 }
 function addMaster(kind) {
+  if(kind === "stores")return storeDialog(state,{...storeContext(),render:()=>{store=store||state.stores[0]?.id||"";render();}});
   if (kind === "products")
     return productDialog({ state, store, modal, mutate, render, toast });
   const masterId = id();
@@ -801,8 +806,6 @@ function receipt(saleId) {
   const d = document.createElement("dialog");
   d.className = "modal receipt-dialog";
   const lines = [
-    "MANIAC DUREN",
-    name("stores", s.storeId),
     "#" + short(s.id) + " · " + s.date,
     "--------------------------------",
     ...s.lines.flatMap((l) => [
@@ -817,16 +820,18 @@ function receipt(saleId) {
     "KEMBALIAN   " + money(s.change),
     ...(s.voided ? ["DIBATALKAN: " + s.voidReason] : []),
   ];
-  d.innerHTML = `<div class="modal-head"><h2>Struk transaksi</h2><button id="close-receipt" aria-label="Tutup">×</button></div><div class="receipt-print receipt-plain">${e(lines.join("\n"))}</div><div class="modal-actions">${!s.voided ? '<button class="danger" id="void-sale">Batalkan transaksi</button>' : ""}<button class="primary" id="print">Cetak</button></div>`;
+  d.innerHTML = `<div class="modal-head"><h2>Struk transaksi</h2><button id="close-receipt" aria-label="Tutup">×</button></div><div class="receipt-print">${receiptHeader(state.stores.find(x=>x.id===s.storeId))}<div class="receipt-plain">${e(lines.join("\n"))}</div></div><div class="modal-actions">${!s.voided ? '<button class="danger" id="void-sale">Batalkan transaksi</button>' : ""}<button class="primary" id="print">Cetak</button></div>`;
   document.body.append(d);
   d.oncancel = (ev) => {
     if (busy) ev.preventDefault();
   };
   d.onclose = () => d.remove();
   d.querySelector("#close-receipt").onclick = () => d.close();
+  const outlet=state.stores.find(x=>x.id===s.storeId);
+  fillReceiptLogo(d,outlet,storeContext()).catch(error=>toast(error.message));
   d.querySelector("#print").onclick = async () => {
     const button=d.querySelector("#print");if(button.disabled)return;button.disabled=true;
-    try{await printReceipt(d.querySelector('.receipt-print'));}catch(error){toast(error.message);}finally{button.disabled=false;}
+    try{await fillReceiptLogo(d,outlet,storeContext());if(d.hasAttribute('open'))await printReceipt(d.querySelector('.receipt-print'));}catch(error){toast(error.message);}finally{button.disabled=false;}
   };
   d.querySelector("#void-sale")?.addEventListener("click", async () => {
     const reason = prompt("Alasan pembatalan (stok akan dikembalikan):");
@@ -905,6 +910,7 @@ function masterDetailFields(kind, p = {}) {
     : `${field("Nomor telepon (opsional)", `<input name="phone" type="tel" maxlength="40" value="${e(p.phone || "")}" placeholder="08… atau +62…">`)}${field("Alamat supplier (opsional)", `<input name="address" maxlength="300" value="${e(p.address || "")}" placeholder="Alamat lengkap">`)}`;
 }
 function editMasterDetails(kind, recordId) {
+  if(kind === "stores")return storeDialog(state,storeContext(),state.stores.find(s=>s.id===recordId));
   const p = state[kind]?.find((x) => x.id === recordId);
   if (!p || !["stores", "suppliers"].includes(kind)) return;
   const editRequestId = id();

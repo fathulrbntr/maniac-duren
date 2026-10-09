@@ -1,0 +1,14 @@
+.store-dialog{width:min(760px,calc(100vw - 32px));max-width:760px}
+.store-editor{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:24px;align-items:start}
+.store-fields{min-width:0}.store-fields textarea{resize:vertical;min-height:88px}
+.store-fields [data-store-logo-status]{font-size:12px;overflow-wrap:anywhere}
+.store-preview> b{display:block;margin-bottom:12px}.store-preview{min-width:0}
+.store-receipt-preview{background:#fff;color:#000;border:1px solid #ddd;border-radius:8px;padding:20px 14px;max-width:302px;margin:auto;font:12px/1.35 'Courier New',monospace}
+.receipt-store-header{text-align:center;white-space:normal;overflow-wrap:anywhere;margin-bottom:12px}
+.receipt-store-header h3{margin:0 0 6px;font-size:1.15em}.receipt-store-header p{margin:4px 0}
+.receipt-store-header .receipt-store-address{white-space:pre-line}
+.receipt-store-logo{display:block;width:auto;height:auto;max-width:100%;max-height:28mm;object-fit:contain;margin:0 auto 8px}
+.store-address-cell{white-space:pre-line;max-width:420px;overflow-wrap:anywhere}
+@media(max-width:640px){.store-editor{grid-template-columns:1fr;gap:16px}.store-dialog{width:calc(100vw - 20px)}.store-receipt-preview{width:100%}}
+.receipt-dialog .receipt-print{background:#fff;color:#000;padding:16px;white-space:normal}
+.receipt-dialog .receipt-plain{white-space:pre-wrap}

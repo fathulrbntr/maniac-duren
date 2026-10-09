@@ -13,7 +13,8 @@
     "test:employees:browser": "node tests/employees-browser.cjs",
     "test:weighing": "node tests/receipt-weighing.test.mjs && node tests/money-input.test.mjs",
     "test:rollback": "node tests/rollback-startup.test.mjs && node tests/cache-recovery.test.mjs && node tests/operations.test.mjs",
-    "test:reject": "node tests/reject-flow-sql.test.mjs && node tests/reject-flow-ui.test.mjs && node tests/batch-report.test.mjs"
+    "test:reject": "node tests/reject-flow-sql.test.mjs && node tests/reject-flow-ui.test.mjs && node tests/batch-report.test.mjs",
+    "test:stores": "node tests/store-receipt-sql.test.mjs && node tests/store-receipt-ui.test.mjs && node tests/receipt-print.test.mjs"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.8",

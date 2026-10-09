@@ -1,0 +1,52 @@
+import assert from 'node:assert/strict';
+import {randomUUID as id} from 'node:crypto';
+import {emptyState} from '../pos/core.mjs';
+import {storeProfile,storeLogo,receiptHeader,loadStoreLogo} from '../pos/store-profile.mjs?v=64';
+import {storesPage,storeDialog} from '../pos/store-settings.mjs';
+import {createStockDemo,applyStockDemoAction} from '../pos/stock-demo.mjs';
+import {showReceipt} from '../pos/cashier-ui.mjs';
+import {printReceipt,waitForReceiptImages} from '../pos/receipt-printer.mjs?v=64';
+import {makeModal,Node} from './variant-dom.mjs';
+import {printDocument} from './receipt-print-dom.mjs';
+const logo='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jR1kAAAAASUVORK5CYII=';
+const original={...emptyState(),stores:[{id:id(),name:'Toko lama',location:'Alamat lama',phone:'08123456',logo,hasLogo:true}],me:{id:id(),role:'owner'},access:{master:true,sell:true}};
+const preserved=structuredClone(original);let state=createStockDemo(original),posts=[],messages=[],m=makeModal();
+const before={document:globalThis.document,FileReader:globalThis.FileReader,createImageBitmap:globalThis.createImageBitmap,fetch:globalThis.fetch,requestAnimationFrame:globalThis.requestAnimationFrame};
+const modal=(...args)=>{const d=m.modal(...args);for(const input of d.querySelectorAll('textarea'))input.value=input.textContent;return d;};
+const ctx={modal,toast:x=>messages.push(x),render(){},getState:()=>state,async mutate(action,p){posts.push({action,p});state=applyStockDemoAction(state,action,p);return true;}};
+const field=(d,key)=>d.querySelector(`[name="${key}"]`),submit=d=>d.querySelector('form').fire('submit');
+globalThis.fetch=()=>{throw Error('No fetch from a demo or print document');};
+globalThis.createImageBitmap=async()=>({width:1,height:1,close(){}});
+globalThis.FileReader=class{readAsDataURL(blob){blob.arrayBuffer().then(b=>{this.result='data:'+blob.type+';base64,'+Buffer.from(b).toString('base64');this.onload();});}};
+try{
+ let d=storeDialog(state,ctx,state.stores[0]);assert.equal(field(d,'address').value,'Alamat lama');assert(d.querySelector('.store-receipt-preview img'));
+ field(d,'name').value='MANIAC DUREN JABABEKA';field(d,'address').value='Jl. Durian No. 10\nCikarang';field(d,'phone').value='0812-3456-7890';await field(d,'name').fire('input');
+ assert.match(d.querySelector('.store-receipt-preview').textContent,/Cikarang/);assert.match(d.querySelector('.store-receipt-preview').textContent,/0812-3456/);
+ await Promise.all([submit(d),submit(d)]);assert(d.closed);assert.equal(posts.length,1);assert.equal(posts[0].action,'store_save');assert(!Object.hasOwn(posts[0].p,'logo'),'Omit unchanged logo');assert.equal(state.stores[0].logo,logo);assert.equal(state.stores[0].name,'MANIAC DUREN JABABEKA');assert.match(storesPage(state),/0812-3456-7890/);
+ d=storeDialog(state,ctx,state.stores[0]);await d.querySelector('[data-store-logo-remove]').fire('click');assert(!d.querySelector('.store-receipt-preview img'));await submit(d);assert.equal(state.stores[0].logo,'');assert.equal(state.stores[0].hasLogo,false);
+ d=storeDialog(state,ctx,state.stores[0]);const input=d.querySelector('[data-store-logo-file]');input.files=[new Blob([Buffer.from(logo.split(',')[1],'base64')],{type:'image/png'})];await input.fire('change');assert.match(d.querySelector('[data-store-logo-status]').textContent,/Logo siap/);assert(d.querySelector('.store-receipt-preview img'));await submit(d);assert.equal(state.stores[0].logo,logo);
+ d=storeDialog(state,ctx,state.stores[0]);field(d,'phone').value='';await submit(d);assert(!d.closed);assert.match(d.querySelector('#form-error').textContent,/Nomor telepon wajib/);d.close();
+ d=storeDialog(state,ctx);field(d,'name').value='Outlet baru';field(d,'address').value='Depok';field(d,'phone').value='+62 812 222';await submit(d);assert(state.stores.some(x=>x.name==='Outlet baru'));
+ assert.deepEqual(original,preserved,'Demo edits cannot change the live source');
+ assert.throws(()=>storeProfile({name:'',address:'x',phone:'1'}),/Nama toko/);assert.throws(()=>storeLogo('https://example.test/logo.png'));assert.throws(()=>storeLogo('data:image/png;base64,YWJjZA=='));
+ assert(!receiptHeader({name:'<script>alert(1)</script>',address:'<img src=x>',phone:'" onerror="bad'}).includes('<script>'));
+ assert.equal(storeDialog({...original,storeProfileVersion:63},ctx,original.stores[0]),undefined);assert.match(messages.at(-1),/SQL store-receipt-064/);
+ // Lazy, versioned loading; no logo request in ordinary store-page rendering.
+ const outlet={id:id(),name:'TOKO TRANSAKSI',address:'Jl. Transaksi 123\nBekasi',phone:'080001234',hasLogo:true,logoVersion:id()};
+ let reads=0;const loader={async loadStoreLogo(key,version){reads++;assert.equal(key,outlet.id);assert.equal(version,outlet.logoVersion);return logo;}};
+ storesPage({stores:[outlet]});assert.equal(reads,0);
+ await Promise.all([loadStoreLogo(outlet,loader),loadStoreLogo(outlet,loader)]);assert.equal(reads,1);
+ const order={id:id(),store_id:outlet.id,business_date:'2026-10-09',status:'paid',total:50000,subtotal:50000,paid:50000,payment:'Tunai',table_no:2,note:'',lines:[{name:'Durpas Bawor 500 gr',qty:1,unit:'pcs',price:50000}]};
+ state={stores:[{id:id(),name:'OUTLET AKTIF YANG BERBEDA'},outlet],orders:[order]};
+ let decoded=0,releaseLogo;const printing=printDocument({decodeImage:async()=>{await new Promise(resolve=>{releaseLogo=resolve;});decoded++;},height:root=>{assert.equal(decoded,1,'Measure only after the image finishes decoding');assert(root.querySelector('img'));return 420;}});
+ globalThis.document=printing.document;globalThis.requestAnimationFrame=fn=>{fn();};
+ const receiptContext={...ctx,...loader};d=showReceipt(receiptContext,order.id);const pending=d.querySelector('#print-order').fire('click');
+ for(let i=0;i<20&&!releaseLogo;i++)await Promise.resolve();assert(releaseLogo);assert.equal(printing.printed.length,0);releaseLogo();await pending;
+ const printed=printing.printed[0];assert.match(printed.text,/TOKO TRANSAKSI/);assert.match(printed.text,/Jl. Transaksi 123/);assert.match(printed.text,/080001234/);assert(!printed.text.includes('OUTLET AKTIF YANG BERBEDA'));assert.match(printed.css,/max-height: 28mm/);assert.equal(reads,1,'Reuse already-loaded logo');
+ // Logo errors stop incomplete printing and allow a clean retry.
+ const imageRoot={querySelectorAll:()=>[{complete:true,naturalWidth:0}]};await assert.rejects(waitForReceiptImages(imageRoot),/Logo struk belum siap/);
+ const badStore={...outlet,id:id(),logoVersion:id()},bad={...loader,loadStoreLogo:async()=>{throw Error('Jaringan terputus');}};
+ await assert.rejects(loadStoreLogo(badStore,bad),/Jaringan/);assert.equal(await loadStoreLogo(badStore,{loadStoreLogo:async()=>logo}),logo);
+ assert.equal(await loadStoreLogo({...outlet,id:id()},{demo:true,loadStoreLogo:()=>{throw Error('No network in demo');}}),'');
+ console.log('PASS store/receipt UI: edit/create/remove/upload/preview, duplicate guard, required fields, demo isolation, escaped header, migration gate, lazy versioned logo cache, exact transaction outlet, image before measurement, failed image handling and retry. DOM adapter only.');
+}finally{Object.assign(globalThis,before);}

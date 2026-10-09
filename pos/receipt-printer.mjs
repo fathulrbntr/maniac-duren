@@ -23,6 +23,11 @@ const receiptCss = ({paperWidth,fontSize,padding}) => `
     font: ${fontSize}px/1.35 'Courier New', monospace; }
   h3 { margin: 0 0 6px; font-size: ${fontSize+2}px; line-height: 1.35; }
   .receipt-plain { white-space: pre-wrap; }
+  .receipt-store-header { text-align: center; white-space: normal; margin-bottom: 12px; }
+  .receipt-store-header p { margin: 4px 0; }
+  .receipt-store-address { white-space: pre-line; }
+  .receipt-store-logo { display: block; width: auto; height: auto; max-width: 100%;
+    max-height: 28mm; object-fit: contain; margin: 0 auto 8px; }
   .receipt-footer { white-space: pre-line; text-align: center; border-top: 1px dashed #777; padding-top: 6px; }
   p { margin: 6px 0; }
   .receipt-print > :last-child { margin-bottom: 0; }
@@ -35,6 +40,19 @@ const receiptCss = ({paperWidth,fontSize,padding}) => `
   thead { display: table-header-group; }
   tr { break-inside: avoid; }
 `;
+
+export async function waitForReceiptImages(root) {
+  await Promise.all([...root.querySelectorAll('img')].map(img=>new Promise((resolve,reject)=>{
+    const error=()=>Error('Logo struk belum siap dicetak. Coba cetak ulang.');
+    if(img.complete){if(img.naturalWidth>0)resolve();else reject(error());return;}
+    let settled=false;
+    const finish=failed=>{if(settled)return;settled=true;clearTimeout(timer);img.removeEventListener?.('load',loaded);img.removeEventListener?.('error',failedLoad);failed?reject(error()):resolve();};
+    const loaded=()=>finish(!(img.naturalWidth>0)),failedLoad=()=>finish(true);
+    const timer=setTimeout(failedLoad,10000);
+    img.addEventListener('load',loaded,{once:true});img.addEventListener('error',failedLoad,{once:true});
+    if(typeof img.decode==='function')img.decode().then(loaded,failedLoad);
+  })));
+}
 
 export async function printReceipt(receipt, settings = readDeviceSettings()) {
   const printer = validateDeviceSettings(settings).printer;
@@ -71,6 +89,7 @@ export async function printReceipt(receipt, settings = readDeviceSettings()) {
       copy.append(footer);
     }
     doc.body.append(copy);
+    await waitForReceiptImages(copy);
     await doc.fonts?.ready;
     await new Promise(resolve => requestAnimationFrame(resolve));
     const height = receiptHeightMm(copy.getBoundingClientRect().height);

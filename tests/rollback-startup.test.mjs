@@ -38,7 +38,7 @@ try{
  await form.onsubmit({currentTarget:form,preventDefault(){}});
  assert.match(app.innerHTML,/sidebar-header/);assert.match(app.innerHTML,/sidebar-account/);
  assert.equal(reads,1);
- nav[0].onclick();assert.match(app.innerHTML,/Master Store/);
+ nav[0].onclick();assert.match(app.innerHTML,/Data toko/);
  nav[1].onclick();assert.match(app.innerHTML,/Master Supplier/);
  nav[2].onclick();assert.match(app.innerHTML,/Pengaturan perangkat/);assert.match(app.innerHTML,/device-scan-input/);
  assert.equal(reads,1,'menu navigation reuses loaded data without waiting for another request');

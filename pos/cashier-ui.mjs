@@ -1,7 +1,8 @@
 import {id,today,money,num,escape as e} from './core.mjs?v=10';
 import {isOwner,tableLabel,cashierQuote,checkoutTotals,findDiscountApproval,validPayment} from './cashier.mjs?v=54';
 import {checkOrder} from './order-stock.mjs?v=12';
-import {printReceipt} from './receipt-printer.mjs?v=58';
+import {printReceipt} from './receipt-printer.mjs?v=64';
+import {receiptHeader,fillReceiptLogo} from './store-profile.mjs?v=64';
 import {readDeviceSettings} from './device-settings.mjs?v=58';
 const statusName={pending:'Menunggu owner',approved:'Disetujui',rejected:'Ditolak',used:'Sudah dipakai'};
 const err=(d,error)=>{d.querySelector('#form-error').textContent=error.message;};
@@ -19,15 +20,17 @@ export function resultPopup(ctx,{success,title,message,orderId,print=false}){
 }
 export function showReceipt(ctx,orderId,autoPrint=false,result){
  const s=ctx.getState(),o=s.orders.find(x=>x.id===orderId);if(!o)return ctx.toast('Pesanan tidak ditemukan');
- const d=ctx.modal(result?.title||'Detail / struk',`${result?`<p class="checkout-success" role="status">✓ ${e(result.message)}</p>`:''}<div class="receipt-print">${s.stockDemo?'<h3>DEMO · BUKAN TRANSAKSI NYATA</h3>':''}<h3>MANIAC DUREN</h3>${o.status==='cancelled'?'<h3>VOID / DIBATALKAN</h3>':''}<p>${e(s.stores.find(x=>x.id===o.store_id)?.name)} · ${e(o.business_date)}<br>#${e(o.id)}<br><b>${e(tableLabel(o.table_no))}</b><br>${e(o.note)}</p><table><thead><tr><th>Produk</th><th>Jumlah</th><th>Subtotal</th></tr></thead><tbody>${o.lines.map(l=>`<tr><td>${e(l.name)}</td><td>${num(l.qty)} ${e(l.unit)}</td><td>${money(l.qty*l.price)}</td></tr>`).join('')}</tbody></table><p>Subtotal: ${money(o.subtotal??o.total)}${o.discount?`<br>Diskon ${e(o.discount.name)}: −${money(o.discount.amount)}<br>Disetujui: ${e(o.discount.approvedName)}`:''}<br><b>Total: ${money(o.total)}</b><br>${e(o.payment)} · Diterima ${money(o.paid)}<br>Kembalian: ${money(Number(o.paid)-o.total)}</p>${o.void_meta?`<p>Alasan void: ${e(o.void_meta.reason)}<br>Pelaksana: ${e(o.void_meta.byName)}<br>Persetujuan: ${e(o.void_meta.approvedName)}</p>`:''}</div><p class="muted no-print">Transaksi sudah tersimpan. Menutup dialog printer hanya membatalkan cetak.</p><button id="print-order" type="button">Cetak struk</button>`,'Selesai');
+ const outlet=s.stores.find(x=>x.id===o.store_id),logoContext={...ctx,demo:!!s.stockDemo};
+ const d=ctx.modal(result?.title||'Detail / struk',`${result?`<p class="checkout-success" role="status">✓ ${e(result.message)}</p>`:''}<div class="receipt-print">${s.stockDemo?'<h3>DEMO · BUKAN TRANSAKSI NYATA</h3>':''}${receiptHeader(outlet)}${o.status==='cancelled'?'<h3>VOID / DIBATALKAN</h3>':''}<p>${e(o.business_date)}<br>#${e(o.id)}<br><b>${e(tableLabel(o.table_no))}</b><br>${e(o.note)}</p><table><thead><tr><th>Produk</th><th>Jumlah</th><th>Subtotal</th></tr></thead><tbody>${o.lines.map(l=>`<tr><td>${e(l.name)}</td><td>${num(l.qty)} ${e(l.unit)}</td><td>${money(l.qty*l.price)}</td></tr>`).join('')}</tbody></table><p>Subtotal: ${money(o.subtotal??o.total)}${o.discount?`<br>Diskon ${e(o.discount.name)}: −${money(o.discount.amount)}<br>Disetujui: ${e(o.discount.approvedName)}`:''}<br><b>Total: ${money(o.total)}</b><br>${e(o.payment)} · Diterima ${money(o.paid)}<br>Kembalian: ${money(Number(o.paid)-o.total)}</p>${o.void_meta?`<p>Alasan void: ${e(o.void_meta.reason)}<br>Pelaksana: ${e(o.void_meta.byName)}<br>Persetujuan: ${e(o.void_meta.approvedName)}</p>`:''}</div><p class="muted no-print">Transaksi sudah tersimpan. Menutup dialog printer hanya membatalkan cetak.</p><button id="print-order" type="button">Cetak struk</button>`,'Selesai');
  // The POS print stylesheet hides every body child except a receipt dialog.
  d.classList.add('receipt-dialog','cashier-receipt-dialog');
  d.querySelector('form').onsubmit=ev=>{ev.preventDefault();d.close();};d.querySelectorAll('.modal-actions .close').forEach(b=>b.textContent='Tutup');
+ fillReceiptLogo(d,outlet,logoContext).catch(error=>ctx.toast(error.message));
  const button=d.querySelector('#print-order');
  const print=async()=>{
   if(button.disabled||!d.hasAttribute('open'))return;
   button.disabled=true;
-  try{await printReceipt(d.querySelector('.receipt-print'));}
+  try{await fillReceiptLogo(d,outlet,logoContext);if(d.hasAttribute('open'))await printReceipt(d.querySelector('.receipt-print'));}
   catch(error){ctx.toast('Pesanan tetap tersimpan. '+error.message);}
   finally{button.disabled=false;}
  };

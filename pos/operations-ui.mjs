@@ -1,6 +1,6 @@
 import {itemTypes} from './catalog.mjs?v=59';
-import {cashierFields,bindCheckout,discountsPage,bindDiscounts,voidDialog,showReceipt,payExistingOrder} from './cashier-ui.mjs?v=58';
-import {devicesPage,bindDevices} from './devices-ui.mjs?v=58';
+import {cashierFields,bindCheckout,discountsPage,bindDiscounts,voidDialog,showReceipt,payExistingOrder} from './cashier-ui.mjs?v=64';
+import {devicesPage,bindDevices} from './devices-ui.mjs?v=64';
 import {readDeviceSettings} from './device-settings.mjs?v=58';
 import {barcodeProduct,bindBarcodeInput} from './barcode-scanner.mjs?v=58';
 import {tableLabel} from './cashier.mjs?v=54';
@@ -17,7 +17,7 @@ const isPaid=o=>o.payment_status==='paid'||(!o.payment_status&&o.status==='paid'
 const paymentLabel=o=>o.payment_status==='refunded'?'Dikembalikan':isPaid(o)?'Lunas':'Belum bayar';
 const orderLabel=o=>({queued:isPaid(o)?'Antre':'Menunggu bayar',preparing:'Dibuat',ready:'Siap',paid:'Selesai',cancelled:'Dibatalkan'})[o.status]||o.status;
 const quality={unsorted:'Belum disortir',ready:'Matang / siap jual',unripe:'Belum matang',reject:'Reject'};
-const actions={receipt:'Terima buah',unit_receipt:'Terima bahan / produk',sort:'Sortir buah',recover:'Olah reject menjadi bahan',produce:'Produksi bahan',reject_mark:'Catat reject',reject_process:'Olah reject',reject_coral:'Olah Coral',reject_loss:'Waste',reject_void:'Batalkan reject / waste',waste_process:'Olah reject',inventory_loss:'Waste / penyusutan',sale:'Jual buah',order_create:'Buat pesanan',order_start:'Mulai buat pesanan',order_ready:'Pesanan siap',order_pay:'Bayar pesanan',order_complete:'Pesanan diserahkan',order_direct:'Selesaikan produk siap jual',order_cancel:'Batalkan pesanan',order_void:'Void pesanan',discount_save:'Atur diskon',cashier_approval_request:'Minta persetujuan',cashier_approval_decide:'Keputusan owner',movement:'Transfer',void:'Batalkan penjualan',production_void:'Batalkan produksi',waste_void:'Batalkan olahan',employee_save:'Ubah karyawan',attendance_in:'Absen masuk',attendance_out:'Absen pulang'};
+const actions={store_save:'Ubah data toko & header struk',receipt:'Terima buah',unit_receipt:'Terima bahan / produk',sort:'Sortir buah',recover:'Olah reject menjadi bahan',produce:'Produksi bahan',reject_mark:'Catat reject',reject_process:'Olah reject',reject_coral:'Olah Coral',reject_loss:'Waste',reject_void:'Batalkan reject / waste',waste_process:'Olah reject',inventory_loss:'Waste / penyusutan',sale:'Jual buah',order_create:'Buat pesanan',order_start:'Mulai buat pesanan',order_ready:'Pesanan siap',order_pay:'Bayar pesanan',order_complete:'Pesanan diserahkan',order_direct:'Selesaikan produk siap jual',order_cancel:'Batalkan pesanan',order_void:'Void pesanan',discount_save:'Atur diskon',cashier_approval_request:'Minta persetujuan',cashier_approval_decide:'Keputusan owner',movement:'Transfer',void:'Batalkan penjualan',production_void:'Batalkan produksi',waste_void:'Batalkan olahan',employee_save:'Ubah karyawan',attendance_in:'Absen masuk',attendance_out:'Absen pulang'};
 const field=(label,html)=>`<label class="field">${label}${html}</label>`;
 const input=(name,type='text',extra='')=>`<input name="${name}" type="${type}" ${extra}>`;
 const opts=(rows,value='')=>rows.map(x=>`<option value="${e(x.id)}" ${x.id===value?'selected':''}>${e(x.name)}</option>`).join('');
