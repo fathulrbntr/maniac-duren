@@ -1,3 +1,4 @@
+import {dummyProductPhoto} from './product-photos.mjs?v=65';
 import {posCategoryName} from './pos-categories.mjs?v=52';
 import { variantEditorMarkup, bindVariantEditor } from "./variant-editor.mjs?v=45";
 import {
@@ -40,7 +41,7 @@ export function productDialog({
   const d = modal(
     editing ? "Edit produk / bahan" : "Tambah produk / bahan",
     `
- <div class="product-photo-editor"><img id="photo-preview" alt="Pratinjau foto produk" ${photo ? `src="${e(photo)}"` : "hidden"}><div>${field("Foto produk", '<input id="photo-file" type="file" accept="image/jpeg,image/png,image/webp">')}<small>JPG, PNG, WebP. Otomatis diperkecil; hasil maksimal 2 MB.</small><p id="photo-status" role="status"></p><button type="button" id="remove-photo">Hapus foto</button></div></div>
+ <div class="product-photo-editor"><img id="photo-preview" alt="Pratinjau foto produk" ${photo ? `src="${e(photo)}"` : "hidden"}><div>${field("Foto produk", '<input id="photo-file" type="file" accept="image/jpeg,image/png,image/webp">')}<small>JPG, PNG, WebP. Otomatis diperkecil; hasil maksimal 2 MB.</small><small id="photo-dummy-note"></small><p id="photo-status" role="status"></p><button type="button" id="remove-photo">Hapus foto</button></div></div>
  <div class="form-grid">${field("Nama barang", `<input name="name" value="${e(p.name || "")}" required maxlength="100" placeholder="Contoh: Durian Musang King" ${p.variantGroupId?'readonly':''}>`)}${field("Jenis barang", `<select name="itemType" ${locked ? "disabled" : ""}>${options(itemTypes, p.itemType)}</select>`)}<input type="hidden" name="category" value="${e(p.category||'')}">${field("Satuan stok", `<select name="stockUnit" ${locked ? "disabled" : ""}>${options(stockUnits, p.stockUnit)}</select>`)}</div>
  <p class="muted">${locked ? "Jenis dan satuan mengikuti barang yang sudah terdaftar." : "Gunakan gram untuk berat bahan dan ml untuk cairan."}</p>
  <section class="product-shared-categories" aria-label="Kategori produk"><span>Kategori</span><strong data-product-category-names>${e(editing?posCategoryName(state,p):'Semua')}</strong><p data-product-category-help>Kategori mengikuti Master Barang, Stok, dan POS. Setelah menyimpan barang, gunakan Kelola kategori → pilih kategori → Tambah produk dari master.</p></section>
@@ -171,10 +172,16 @@ export function productDialog({
   toggleVariants();
   const preview = () => {
     const img = d.querySelector("#photo-preview");
-    img.hidden = !photo;
-    if (photo) img.src = photo;
+    const placeholder=dummyProductPhoto({...p,name:c("name").value,itemType:c("itemType").value,stockUnit:c("stockUnit").value}),shown=photo||placeholder;
+    img.hidden = !shown;
+    if (shown) img.src = shown;
     else img.removeAttribute("src");
+    d.querySelector("#photo-dummy-note").textContent=!photo&&placeholder?"Foto dummy otomatis. Unggah foto untuk menggantinya.":"";
   };
+  c("name").addEventListener("input",preview);
+  c("itemType").addEventListener("change",preview);
+  c("stockUnit").addEventListener("change",preview);
+  preview();
   d.querySelector("#photo-file").onchange = async (ev) => {
     const file = ev.target.files[0];
     if (!file) return;
@@ -205,7 +212,7 @@ export function productDialog({
     photo = "";
     d.querySelector("#photo-file").value = "";
     d.querySelector("#photo-status").textContent =
-      "Foto akan dihapus saat Simpan.";
+      "Foto asli akan dihapus saat Simpan. Foto dummy tampil jika tersedia.";
     preview();
   };
   d.querySelector("#delete-product")?.addEventListener("click", () => {

@@ -40,3 +40,7 @@
 .pos-variant-confirmation{padding:14px 0 0;margin-top:16px;border-top:1px solid var(--line);font-size:13px;line-height:1.5;font-weight:500;overflow-wrap:anywhere}
 .pos-sale-variant-modal .modal-actions{gap:8px}
 @media(max-width:600px){.modal.pos-sale-variant-modal{width:calc(100vw - 20px)}.pos-sale-variant-modal .pos-sale-variant{grid-template-columns:20px minmax(0,1fr);padding:12px}.pos-sale-variant-price{grid-column:2;text-align:left}.pos-variant-options{max-height:44vh}.pos-sale-variant-modal .modal-actions{flex-wrap:wrap}.pos-sale-variant-modal .modal-actions [type=submit]{flex:1;white-space:normal}}
+
+.pos-sale-variant-copy:has(.pos-sale-variant-photo){grid-template-columns:48px minmax(0,1fr);column-gap:10px}
+.pos-sale-variant-photo{grid-column:1;grid-row:1 / span 4;width:48px;height:48px;object-fit:cover;border-radius:8px;background:#f7f5f0}
+.pos-sale-variant-copy:has(.pos-sale-variant-photo)>:not(img){grid-column:2}

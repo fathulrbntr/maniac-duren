@@ -42,7 +42,7 @@ summary=render().querySelector('.has-variants summary');
 assert.equal(summary.querySelector('[data-card-sale] strong').textContent,money(50000),'Equal prices show one fixed value');
 assert.equal(summary.querySelector('[data-card-buy] strong').textContent,`${money(0)} – ${money(30000)}`,'A real zero buy price remains valid');
 a.photo='';summary=render().querySelector('.has-variants summary');
-assert(!summary.querySelector('img'),'A missing first photo uses the placeholder, never an unrelated variant photo');
+assert.match(summary.querySelector('img').attrs.src,/\/dummy-products\/durpas\.webp$/,'A missing first photo uses its own dummy, never an unrelated variant photo');
 Object.assign(a,{itemType:'direct',stockUnit:'kg_butir',category:'Buah',priceKg:70000,pricePiece:140000});
 Object.assign(b,{itemType:'direct',stockUnit:'kg_butir',category:'Buah',priceKg:90000,pricePiece:180000});
 summary=render().querySelector('.has-variants summary');

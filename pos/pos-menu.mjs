@@ -1,3 +1,4 @@
+import {productPhoto} from './product-photos.mjs?v=65';
 import {escape as e,money,today} from './core.mjs?v=9';
 import {posVisible,posCategoryIds,posCategories,hasPosPrice,posProductStatus} from './pos-categories.mjs?v=52';
 
@@ -41,7 +42,7 @@ const saleEntries=(state,store,draft,category='all',query='')=>posMenuEntries(st
 const cardIcon=hasVariants=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${hasVariants?'M9 5l7 7-7 7':'M12 5v14M5 12h14'}"/></svg>`;
 export function posProductCards(s,store,draft=[]){
  return saleEntries(s,store,draft).map(({entry,status})=>{
-  const photo=entry.products.find(p=>p.photo)?.photo,ids=entryCategories(s,entry),p=entry.products[0];
+  const photo=productPhoto(entry.products[0]),ids=entryCategories(s,entry),p=entry.products[0];
   return `<button type="button" class="order-product ${entry.hasVariants?'order-product-variants':''}" ${!status.ok?'disabled':''} aria-disabled="${!status.ok}" title="${e(entry.name+' · '+status.reason)}" data-menu-key="${e(entry.key)}" ${entry.hasVariants?`data-order-group="${e(p.variantGroupId||p.id)}" aria-haspopup="dialog"`:`data-order-add="${e(p.id)}"`} data-categories="${e(['all',...ids].join(' '))}"><span class="order-product-photo">${photo?`<img src="${e(photo)}" alt="" loading="lazy" decoding="async">`:`<span>${e(entry.name.split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase())}</span>`}</span><span class="order-product-info"><span class="order-product-category">${e(entryCategoryName(s,entry))}</span><strong>${e(entry.name)}</strong><span class="order-variant-count ${entry.hasVariants?'':'is-placeholder'}" ${entry.hasVariants?'':'aria-hidden="true"'}>${entry.hasVariants?`${entry.products.length} pilihan varian`:''}</span><span class="order-product-price">${e(entryPrice(entry))}</span></span><span class="order-product-footer"><span class="order-stock-status">${e(status.reason)}</span><span class="order-product-add" aria-hidden="true">${cardIcon(entry.hasVariants)}</span></span></button>`;
  }).join('')||'<div class="empty">Belum ada produk jual di Master Barang.</div>';
 }
@@ -86,7 +87,7 @@ export function posVariantDialog({key,category='all',getState,getDraft,store,mod
    else{const status=posProductStatus(state,store,product,getDraft(),today());if(!status.ok)reason=status.reason;}
    if(reason){selected='';snapshot='';error(reason);}
   }
-  d.querySelector('[data-sale-variants]').innerHTML=entry?.products.map(p=>{const status=posProductStatus(state,store,p,getDraft(),today());return `<label class="pos-sale-variant ${status.ok?'':'is-unavailable'}"><input type="radio" name="saleVariant" value="${e(p.id)}" data-sale-variant="${e(p.id)}" ${selected===p.id?'checked':''} ${status.ok?'':'disabled'}><span class="pos-sale-variant-copy"><b>${e(variantLabel(p))}</b><small>${e(p.name)}</small><small>${e(p.sku)}</small><span class="pos-sale-variant-status">${e(status.reason)}</span></span><strong class="pos-sale-variant-price">${e(posPriceLabel(p))}</strong></label>`;}).join('')||'<p class="empty">Produk sudah tidak tersedia dalam kategori ini.</p>';
+  d.querySelector('[data-sale-variants]').innerHTML=entry?.products.map(p=>{const status=posProductStatus(state,store,p,getDraft(),today());return `<label class="pos-sale-variant ${status.ok?'':'is-unavailable'}"><input type="radio" name="saleVariant" value="${e(p.id)}" data-sale-variant="${e(p.id)}" ${selected===p.id?'checked':''} ${status.ok?'':'disabled'}><span class="pos-sale-variant-copy">${productPhoto(p)?`<img class="pos-sale-variant-photo" src="${e(productPhoto(p))}" alt="" loading="lazy" decoding="async">`:""}<b>${e(variantLabel(p))}</b><small>${e(p.name)}</small><small>${e(p.sku)}</small><span class="pos-sale-variant-status">${e(status.reason)}</span></span><strong class="pos-sale-variant-price">${e(posPriceLabel(p))}</strong></label>`;}).join('')||'<p class="empty">Produk sudah tidak tersedia dalam kategori ini.</p>';
   updateConfirmation(entry);
  }
  d.querySelector('[data-sale-variants]').addEventListener('change',ev=>{
