@@ -1,0 +1,21 @@
+import assert from 'node:assert/strict';
+import {batchReports} from '../pos/batch-report.mjs';
+const day='2026-10-01';
+const a={id:'a',storeId:'A',productId:'fruit',supplierId:'SA',date:day,quality:'ready',receivedKg:10,receivedPieces:4,kg:0,pieces:0,unitCost:1000};
+const b={...a,id:'b',supplierId:'SB',receivedKg:20,receivedPieces:8,unitCost:2000};
+const ca={id:'ca',storeId:'A',productId:'coral',receivedQty:2,qty:0,unit:'kg',unitCost:5000,kind:'waste'},cb={...ca,id:'cb',receivedQty:4,unitCost:10000};
+const mix={id:'mix',storeId:'A',productId:'flesh',receivedQty:3,qty:1.5,unit:'kg',unitCost:50000/3,kind:'production'};
+const s={stores:[{id:'A'},{id:'B'}],lots:[a,b],unitLots:[ca,cb,mix],products:[],origins:[{lot_id:'ca',inputs:[{lotId:'a',qty:10}]},{lot_id:'cb',inputs:[{lotId:'b',qty:20}]},{lot_id:'mix',inputs:[{lotId:'ca',qty:2},{lotId:'cb',qty:4}]}],orders:[{id:'o',store_id:'A',status:'paid',payment_status:'paid',subtotal:100000,total:100000,lines:[{lineId:'line',itemType:'recipe',qty:1,price:100000}],consumption:[{lineId:'line',lotId:'mix',qty:1.5,unitCost:50000/3}]}]};
+const before=structuredClone(s);let reports=batchReports(s,'A');
+for(const r of reports){assert.equal(r.status,'active');assert.equal(r.stock[0].mixed,true);assert.equal(r.stock[0].lot.qty,1.5);assert(Math.abs(r.untraced)<1e-6);}
+assert.equal(reports.find(r=>r.root.id==='a').allocatedRevenue,20000);assert.equal(reports.find(r=>r.root.id==='b').allocatedRevenue,80000);assert.equal(reports.reduce((n,r)=>n+r.remainingCost+r.cogs+r.lossCost,0),50000);assert.deepEqual(s,before);
+const done=structuredClone(s);done.unitLots[2].qty=0;done.orders[0].consumption[0].qty=3;done.orders[0].total=200000;done.orders[0].subtotal=200000;done.orders[0].lines[0].price=200000;
+reports=batchReports(done);assert(reports.every(r=>r.status==='closed'));assert.equal(reports.reduce((n,r)=>n+r.cogs,0),50000);
+const unknown=structuredClone(done);unknown.lots[1].unitCost=null;unknown.orders[0].consumption[0].unitCost=null;reports=batchReports(unknown);assert(reports.every(r=>r.revenueIncomplete));assert.equal(reports.find(r=>r.root.id==='b').cogs,null);
+const transfer={stores:s.stores,lots:[a,{...a,id:'child',sourceLotId:'a',storeId:'B',kg:10,pieces:4}],unitLots:[],products:[],movements:[{lotId:'a',kind:'Transfer',toStoreId:'B'}]};
+assert.equal(batchReports(transfer,'B')[0].root.id,'a','Destination outlet can inspect related root batch');assert.equal(batchReports(transfer,'A')[0].status,'active');
+const scoped={...transfer,stores:[{id:'B'}],lots:[transfer.lots[1]]};assert.equal(batchReports(scoped,'B')[0].status,'scope','Missing original outlet cannot be declared complete');
+assert.equal(batchReports({stores:s.stores,lots:[a],unitLots:[]})[0].status,'review','Unexplained stock loss is not a completed batch');
+const kitchen=structuredClone(done);kitchen.access={finance:false,trace:true};kitchen.orders[0].consumption=undefined;kitchen.orders[0].status='preparing';kitchen.events=[{id:'make',action:'order_start'}];kitchen.journal=[{event_id:'make',lot_id:'mix',qty:-3,store_id:'A'}];kitchen.batchOpenOrders=[{id:'o',lotIds:['mix']}];
+assert(batchReports(kitchen).every(r=>r.status==='active'));kitchen.batchOpenOrders=[];kitchen.orders[0].status='paid';assert(batchReports(kitchen).every(r=>r.status==='closed'),'Physical journal reconciles non-finance readers without cost data');
+console.log('PASS batch report: mixed supplier allocation without double-counted value, descendants, cross-outlet roots, missing/unknown history, pending kitchen orders, non-finance reconciliation and immutable filters.');

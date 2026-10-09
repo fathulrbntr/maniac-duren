@@ -6,6 +6,7 @@ export const proofLabels = {
   durpas500: "Bukti Durpas 500 gr",
   durpas1000: "Bukti Durpas 1 kg",
   coral: "Bukti Coral",
+  daging: "Bukti Daging Durian",
 };
 export function evidenceValues(value = {}) {
   return Object.fromEntries(Object.keys(proofLabels).map((key) => [key, photoValue(value?.[key])]));

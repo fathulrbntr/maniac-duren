@@ -5,28 +5,29 @@ import {installMoneyInputs} from './money-input.mjs?v=44';
 installMoneyInputs();
 import { openWeighingReceipt, showWeighingHistory } from './receipt-weighing.mjs?v=19';
 import {inventoryPanel,bindInventory} from "./inventory-ui.mjs?v=62";
-import {opsPages,opsPage,bindOps,clearOrderDraft,hasOrderDraft} from './operations-ui.mjs?v=62';
+import {opsPages,opsPage,bindOps,clearOrderDraft,hasOrderDraft} from './operations-ui.mjs?v=63';
 import {printReceipt} from './receipt-printer.mjs?v=58';
 import {
   navigation,
   mayLeave,
   trackForms,
-} from "./navigation.mjs?v=58";
+} from "./navigation.mjs?v=63";
 import {
   prepareRetry,
   settleRetry,
   reconcileRetry,
   pendingRetry,
   setRetryScope,
-} from "./retry.mjs?v=54";
-import { wastePage, bindWaste } from "./waste-ui.mjs?v=43";
+} from "./retry.mjs?v=63";
+import {batchReportPage,bindBatchReport} from './batch-report-ui.mjs?v=63';
+import { wastePage, bindWaste } from "./waste-ui.mjs?v=63";
 import {
   recipesPage,
   productionPage,
   unitStockPanel,
   receiptDialog,
   bindProduction,
-} from "./production-ui.mjs?v=59";
+} from "./production-ui.mjs?v=63";
 import {
   today,
   money,
@@ -84,7 +85,7 @@ const app = document.querySelector("#app"),
 const title = {
   devices: "Printer & Scanner",
   discounts: "Diskon & Persetujuan", dashboard: "Dashboard", orders: "Kasir / POS", kitchen: "Kitchen Display",
-  products: "Master Barang", stock: "Stok & Penerimaan", losses: "Waste & Penyusutan", waste: "Olah Reject",
+  products: "Master Barang", stock: "Stok & Penerimaan", losses: "Reject & Waste", waste: "Reject & Waste", batches: "Laporan Batch Supplier",
   recipes: "Master Resep", production: "Produksi & Persiapan",
   finance: "Petty Cash & Keuangan", salesreport: "Laporan Penjualan", trace: "Jejak Stok & Produksi", reports: "Rincian Penjualan Buah",
   employees: "Karyawan & Akses", attendance: "Absensi", stores: "Outlet", suppliers: "Supplier", guide: "Panduan",
@@ -104,6 +105,7 @@ const paths = {
   salesreport: "M5 3h14v18l-3-2-4 2-4-2-3 2z M8 7h8 M8 11h8 M8 15h3",
   finance: "M3 6h18v14H3z M3 6l14-3v3 M15 11h6v5h-6z M17 13h1",
   trace: "M5 3h10v6H5z M5 15h10v6H5z M10 9v6 M15 6h4v12h-4",
+  batches: "M3 7l9-4 9 4-9 4z M3 7v10l9 4 9-4V7 M12 11v10",
   reports: "M4 20V4 M4 20h17 M8 16v-5 M13 16V7 M18 16v-9",
   employees: "M9 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8 M2 21v-3a6 6 0 0 1 12 0v3 M17 4a4 4 0 0 1 0 8 M18 15a5 5 0 0 1 4 5v1",
   attendance: "M5 4h14v17H5z M8 2v4 M16 2v4 M5 9h14 M8 15l3 3 5-6",
@@ -132,7 +134,7 @@ function toast(text) {
   toast.timer = setTimeout(() => (t.style.display = "none"), 5000);
 }
 let stockDemoModule,demoSource=null;
-const demoEngine=()=>stockDemoModule ||= import('./stock-demo.mjs?v=60').catch(error=>{stockDemoModule=null;throw error;});
+const demoEngine=()=>stockDemoModule ||= import('./stock-demo.mjs?v=63').catch(error=>{stockDemoModule=null;throw error;});
 function assertDemoRequest(path,allowDemoRead){
   if(mode==='stock-demo'&&!(allowDemoRead&&['/rest/v1/rpc/pos_read','/auth/v1/token?grant_type=refresh_token'].includes(path)))throw Error('Mode demo tidak mengirim perubahan ke database asli.');
 }
@@ -458,6 +460,8 @@ function render() {
       cashier,
       stock: stockPage,
       waste: () => wastePage(state, store),
+      losses: () => wastePage(state, store),
+      batches: () => batchReportPage(state,store),
       reports: reportPage,
       products: productsPage,
       stores: () => directoryPage("stores"),
@@ -552,7 +556,10 @@ function render() {
   observeKitchen();
   trackForms();
   bindProduction(view, state, store, { modal, mutate, render, toast, refresh });
+  if(view === "batches") bindBatchReport(state,store,{modal,refresh,render,toast});
   bindWaste(view, state, store, {
+    getState:()=>state,
+    loadRejectEvidence: async recordId => mode === "stock-demo" ? state.rejectRecords.find(r=>r.id===recordId)?.evidence : request("/rest/v1/rpc/pos_reject_evidence",{record_id:recordId}),
     modal,
     mutate,
     render,

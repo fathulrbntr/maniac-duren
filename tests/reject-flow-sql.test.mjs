@@ -1,0 +1,76 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {batchReports} from '../pos/batch-report.mjs';
+import {menuStatus} from '../pos/order-stock.mjs';
+import {randomUUID as id} from 'node:crypto';
+import {PGlite} from '@electric-sql/pglite';
+const db=new PGlite(),image='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jR1kAAAAASUVORK5CYII=';
+try{
+ await db.exec("create role anon;create role authenticated;create role service_role;create schema auth;create table auth.users(id uuid primary key,email text);create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;");
+ for(const file of ['database/pos.sql','database/compress-pos-photos.sql','database/pos-menu-categories.sql','database/pos-cashier-controls.sql'])await db.exec(fs.readFileSync(file,'utf8'));
+ let seed=fs.readFileSync('database/seeds/import-durian-dan-turunan.sql','utf8').replace("null, null, null, null, '', ''","case when r.stock_unit='kg_butir' then 50000 end, case when r.stock_unit='kg_butir' then 100000 end, null, null, '', ''");
+ await db.exec(seed);await db.exec(fs.readFileSync('database/link-durian-reject.sql','utf8'));
+ const owner=id(),kitchen=id(),cashier=id(),store=id(),foreign=id(),supplier=id(),date=new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Jakarta'});
+ await db.query("insert into public.md_pos_stores(id,name) values($1,'Depok'),($2,'Bogor')",[store,foreign]);
+ for(const [user,role] of [[owner,'owner'],[kitchen,'kitchen'],[cashier,'cashier']]){await db.query('insert into auth.users values($1,$2)',[user,user+'@test.local']);await db.query('insert into public.md_pos_staff values($1)',[user]);await db.query('insert into public.md_pos_employees(id,user_id,name,role,store_ids) values($1,$1,$2,$2,$3)',[user,role,[store]]);}
+ const as=who=>db.query("select set_config('request.jwt.claim.sub',$1,false)",[who]);await as(owner);
+ const read=async()=>(await db.query('select public.pos_read() s')).rows[0].s;
+ const mut=async(action,p,endpoint='pos_mutate_027')=>(await db.query('select public.'+endpoint+'($1,$2::jsonb) s',[action,JSON.stringify(p)])).rows[0].s;
+ await mut('master',{id:supplier,kind:'suppliers',name:'Supplier A'});
+ const products=(await read()).products,product=sku=>products.find(p=>p.sku===sku),fruit=product('MD-MK-FRESH-BUAH');
+ const fl=id();await mut('receipt',{id:fl,storeId:store,date,productId:fruit.id,kg:100,pieces:40,totalCost:3200000,supplierId:supplier});
+ const makeOutputs=()=>[['durpas500','DP500',4],['durpas1000','DP1KG',2],['coral','CORAL',1]].map(([key,code,qty])=>({key,productId:product('MD-MK-FRESH-'+code).id,qty,lotId:id(),expiry:''}));
+ const proof={reject:image,durpas500:image,durpas1000:image,coral:image};
+ const old={id:id(),storeId:store,date,sourceLotId:fl,receivedDate:date,kg:10,pieces:4,processedBy:'Owner',reason:'Riwayat lama',evidence:proof,outputs:makeOutputs()};await mut('waste_process',old);
+ const migration=fs.readFileSync('database/reject-flow-063.sql','utf8');await db.exec(migration);await db.exec(migration);
+ await db.exec('set role authenticated');
+ await mut('waste_process',old);await mut('waste_void',{id:id(),date,wasteId:old.id,reason:'Koreksi riwayat lama'});
+ await assert.rejects(mut('recover',{id:id(),storeId:store,date,lotId:fl}),/menu Reject/);
+ await assert.rejects(db.query('select public.pos_reject_mutate($1,$2)', ['reject_mark',{}]),/permission denied/);
+ const mark={id:id(),storeId:store,date,sourceLotId:fl,rejectLotId:id(),kg:20,pieces:8,cause:'taste',reason:'Rasa tidak enak',evidence:{reject:image}};
+ await as(cashier);await assert.rejects(mut('reject_mark',mark),/Hak akses/);await as(kitchen);await assert.rejects(mut('reject_mark',{...mark,storeId:foreign}),/Hak akses/);
+ let s=await mut('reject_mark',mark);await mut('reject_mark',mark);assert.equal(s.lots.find(l=>l.id===fl).kg,80);assert.equal(s.lots.find(l=>l.id===mark.rejectLotId).quality,'reject');assert.equal(s.lots.reduce((n,l)=>n+l.kg,0),100);assert.equal(s.rejectRecords.length,1);assert.equal(s.rejectRecords[0].processedBy,'kitchen');assert.equal(s.rejectRecords[0].inputCost,undefined);assert(!JSON.stringify(s).includes(image),'No evidence photos in normal read');
+ await assert.rejects(mut('reject_mark',{...mark,kg:21}),/ID pengiriman/);
+ await as(owner);
+ const process={id:id(),storeId:store,date,sourceLotId:mark.rejectLotId,kg:10,pieces:4,reason:'Olah separuh reject',outputs:makeOutputs(),evidence:{durpas500:image,durpas1000:image,coral:image}};
+ s=await mut('reject_process',process);assert.equal(s.lots.find(l=>l.id===fl).kg,80);assert.equal(s.lots.find(l=>l.id===mark.rejectLotId).kg,10);assert.equal(s.rejectRecords.find(r=>r.id===process.id).lossKg,5);
+ const result=s.unitLots.filter(l=>process.outputs.some(o=>o.lotId===l.id));assert.equal(result.reduce((n,l)=>n+l.qty*l.unitCost,0),320000);assert(result.every(l=>l.supplierId===supplier));
+ const coral=process.outputs.find(o=>o.key==='coral');
+ const cp={id:id(),storeId:store,date,sourceLotId:coral.lotId,kg:1,netKg:0.65,outputLotId:id(),expiry:date,reason:'Pisahkan biji Coral',evidence:{coral:image,daging:image}};
+ s=await mut('reject_coral',cp);const flesh=s.unitLots.find(l=>l.id===cp.outputLotId);assert.equal(flesh.productId,product('MD-MK-FRESH-DAGING').id);assert(Math.abs(flesh.qty*flesh.unitCost-64000)<1e-6);assert.equal(s.rejectRecords.find(r=>r.id===cp.id).lossKg,.35);assert.equal(s.origins.find(o=>o.lot_id===flesh.id).inputs[0].lotId,coral.lotId);
+ await assert.rejects(mut('reject_void',{id:id(),storeId:store,date,recordId:process.id,reason:'Coba batal induk'}),/sudah dipakai/);
+ const loss={id:id(),storeId:store,date,sourceLotId:flesh.id,qty:.15,pieces:0,cause:'spoiled',reason:'Daging rusak',evidence:{reject:image}};
+ s=await mut('reject_loss',loss);assert.equal(s.unitLots.find(l=>l.id===flesh.id).qty,.5);assert(Math.abs(s.money.find(m=>m.event_id===loss.id).cost-64000*.15/.65)<1e-6);
+ for(const r of [loss.id,cp.id,process.id,mark.id])await mut('reject_void',{id:id(),storeId:store,date,recordId:r,reason:'Koreksi berurutan'});
+ s=await read();assert.equal(s.lots.find(l=>l.id===fl).kg,100);assert.equal(s.money.filter(m=>m.category==='loss').reduce((n,m)=>n+m.cost,0),0);
+ const instant={...mark,id:id(),rejectLotId:id(),processNow:true,outputs:makeOutputs(),evidence:proof};s=await mut('reject_mark',instant);assert.equal(s.lots.find(l=>l.id===fl).kg,80);assert.equal(s.lots.find(l=>l.id===instant.rejectLotId).kg,0);assert.equal(s.rejectRecords.find(r=>r.id===instant.id).kind,'direct');
+ await mut('reject_void',{id:id(),storeId:store,date,recordId:instant.id,reason:'Koreksi langsung'});assert.equal((await read()).lots.find(l=>l.id===fl).kg,100);
+ const total={...mark,id:id(),rejectLotId:id(),processNow:true,outputs:makeOutputs().map(o=>({...o,qty:0})),evidence:proof};s=await mut('reject_mark',total);assert.equal(s.money.find(m=>m.event_id===total.id).cost,640000);
+ await mut('reject_void',{id:id(),storeId:store,date,recordId:total.id,reason:'Koreksi waste total'});
+ const collision={...instant,id:id(),rejectLotId:id(),outputs:makeOutputs()};collision.outputs[0].lotId=fl;await assert.rejects(mut('reject_mark',collision),/ID batch hasil/);
+ const bad={...instant,id:id(),rejectLotId:id(),outputs:makeOutputs()};bad.outputs[2].productId=product('MD-MK-NITROGEN-CORAL').id;await assert.rejects(mut('reject_mark',bad),/tidak sesuai durian/);assert.equal((await read()).lots.find(l=>l.id===fl).kg,100,'Failed direct process rolls back marking as well');
+ await assert.rejects(mut('reject_mark',{...mark,id:id(),rejectLotId:id(),kg:100,pieces:8}),/konsisten/);
+ await assert.rejects(mut('reject_loss',{...loss,id:id(),sourceLotId:fl,qty:1,pieces:1,cause:'shrinkage'}),/konsisten/);
+ s=await mut('reject_loss',{...loss,id:id(),sourceLotId:fl,qty:1,pieces:0,cause:'shrinkage'});assert.equal(s.lots.find(l=>l.id===fl).pieces,40);assert.equal(s.lots.find(l=>l.id===fl).kg,99);
+ await as(cashier);await assert.rejects(db.query('select public.pos_reject_evidence($1)',[mark.id]),/tidak tersedia/);await as(kitchen);assert.equal((await db.query('select public.pos_reject_evidence($1) proof',[mark.id])).rows[0].proof.reject,image);
+ await as(owner);
+ // End to end: an entire supplier batch remains open through Coral and paid kitchen work.
+ const fresh=id();await mut('receipt',{id:fresh,storeId:store,date,productId:fruit.id,kg:10,pieces:4,totalCost:100000,supplierId:supplier});
+ const full={...mark,id:id(),sourceLotId:fresh,rejectLotId:id(),kg:10,pieces:4,processNow:true,outputs:makeOutputs(),evidence:proof};
+ s=await mut('reject_mark',full);let report=batchReports(s,store).find(r=>r.root.id===fresh);assert.equal(report.status,'active');assert.equal(report.remainingCost,100000);assert(Math.abs(report.untraced)<1e-6);
+ const fullCoral=full.outputs.find(o=>o.key==='coral'),fullFlesh=id();s=await mut('reject_coral',{...cp,id:id(),sourceLotId:fullCoral.lotId,outputLotId:fullFlesh});
+ await db.exec('reset role');for(const [code,price] of [['DP500',50000],['DP1KG',90000]])await db.query('update public.md_pos_products set sale_price=$1 where id=$2',[price,product('MD-MK-FRESH-'+code).id]);await db.exec('set role authenticated');
+ // Other old output lots have zero stock, so FEFO consumes this fresh batch.
+ const sale={id:id(),storeId:store,date,lines:[{productId:product('MD-MK-FRESH-DP500').id,qty:4,price:50000},{productId:product('MD-MK-FRESH-DP1KG').id,qty:2,price:90000}],paid:380000,payment:'Tunai'};
+ s=await mut('order_create',sale);report=batchReports(s,store).find(r=>r.root.id===fresh);assert.equal(report.status,'active');assert(Math.abs(report.remainingCost-20000)<1e-6);assert(Math.abs(report.cogs-80000)<1e-6);
+ const dessert=id(),recipe=id();await mut('product_save',{id:dessert,name:'Es uji Coral',sku:'ES-CORAL-TEST',itemType:'recipe',stockUnit:'porsi',category:'Dessert',salePrice:150000});await mut('recipe_save',{id:recipe,name:'Es uji Coral',version:0,outputId:dessert,yieldQty:1,ingredients:[{productId:product('MD-MK-FRESH-DAGING').id,qty:.65}]});
+ const order=id();await mut('order_create',{id:order,storeId:store,date,lines:[{productId:dessert,qty:1,price:150000}],paid:150000,payment:'Tunai'});
+ const reservedLoss={...loss,id:id(),sourceLotId:fullFlesh,qty:.65};await assert.rejects(mut('reject_loss',reservedLoss),/dipesan|kurang/);assert.equal((await read()).unitLots.find(l=>l.id===fullFlesh).qty,.65,'Reservation failure is atomic');
+ await mut('order_start',{id:id(),storeId:store,date,orderId:order});s=await read();report=batchReports(s,store).find(r=>r.root.id===fresh);assert.equal(report.status,'active');assert.equal(report.stock.length,0);assert.equal(report.pendingOrders.size,1);await as(kitchen);const kitchenReport=batchReports(await read(),store).find(r=>r.root.id===fresh);assert.equal(kitchenReport.status,'active');assert.equal(kitchenReport.pendingOrders.size,1);await as(owner);
+ await mut('order_ready',{id:id(),storeId:store,date,orderId:order});s=await mut('order_complete',{id:id(),storeId:store,date,orderId:order});report=batchReports(s,store).find(r=>r.root.id===fresh);assert.equal(report.status,'closed');assert(Math.abs(report.cogs-100000)<1e-6);assert(Math.abs(report.allocatedRevenue-530000)<1e-6);assert.equal(report.lossCost,0);assert(Math.abs(report.untraced)<1e-6);await as(kitchen);assert.equal(batchReports(await read(),store).find(r=>r.root.id===fresh).status,'closed');await as(owner);
+ // Pending fruit receipts cannot escape the existing reconciliation gate.
+ await db.exec('reset role');await db.exec('alter table public.md_pos_lots add column if not exists cost_finalized boolean default true');await db.query('update public.md_pos_lots set cost_finalized=false where id=$1',[fl]);await db.exec('set role authenticated');
+ await assert.rejects(mut('reject_mark',{...mark,id:id(),rejectLotId:id()}),/Selesaikan modal/);
+ await db.exec('reset role');
+ console.log('PASS SQL reject flow: idempotent migration/retry, ACL, isolated reject stock, actual Coral/flesh, inherited cost/origins, photos omitted from reads, partial/direct processing, atomic failure, old history, total waste and chained reversals.');
+}catch(e){console.error('FAIL:',e.message,e.internalQuery||'',e.where||'',e.actual!==undefined?{actual:e.actual,expected:e.expected}:e.stack?.split('\n').find(l=>l.includes('tests/')));process.exitCode=1;}finally{await db.close();}

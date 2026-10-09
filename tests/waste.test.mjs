@@ -1,6 +1,7 @@
+import {Node,makeModal} from './variant-dom.mjs';
 import assert from "node:assert/strict";
 import { emptyState, applyAction, today } from "../pos/core.mjs";
-import { wastePage } from "../pos/waste-ui.mjs";
+import { wastePage, bindWaste } from "../pos/waste-ui.mjs";
 let s = emptyState();
 s.stores = [
   { id: "a", name: "Store A" },
@@ -92,7 +93,8 @@ assert.equal(
   }).wasteRuns[0].evidence.processed,
   photo,
 );
-assert(wastePage(withEvidence, "a").includes("Lihat bukti"));
+function history(state,store){const root=new Node(),m=makeModal(),before=globalThis.document;root.innerHTML=wastePage(state,store);globalThis.document={querySelector:q=>root.querySelector(q),querySelectorAll:q=>root.querySelectorAll(q)};try{bindWaste('waste',state,store,{modal:m.modal,toast(){},refresh(){},render(){}});root.querySelector('[data-reject-detail]')?.onclick();return {text:root.textContent,detail:m.latest?.textContent||''};}finally{globalThis.document=before;}}
+assert(history(withEvidence,'a').detail.includes('Lihat foto bukti'));
 assert.throws(
   () =>
     applyAction(before, "waste_process", {
@@ -199,8 +201,8 @@ assert.deepEqual(
   }).lots,
   before.lots,
 );
-assert(wastePage(cancelled, "a").includes("Dihapus / dibatalkan"));
-assert(!wastePage(cancelled, "b").includes("Salah input"));
+assert(history(cancelled, "a").text.includes("Dibatalkan"));
+assert(!history(cancelled, "b").detail.includes("Salah input"));
 assert.equal(before.unitLots.length, 0);
 assert.equal(before.lots[0].kg, 100);
 console.log(
