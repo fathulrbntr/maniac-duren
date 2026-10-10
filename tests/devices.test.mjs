@@ -67,41 +67,63 @@ try{
  assert.equal(actions.filter(x=>x.action==='order_create').length,1);assert.equal(printing.printed.length,printCount,'Auto print off is respected after payment');assert.match(modal.latest.textContent,/Pesanan berhasil/);assert.equal(qty(state,f.water,f.store),98);assert(!hasOrderDraft());
  await modal.latest.querySelector('#result-receipt').fire('click');await modal.latest.querySelector('#print-order').fire('click');assert.equal(printing.printed.length,printCount+1);assert.match(printing.printed.at(-1).css,/size: 58mm/);assert.equal(actions.length,1,'Manual reprint must not post another transaction');
  modal.latest.close();
- // CAS scan -> explicit batch/fruit confirmation -> paid sale, using real form handlers.
+ // CAS single batch: every scan adds exactly one fruit, with no weight/piece form.
  const fruit=state.products.find(p=>p.id===f.fruit.id);fruit.barcode='0001';fruit.priceKg=100000;
  const fruitLot=state.lots.find(l=>l.productId===fruit.id&&l.storeId===f.store);
- const secondLot={...fruitLot,id:'second-fruit-lot',supplierId:state.suppliers[0].id,kg:20,pieces:10};state.lots.push(secondLot);
- view='devices';render();const beforeTest=JSON.stringify(state),beforeActions=actions.length;
+ const initialKg=fruitLot.kg,initialPieces=fruitLot.pieces,beforeActions=actions.length;
+ view='devices';render();const beforeTest=JSON.stringify(state);
  root.querySelector('#device-scan-input').value='2100010030320';await key(root.querySelector('#device-scan-input'),'Enter');
  assert.match(root.querySelector('#device-scan-status').textContent,/kode 0001 · 3.032 kg/);assert.equal(JSON.stringify(state),beforeTest);assert.equal(actions.length,beforeActions);
- view='orders';render();await scan('2100010030320');
- assert.equal(field('kg').value,'3.032');assert.equal(field('pieces').value,'1');assert.equal(field('price').value,'100000');assert.equal(field('unit').value,'KG');
- assert.equal(field('lotId').value,'','Several batches require a deliberate choice');assert(!hasOrderDraft());
- await root.querySelector('#order-line').fire('submit');assert(!hasOrderDraft());assert.match(messages.at(-1),/Pilih asal penerimaan/);
- await scan('2100010024145');assert.equal(field('kg').value,'3.032');assert.match(root.querySelector('#order-scan-status').textContent,/Konfirmasi buah/);
- field('lotId').value=secondLot.id;field('pieces').value='1.5';await root.querySelector('#order-line').fire('submit');assert(!hasOrderDraft());assert.match(messages.at(-1),/butir bulat/);
- field('pieces').value='1';field('kg').value='30';await root.querySelector('#order-line').fire('submit');assert(!hasOrderDraft());assert.match(messages.at(-1),/Stok kurang/);
- field('kg').value='3.032';await root.querySelector('#order-line').fire('submit');assert(hasOrderDraft());assert.equal(root.querySelector('#order-line').hidden,true);assert.equal(root.querySelector('#order-scan').value,'');
- assert.match(root.querySelector('#order-draft').textContent,/Supplier asli/);assert.equal(secondLot.kg,20);assert.equal(actions.length,beforeActions);
- await scan('2100010024145');assert.equal(field('kg').value,'2.414');
- const closedModal=modal.latest;await root.querySelector('#save-order').fire('click');assert.equal(modal.latest,closedModal);assert.match(messages.at(-1),/Buah belum masuk pesanan/);
- field('lotId').value=secondLot.id;await root.querySelector('#order-line').fire('submit');
- assert.equal(JSON.stringify(state),beforeTest,'Adding both labels must not mutate stock or create transactions');
+ view='orders';render();const previousModal=modal.latest;
+ await scan('2100010030320');assert(hasOrderDraft());assert.equal(root.querySelector('#order-line').hidden,true);assert.equal(modal.latest,previousModal,'Single batch adds without a dialog');
+ assert.equal(root.querySelector('#order-scan').value,'');assert(root.querySelector('#order-scan').focused);
+ await scan('2100010024145');assert.equal(root.querySelector('#order-draft').querySelectorAll('.order-cart-line').length,2);
+ assert.equal(JSON.stringify(state),beforeTest,'Scan only changes cart, never stock');
  const cartBeforeBadScan=root.querySelector('#order-draft').textContent;
  await scan('2100010030321');assert.equal(root.querySelector('#order-draft').textContent,cartBeforeBadScan);assert.match(root.querySelector('#order-scan-status').textContent,/digit pemeriksa/);
  await root.querySelector('#save-order').fire('click');await modal.latest.querySelector('form').fire('submit');await modal.latest.querySelector('form').fire('submit');
  assert.equal(actions.length,beforeActions+1);assert.equal(actions.at(-1).action,'order_create');
- assert.deepEqual(actions.at(-1).payload.lines.map(l=>[l.lotId,l.kg,l.pieces,l.qty,l.price]),[[secondLot.id,3.032,1,3.032,100000],[secondLot.id,2.414,1,2.414,100000]]);
- const soldLot=state.lots.find(l=>l.id===secondLot.id);assert(Math.abs(soldLot.kg-14.554)<1e-8);assert.equal(soldLot.pieces,8);
- assert.equal(state.lots.find(l=>l.id===fruitLot.id).kg,fruitLot.kg,'Other batch must remain unchanged');
- assert.equal(Math.round(state.orders.at(-1).total),544600);assert(!hasOrderDraft());
- // A single 2.414 kg label must accept exactly Rp241400 for QRIS (no float tail).
- modal.latest.close();render();await scan('2100010024145');field('lotId').value=secondLot.id;await root.querySelector('#order-line').fire('submit');
+ assert.deepEqual(actions.at(-1).payload.lines.map(l=>[l.lotId,l.kg,l.pieces,l.qty,l.price]),[[fruitLot.id,3.032,1,3.032,100000],[fruitLot.id,2.414,1,2.414,100000]]);
+ let soldLot=state.lots.find(l=>l.id===fruitLot.id);assert(Math.abs(soldLot.kg-(initialKg-5.446))<1e-8);assert.equal(soldLot.pieces,initialPieces-2);
+ assert.equal(state.orders.at(-1).total,544600);assert(!hasOrderDraft());modal.latest.close();
+ // Several batches: ask only for origin, remember the selection for subsequent labels.
+ clearOrderDraft();const secondLot={...soldLot,id:'second-fruit-lot',supplierId:state.suppliers[0].id,kg:2,pieces:10};state.lots.push(secondLot);
+ render();await scan('2100010030320');const sourceDialog=modal.latest;
+ assert(!hasOrderDraft());assert.equal(root.querySelector('#order-line').hidden,true);assert(sourceDialog.querySelector('[name="scanLotId"]'));
+ assert(!sourceDialog.querySelector('[name="kg"]'));assert(!sourceDialog.querySelector('[name="pieces"]'));
+ await sourceDialog.querySelector('form').fire('submit');assert(!hasOrderDraft());assert.match(sourceDialog.querySelector('#form-error').textContent,/Pilih asal/);
+ await scan('2100010024145');assert.equal(modal.latest,sourceDialog);assert.match(root.querySelector('#order-scan-status').textContent,/Tutup pop-up/);
+ sourceDialog.querySelector('[name="scanLotId"]').value=secondLot.id;await sourceDialog.querySelector('form').fire('submit');assert(!hasOrderDraft());assert.match(sourceDialog.querySelector('#form-error').textContent,/Stok batch pilihan tidak cukup/);
+ secondLot.kg=20;const beforeMultiReady=JSON.stringify(state);
+ await sourceDialog.querySelector('form').fire('submit');await sourceDialog.querySelector('form').fire('submit');
+ assert(hasOrderDraft());assert.equal(root.querySelector('#order-draft').querySelectorAll('.order-cart-line').length,1,'Double submit must add once');assert(!sourceDialog.hasAttribute('open'));
+ assert.match(root.querySelector('#order-draft').textContent,/Supplier asli/);assert.equal(root.querySelector('#order-scan-batch').hidden,false);
+ await scan('2100010024145');assert.equal(modal.latest,sourceDialog,'Next label reuses selected batch without opening a dialog');assert.equal(root.querySelector('#order-draft').querySelectorAll('.order-cart-line').length,2);
+ assert.equal(JSON.stringify(state),beforeMultiReady);assert.equal(actions.length,beforeActions+1);
+ await root.querySelector('#save-order').fire('click');await modal.latest.querySelector('form').fire('submit');await modal.latest.querySelector('form').fire('submit');
+ assert.deepEqual(actions.at(-1).payload.lines.map(l=>[l.lotId,l.kg,l.pieces]),[[secondLot.id,3.032,1],[secondLot.id,2.414,1]]);
+ soldLot=state.lots.find(l=>l.id===secondLot.id);assert(Math.abs(soldLot.kg-14.554)<1e-8);assert.equal(soldLot.pieces,8);
+ assert.equal(state.lots.find(l=>l.id===fruitLot.id).kg,initialKg-5.446,'Other batch remains unchanged');
+ assert.equal(state.orders.at(-1).total,544600);assert(!hasOrderDraft());
+ // Selection survives a completed sale/render; one 2.414 kg label accepts exact QRIS.
+ modal.latest.close();render();const paidDialog=modal.latest;await scan('2100010024145');assert.equal(modal.latest,paidDialog);assert(hasOrderDraft());
  await root.querySelector('#save-order').fire('click');modal.latest.querySelector('[name="payment"]').value='QRIS';await modal.latest.querySelector('[name="payment"]').fire('change');
  assert.equal(modal.latest.querySelector('[name="paid"]').value,'241400');
  await modal.latest.querySelector('form').fire('submit');await modal.latest.querySelector('form').fire('submit');
  assert.equal(state.orders.at(-1).paid,241400);assert.equal(state.orders.at(-1).total,241400);assert.equal(state.orders.at(-1).payment,'QRIS');assert(!hasOrderDraft());
- modal.latest.close();render();await scan('2100010030320');await root.querySelector('#close-fruit-editor').fire('click');assert(!hasOrderDraft());assert.equal(actions.length,beforeActions+2,'Closing an unconfirmed label is not a sale');
+ assert.equal(actions.at(-1).payload.lines[0].lotId,secondLot.id);modal.latest.close();render();
+ const lowLot=state.lots.find(l=>l.id===secondLot.id),savedKg=lowLot.kg;lowLot.kg=2;
+ await scan('2100010030320');assert(!hasOrderDraft());assert.match(root.querySelector('#order-scan-status').textContent,/Stok batch pilihan tidak cukup/);assert.equal(root.querySelector('#order-scan-batch').hidden,false,'Saved batch with insufficient weight still allows changing origin');lowLot.kg=savedKg;
+ // Change origin explicitly; choosing another batch never edits existing cart lines.
+ await scan('2100010030320');const beforeSwitch=root.querySelector('#order-draft').textContent;
+ await root.querySelector('#order-scan-batch').fire('click');modal.latest.querySelector('[name="scanLotId"]').value=fruitLot.id;await modal.latest.querySelector('form').fire('submit');
+ assert.equal(root.querySelector('#order-draft').textContent,beforeSwitch);await scan('2100010030320');assert.equal(root.querySelector('#order-draft').querySelectorAll('.order-cart-line').length,2,'Identical labels can represent two different fruit');
+ const preserved=JSON.stringify(state);clearOrderDraft();render();await scan('2100010030320');assert(!hasOrderDraft());modal.latest.close();assert.equal(JSON.stringify(state),preserved);assert.equal(actions.length,beforeActions+3,'Cancelling batch selection is not a sale');
+ // Reject stock races/other branches/reject lots, including quantities already in cart.
+ const realLots=state.lots;state.lots=[{...secondLot,kg:3.032,pieces:1},{...secondLot,id:'foreign',storeId:f.otherStore,kg:100,pieces:100},{...secondLot,id:'reject',quality:'reject',kg:100,pieces:100}];clearOrderDraft();render();
+ await scan('2100010030320');assert.equal(root.querySelector('#order-draft').querySelectorAll('.order-cart-line').length,1);
+ await scan('2100010030320');assert.equal(root.querySelector('#order-draft').querySelectorAll('.order-cart-line').length,1);assert.match(root.querySelector('#order-scan-status').textContent,/Stok buah siap jual habis/);
+ state.lots=realLots;clearOrderDraft();render();
  saveDeviceSettings({...readDeviceSettings(),scanner:{...defaultDeviceSettings().scanner,enabled:false}});render();assert(root.querySelector('#order-scan').disabled);assert(root.querySelector('#order-scan-add').disabled);
- console.log('PASS device settings and CAS POS: harmless scanner/print tests, local settings, exact variants, framing, fruit weight/batch confirmation, pending-label guards, invalid/oversized rejection, both real labels paid as 5.446 kg / 2 fruit with correct batch stock, cancel without sale, repeat/IME, auto-print off and manual reprint. No physical hardware/render test.');
+ console.log('PASS device settings and CAS POS: harmless scanner/print tests, local settings, exact variants, framing, automatic scale cart lines, one-time batch choice/change, consecutive scans, exact QRIS, invalid/oversized/branch/reject stock guards, both real labels paid as 5.446 kg / 2 fruit, cancel without sale, repeat/IME, auto-print off and manual reprint. No physical hardware/render test.');
 }finally{clearOrderDraft();Object.assign(globalThis,original);for(const [key,value]of Object.entries(descriptors)){if(value)Object.defineProperty(Node.prototype,key,value);else delete Node.prototype[key];}}

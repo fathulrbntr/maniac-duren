@@ -1,0 +1,72 @@
+MANIAC DUREN — PATCH 067: SCAN TIMBANGAN LANGSUNG MASUK POS
+
+Pasang di atas patch 066 timbangan CAS yang sudah bekerja.
+Ekstrak isi ZIP ke root proyek (folder package.json), timpa file yang sama,
+commit/push, tunggu deployment selesai, lalu Ctrl+Shift+R pada POS.
+Paket hanya berisi file baru/berubah. Tidak ada SQL atau perubahan database.
+Tetap gunakan barcode No. 3 / POS KG: 21IIIIWWWWWWC dan pemetaan master 0001
+untuk Monthong. Pengaturan timbangan yang sudah benar tidak perlu diubah.
+
+ALUR BARU — MENGGANTIKAN KONFIRMASI BERAT/BUTIR PADA PATCH 066
+1. Klik kolom Scan barcode / SKU di Kasir / POS, lalu scan label.
+2. Produk langsung ditambahkan ke keranjang dengan:
+   - Berat dari barcode, tanpa mengetik ulang.
+   - Jumlah otomatis 1 butir per scan.
+   - Penjualan per kg dengan harga dari Master Barang.
+3. Kolom scan otomatis kosong dan siap menerima label berikutnya.
+4. Periksa keranjang lalu bayar. Stok kg dan butir baru dipotong setelah
+   pembayaran berhasil disimpan.
+
+ASAL PENERIMAAN / BATCH
+- Satu batch tersedia: langsung digunakan tanpa pop-up.
+- Beberapa batch tersedia: pilih asal penerimaan satu kali. Pop-up hanya
+  meminta batch; tidak ada input berat atau butir.
+- Pilihan diingat per produk selama sesi POS, termasuk setelah pembayaran.
+- Gunakan tombol Ganti batch scan jika mengambil buah dari penerimaan lain.
+  Perubahan pilihan berlaku untuk scan berikutnya; keranjang lama tidak berubah.
+- Batch diperiksa terhadap outlet, status siap jual, tanggal, cadangan pesanan,
+  dan buah yang sudah berada di keranjang.
+- Jika batch pilihan masih ada tetapi beratnya tidak cukup, scan ditolak.
+  Pilih ulang asal yang benar atau periksa stok; tidak dipindahkan diam-diam.
+- Jika batch habis, scan berikutnya memakai satu batch lain yang tersedia atau
+  meminta pilihan bila ada beberapa batch. Bila semua habis, scan ditolak.
+- Pilihan dihapus saat ganti outlet, logout, ganti mode/demo, atau muat ulang.
+
+CONTOH
+Scan 2100010030320 -> Monthong 3,032 kg, 1 butir, Rp303.200 pada Rp100.000/kg.
+Scan 2100010024145 -> Monthong 2,414 kg, 1 butir, Rp241.400 pada Rp100.000/kg.
+Keduanya -> total 5,446 kg / 2 butir, Rp544.600 sebelum diskon.
+
+Satu label diasumsikan untuk satu buah. Untuk penjualan beberapa buah dalam
+satu penimbangan/label, gunakan input buah manual dengan jumlah sebenarnya.
+Label dengan produk dan berat sama dapat memiliki barcode identik; setiap
+scan berikutnya tetap menambah satu buah. Hapus baris keranjang jika ter-scan dua kali.
+Produk yang dipilih manual atau barcode biasa tanpa berat tetap memakai alur lama.
+Uji scanner di menu perangkat tetap hanya menampilkan hasil, tidak menambah pesanan.
+
+VERIFIKASI
+Lulus:
+  node tests/devices.test.mjs
+  node tests/scale-barcode.test.mjs
+  node tests/stock-demo-ui.test.mjs
+  node tests/rollback-startup.test.mjs
+  node tests/stock-demo-isolation.test.mjs
+
+Mencakup langsung tambah dengan satu batch, pilih batch sekali untuk beberapa
+scan/transaksi, ganti asal, tombol konfirmasi ganda, batal pilih batch, stok
+kurang/habis, outlet lain/reject, barcode salah, dua barcode identik, pembayaran
+QRIS tepat Rp241.400, pemotongan kg/butir dari batch yang dipilih, dan stok tidak
+berubah saat scan saja. Tes memakai adapter DOM dan stok demo lokal; perangkat
+scanner fisik dan transaksi database produksi belum dijalankan di sini.
+
+FILE PAKET
+pos/app.js
+pos/index.html
+pos/operations-ui.mjs
+tests/devices.test.mjs
+TIMBANGAN-CAS-067.txt
+
+GIT — DARI ROOT PROYEK SETELAH MENIMPA FILE
+git add pos/app.js pos/index.html pos/operations-ui.mjs tests/devices.test.mjs TIMBANGAN-CAS-067.txt
+git commit -m "Add scale barcode scans directly to POS cart"
+git push

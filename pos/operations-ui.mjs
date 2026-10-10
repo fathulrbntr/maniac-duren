@@ -8,7 +8,7 @@ import {posMenuEntries,updatePosCards,posVariantDialog} from './pos-menu.mjs?v=6
 import {posCategoryTabs,posProductCards,posCategoryDialog,posCategoryManager} from './pos-categories-ui.mjs?v=65';
 import {posVisible,menuCatalogChanged,posProductStatus} from './pos-categories.mjs?v=52';
 import {employeesPage,bindEmployees} from './employees-ui.mjs?v=25';
-import {checkOrder} from './order-stock.mjs?v=12';
+import {checkOrder,availableStock,requirements} from './order-stock.mjs?v=12';
 import {orderMargins} from './finance.mjs?v=54';
 import {escape as e,id,today,num,money} from './core.mjs?v=9';
 export const opsPages=['devices','discounts','salesreport','orders','kitchen','trace','finance','employees','attendance','guide'];
@@ -30,6 +30,9 @@ const lots=(s,store)=>[...s.lots,...s.unitLots].filter(x=>x.storeId===store&&(x.
 const cost=(n)=>n==null?'Belum diketahui':money(n);
 const allowed=(s,p)=>!s.access||s.access[p];
 let draft=[];
+// Keep the chosen physical batch for consecutive labels in this POS session.
+// Clear on logout/outlet/demo changes via clearOrderDraft; never persist stock.
+const scaleBatches=new Map();
 export function opsPage(view,s,store){
  if(view==='devices')return devicesPage(s);
  if(['employees','attendance'].includes(view))return employeesPage(view,s,store);
@@ -43,7 +46,7 @@ export function opsPage(view,s,store){
  const draftTotal=draft.reduce((a,x)=>a+x.qty*x.price,0);
  const itemCount=draft.reduce((a,x)=>a+x.qty,0);
  const cartLines=draft.map((x,i)=>{const p=s.products.find(p=>p.id===x.productId);const fruit=p?.stockUnit==='kg_butir';const unit=fruit?(x.unit==='KG'?'kg':'butir'):(p?.stockUnit||'pcs');return `<article class="order-cart-line"><div class="order-cart-copy"><strong>${e(nm(s,'products',x.productId))}</strong><span>${num(x.qty)} ${e(unit)} × ${money(x.price)}</span>${fruit?`<small>${num(x.kg)} kg aktual · ${x.pieces} butir<br>${e(nm(s,'suppliers',x.supplierId))} · ${e((x.lotId||'').slice(0,8))}</small>`:''}</div><div class="order-cart-actions">${!fruit?`<button type="button" data-draft-qty="${i}" data-delta="-1" aria-label="Kurangi jumlah">−</button><button type="button" data-draft-qty="${i}" data-delta="1" aria-label="Tambah jumlah">+</button>`:''}<button type="button" class="order-remove" data-remove-line="${i}" aria-label="Hapus item">×</button><b>${money(x.qty*x.price)}</b></div></article>`;}).join('');
- html=header('Pesanan & kitchen','Pilih menu dan terima pembayaran. Buah dan produk siap jual langsung selesai. Hanya menu yang perlu dibuat masuk kitchen.')+(allowed(s,'sell')?`<div class="order-screen"><section class="panel order-catalog"><div class="order-catalog-head"><div><h3>Pilih menu</h3><p class="muted">${e(nm(s,'stores',store))} · buah / produk siap jual langsung diproses kasir.</p></div><label class="order-search"><span class="sr-only">Cari menu</span><input id="order-search" type="search" placeholder="Cari menu…" autocomplete="off"></label></div><div class="pos-scanbar"><label for="order-scan">Scan barcode / SKU</label><div class="pos-scan-controls"><input id="order-scan" type="text" maxlength="256" autocomplete="off" spellcheck="false" placeholder="Klik di sini, lalu scan produk" ${readDeviceSettings().scanner.enabled?'':'disabled'}><button type="button" id="order-scan-add" ${readDeviceSettings().scanner.enabled?'':'disabled'}>Tambah</button></div><p id="order-scan-status" role="status">${readDeviceSettings().scanner.enabled?'Label CAS POS KG mengisi berat otomatis. Konfirmasi asal penerimaan dan butir sebelum label berikutnya.':'Scanner nonaktif. Aktifkan melalui Printer & Scanner.'}</p></div><div class="order-categories" role="group" aria-label="Kategori menu">${posCategoryTabs(s)}</div>${allowed(s,'master')?'<div class="order-category-actions"><button type="button" id="add-pos-category">+ Tambah kategori</button><button type="button" id="manage-pos-categories">Kelola kategori & produk</button></div>':''}<div id="order-products" class="order-product-grid">${posProductCards(s,store,draft)}</div><p id="order-no-results" class="empty" hidden>Menu tidak ditemukan.</p><form id="order-line" class="order-line-editor" hidden><div class="order-editor-title"><div><span class="order-product-category">PENJUALAN BUAH</span><h4 id="fruit-order-name">Pilih cara jual</h4></div><button type="button" id="close-fruit-editor" aria-label="Tutup">×</button></div><select class="sr-only" name="productId" required><option value="">Pilih durian</option>${opts(sellable.filter(p=>p.stockUnit==='kg_butir'))}</select><input class="sr-only" name="qty" type="number" value="1"><div id="fruit-order-fields" hidden><div class="form-grid">${field('Asal penerimaan',`<select name="lotId" required></select>`)}${field('Cara jual','<select name="unit" required><option value="KG">Per kg</option><option value="BUTIR">Per butir</option></select>')}${field('Berat buah aktual (kg)',input('kg','number','min="0.000001" step="any" required'))}${field('Jumlah butir terjual',input('pieces','number','min="1" step="1" required'))}${field('Harga jual satuan (Rp)',input('price','number','min="0.01" step="any" readonly required'))}</div></div><button type="submit" class="primary">Tambah ke pesanan</button></form></section><aside class="panel order-summary"><div class="order-summary-head"><div><span class="order-product-category">PESANAN SAAT INI</span><h3>Rincian pesanan</h3></div><span class="order-count" id="order-item-count">${num(itemCount)} item</span></div><div id="order-draft" class="order-cart-items">${cartLines||'<div class="order-empty"><span>＋</span><b>Belum ada item</b><small>Pilih menu untuk mulai membuat pesanan.</small></div>'}</div><div class="order-total-row"><span>Total pesanan</span><strong id="order-total">${money(draftTotal)}</strong></div>${cashierFields(s)}<button class="primary full order-save" id="save-order" ${draft.length?'':'disabled'}>${s.stockDemo?'Uji pembayaran':'Bayar sekarang'} · ${money(draftTotal)}</button><p id="order-stock-message" class="order-payment-hint" aria-live="polite"></p><p class="order-payment-hint">Buah / produk siap jual: stok dipotong saat bayar. ${e(itemTypes.recipe)}: masuk kitchen setelah lunas.</p></aside></div>`:'')+`<section class="panel order-queue"><div class="header-row"><div><h3>Antrean pesanan</h3><p class="muted">Pesanan cabang ini · bayar → antre → dibuat → siap → diserahkan.</p></div></div>${table(['Pesanan / catatan','Item','Status / total','Aksi'],(s.orders||[]).filter(o=>o.store_id===store).map(o=>`<tr><td><b>${e(o.id.slice(0,8))}</b><small>${e(o.business_date)} · ${e(tableLabel(o.table_no))}</small>${e(o.note)}</td><td>${o.lines.map(l=>`${e(l.name)} × ${num(l.qty)} ${e(l.unit)}`).join('<br>')}</td><td><span class="pill">${e(orderLabel(o))}</span><small>${e(paymentLabel(o))} · ${money(o.total)}</small></td><td>${isPaid(o)&&!needsKitchen(o)&&['queued','preparing','ready'].includes(o.status)&&allowed(s,'sell')?button('Selesaikan di kasir','order_direct',o.id,'primary'):''}${!isPaid(o)&&o.status!=='cancelled'&&allowed(s,'sell')?button('Bayar sekarang','pay',o.id,'primary'):''}${isPaid(o)&&needsKitchen(o)&&o.status==='ready'&&allowed(s,'sell')?button('Sudah diserahkan','order_complete',o.id,'primary'):''}${o.status!=='cancelled'&&allowed(s,'sell')?button('Void','cashier_void',o.id,'danger'):''}${button('Detail / struk','order_receipt',o.id)}</td></tr>`))}</section>`;
+ html=header('Pesanan & kitchen','Pilih menu dan terima pembayaran. Buah dan produk siap jual langsung selesai. Hanya menu yang perlu dibuat masuk kitchen.')+(allowed(s,'sell')?`<div class="order-screen"><section class="panel order-catalog"><div class="order-catalog-head"><div><h3>Pilih menu</h3><p class="muted">${e(nm(s,'stores',store))} · buah / produk siap jual langsung diproses kasir.</p></div><label class="order-search"><span class="sr-only">Cari menu</span><input id="order-search" type="search" placeholder="Cari menu…" autocomplete="off"></label></div><div class="pos-scanbar"><label for="order-scan">Scan barcode / SKU</label><div class="pos-scan-controls"><input id="order-scan" type="text" maxlength="256" autocomplete="off" spellcheck="false" placeholder="Klik di sini, lalu scan produk" ${readDeviceSettings().scanner.enabled?'':'disabled'}><button type="button" id="order-scan-add" ${readDeviceSettings().scanner.enabled?'':'disabled'}>Tambah</button></div><p id="order-scan-status" role="status">${readDeviceSettings().scanner.enabled?'Scan label CAS POS KG langsung menambah berat label dan 1 butir ke pesanan.':'Scanner nonaktif. Aktifkan melalui Printer & Scanner.'}</p><button type="button" id="order-scan-batch" class="small" hidden>Ganti batch scan</button></div><div class="order-categories" role="group" aria-label="Kategori menu">${posCategoryTabs(s)}</div>${allowed(s,'master')?'<div class="order-category-actions"><button type="button" id="add-pos-category">+ Tambah kategori</button><button type="button" id="manage-pos-categories">Kelola kategori & produk</button></div>':''}<div id="order-products" class="order-product-grid">${posProductCards(s,store,draft)}</div><p id="order-no-results" class="empty" hidden>Menu tidak ditemukan.</p><form id="order-line" class="order-line-editor" hidden><div class="order-editor-title"><div><span class="order-product-category">PENJUALAN BUAH</span><h4 id="fruit-order-name">Pilih cara jual</h4></div><button type="button" id="close-fruit-editor" aria-label="Tutup">×</button></div><select class="sr-only" name="productId" required><option value="">Pilih durian</option>${opts(sellable.filter(p=>p.stockUnit==='kg_butir'))}</select><input class="sr-only" name="qty" type="number" value="1"><div id="fruit-order-fields" hidden><div class="form-grid">${field('Asal penerimaan',`<select name="lotId" required></select>`)}${field('Cara jual','<select name="unit" required><option value="KG">Per kg</option><option value="BUTIR">Per butir</option></select>')}${field('Berat buah aktual (kg)',input('kg','number','min="0.000001" step="any" required'))}${field('Jumlah butir terjual',input('pieces','number','min="1" step="1" required'))}${field('Harga jual satuan (Rp)',input('price','number','min="0.01" step="any" readonly required'))}</div></div><button type="submit" class="primary">Tambah ke pesanan</button></form></section><aside class="panel order-summary"><div class="order-summary-head"><div><span class="order-product-category">PESANAN SAAT INI</span><h3>Rincian pesanan</h3></div><span class="order-count" id="order-item-count">${num(itemCount)} item</span></div><div id="order-draft" class="order-cart-items">${cartLines||'<div class="order-empty"><span>＋</span><b>Belum ada item</b><small>Pilih menu untuk mulai membuat pesanan.</small></div>'}</div><div class="order-total-row"><span>Total pesanan</span><strong id="order-total">${money(draftTotal)}</strong></div>${cashierFields(s)}<button class="primary full order-save" id="save-order" ${draft.length?'':'disabled'}>${s.stockDemo?'Uji pembayaran':'Bayar sekarang'} · ${money(draftTotal)}</button><p id="order-stock-message" class="order-payment-hint" aria-live="polite"></p><p class="order-payment-hint">Buah / produk siap jual: stok dipotong saat bayar. ${e(itemTypes.recipe)}: masuk kitchen setelah lunas.</p></aside></div>`:'')+`<section class="panel order-queue"><div class="header-row"><div><h3>Antrean pesanan</h3><p class="muted">Pesanan cabang ini · bayar → antre → dibuat → siap → diserahkan.</p></div></div>${table(['Pesanan / catatan','Item','Status / total','Aksi'],(s.orders||[]).filter(o=>o.store_id===store).map(o=>`<tr><td><b>${e(o.id.slice(0,8))}</b><small>${e(o.business_date)} · ${e(tableLabel(o.table_no))}</small>${e(o.note)}</td><td>${o.lines.map(l=>`${e(l.name)} × ${num(l.qty)} ${e(l.unit)}`).join('<br>')}</td><td><span class="pill">${e(orderLabel(o))}</span><small>${e(paymentLabel(o))} · ${money(o.total)}</small></td><td>${isPaid(o)&&!needsKitchen(o)&&['queued','preparing','ready'].includes(o.status)&&allowed(s,'sell')?button('Selesaikan di kasir','order_direct',o.id,'primary'):''}${!isPaid(o)&&o.status!=='cancelled'&&allowed(s,'sell')?button('Bayar sekarang','pay',o.id,'primary'):''}${isPaid(o)&&needsKitchen(o)&&o.status==='ready'&&allowed(s,'sell')?button('Sudah diserahkan','order_complete',o.id,'primary'):''}${o.status!=='cancelled'&&allowed(s,'sell')?button('Void','cashier_void',o.id,'danger'):''}${button('Detail / struk','order_receipt',o.id)}</td></tr>`))}</section>`;
  }
  if(view==='salesreport')html=header('Laporan seluruh penjualan','Penjualan pesanan dan riwayat transaksi buah lama. Pesanan belum dibayar tidak dihitung.')+`<section class="panel"><div class="form-grid">${field('Dari',input('reportFrom','date',`id="sales-from" value="${today().slice(0,8)}01"`))}${field('Sampai',input('reportTo','date',`id="sales-to" value="${today()}"`))}</div><div id="sales-result"></div></section>`;
  if(view==='trace')html=header('Jejak stok','Pilih penerimaan atau hasil untuk melihat pergerakan dan asal bahan lintas proses.')+`<section class="panel">${field('Telusuri lot / penerimaan',`<select id="trace-lot"><option value="">Semua pergerakan</option>${opts([...s.lots,...s.unitLots].filter(l=>l.storeId===store).map(l=>({id:l.id,name:`${nm(s,'products',l.productId)} · ${l.date} · ${l.id.slice(0,8)}`})))}</select>`)}<div id="trace-result"></div></section>`;
@@ -117,16 +120,78 @@ export function bindOps(view,s,store,ctx){
  const scanInput=document.querySelector('#order-scan');
  if(scanInput){
   const scanStatus=document.querySelector('#order-scan-status');
+  const batchButton=document.querySelector('#order-scan-batch');
+  let lastScaleProduct=null;
+  const batchKey=productId=>`${store}:${productId}`;
+  const scanLots=productId=>{
+   const available=availableStock(s,store,today()),used=requirements(s,draft);
+   return s.lots.filter(l=>l.productId===productId&&l.storeId===store&&l.quality==='ready'&&l.date<=today()).map(l=>{
+    const key='lot:'+l.id,left=available.get(key)||{qty:0,pieces:0},taken=used.get(key)||{qty:0,pieces:0};
+    return {...l,kg:left.qty-taken.qty,pieces:left.pieces-taken.pieces};
+   }).filter(l=>l.kg>1e-8&&l.pieces>=1);
+  };
+  const showBatchButton=product=>{
+   lastScaleProduct=product.id;
+   batchButton.hidden=false;batchButton.textContent=`Ganti batch scan · ${product.name}`;
+  };
+  const rememberBatch=(product,lot)=>{scaleBatches.set(batchKey(product.id),lot.id);showBatchButton(product);};
+  const addScaleLabel=(raw,settings,productId,lotId)=>{
+   s=ctx.getState?.()||s;
+   const {product,scale}=barcodeProduct(s,raw,settings);
+   if(!scale||product.id!==productId)throw Error('Pemetaan barcode berubah. Scan ulang label.');
+   const lot=scanLots(product.id).find(l=>l.id===lotId);
+   if(!lot)throw Error('Batch pilihan sudah habis atau tidak tersedia. Pilih ulang asal penerimaan.');
+   const line={productId:product.id,lotId:lot.id,supplierId:lot.supplierId,unit:'KG',kg:scale.kg,pieces:1,qty:scale.kg,price:Number(product.priceKg)};
+   const stock=checkOrder(s,store,[...draft,line],today());
+   if(!stock.ok)throw Error(stock.reason.startsWith('Stok kurang')?'Stok batch pilihan tidak cukup untuk berat label. Periksa stok atau Ganti batch scan sesuai asal buah.':stock.reason);
+   if(!addDraftLine(line))throw Error('Buah belum ditambahkan. Periksa stok batch pilihan.');
+   rememberBatch(product,lot);
+   scanStatus.textContent=`Ditambahkan: ${product.name} · ${scale.kg.toFixed(3)} kg · 1 butir · ${nm(s,'suppliers',lot.supplierId)} · ${lot.date}. Siap scan label berikutnya.`;
+   scanInput.value='';scanInput.focus();
+  };
+  const chooseScanBatch=(product,onChoose,pendingLabel=false)=>{
+   const choices=scanLots(product.id);
+   if(!choices.length)throw Error('Stok buah siap jual habis pada outlet ini.');
+   const d=ctx.modal(`Asal penerimaan · ${product.name}`,`<p>${pendingLabel?'Berat dari label dan jumlah 1 butir sudah terisi otomatis. Pilih asal buah untuk langsung menambah ke pesanan.':'Pilih asal buah untuk scan berikutnya. Isi keranjang yang sudah ada tetap memakai batch sebelumnya.'}</p>${field('Asal penerimaan',`<select name="scanLotId" required><option value="">Pilih batch buah ini</option>${opts(choices.map(l=>({id:l.id,name:`${nm(s,'suppliers',l.supplierId)} · ${l.date} · ${balance(l)} · ${l.id.slice(0,8)}`})))}</select>`)}<p class="muted">Pilihan dipakai untuk label berikutnya sampai batch habis atau diganti.</p>`,pendingLabel?'Pilih & tambah ke pesanan':'Gunakan batch ini');
+   let finished=false;
+   d.querySelector('form').onsubmit=ev=>{
+    ev.preventDefault();if(finished)return;
+    try{
+     s=ctx.getState?.()||s;
+     const lot=scanLots(product.id).find(l=>l.id===d.querySelector('[name="scanLotId"]').value);
+     if(!lot)throw Error('Pilih asal penerimaan yang masih tersedia untuk buah ini.');
+     onChoose(lot);finished=true;d.close();scanInput.focus();
+    }catch(error){d.querySelector('#form-error').textContent=error.message;}
+   };
+   d.addEventListener('close',()=>{if(!finished)scanStatus.textContent=pendingLabel?'Scan dibatalkan; buah belum ditambahkan.':'Pilihan batch tetap seperti sebelumnya.';scanInput.focus();});
+  };
+  batchButton.onclick=()=>{
+   try{
+    if(document.querySelector('dialog[open]'))return;
+    s=ctx.getState?.()||s;const product=s.products.find(p=>p.id===lastScaleProduct);
+    if(!product)throw Error('Produk tidak tersedia. Scan ulang label.');
+    chooseScanBatch(product,lot=>{rememberBatch(product,lot);scanStatus.textContent=`Batch scan ${product.name}: ${nm(s,'suppliers',lot.supplierId)} · ${lot.date}. Siap scan label berikutnya.`;});
+   }catch(error){scanStatus.textContent=error.message;}
+  };
   const scan=bindBarcodeInput(scanInput,{onScan:(raw,settings)=>{
    if(document.querySelector('dialog[open]'))throw Error('Tutup pop-up sebelum scan produk berikutnya.');
    if(!f.hidden)throw Error('Konfirmasi buah dengan Tambah ke pesanan atau tutup form sebelum scan label berikutnya.');
+   s=ctx.getState?.()||s;
    const {product,scale}=barcodeProduct(s,raw,settings);
+   if(scale){
+    showBatchButton(product);
+    const choices=scanLots(product.id);
+    const selected=choices.find(l=>l.id===scaleBatches.get(batchKey(product.id)))||(choices.length===1?choices[0]:null);
+    if(selected)addScaleLabel(raw,settings,product.id,selected.id);
+    else chooseScanBatch(product,lot=>addScaleLabel(raw,settings,product.id,lot.id),true);
+    return;
+   }
    const added=selectProduct(product);
    if(!added){scanStatus.textContent='Belum ditambahkan. Periksa ketersediaan stok dan harga produk.';return false;}
-   scanStatus.textContent=scale?`Terbaca: ${product.name} · ${scale.kg.toFixed(3)} kg · ${money(scale.kg*Number(product.priceKg))}. Harga memakai Master Barang; samakan dengan label. Konfirmasi asal penerimaan dan butir.`:product.stockUnit==='kg_butir'?`Terpilih: ${product.name}. Konfirmasi asal penerimaan, berat, dan butir.`:`Ditambahkan: ${product.name} × 1 ${product.stockUnit||'pcs'}.`;
+   scanStatus.textContent=product.stockUnit==='kg_butir'?`Terpilih: ${product.name}. Konfirmasi asal penerimaan, berat, dan butir.`:`Ditambahkan: ${product.name} × 1 ${product.stockUnit||'pcs'}.`;
    if(product.stockUnit==='kg_butir'){
-    f.elements.unit.value='KG';f.elements.unit.onchange();f.elements.kg.value=scale?scale.kg.toFixed(3):'';f.elements.pieces.value=scale?'1':'';
-    requestAnimationFrame(()=>(scale?(f.elements.lotId.value?f.elements.pieces:f.elements.lotId):f.elements.kg).focus());
+    f.elements.unit.value='KG';f.elements.unit.onchange();f.elements.kg.value='';f.elements.pieces.value='';
+    requestAnimationFrame(()=>f.elements.kg.focus());
    }else scanInput.focus();
   },onError:message=>scanStatus.textContent=message});
   document.querySelector('#order-scan-add').onclick=scan;
@@ -215,7 +280,7 @@ export function bindOps(view,s,store,ctx){
  document.querySelector('#finance-result').innerHTML=`${unknown?`<div class="notice">${unknown} transaksi memiliki biaya belum diketahui. Laba belum dapat dinyatakan lengkap; biaya lama tidak diasumsikan nol.</div>`:''}<div class="stats"><div class="stat"><small>Omzet tercatat sejak upgrade</small><strong>${money(rev)}</strong></div><div class="stat"><small>Biaya barang terjual</small><strong>${money(cogs)}</strong></div><div class="stat"><small>Waste / penyusutan</small><strong>${money(loss)}</strong></div><div class="stat"><small>Laba kotor setelah waste</small><strong>${unknown?'Belum lengkap':money(rev-cogs-loss)}</strong></div></div><h3>Penjualan buah per supplier</h3>${table(['Supplier','Kg / butir','Omzet'],s.suppliers.filter(x=>!supplier||x.id===supplier).map(x=>{const r=fruitRows.filter(l=>l.supplierId===x.id);return `<tr><td>${e(x.name)}</td><td>${num(r.reduce((a,l)=>a+ +l.kg,0))} kg / ${r.reduce((a,l)=>a+ +l.pieces,0)} butir</td><td>${money(r.reduce((a,l)=>a+ +l.total,0))}</td></tr>`}))}<h3>Produk terjual yang memakai hasil olahan reject</h3><p class="muted">Termasuk pemakaian melalui resep bertingkat. Laba per item mencakup seluruh bahan item tersebut.</p>${table(['Produk / pesanan','Omzet','Biaya bahan','Laba kotor item'],recovered.map(o=>`<tr><td>${e(o.name)}<small>${e(o.orderId.slice(0,8))}</small></td><td>${money(o.revenue)}</td><td>${cost(o.cost)}</td><td>${cost(o.profit)}</td></tr>`))}<h3>Alokasi penjualan pesanan menurut supplier bahan</h3><p class="muted">Untuk produk campuran, omzet dialokasikan menurut proporsi modal bahan. Ini alokasi analitis, bukan penjualan langsung buah. Item tanpa modal lengkap atau modal nol tidak dialokasikan.</p>${table(['Supplier','Alokasi omzet','Modal bahan','Selisih'],[...allocated].filter(([key])=>!supplier||key===supplier).map(([key,x])=>`<tr><td>${e(nm(s,'suppliers',key))}</td><td>${money(x.revenue)}</td><td>${money(x.cost)}</td><td>${money(x.revenue-x.cost)}</td></tr>`))}<h3>Rincian biaya & pendapatan</h3>${table(['Kegiatan','Pendapatan','Biaya'],rows.map(x=>`<tr><td>${e(x.note)}</td><td>${money(x.revenue)}</td><td>${cost(x.cost)}</td></tr>`))}<p class="muted">Modal buah reject yang diolah dipindahkan ke hasil menurut berat hasil. Selisih kulit/biji belum dianggap kerugian rupiah tersendiri agar modal tidak dihitung dua kali.</p>`;};for(const k of ['finance-from','finance-to','finance-supplier'])document.getElementById(k).onchange=renderFinance;renderFinance();
  }
 }
-export function clearOrderDraft(){draft=[];}
+export function clearOrderDraft(){draft=[];scaleBatches.clear();}
 export function hasOrderDraft(){return draft.length>0;}
 
 function kitchenPage(s,store) {
