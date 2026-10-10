@@ -1,0 +1,80 @@
+MANIAC DUREN — PATCH 068: POP-UP PENJUALAN BUAH
+
+PEMASANGAN
+Pasang di atas patch 067, setelah patch 066 timbangan CAS sudah terpasang.
+Ekstrak isi ZIP ke root proyek (folder package.json), timpa file yang sama,
+commit/push, tunggu deployment selesai, lalu Ctrl+Shift+R pada POS.
+Paket hanya berisi file baru/berubah. Tidak memerlukan SQL.
+Pengaturan timbangan tetap: 21IIIIWWWWWWC, item code 4 digit di Master Barang.
+
+ALUR BARU
+1. Klik produk buah atau scan label timbangan CAS dari kolom Scan barcode / SKU.
+2. Pop-up Penjualan buah terbuka. Pilih Per kg atau Per butir.
+3. Pilih tanggal barang masuk. Pilihan hanya berasal dari penerimaan produk
+   tersebut yang masih memiliki stok siap jual di outlet aktif.
+4. Pilih supplier. Daftar supplier mengikuti tanggal yang dipilih.
+5. Jika ada beberapa penerimaan dari supplier yang sama pada tanggal itu,
+   pilih penerimaan yang sesuai. Bila hanya satu, digunakan otomatis.
+6. Klik Tambah ke pesanan. Bayar setelah rincian pesanan benar.
+
+BERAT, BUTIR, HARGA DAN STOK
+- Scan label CAS: berat dari barcode dan 1 butir otomatis; tidak perlu
+  mengisi kedua angka itu lagi. Satu label diasumsikan untuk satu buah.
+- Pilih produk manual / barcode biasa tanpa berat: isi berat aktual dan
+  jumlah buah dalam pop-up; jumlah awal 1 butir.
+- Per kg memakai harga/kg Master Barang. Per butir memakai harga/butir
+  Master Barang. Ringkasan harga dan subtotal mengikuti pilihan ini.
+- Penjualan per butir tetap mencatat kg aktual dan memotong kg serta butir
+  dari penerimaan yang dipilih setelah pembayaran berhasil.
+- Scan, memilih batch, dan menutup pop-up belum memotong stok.
+- Setiap scan buah meminta cara jual, tanggal masuk, dan supplier lagi.
+  Alur ini menggantikan auto-tambah dan ingatan batch dari patch 067.
+- Tanggal masuk adalah tanggal penerimaan stok, bukan tanggal penjualan.
+- Mengganti tanggal mengosongkan pilihan supplier/penerimaan sebelumnya.
+- Stok outlet lain, reject, tanggal mendatang, stok yang dicadangkan pesanan,
+  dan buah yang sudah dipilih dalam keranjang tidak dihitung sebagai tersedia.
+- Jika stok atau asal berubah saat pop-up terbuka, konfirmasi memeriksa ulang.
+  Stok kurang tidak dialihkan diam-diam ke batch lain.
+- Untuk satu label yang berisi beberapa buah, gunakan input manual dengan
+  jumlah buah sebenarnya. Barcode berat tidak memuat jumlah buah.
+
+CONTOH
+Label 2100010030320 -> item 0001, 3,032 kg / 1 butir.
+Per kg dengan harga Rp100.000/kg -> Rp303.200.
+Label 2100010024145 -> item 0001, 2,414 kg / 1 butir.
+Per butir dengan harga Rp180.000/butir -> Rp180.000.
+Keduanya: Rp483.200, potong 5,446 kg dan 2 butir saat pembayaran berhasil.
+
+VERIFIKASI LULUS
+node tests/fruit-sale-dialog.test.mjs
+node tests/devices.test.mjs
+node tests/pos-sale-variants.test.mjs
+node tests/scale-barcode.test.mjs
+node tests/stock-demo-ui.test.mjs
+node tests/rollback-startup.test.mjs
+node tests/stock-demo-isolation.test.mjs
+
+Tes mencakup pilihan tanggal/supplier/penerimaan, beberapa penerimaan pada
+supplier/tanggal yang sama, kg/butir, berat label otomatis, input manual,
+pembayaran campuran, QRIS dengan jumlah tepat, pemotongan stok, konfirmasi
+ganda, batal, barcode salah, perubahan pemetaan/harga dan stok kedaluwarsa.
+Tes memakai adapter DOM dan stok demo lokal. Uji tampilan browser tidak
+berjalan karena browser Chromium tidak tersedia dan unduhannya gagal.
+Scanner fisik dan transaksi database produksi belum diuji di lingkungan ini.
+
+FILE PAKET
+pos/app.js
+pos/index.html
+pos/operations-ui.mjs
+pos/pos-menu.mjs
+pos/fruit-sale-dialog.mjs
+pos/fruit-sale.css
+tests/devices.test.mjs
+tests/pos-sale-variants.test.mjs
+tests/fruit-sale-dialog.test.mjs
+TIMBANGAN-CAS-068.txt
+
+GIT — DARI ROOT PROYEK SETELAH MENIMPA FILE
+git add pos/app.js pos/index.html pos/operations-ui.mjs pos/pos-menu.mjs pos/fruit-sale-dialog.mjs pos/fruit-sale.css tests/devices.test.mjs tests/pos-sale-variants.test.mjs tests/fruit-sale-dialog.test.mjs TIMBANGAN-CAS-068.txt
+git commit -m "Move fruit sales to popup with date and supplier selection"
+git push

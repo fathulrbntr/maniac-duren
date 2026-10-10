@@ -74,7 +74,7 @@ export function posVariantDialog({key,category='all',getState,getDraft,store,mod
  const current=()=>{const state=getState();return {state,entry:posMenuEntries(state,category).find(entry=>entry.key===key)};};
  function updateConfirmation(entry){
   const product=entry?.products.find(p=>p.id===selected);submit.disabled=!product;
-  submit.textContent=product?.stockUnit==='kg_butir'?'Konfirmasi · Isi berat buah':'Konfirmasi · Tambah ke pesanan';
+  submit.textContent=product?.stockUnit==='kg_butir'?'Konfirmasi · Penjualan buah':'Konfirmasi · Tambah ke pesanan';
   d.querySelector('[data-variant-confirmation]').textContent=product?`${product.name} · ${posPriceLabel(product)}`:'Belum ada varian dipilih.';
  }
  function refresh(){
