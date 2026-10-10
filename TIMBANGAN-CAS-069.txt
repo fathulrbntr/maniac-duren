@@ -1,0 +1,78 @@
+MANIAC DUREN — PATCH 069: SCAN DENGAN NUMPAD DAN ENTER
+
+PASANG
+Ekstrak isi ZIP ke root proyek (folder package.json), timpa file yang sama.
+Pasang setelah patch 068 beserta patch 066/067 yang sudah bekerja.
+Commit/push, tunggu deployment selesai, lalu Ctrl+Shift+R pada POS.
+Tidak memerlukan SQL. Pengaturan timbangan dan pemetaan barcode tetap.
+
+ALUR SCANNER
+1. Scan barcode pada kolom Scan barcode / SKU.
+2. Pop-up terbuka dengan kursor langsung pada Tanggal barang masuk.
+3. Ketik tanggal 8 angka lewat numpad. Contoh: 09102026, lalu Enter.
+   Tanggal tampil menjadi 09/10/2026 dan fokus pindah ke Supplier.
+4. Supplier pertama pada tanggal tersebut terpilih sebagai pilihan awal.
+   Gunakan panah atas/bawah untuk memilih supplier, lalu Enter.
+5. Fokus pindah ke Cara jual. Pilihan awal Per kg. Panah bawah memilih
+   Per butir, panah atas kembali ke Per kg. Enter menambah ke keranjang.
+6. Pop-up ditutup dan kolom scan kembali aktif untuk buah berikutnya.
+
+CONTOH LABEL
+2100010024145 -> item code 0001, berat 2,414 kg, otomatis 1 butir.
+Per kg memakai harga/kg Master Barang; Per butir memakai harga/butir.
+Berat dan jumlah tidak perlu diketik lagi ketika memakai label timbangan.
+Satu label diasumsikan satu buah. Jika satu label menimbang beberapa buah,
+gunakan input manual dengan jumlah buah sebenarnya.
+
+TANGGAL DAN SUPPLIER
+Tanggal adalah tanggal masuk stok, bukan tanggal transaksi penjualan.
+Tanggal tidak valid, tanggal mendatang, atau tanggal tanpa stok siap jual
+pada outlet aktif ditolak dan fokus tetap kembali ke tanggal.
+Format 09/10/2026 juga diterima jika diketik atau ditempel.
+Mengganti tanggal menghapus pilihan asal sebelumnya.
+Jika supplier punya beberapa penerimaan di tanggal yang sama, masing-masing
+penerimaan tampil sebagai pilihan di kolom Supplier, disertai stok dan
+referensi penerimaannya. Tetap pilih dengan panah lalu Enter tanpa langkah
+atau pop-up tambahan; pencatatan modal/stok tetap mengarah ke batch tepat.
+Stok diperiksa lagi sebelum masuk keranjang dan saat pembayaran.
+Berat aktual dan jumlah buah baru dipotong setelah pembayaran berhasil.
+Jika stok asal habis/berubah, sistem tidak otomatis memindahkan ke supplier lain.
+
+INPUT MANUAL DAN MOUSE
+Klik produk buah juga membuka pop-up yang sama. Setelah tanggal, supplier,
+dan cara jual, isi kg aktual, Enter ke jumlah butir, Enter untuk menambah.
+Jumlah butir awal 1. Tombol Tambah ke pesanan serta pemilihan dengan mouse
+masih dapat digunakan. Batal/Escape menutup tanpa menambah item.
+Enter yang ditahan tidak melewati beberapa langkah atau menambah dua kali.
+
+PENGUJIAN LULUS
+node tests/fruit-sale-dialog.test.mjs
+node tests/devices.test.mjs
+node tests/pos-sale-variants.test.mjs
+node tests/scale-barcode.test.mjs
+node tests/stock-demo-ui.test.mjs
+node tests/rollback-startup.test.mjs
+node tests/stock-demo-isolation.test.mjs
+
+Mencakup tanggal 8 digit dan tahun kabisat, Numpad Enter, fokus antar kolom,
+pilihan panah, beberapa penerimaan dari supplier yang sama, kg/butir,
+berat otomatis, konfirmasi ganda, stok berubah, pemetaan barcode berubah,
+pembayaran campuran, QRIS tepat, serta pengurangan kg/butir pada batch asal.
+Pengujian melalui adapter DOM dan stok demo lokal. Browser dan scanner fisik
+belum diuji langsung di lingkungan ini.
+
+FILE PAKET
+pos/app.js
+pos/index.html
+pos/operations-ui.mjs
+pos/fruit-sale-dialog.mjs
+pos/fruit-sale.css
+tests/devices.test.mjs
+tests/fruit-sale-dialog.test.mjs
+tests/variant-dom.mjs
+TIMBANGAN-CAS-069.txt
+
+PERINTAH GIT DARI ROOT PROYEK
+git add pos/app.js pos/index.html pos/operations-ui.mjs pos/fruit-sale-dialog.mjs pos/fruit-sale.css tests/devices.test.mjs tests/fruit-sale-dialog.test.mjs tests/variant-dom.mjs TIMBANGAN-CAS-069.txt
+git commit -m "Add numpad and Enter flow for fruit barcode sales"
+git push

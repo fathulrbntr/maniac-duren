@@ -67,7 +67,7 @@ try{
  assert.equal(actions.filter(x=>x.action==='order_create').length,1);assert.equal(printing.printed.length,printCount,'Auto print off is respected after payment');assert.match(modal.latest.textContent,/Pesanan berhasil/);assert.equal(qty(state,f.water,f.store),98);assert(!hasOrderDraft());
  await modal.latest.querySelector('#result-receipt').fire('click');await modal.latest.querySelector('#print-order').fire('click');assert.equal(printing.printed.length,printCount+1);assert.match(printing.printed.at(-1).css,/size: 58mm/);assert.equal(actions.length,1,'Manual reprint must not post another transaction');
  modal.latest.close();
- // Scanned fruit always opens unit -> receipt date -> supplier; quantity is automatic.
+ // Scanned fruit opens date -> supplier -> unit; Numpad Enter adds it to the cart.
  const fruit=state.products.find(p=>p.id===f.fruit.id);fruit.barcode='0001';fruit.priceKg=100000;fruit.pricePiece=180000;
  const fruitLot=state.lots.find(l=>l.productId===fruit.id&&l.storeId===f.store),initialKg=fruitLot.kg,initialPieces=fruitLot.pieces,beforeActions=actions.length;
  view='devices';render();const beforeTest=JSON.stringify(state);
@@ -76,11 +76,12 @@ try{
  view='orders';render();
  const chooseFruit=async(unit='KG')=>{
   const d=modal.latest,control=name=>d.querySelector(`[name="${name}"]`);
-  assert(!control('kg'));assert(!control('pieces'));assert(control('supplierId').disabled);
-  control('unit').value=unit;await control('unit').fire('change');
-  control('receiptDate').value=fruitLot.date;await control('receiptDate').fire('change');
-  control('supplierId').value=fruitLot.supplierId;await control('supplierId').fire('change');
-  assert.equal(control('lotId').value,fruitLot.id);await d.querySelector('form').fire('submit');return d;
+  assert(!control('kg'));assert(!control('pieces'));assert(control('lotId').disabled);assert(control('receiptDate').focused);
+  control('receiptDate').value=fruitLot.date.split('-').reverse().join('');await control('receiptDate').fire('input');
+  await key(control('receiptDate'),'Enter',{code:'NumpadEnter'});assert(control('lotId').focused);
+  assert.equal(control('lotId').value,fruitLot.id);await key(control('lotId'),'Enter',{code:'NumpadEnter'});assert(control('unit').focused);
+  if(unit==='BUTIR')await key(control('unit'),'ArrowDown');
+  await key(control('unit'),'Enter',{code:'NumpadEnter'});return d;
  };
  await scan('2100010030320');assert(!hasOrderDraft());assert(!root.querySelector('#order-line'));assert(modal.latest.hasAttribute('open'));
  const pending=modal.latest;await scan('2100010024145');assert.equal(modal.latest,pending);assert.match(root.querySelector('#order-scan-status').textContent,/Tutup pop-up/);
