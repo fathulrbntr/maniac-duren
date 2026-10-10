@@ -20,12 +20,37 @@ export function normalizeBarcode(raw, settings = readDeviceSettings()) {
 export function barcodeProduct(state, raw, settings = readDeviceSettings()) {
   const code = normalizeBarcode(raw, settings);
   const products = state.products || [];
+  const scale = parseScaleBarcode(code);
+  if (scale) {
+    // CAS I means Item Code. Match the four-digit master barcode exactly;
+    // never infer a product from its name, SKU, PLU number or printed price.
+    const matches = products.filter(p => String(p.barcode || '').trim() === scale.itemCode);
+    if (matches.length > 1) throw Error(`Kode timbangan ${scale.itemCode} dipakai lebih dari satu produk. Perbaiki Barcode di Master Barang.`);
+    if (!matches.length) throw Error(`Kode timbangan ${scale.itemCode} belum terdaftar. Isi Barcode produk di Master Barang dengan ${scale.itemCode}.`);
+    const product = matches[0];
+    if (!posVisible(product) || product.stockUnit !== 'kg_butir') throw Error('Kode timbangan harus terhubung ke buah dengan satuan stok Kg + butir.');
+    if (!Number.isFinite(Number(product.priceKg)) || !(Number(product.priceKg) > 0)) throw Error('Harga jual per kg belum valid. Periksa Master Barang dan samakan dengan timbangan.');
+    return { code, product, scale };
+  }
   let matches = products.filter(p => String(p.barcode || '').trim() === code);
   if (!matches.length) matches = products.filter(p => String(p.sku || '').trim().toLowerCase() === code.toLowerCase());
   if (matches.length > 1) throw Error('Kode dipakai lebih dari satu produk. Perbaiki barcode/SKU di Master Barang.');
-  if (!matches.length) throw Error('Barcode/SKU belum terdaftar di Master Barang.');
+  if (!matches.length) {
+    if (/^14\d{11}$/.test(code)) throw Error('Label timbangan lama berawalan 14 belum didukung. Cetak ulang dengan format POS KG berawalan 21.');
+    throw Error('Barcode/SKU belum terdaftar di Master Barang.');
+  }
   if (!posVisible(matches[0])) throw Error('Produk ini adalah bahan dan tidak dijual di POS.');
   return { code, product: matches[0] };
+}
+// Confirmed CAS CL5200-30B format: 21 + IIII + WWWWWW + C.
+// Six weight digits are grams; the final digit is the EAN-13 checksum.
+export function parseScaleBarcode(code) {
+  if (!/^21\d{11}$/.test(code)) return null;
+  const sum = [...code.slice(0, 12)].reduce((n, digit, i) => n + Number(digit) * (i % 2 ? 3 : 1), 0);
+  if ((10 - sum % 10) % 10 !== Number(code[12])) throw Error('Barcode timbangan tidak valid (digit pemeriksa). Scan ulang label lengkap 13 digit.');
+  const grams = Number(code.slice(6, 12));
+  if (grams <= 0 || grams > 30000) throw Error('Berat label harus lebih dari 0 dan maksimal 30 kg untuk CAS CL5200-30B.');
+  return { itemCode: code.slice(2, 6), grams, kg: grams / 1000 };
 }
 // Listen only on the scan field. Typing notes, prices or passwords elsewhere
 // must never add a product or trigger a payment.

@@ -1,0 +1,107 @@
+MANIAC DUREN — PATCH 066: BARCODE TIMBANGAN CAS
+
+Paket perubahan untuk ZIP maniac-duren(5).zip yang dikirim 10 Oktober 2026.
+Ekstrak isi paket ke root proyek (folder yang berisi package.json), lalu timpa
+file dengan nama yang sama. Paket ini hanya memuat file baru/berubah.
+Tidak memerlukan SQL, dependensi baru, atau pengisian ulang stok.
+
+FORMAT LABEL YANG DIDUKUNG
+Model: CAS CL5200-30B. EAN-13, Form 0 / User Defined.
+Barcode No. 3, description POS KG: 21IIIIWWWWWWC
+- 21: awalan tetap.
+- IIII: tepat 4 huruf I besar, Item Code produk pada timbangan.
+- WWWWWW: tepat 6 huruf W besar, berat dalam gram.
+- C: digit pemeriksa otomatis EAN-13.
+I adalah Item Code; jangan menganggapnya selalu sama dengan nomor PLU.
+
+Contoh label yang sudah diberikan dan diuji:
+2100010030320 = kode 0001, 3,032 kg, Rp303.200 pada Rp100.000/kg.
+2100010024145 = kode 0001, 2,414 kg, Rp241.400 pada Rp100.000/kg.
+
+PEMASANGAN DAN AKTIVASI
+1. Ekstrak patch, commit/push memakai perintah di akhir panduan ini, lalu
+   tunggu deployment selesai. Buka POS dan tekan Ctrl+Shift+R.
+2. Master Barang > edit produk Monthong yang sudah ada:
+   - Satuan stok: Kg + butir.
+   - Barcode: 0001 (empat digit, bukan 1 dan bukan seluruh angka label).
+   - Harga jual per kg: samakan dengan timbangan; pada label contoh 100000.
+   - Simpan. SKU boleh tetap memakai kode internal yang sudah ada.
+   Untuk buah lain, isi Barcode sesuai Item Code timbangan masing-masing.
+   Satu kode hanya untuk satu produk/varian; nol di depan harus dipertahankan.
+   Kolom Barcode yang sama menyimpan pemetaan ini di database seluruh outlet.
+   Bila mengganti barcode lama suatu buah, kode lama tersebut tidak lagi cocok.
+3. Pengaturan > Printer & Scanner > Uji scanner. Ketik atau scan dua contoh
+   di atas. Hasil harus menyebut produk Monthong serta 3.032 kg / 2.414 kg.
+   Uji ini tidak membuat pesanan atau mengubah stok.
+   Gunakan Enter/Tab sesuai scanner. Awalan/akhiran tambahan biasanya kosong.
+   Jangan mengisi awalan scanner dengan 21; angka itu bagian dari barcode.
+4. Setelah POS terbaru dan pemetaan siap, pada timbangan menu 1520 halaman 1:
+   - Use global barcode1: Y.
+   - PLU weight barcode No.: 3 (POS KG).
+   - Pertahankan pengaturan PLU count yang sudah ada.
+   - Tekan SAVE. Pastikan barcode No. 3 berisi format di atas.
+   Sampai tahap ini siap, pengaturan lama No. 1 dapat tetap dipakai.
+5. Cetak satu label baru, lalu scan di Kasir / POS. Cocokkan produk, berat,
+   dan harga dengan label sebelum memakai untuk penjualan berikutnya.
+
+ALUR PENJUALAN
+- Klik kolom Scan barcode / SKU, kemudian scan satu label.
+- Produk dan berat terisi; cara jual awal Per kg dan jumlah awal 1 butir.
+- Jika label mewakili beberapa buah, sesuaikan jumlah butir sebenarnya.
+- Konfirmasi asal penerimaan. Jika ada lebih dari satu batch siap jual,
+  kasir wajib memilih batch yang benar. Jika hanya satu, batch itu terpilih.
+  Label tidak memuat nomor batch/supplier, sehingga asal tidak dapat diketahui
+  dari barcode. Pemakaian batch mengikuti pilihan kasir, bukan urutan scan.
+- Tekan Tambah ke pesanan, baru scan label berikutnya. Form buah yang masih
+  terbuka harus diselesaikan atau ditutup sebelum memilih item/pembayaran.
+- Keranjang dapat ditinjau/hapus sebelum bayar. Scan dan tambah ke keranjang
+  belum memotong stok; stok kg dan butir dipotong setelah pembayaran tersimpan.
+- Harga memakai Master Barang POS. Label baru memuat berat, bukan harga;
+  POS tidak bisa mendeteksi perbedaan harga POS dengan harga di timbangan.
+- Dua buah dengan kode produk dan berat sama dapat mempunyai barcode sama.
+  Barcode bukan nomor seri unik buah. Scan satu kali per label yang dijual.
+
+VALIDASI DAN KOMPATIBILITAS
+- Barcode 13 digit berawalan 21 dipakai khusus label timbangan format ini.
+- Digit pemeriksa salah, berat nol/di atas 30 kg, kode belum terdaftar/ganda,
+  satuan produk yang tidak sesuai, atau harga per kg tidak valid ditolak.
+- Barcode produk biasa/SKU tetap memakai pencocokan yang sudah ada.
+- Label lama berawalan 14 yang belum terdaftar diminta dicetak ulang memakai
+  POS KG. Sistem tidak menghitung balik berat dari harga yang dibulatkan.
+- Jumlah butir harus bulat positif, batch harus sesuai produk/outlet, dan
+  ketersediaan stok diperiksa sebelum masuk pesanan dan saat pembayaran.
+
+VERIFIKASI PAKET
+Lulus:
+  node tests/scale-barcode.test.mjs
+  node tests/devices.test.mjs
+  node tests/product-details.test.mjs
+  node tests/product-variants-ui.test.mjs
+  node tests/stock-demo-ui.test.mjs
+  node tests/rollback-startup.test.mjs
+  node tests/cache-recovery.test.mjs
+
+Tes dua label sampai pembayaran memeriksa total Rp544.600, pemotongan tepat
+5,446 kg dan 2 butir dari batch yang dipilih, serta batch lain tetap utuh.
+Termasuk uji perangkat tanpa transaksi, checksum salah, kode ganda, penolakan
+stok kurang, pilihan batch wajib, form belum dikonfirmasi, dan batal scan.
+Uji pembayaran QRIS satu label 2,414 kg menerima tepat Rp241.400. Perhitungan
+subtotal/diskon memakai aritmetika desimal agar tidak mengirim sisa pecahan
+floating point ke validasi pembayaran database.
+Pengujian UI menggunakan adapter DOM dan simulasi stok lokal. Scanner fisik,
+printer, dan transaksi database produksi tidak dijalankan dari lingkungan ini.
+
+Catatan tes lama: tests/cashier-ui.test.mjs gagal pada pemeriksaan jumlah cetak
+(0 dibanding 1, baris 42). Hasil yang sama terjadi pada salinan ZIP asli sebelum
+patch. Jalur printer tidak diubah pada patch ini; uji perangkat/cetak manual
+di tests/devices.test.mjs lulus.
+
+KEMBALI KE VERSI SEBELUMNYA
+Jika perlu, kembalikan deployment/commit patch ini dan pemetaan Barcode master
+yang sempat diganti. Kembalikan PLU weight barcode No. ke 1 lalu SAVE agar label
+sesuai alur sebelumnya. Riwayat transaksi yang sudah sah tidak perlu dihapus.
+
+GIT — JALANKAN DARI ROOT PROYEK SETELAH MENIMPA FILE
+git add pos/app.js pos/barcode-scanner.mjs pos/catalog-ui.mjs pos/devices-ui.mjs pos/index.html pos/operations-ui.mjs pos/product-dialog.mjs pos/cashier.mjs pos/cashier-ui.mjs pos/cashier-demo.mjs pos/stock-demo.mjs pos/decimal-totals.mjs tests/devices.test.mjs tests/scale-barcode.test.mjs TIMBANGAN-CAS-066.txt
+git commit -m "Support CAS scale weight barcodes in POS"
+git push

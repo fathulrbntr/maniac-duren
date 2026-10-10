@@ -1,7 +1,8 @@
 import {saveStoreDemo} from './store-profile.mjs?v=64';
 import {rejectActions,rejectDemo} from './reject-flow.mjs?v=63';
 import {collapseSingleVariants} from './product-stock.mjs?v=60';
-import {cashierActions,cashierDemo} from './cashier-demo.mjs?v=54';
+import {cashierActions,cashierDemo} from './cashier-demo.mjs?v=66';
+import {sumProducts} from './decimal-totals.mjs?v=66';
 // In-memory training data only. This module never sends requests or persists data.
 import {emptyState,today,id,applyAction} from './core.mjs?v=60';
 import {checkOrder,requirements} from './order-stock.mjs?v=12';
@@ -81,7 +82,7 @@ function createOrder(s,p){
   return {lineId:id(),productId:product.id,name:product.name,itemType:product.itemType||'direct',unit:product.stockUnit,qty:unitQty(l.qty,product.stockUnit),price,...(product.itemType==='recipe'?{recipeId:recipe?.id,recipeVersion:recipe?.version}:{})};
  });
  stockCheck(s,p.storeId,lines,p.date);
- const total=lines.reduce((n,l)=>n+l.qty*l.price,0);if(!Number.isFinite(total)||total<=0)throw Error('Total tidak valid');
+ const total=sumProducts(lines.map(l=>[l.qty,l.price]));if(!Number.isFinite(total)||total<=0)throw Error('Total tidak valid');
  const kitchen=lines.filter(l=>l.itemType==='recipe');
  const order={id:p.id,store_id:p.storeId,business_date:p.date,created_at:new Date().toISOString(),created_by:s.me?.id,status:kitchen.length?'queued':'paid',note:String(p.note||'').slice(0,300),lines,total,...payment(p,total),consumption:[],reserved:{},cost:null,demo:true};
  consume(s,order,lines.filter(l=>l.itemType!=='recipe'),p.id);

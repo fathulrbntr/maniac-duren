@@ -1,4 +1,5 @@
 import {today} from './core.mjs?v=10';
+import {sumProducts} from './decimal-totals.mjs?v=66';
 export const isOwner=s=>s.me?.role==='owner';
 export const tableLabel=value=>value?'Meja '+value:'Tanpa meja / takeaway';
 export const stable=value=>JSON.stringify(value,(_,v)=>v&&typeof v==='object'&&!Array.isArray(v)?Object.fromEntries(Object.entries(v).sort(([a],[b])=>a.localeCompare(b))):v);
@@ -22,11 +23,11 @@ export function cashierQuote(s,p){
   if(!Number.isFinite(price)||price<=0||Number(l.price)!==price)throw Error('Harga mengikuti master. Gunakan diskon dengan persetujuan owner');
   return out;
  });
- return {storeId:p.storeId,date:p.date||today(),tableNo,note,lines,subtotal:lines.reduce((n,l)=>n+l.qty*l.price,0)};
+ return {storeId:p.storeId,date:p.date||today(),tableNo,note,lines,subtotal:sumProducts(lines.map(l=>[l.qty,l.price]))};
 }
 export function discountAmount(discount,subtotal){
  const v=Number(discount?.value);if(!discount?.active||!['percent','amount'].includes(discount.kind)||!Number.isFinite(v)||v<=0||(discount.kind==='percent'&&v>100))throw Error('Diskon berubah atau tidak aktif');
- return Math.min(subtotal,discount.kind==='percent'?subtotal*v/100:v);
+ return Math.min(subtotal,discount.kind==='percent'?sumProducts([[subtotal,v,0.01]]):v);
 }
 export const sameQuote=(a,b)=>stable(a)===stable(b);
 export function findDiscountApproval(s,quote,discountId){
@@ -40,7 +41,7 @@ export function checkoutTotals(s,p){
   const d=(s.discounts||[]).find(d=>d.id===a.details.discountId&&d.version===a.details.version);amount=discountAmount(d,quote.subtotal);
   discount={...a.details,approvalId:a.id,approvedBy:a.decided_by,approvedName:a.decided_name};delete discount.quote;
  }else if(p.discountId||Number(p.discountAmount))throw Error('Diskon perlu persetujuan owner');
- return {quote,subtotal:quote.subtotal,discount,discountAmount:amount,total:quote.subtotal-amount};
+ return {quote,subtotal:quote.subtotal,discount,discountAmount:amount,total:sumProducts([[quote.subtotal],[-amount]])};
 }
 export function validPayment(p,total){
  const paid=Number(p.paid);if(!['Tunai','QRIS','Transfer'].includes(p.payment)||!Number.isFinite(paid)||paid<total)throw Error('Pembayaran belum sesuai total');

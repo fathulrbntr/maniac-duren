@@ -1,5 +1,5 @@
 import {id,today,money,num,escape as e} from './core.mjs?v=10';
-import {isOwner,tableLabel,cashierQuote,checkoutTotals,findDiscountApproval,validPayment} from './cashier.mjs?v=54';
+import {isOwner,tableLabel,cashierQuote,checkoutTotals,findDiscountApproval,validPayment} from './cashier.mjs?v=66';
 import {checkOrder} from './order-stock.mjs?v=12';
 import {printReceipt} from './receipt-printer.mjs?v=64';
 import {receiptHeader,fillReceiptLogo} from './store-profile.mjs?v=64';

@@ -1,6 +1,6 @@
 import {escape as e} from './core.mjs?v=10';
 import {readDeviceSettings,saveDeviceSettings,defaultDeviceSettings,validateDeviceSettings,canConfigureDevices} from './device-settings.mjs?v=58';
-import {barcodeProduct,bindBarcodeInput} from './barcode-scanner.mjs?v=58';
+import {barcodeProduct,bindBarcodeInput} from './barcode-scanner.mjs?v=66';
 import {printReceipt} from './receipt-printer.mjs?v=64';
 import {receiptHeader,fillReceiptLogo} from './store-profile.mjs?v=64';
 const choice=(values,current)=>values.map(([value,label])=>`<option value="${value}" ${String(current)===String(value)?'selected':''}>${label}</option>`).join('');
@@ -24,7 +24,7 @@ export function devicesPage(state) {
       ${field('Tombol akhir scan',`<select name="terminator">${choice([['Enter','Enter'],['Tab','Tab']],s.terminator)}</select>`)}
       <details class="device-help"><summary>Awalan / akhiran tambahan</summary><p class="muted">Isi hanya jika scanner mengirim karakter tambahan. Karakter ini dilepas sebelum kode dicocokkan.</p><div class="form-grid">${field('Awalan',`<input name="prefix" maxlength="16" value="${e(s.prefix)}" autocomplete="off" placeholder="Kosongkan jika tidak ada">`)}${field('Akhiran',`<input name="suffix" maxlength="16" value="${e(s.suffix)}" autocomplete="off" placeholder="Kosongkan jika tidak ada">`)}</div></details>
       <div class="device-scan-test">${field('Uji scanner', '<input id="device-scan-input" type="text" maxlength="256" autocomplete="off" spellcheck="false" placeholder="Klik di sini, lalu scan barcode">')}<button type="button" id="device-scan-test">Periksa kode</button><p id="device-scan-status" class="device-status" role="status">Hasil uji tidak menambah keranjang atau mengubah stok.</p></div>
-      <p class="muted">Pasangkan scanner Bluetooth melalui Windows terlebih dahulu. Barcode harus terdaftar di Master Barang. Barcode timbangan berisi berat/harga memerlukan pola label khusus; pengaturan ini mencocokkan barcode produk dan SKU.</p>
+      <p class="muted">Pasangkan scanner Bluetooth melalui Windows terlebih dahulu. Label CAS POS KG (21IIIIWWWWWWC) membaca kode barang 4 digit dan berat gram 6 digit. Isi kolom Barcode buah di Master Barang dengan kode seperti 0001. Harga per kg di POS harus sama dengan timbangan. Awalan tambahan scanner tetap kosong jika tidak ada; angka 21 merupakan bagian label.</p>
     </section></div>
     <div class="device-settings-actions"><p id="device-save-status" role="status">Uji perangkat memakai isian saat ini. Simpan untuk menerapkannya di kasir.</p><div><button type="button" id="device-reset">Kembalikan bawaan</button><button type="submit" class="primary">Simpan pengaturan</button></div></div>
   </form>`;
@@ -58,8 +58,8 @@ export function bindDevices(state,store,ctx) {
   const scanInput=document.querySelector('#device-scan-input');
   for(const type of ['input','change'])scanInput.addEventListener(type,event=>event.stopPropagation());
   const scan=bindBarcodeInput(scanInput,{getSettings:values,onScan:(raw,settings)=>{
-    const {code,product}=barcodeProduct(ctx.getState?.()||state,raw,settings);
-    scanStatus.textContent=`Terbaca: ${code} · ${product.name}. Produk ditemukan; keranjang dan stok tidak berubah.`;
+    const {code,product,scale}=barcodeProduct(ctx.getState?.()||state,raw,settings);
+    scanStatus.textContent=`Terbaca: ${code} · ${product.name}${scale?` · kode ${scale.itemCode} · ${scale.kg.toFixed(3)} kg`:""}. Produk ditemukan; keranjang dan stok tidak berubah.`;
   },onError:message=>scanStatus.textContent=message});
   document.querySelector('#device-scan-test').onclick=scan;
 }
