@@ -19,3 +19,12 @@ ke Supabase. Jalankan `npm run db:build` setelah mengubah bagian yang relevan.
 
 Untuk database produksi yang sudah berjalan, jangan mengulang `pos.sql` tanpa backup.
 Perubahan aplikasi dikelola dari sumber `sections/operations/` lalu `pos.sql` dibangun ulang.
+
+## Kontak darurat dan rekening karyawan (070)
+
+Untuk database aktif, jalankan seluruh `database/employee-details-070.sql` satu kali
+di Supabase SQL Editor, lalu perbarui halaman POS. Aman dijalankan ulang tanpa reset.
+Form Tambah/Edit karyawan dan Detail & rekap menampilkan nama serta nomor kontak
+darurat, nama bank, nama pemilik rekening, dan nomor rekening. Semua kolom opsional.
+Nomor rekening disimpan sebagai teks agar nol di depan tidak hilang.
+Untuk instalasi baru, jalankan patch ini setelah `pos.sql` dan patch fitur sebelumnya.

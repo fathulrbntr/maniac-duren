@@ -53,3 +53,12 @@ img.employee-photo,.ktp-preview { background:transparent; object-fit:contain; }
 .employee-card-v22 h3>span { display:block; width:100%; overflow-wrap:anywhere; }
 .employee-card-footer { justify-content:space-between; gap:0; }
 .employee-more summary { padding:0 6px; line-height:24px; }
+
+/* Optional emergency contact and bank details in the employee editor. */
+.employee-detail-fields { min-width:0; margin:20px 0; padding:16px 16px 0; border:1px solid var(--line); border-radius:12px; }
+.employee-detail-fields legend { padding:0 6px; font-size:16px; font-weight:700; }
+.employee-detail-fields .form-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.employee-detail-fields .field { min-width:0; }
+.employee-detail-fields input { min-width:0; width:100%; }
+.employee-detail-fields:disabled { opacity:.65; }
+@media(max-width:700px){.employee-detail-fields .form-grid{grid-template-columns:1fr}}
