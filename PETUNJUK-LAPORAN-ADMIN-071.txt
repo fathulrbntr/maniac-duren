@@ -1,0 +1,90 @@
+MANIAC DUREN — PATCH LAPORAN & ADMIN DOKUMEN 071
+Dasar: maniac-duren(6).zip + patch detail karyawan 070.
+Paket berisi file yang ditambah/diubah, bukan proyek penuh.
+
+PASANG
+1. Ekstrak ZIP ke folder proyek Maniac Duren. Replace file dengan nama yang sama.
+   Jangan hapus folder/file proyek lain. Tidak perlu reset database.
+2. Buka Supabase > SQL Editor > New query.
+   Jika patch detail karyawan 070 belum dipasang, jalankan SELURUH isi
+   database/employee-details-070.sql terlebih dahulu.
+   Setelah itu jalankan SELURUH isi database/reports-admin-071.sql.
+   SQL 071 memerlukan profil toko 064 yang digunakan pada proyek sumber.
+   SQL ini aman dijalankan ulang dan tidak menghapus data lama.
+   Jangan menjalankan ulang pos.sql/reset-pos.sql.
+3. Push perubahan web, tunggu deployment Vercel selesai, lalu muat ulang /pos.
+
+STRUKTUR
+Laporan:
+- Ringkasan: hari ini, minggu Senin–Minggu, bulan ini, dan periode bebas.
+- Produk: qty, satuan, kg aktual, butir dan penjualan setelah diskon.
+- Toko: satu toko atau gabungan semua toko yang diizinkan akun.
+- Supplier: penjualan langsung + alokasi bahan olahan; sumber belum lengkap
+  tetap muncul sebagai Belum terpetakan, tidak dialihkan ke supplier sembarang.
+- Stok: saldo awal/akhir periode, barang datang, terjual/pemakaian pesanan,
+  reject, waste, transfer masuk/keluar, produksi/koreksi dan sisa sekarang.
+- Pengeluaran: biaya pembelian termasuk ongkir + input operasional.
+- HPP & Hasil: HPP, waste, operasional dan margin termasuk hasil olahan reject.
+- Batch supplier: laporan batch lama dipertahankan dalam menu yang sama.
+Tombol Excel mengunduh .xlsx. Tombol PDF/Cetak A4 membuka cetakan;
+tekan Cetak/Simpan PDF lalu pilih tujuan Simpan sebagai PDF.
+Batch memakai filter tanggal penerimaan dan jejak sepanjang umur batch.
+Ekspor laporan lainnya memakai periode transaksi yang dipilih.
+
+Admin Dokumen:
+- Purchase Order: simpan draft, periksa, lalu Terbitkan dokumen.
+- Dari PO terbit, tekan Lanjut pembelian. Pembelian boleh sebagian, tidak boleh
+  melewati jumlah sisa PO. Baris yang dipenuhi tercatat melalui penerimaan stok.
+- Pembelian baru: beberapa produk dalam satu kiriman, harga per satuan untuk
+  tiap produk, satu ongkir. Buah diisi kg dan butir; satuan lain mengikuti master.
+  Stok masuk HANYA saat dokumen diterbitkan. Draft tidak mengubah stok.
+- Pembelian dari penerimaan yang sudah ada: pilih referensinya. Tidak menambah
+  stok atau pengeluaran untuk kedua kalinya.
+- Invoice: pilih transaksi POS/penjualan buah yang sudah lunas, isi pelanggan
+  dan alamat. Penerbitan invoice tidak membuat penjualan atau memotong stok lagi.
+  Ini invoice penjualan, bukan faktur pajak atau fitur piutang cicilan.
+- DO penjualan: memakai transaksi yang sama, menampilkan jumlah tanpa harga.
+- DO transfer: pilih transfer buah yang sudah tercatat, atau Transfer baru.
+  Transfer baru bisa memuat buah dan barang satuan. Pilih lot asal dan toko tujuan.
+  Penerbitan memotong asal dan menambah tujuan dalam satu transaksi database.
+  Bahan satuan tidak dapat ditransfer bila toko asal masih punya antrean kitchen
+  lunas, untuk menjaga cadangan bahan.
+- Kop surat: hanya owner; nama toko/perusahaan, alamat, telepon, email, logo,
+  penandatangan dan catatan kaki. Berlaku per toko, awalnya mengikuti profil toko.
+- Semua dokumen terbit dapat dicetak A4/PDF. Kop dan rincian dokumen terbit dibekukan.
+- Nomor otomatis MD/PO/YYYYMM/000001, MD/PUR/..., MD/INV/... atau MD/DO/....
+  Nomor unik lintas toko per jenis/bulan. Nomor batal tidak dipakai ulang.
+- Cari dokumen lewat nomor, referensi atau pelanggan/supplier, lalu filter jenis,
+  status dan toko. Detail menampilkan riwayat serta tombol dokumen terkait.
+
+AGAR TIDAK GANDA
+- Penerimaan lama, penjualan POS dan jurnal stok tetap menjadi sumber utama.
+- PO/invoice/DO dari transaksi lama tidak menambah omzet atau stok.
+- Pembelian baru memakai fungsi penerimaan yang sama dalam satu transaksi.
+- Ongkir tidak dimasukkan lagi sebagai operasional jika sudah masuk pembelian.
+- Pengeluaran = pembelian + operasional. HPP/waste tidak ditambahkan lagi.
+- Hasil usaha = penjualan - HPP - waste - operasional; pembelian tidak dikurangkan lagi.
+- Penjualan batal/refund dikeluarkan dari periode penjualan asal.
+- Stok fisik mengikuti tanggal pemakaian barang; dapat berbeda dengan tanggal bayar.
+- Rekonstruksi stok lama bergantung kelengkapan jurnal. Jika tidak lengkap, sistem
+  memberi penanda dan perlu dicocokkan dengan stock opname.
+- PO/pembelian/invoice memakai akses finance; penerimaan pembelian juga stock.
+  DO memakai stock; DO penjualan juga akses penjualan/reports. Kop hanya owner.
+- Dokumen pembelian/transfer baru yang sudah mengubah stok tidak bisa dibatalkan
+  hanya untuk menghapus dokumen. Koreksi stok dilakukan melalui alur stok yang ada.
+- Mode demo tidak membawa dokumen/pengeluaran asli dan tidak menerbitkan surat resmi.
+
+VERIFIKASI
+Diuji pada database PostgreSQL lokal (PGlite) dan browser Chromium:
+migrasi ulang tanpa reset, nomor surat, stok atomik, retry, duplikasi sumber,
+pembatasan PO, transaksi invoice, hak akses, kop tersimpan, seluruh tab laporan,
+Excel valid dibuka openpyxl, PDF A4, form HP 390 px, serta startup/login aplikasi.
+Belum diterapkan atau diuji dengan kredensial database produksi Anda.
+Tes lama login-startup.test.mjs sudah gagal pada baseline karena mengharapkan
+posLoginTiming yang tidak ada. Startup aplikasi nyata lulus browser smoke test.
+
+GIT TERMINAL — jalankan dari folder proyek setelah file diganti:
+git status
+git add pos database tests PETUNJUK-LAPORAN-ADMIN-071.txt
+git commit -m "feat: unify reports and add admin documents"
+git push

@@ -10,6 +10,7 @@ export function setRetryScope(scope) {
   }
 }
 const tracked = new Set([
+  "document_save", "document_issue", "document_cancel", "letterhead_save", "expense_save", "expense_void",
   "store_save",
   "reject_mark", "reject_process", "reject_coral", "reject_loss", "reject_void",
   "order_void", "discount_save", "cashier_approval_request", "cashier_approval_decide",
@@ -61,6 +62,7 @@ export function reconcileRetry(state) {
   if (!pending) return false;
   const rows =
     {
+      document_save: state.adminEvents, document_issue: state.adminEvents, document_cancel: state.adminEvents, letterhead_save: state.adminEvents, expense_save: state.adminEvents, expense_void: state.adminEvents,
       order_create: state.orders,
       sale: state.sales,
       receipt: state.lots,

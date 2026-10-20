@@ -13,13 +13,6 @@
       })();
     </script>
     <link rel="icon" href="logo.png" />
-    <link rel="manifest" href="manifest.webmanifest" />
-    <link rel="apple-touch-icon" href="icons/icon-192.png" />
-    <meta name="theme-color" content="#28543e" />
-    <script type="module">
-      import {startPWA} from './pwa.mjs?v=72';
-      startPWA();
-    </script>
     <link rel="stylesheet" href="pos.css?v=27" />
     <link rel="stylesheet" href="catalog-table.css?v=16.2" />
     <link rel="stylesheet" href="inventory.css?v=61" />
@@ -34,13 +27,13 @@
     <link rel="stylesheet" href="fruit-sale.css?v=69" />
     <link rel="stylesheet" href="reject-flow.css?v=63" />
     <link rel="stylesheet" href="store-settings.css?v=64" />
-    <link rel="stylesheet" href="pwa.css?v=72" />
+    <link rel="stylesheet" href="reports-admin.css?v=71" />
   </head>
   <body>
     <div id="app"></div>
     <div id="toast" role="status" aria-live="polite"></div>
     <script type="module">
-      import('./app.js?v=72').catch(() => {
+      import('./app.js?v=71').catch(() => {
         document.getElementById('app').innerHTML = '<section style="padding:32px"><h2>POS gagal dimuat</h2><p>Muat ulang halaman. Jika tetap gagal, pastikan deployment terbaru sudah selesai.</p><button onclick="location.reload()">Muat ulang</button></section>';
       });
     </script>

@@ -2,7 +2,7 @@ export const sections = [
   { id: 'utama', label: 'Utama', pages: ['dashboard', 'orders', 'kitchen'] },
   { id: 'inventory', label: 'Inventory', pages: ['products', 'stock', 'waste'] },
   { id: 'produksi', label: 'Produksi', pages: ['recipes', 'production'] },
-  { id: 'laporan', label: 'Keuangan & Laporan', pages: ['finance', 'salesreport', 'batches', 'trace', 'reports'] },
+  { id: 'laporan', label: 'Laporan & Administrasi', pages: ['reports', 'documents'] },
   { id: 'manajemen', label: 'Manajemen', pages: ['discounts', 'employees', 'attendance', 'stores', 'suppliers'] },
   { id: 'pengaturan', label: 'Pengaturan', pages: ['devices'] },
   { id: 'bantuan', label: 'Bantuan', pages: ['guide'] },
@@ -12,7 +12,7 @@ export function visibleSections(access) {
     devices: access.cashierOwner || access.sell || access.master, discounts: access.cashierOwner, salesreport: access.reports, orders: access.sell, kitchen: access.kitchen || access.sell,
     dashboard: access.reports, stock: access.stock || access.produce,
     production: access.produce, waste: access.waste, losses: access.waste,
-    batches: access.trace || access.finance || access.waste, reports: access.reports, finance: access.finance, trace: access.trace,
+    batches: access.trace || access.finance || access.waste, reports: access.reports || access.finance || access.trace || access.waste, documents: access.finance || access.stock, finance: access.finance, trace: access.trace,
     employees: access.employees, attendance: access.attendance, products: access.master,
     recipes: access.master, stores: access.master, suppliers: access.master, guide: true,
   } : null;

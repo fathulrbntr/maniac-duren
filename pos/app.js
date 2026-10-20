@@ -1,4 +1,5 @@
-import {installButton,bindInstall} from './pwa.mjs?v=72';
+import {reportsPage,bindReports,selectReportTab} from './reports-ui.mjs?v=71';
+import {documentsPage,bindDocuments} from './documents-ui.mjs?v=71';
 import { variantGroupDialog, productVariantDialog } from "./variant-editor.mjs?v=45";
 import {createSidebarController,sidebarIcon} from './sidebar.mjs?v=42';
 const sidebar = createSidebarController();
@@ -6,7 +7,7 @@ import {installMoneyInputs} from './money-input.mjs?v=44';
 installMoneyInputs();
 import { openWeighingReceipt, showWeighingHistory } from './receipt-weighing.mjs?v=19';
 import {inventoryPanel,bindInventory} from "./inventory-ui.mjs?v=65";
-import {opsPages,opsPage,bindOps,clearOrderDraft,hasOrderDraft} from './operations-ui.mjs?v=70';
+import {opsPages,opsPage,bindOps,clearOrderDraft,hasOrderDraft} from './operations-ui.mjs?v=71';
 import {printReceipt} from './receipt-printer.mjs?v=64';
 import {storesPage,storeDialog} from './store-settings.mjs?v=64';
 import {receiptHeader,fillReceiptLogo} from './store-profile.mjs?v=64';
@@ -15,15 +16,14 @@ import {
   navigation,
   mayLeave,
   trackForms,
-} from "./navigation.mjs?v=63";
+} from "./navigation.mjs?v=71";
 import {
   prepareRetry,
   settleRetry,
   reconcileRetry,
   pendingRetry,
   setRetryScope,
-} from "./retry.mjs?v=64";
-import {batchReportPage,bindBatchReport} from './batch-report-ui.mjs?v=63';
+} from "./retry.mjs?v=71";
 import { wastePage, bindWaste } from "./waste-ui.mjs?v=63";
 import {
   recipesPage,
@@ -91,11 +91,12 @@ const title = {
   discounts: "Diskon & Persetujuan", dashboard: "Dashboard", orders: "Kasir / POS", kitchen: "Kitchen Display",
   products: "Master Barang", stock: "Stok & Penerimaan", losses: "Reject & Waste", waste: "Reject & Waste", batches: "Laporan Batch Supplier",
   recipes: "Master Resep", production: "Produksi & Persiapan",
-  finance: "Petty Cash & Keuangan", salesreport: "Laporan Penjualan", trace: "Jejak Stok & Produksi", reports: "Rincian Penjualan Buah",
+  finance: "Petty Cash & Keuangan", salesreport: "Laporan Penjualan", trace: "Jejak Stok & Produksi", reports: "Laporan", documents: "Admin Dokumen",
   employees: "Karyawan & Akses", attendance: "Absensi", stores: "Outlet", suppliers: "Supplier", guide: "Panduan",
   cashier: "Kasir buah cepat",
 };
 const paths = {
+  documents: "M4 3h11l5 5v13H4z M15 3v6h5 M8 13h8 M8 17h5",
   devices: "M6 9V3h12v6 M6 17H3V9h18v8h-3 M6 14h12v7H6z M17 12h1",
   discounts: "M19 5L5 19 M7 7h.01 M17 17h.01 M9 7a2 2 0 1 1-4 0 2 2 0 0 1 4 0 M19 17a2 2 0 1 1-4 0 2 2 0 0 1 4 0",
   dashboard: "M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z",
@@ -138,7 +139,7 @@ function toast(text) {
   toast.timer = setTimeout(() => (t.style.display = "none"), 5000);
 }
 let stockDemoModule,demoSource=null;
-const demoEngine=()=>stockDemoModule ||= import('./stock-demo.mjs?v=66').catch(error=>{stockDemoModule=null;throw error;});
+const demoEngine=()=>stockDemoModule ||= import('./stock-demo.mjs?v=71').catch(error=>{stockDemoModule=null;throw error;});
 function assertDemoRequest(path,allowDemoRead){
   if(mode==='stock-demo'&&!(allowDemoRead&&['/rest/v1/rpc/pos_read','/auth/v1/token?grant_type=refresh_token'].includes(path)))throw Error('Mode demo tidak mengirim perubahan ke database asli.');
 }
@@ -278,9 +279,8 @@ async function mutate(action, payload, {throwOnError = false} = {}) {
 }
 function login(message = "") {
   sidebar.reset();
-  app.innerHTML = `<div class="auth auth-workspace">${themeButton("auth-theme")}<section class="auth-form"><div><img class="auth-logo" src="logo.png" alt="Maniac Duren"><h1>Selamat datang kembali</h1><p class="muted auth-intro">Masuk untuk mengelola outlet Maniac Duren.</p>${config.configured ? "" : `<div class="notice">Akses POS belum tersedia. Hubungi pengelola.</div>`}<form id="login-form">${field("Email, username, atau nomor telepon", '<input name="identifier" required autocomplete="username" placeholder="Masukkan akun Anda">')}${field("Password", '<input name="password" type="password" required autocomplete="current-password" placeholder="Masukkan password">')}<p class="error" id="login-error" role="alert">${e(message)}</p><button class="primary full" type="submit" ${config.configured ? "" : "disabled"}>Masuk</button></form>${installButton()}<a class="auth-back" href="/">Kembali ke website</a></div></section></div>`;
+  app.innerHTML = `<div class="auth auth-workspace">${themeButton("auth-theme")}<section class="auth-form"><div><img class="auth-logo" src="logo.png" alt="Maniac Duren"><h1>Selamat datang kembali</h1><p class="muted auth-intro">Masuk untuk mengelola outlet Maniac Duren.</p>${config.configured ? "" : `<div class="notice">Akses POS belum tersedia. Hubungi pengelola.</div>`}<form id="login-form">${field("Email, username, atau nomor telepon", '<input name="identifier" required autocomplete="username" placeholder="Masukkan akun Anda">')}${field("Password", '<input name="password" type="password" required autocomplete="current-password" placeholder="Masukkan password">')}<p class="error" id="login-error" role="alert">${e(message)}</p><button class="primary full" type="submit" ${config.configured ? "" : "disabled"}>Masuk</button></form><a class="auth-back" href="/">Kembali ke website</a></div></section></div>`;
   syncThemeControls();
-  bindInstall();
   document.querySelector("#login-form").onsubmit = async (ev) => {
     ev.preventDefault();
     const form = ev.currentTarget,
@@ -336,7 +336,7 @@ function shell(body) {
       <div class="sidebar-account">${accountProfile()}<button id="logout" class="sidebar-logout" type="button" aria-label="Logout" title="Logout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 4H4v16h5M14 8l4 4-4 4M8 12h10"/></svg><span>Logout</span></button></div>
     </aside>
     <button type="button" class="sidebar-backdrop" data-sidebar-close tabindex="-1" aria-label="Tutup sidebar"></button>
-    <main id="pos-main"><header class="topbar"><div class="workspace-heading"><button id="sidebar-toggle" type="button" class="sidebar-toggle" data-sidebar-toggle aria-controls="pos-sidebar" aria-label="Buka sidebar">${sidebarIcon}</button><h1>${e(title[view] || "Maniac Duren")}</h1></div><div class="workspace-tools">${installButton()}<span class="workspace-outlet">${icon("stores")}<span>${e(name("stores", store))}</span></span><button type="button" id="stock-demo-toggle" class="stock-demo-toggle" role="switch" aria-checked="${mode==='stock-demo'}"><span class="stock-demo-track" aria-hidden="true"></span>Mode demo</button>${themeButton()}</div></header><div class="workspace-content">${mode==='stock-demo'?'<aside class="stock-demo-banner" role="status"><div><b>MODE DEMO · Stok awal 100</b><p>Data uji hanya di tab ini. Semua penyimpanan demo terpisah dari database asli. Harga dan resep mengikuti master.</p><small>Buah: 100 kg + 100 butir. Bahan / produk stok: 100 sesuai satuannya. ${e(itemTypes.recipe)} mengikuti bahan.</small></div><button type="button" id="stock-demo-reset">Reset demo</button></aside>':''}${body}<p class="page-foot">Maniac Duren · ${e(name("stores", store))}</p></div></main>
+    <main id="pos-main"><header class="topbar"><div class="workspace-heading"><button id="sidebar-toggle" type="button" class="sidebar-toggle" data-sidebar-toggle aria-controls="pos-sidebar" aria-label="Buka sidebar">${sidebarIcon}</button><h1>${e(title[view] || "Maniac Duren")}</h1></div><div class="workspace-tools"><span class="workspace-outlet">${icon("stores")}<span>${e(name("stores", store))}</span></span><button type="button" id="stock-demo-toggle" class="stock-demo-toggle" role="switch" aria-checked="${mode==='stock-demo'}"><span class="stock-demo-track" aria-hidden="true"></span>Mode demo</button>${themeButton()}</div></header><div class="workspace-content">${mode==='stock-demo'?'<aside class="stock-demo-banner" role="status"><div><b>MODE DEMO · Stok awal 100</b><p>Data uji hanya di tab ini. Semua penyimpanan demo terpisah dari database asli. Harga dan resep mengikuti master.</p><small>Buah: 100 kg + 100 butir. Bahan / produk stok: 100 sesuai satuannya. ${e(itemTypes.recipe)} mengikuti bahan.</small></div><button type="button" id="stock-demo-reset">Reset demo</button></aside>':''}${body}<p class="page-foot">Maniac Duren · ${e(name("stores", store))}</p></div></main>
   </div>`;
 }
 function dashboard() {
@@ -422,30 +422,6 @@ function stockHistoryPage() {
     '<tr><td colspan="5" class="empty">Belum ada pergerakan stok.</td></tr>'
   }</tbody></table></div></section>`;
 }
-function reportPage() {
-  const rows = saleRows(state, filter),
-    s = summarize(rows),
-    groups = state.suppliers.map((p) => ({
-      p,
-      s: summarize(rows.filter((r) => r.supplierId === p.id)),
-    }));
-  return `<div class="intro"><div><h2>Omzet & pemakaian stok</h2><div class="muted">Pisahkan cara jual, tetap lacak kg yang keluar.</div></div><button id="export-csv">Ekspor CSV</button></div><form id="filters" class="filters">${field("Dari", `<input type="date" name="from" value="${filter.from}" required>`)}${field("Sampai", `<input type="date" name="to" value="${filter.to}" required>`)}${field("Store", `<select name="store">${options("stores", filter.store, true)}</select>`)}${field("Supplier", `<select name="supplier">${options("suppliers", filter.supplier, true)}</select>`)}<button class="primary">Terapkan</button></form><div class="stats">${stat("Total omzet", money(s.total), new Set(rows.map((x) => x.saleId)).size + " transaksi")}${stat("Omzet per kg", money(s.kgRevenue), num(rows.filter((x) => x.unit === "KG").reduce((a, r) => a + r.kg, 0)) + " kg terjual")}${stat("Omzet per butir", money(s.pieceRevenue), num(s.pieceKg) + " kg stok terpakai")}${stat("Total stok terjual", num(s.kg) + " kg", num(s.pieces) + " butir")}</div><section class="panel"><h3>Penjualan per supplier</h3><div class="table-wrap"><table><thead><tr><th>SUPPLIER</th><th class="numeric">OMZET PER KG</th><th class="numeric">OMZET PER BUTIR</th><th class="numeric">KG UNTUK JUAL BUTIR</th><th class="numeric">TOTAL KG / BUTIR</th><th class="numeric">TOTAL OMZET</th></tr></thead><tbody>${groups.map(({ p, s }) => `<tr><td><b>${e(p.name)}</b></td><td class="numeric">${money(s.kgRevenue)}</td><td class="numeric">${money(s.pieceRevenue)}</td><td class="numeric"><b>${num(s.pieceKg)} kg</b></td><td class="numeric">${num(s.kg)} kg / ${s.pieces}</td><td class="numeric"><b>${money(s.total)}</b></td></tr>`).join("")}</tbody></table></div></section><section class="panel"><h3>Detail penjualan</h3>${salesTable(rows.slice().reverse())}</section><section class="panel"><h3>Transaksi dibatalkan</h3>${
-    state.sales
-      .filter(
-        (x) =>
-          x.voided &&
-          (!filter.store || x.storeId === filter.store) &&
-          x.date >= filter.from &&
-          x.date <= filter.to,
-      )
-      .map(
-        (x) =>
-          `<p class="muted"><b>#${short(x.id)}</b> · ${x.date} · ${money(x.total)} · ${e(x.voidReason)}</p>`,
-      )
-      .join("") ||
-    '<p class="muted">Tidak ada pembatalan dalam periode ini.</p>'
-  }</section>`;
-}
 function productsPage() {
   return catalogPanel(state.products,catalogFilter,state,store);
 }
@@ -456,6 +432,7 @@ function directoryPage(kind) {
   return `<div class="intro"><div><h2>Master ${label}</h2><p class="muted">${isStore ? "Ubah nama toko dan lokasi melalui tombol Edit toko." : "Kelola supplier, nomor telepon, dan alamat."}</p></div><button class="primary" data-master="${kind}">Tambah ${label}</button></div><section class="panel"><div class="table-wrap"><table><thead><tr><th>NAMA</th>${isStore ? "<th>LOKASI</th>" : "<th>NOMOR TELEPON</th><th>ALAMAT</th>"}<th>ACTION</th></tr></thead><tbody>${state[kind].map((p) => `<tr><td><b>${e(p.name)}</b></td>${isStore ? `<td>${e(p.location || "—")}</td>` : `<td>${e(p.phone || "—")}</td><td>${e(p.address || "—")}</td>`}<td><button class="small" data-edit-kind="${kind}" data-edit-id="${e(p.id)}">${icon("edit")}${isStore ? "Edit toko" : "Edit"}</button></td></tr>`).join("") || `<tr><td colspan="${isStore ? 3 : 4}" class="empty">Belum ada ${label.toLowerCase()}.</td></tr>`}</tbody></table></div></section>`;
 }
 function render() {
+  if(["salesreport","finance","batches","trace"].includes(view)){selectReportTab(({salesreport:"summary",finance:"expenses",batches:"batches",trace:"stock"})[view]);view="reports";}
   sidebar.capture();
   app.innerHTML = shell(
     {
@@ -467,15 +444,14 @@ function render() {
       stock: stockPage,
       waste: () => wastePage(state, store),
       losses: () => wastePage(state, store),
-      batches: () => batchReportPage(state,store),
-      reports: reportPage,
+      reports: () => reportsPage(state),
+      documents: () => documentsPage(state),
       products: productsPage,
       stores: () => directoryPage("stores"),
       suppliers: () => directoryPage("suppliers"),
     }[view](),
   );
   syncThemeControls();
-  bindInstall();
   sidebar.mount();
   document.querySelector("#stock-demo-toggle")?.addEventListener("click",()=>switchStockDemo());
   document.querySelector("#stock-demo-reset")?.addEventListener("click",()=>switchStockDemo(true));
@@ -563,7 +539,9 @@ function render() {
   observeKitchen();
   trackForms();
   bindProduction(view, state, store, { modal, mutate, render, toast, refresh });
-  if(view === "batches") bindBatchReport(state,store,{modal,refresh,render,toast});
+  const adminContext={modal,mutate,render,toast,refresh,getState:()=>state,rpc:(name,p)=>request("/rest/v1/rpc/"+name,p)};
+  if(view === "reports")bindReports(state,store,adminContext);
+  if(view === "documents")bindDocuments(state,store,adminContext);
   bindWaste(view, state, store, {
     getState:()=>state,
     loadRejectEvidence: async recordId => mode === "stock-demo" ? state.rejectRecords.find(r=>r.id===recordId)?.evidence : request("/rest/v1/rpc/pos_reject_evidence",{record_id:recordId}),
@@ -640,16 +618,6 @@ function render() {
       };
     };
     document.querySelector("#movement").onclick = movement;
-  }
-  if (view === "reports") {
-    document.querySelector("#filters").onsubmit = (ev) => {
-      ev.preventDefault();
-      const f = Object.fromEntries(new FormData(ev.currentTarget));
-      if (f.from > f.to) return toast("Tanggal awal melebihi tanggal akhir");
-      Object.assign(filter, f);
-      render();
-    };
-    document.querySelector("#export-csv").onclick = exportCSV;
   }
   if (["products", "stores", "suppliers"].includes(view)) {
     if (view === "products") {
@@ -847,55 +815,7 @@ function receipt(saleId) {
   });
   d.showModal();
 }
-function exportCSV() {
-  const rows = saleRows(state, filter);
-  const q = (x) =>
-    '"' +
-    String(x ?? "")
-      .replace(/^[=+@-]/, "'")
-      .replaceAll('"', '""') +
-    '"';
-  const lines = [
-    [
-      "Tanggal",
-      "Transaksi",
-      "Store",
-      "SKU",
-      "Produk",
-      "Supplier",
-      "ID Masuk",
-      "KG Terjual",
-      "Butir",
-      "Satuan Jual",
-      "Harga Satuan",
-      "Omzet",
-    ],
-    ...rows.map((r) => [
-      r.date,
-      r.saleId,
-      name("stores", r.storeId),
-      state.products.find((p) => p.id === r.productId)?.sku,
-      name("products", r.productId),
-      name("suppliers", r.supplierId),
-      r.lotId,
-      r.kg,
-      r.pieces,
-      r.unit,
-      r.price,
-      r.total,
-    ]),
-  ];
-  const url = URL.createObjectURL(
-    new Blob(["\ufeff" + lines.map((l) => l.map(q).join(",")).join("\r\n")], {
-      type: "text/csv;charset=utf-8",
-    }),
-  );
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `${mode==="stock-demo"?"DEMO-":""}penjualan-${filter.from}-${filter.to}.csv`;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
+
 try {
   const r = await fetch("/api/pos-config", { signal: AbortSignal.timeout(15000) });
   config = r.ok ? await r.json() : {};
