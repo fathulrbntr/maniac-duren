@@ -1,0 +1,43 @@
+/* Shared login/startup layout, with accessible indeterminate progress. */
+.auth.auth-workspace { padding:76px 24px 36px; min-height:100svh; }
+.auth-workspace .auth-form { max-width:400px; }
+.auth-workspace .auth-form>div { min-width:0; }
+.auth-workspace .auth-logo { width:102px; height:64px; margin-bottom:24px; }
+.auth-workspace h1 { font-size:clamp(23px,5.5vw,28px); text-wrap:balance; }
+.auth-workspace .auth-intro { margin-bottom:26px; line-height:1.6; }
+.auth-workspace .auth-theme { position:absolute; top:max(18px,env(safe-area-inset-top)); right:max(18px,env(safe-area-inset-right)); }
+.auth-workspace input { width:100%; min-width:0; font-size:16px; }
+.auth-workspace #login-form { display:grid; gap:0; margin-bottom:18px; }
+.auth-workspace #login-form .field { margin-bottom:18px; }
+.auth-workspace #login-form button { min-height:48px; }
+.auth-workspace .auth-back { margin-top:4px; }
+.auth-progress { width:100%; margin:16px 0 0; }
+.auth-progress[hidden],.auth-actions[hidden] { display:none!important; }
+.auth-progress-track { height:5px; width:100%; overflow:hidden; border-radius:100px; background:var(--surface-raised); }
+.auth-progress-track::before { content:''; display:block; width:38%; height:100%; border-radius:inherit; background:#80ad3f; animation:auth-progress 1.2s ease-in-out infinite; }
+.auth-progress-text { margin:9px 0 0; color:var(--muted); font-size:12px; line-height:1.5; text-align:center; }
+.auth-startup .auth-form { max-width:360px; text-align:center; }
+.auth-startup h1 { font-size:23px; }
+.auth-startup .auth-intro { margin-bottom:18px; }
+.auth-actions { display:grid; gap:10px; margin-top:24px; }
+.auth-session-error { margin:18px 0 0; font-size:13px; color:var(--danger); line-height:1.6; overflow-wrap:anywhere; }
+.auth-session-error:empty { display:none; }
+.auth-storage-note { margin:10px 0; color:var(--warning); font-size:12px; }
+.shell .workspace-heading { flex:1; min-width:0; }
+.shell .workspace-tools { flex:0 0 auto; flex-wrap:nowrap; }
+.shell .workspace-tools>button,.shell .workspace-tools .pos-install-button { display:inline-flex; align-items:center; justify-content:center; min-height:36px; }
+.shell .workspace-tools .theme-toggle svg { width:18px; height:18px; flex-shrink:0; }
+@keyframes auth-progress { from { transform:translateX(-110%); } to { transform:translateX(370%); } }
+@media(max-width:600px) {
+  .auth.auth-workspace { padding:74px 24px 30px; }
+  .auth-workspace .auth-logo { margin-bottom:20px; }
+  .shell .topbar { column-gap:8px; }
+  .shell .workspace-tools { gap:3px; }
+  .shell .workspace-tools .stock-demo-toggle { padding:7px 6px; font-size:10px; gap:5px; }
+  .shell .workspace-tools .stock-demo-track { width:26px; }
+  .shell .workspace-tools .stock-demo-track::after { width:10px; height:10px; }
+  .shell .workspace-tools .stock-demo-toggle[aria-checked=true] .stock-demo-track::after { transform:translateX(10px); }
+  .shell .workspace-tools .theme-toggle { padding:7px; }
+}
+@media(max-height:650px) { .auth.auth-workspace { place-items:start center; } }
+@media(prefers-reduced-motion:reduce) { .auth-progress-track::before { animation:none; width:100%; opacity:.7; } }

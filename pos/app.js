@@ -1,4 +1,6 @@
-import {reportsPage,bindReports,selectReportTab} from './reports-ui.mjs?v=71';
+import {createSessionManager} from './session.mjs?v=73';
+import {installButton,bindInstall} from './pwa.mjs?v=72';
+import {reportsPage,bindReports,selectReportTab} from './reports-ui.mjs?v=73';
 import {documentsPage,bindDocuments} from './documents-ui.mjs?v=71';
 import { variantGroupDialog, productVariantDialog } from "./variant-editor.mjs?v=45";
 import {createSidebarController,sidebarIcon} from './sidebar.mjs?v=42';
@@ -14,6 +16,7 @@ import {receiptHeader,fillReceiptLogo} from './store-profile.mjs?v=64';
 const storeContext=()=>({modal,mutate,render,toast,demo:mode==='stock-demo',loadStoreLogo:(storeId,version)=>request('/rest/v1/rpc/pos_store_logo',{store_id:storeId,expected_version:version||null})});
 import {
   navigation,
+  visibleSections,
   mayLeave,
   trackForms,
 } from "./navigation.mjs?v=71";
@@ -64,11 +67,13 @@ document.addEventListener('click', event => {
   syncThemeControls();
 });
 window.addEventListener('storage', event => {
+  handleSessionStorage(event);
   if (event.key === themeKey && ['light','dark'].includes(event.newValue)) {
     document.documentElement.dataset.theme = event.newValue;
     syncThemeControls();
   }
 });
+let sessions, activeSessionId = "", loginAttempt = 0, authBusy = false, startupBusy = false;
 const stockFilter = {};
 const catalogFilter = { query: "", category: "", itemType: "" };
 let stateRevision=0, polling=false, soundEnabled=false, audioContext;
@@ -77,8 +82,6 @@ let state = emptyState(),
   mode = "",
   config = {},
   token = "",
-  refreshToken = "",
-  expires = 0,
   view = "dashboard",
   store = "",
   cart = [],
@@ -171,47 +174,80 @@ async function switchStockDemo(reset=false){
   }catch(err){toast(err.message);}
   finally{busy=false;switchingControls.forEach(({node,disabled})=>{if(node.isConnected)node.disabled=disabled;});}
 }
-let refreshingToken;
 async function request(path, body, auth = true, allowDemoRead = false) {
   assertDemoRequest(path,allowDemoRead);
-  if (auth && refreshToken && Date.now() > expires - 60000) {
-    refreshingToken ||= request(
-      "/auth/v1/token?grant_type=refresh_token",
-      { refresh_token: refreshToken },
-      false,
-      allowDemoRead,
-    )
-      .then((d) => {
-        token = d.access_token;
-        refreshToken = d.refresh_token;
-        expires = Date.now() + d.expires_in * 1000;
-      })
-      .finally(() => (refreshingToken = null));
-    await refreshingToken;
-  }
-  assertDemoRequest(path,allowDemoRead);
-  const r = await fetch(config.url + path, {
-    method: body ? "POST" : "GET",
-    headers: {
-      apikey: config.key,
-      "Content-Type": "application/json",
-      ...(auth ? { Authorization: "Bearer " + token } : {}),
-    },
-    ...(body ? { body: JSON.stringify(body) } : {}),
-  });
-  const data = await r.json().catch(() => {
-    throw Error("Respons server tidak dapat dibaca");
-  });
-  if (!r.ok) {
-    const error = Error(
-      data.message || data.error_description || data.msg || "Koneksi gagal",
-    );
-    error.definitive = r.status < 500;
-    error.code = data.code;
-    error.status = r.status;
+  const sessionId=activeSessionId;
+  try {
+    let requestToken=auth?await sessions.accessToken(sessionId):'';
+    if(auth)token=requestToken;
+    assertDemoRequest(path,allowDemoRead);
+    const send=()=>fetch(config.url+path,{
+      method:body?'POST':'GET',headers:{apikey:config.key,'Content-Type':'application/json',...(auth?{Authorization:'Bearer '+requestToken}:{})},
+      ...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(30000),
+    });
+    let response=await send();
+    if(auth && response.status===401){
+      requestToken=await sessions.accessToken(sessionId,{force:true,rejectedToken:requestToken});
+      token=requestToken;
+      assertDemoRequest(path,allowDemoRead);
+      response=await send();
+    }
+    if(auth && (sessionId!==activeSessionId || sessions.read()?.sessionId!==sessionId))throw Object.assign(Error('Sesi berubah. Silakan masuk kembali.'),{sessionChanged:true});
+    const data=await response.json().catch(()=>{throw Error('Respons server tidak dapat dibaca. Coba lagi.');});
+    if(!response.ok){
+      const error=Object.assign(Error(data.message||data.error_description||data.msg||'Koneksi gagal'),{definitive:response.status<500,code:data.code,status:response.status});
+      if(auth && response.status===401){sessions.clear(sessionId);error.authExpired=true;error.message='Sesi sudah berakhir. Silakan masuk kembali.';}
+      throw error;
+    }
+    return data;
+  } catch(error) {
+    if(auth && (error.authExpired||error.sessionChanged) && activeSessionId===sessionId){resetWorkspace();login(error.message);}
     throw error;
   }
-  return data;
+}
+function resetWorkspace(forget=false) {
+  if(forget)sessions?.clear(activeSessionId || undefined);
+  loginAttempt++;authBusy=false;activeSessionId='';token='';mode='';demoSource=null;lastSale=null;
+  stateRevision++;seenKitchen.clear();cart=[];state=emptyState();view='dashboard';store='';clearOrderDraft();
+  document.querySelectorAll('dialog[open]').forEach(dialog=>dialog.close());
+}
+function defaultView() { return state.access?.sell?'orders':state.access?.kitchen?'kitchen':state.access?.attendance?'attendance':'guide'; }
+function sessionProgress(text,hidden=false) {
+  return `<div class="auth-progress" data-auth-progress ${hidden?'hidden':''}><div class="auth-progress-track" role="progressbar" aria-label="Proses masuk"></div><p class="auth-progress-text" data-auth-progress-text role="status" aria-live="polite">${e(text)}</p></div>`;
+}
+function setLoginProgress(form,text,working) {
+  form.setAttribute('aria-busy',String(working));
+  const progress=form.querySelector('[data-auth-progress]');if(progress)progress.hidden=!working;
+  const label=form.querySelector('[data-auth-progress-text]');if(label)label.textContent=text;
+  const button=form.querySelector('button[type="submit"]');if(button){button.disabled=working;button.textContent=working?'Sedang masuk…':'Masuk';}
+  form.querySelectorAll?.('input').forEach(input=>input.readOnly=working);
+}
+function loadingPage(text,error='',retry=restoreSession) {
+  sidebar.reset();
+  app.innerHTML=`<div class="auth auth-workspace auth-startup">${themeButton('auth-theme')}<section class="auth-form"><div><img class="auth-logo" src="logo.png" alt="Maniac Duren"><h1>${error?'Koneksi belum siap':'Menyiapkan POS'}</h1><p class="muted auth-intro">${e(text)}</p>${sessionProgress(text,!!error)}<p class="auth-session-error" role="alert">${e(error)}</p><div class="auth-actions" ${error?'':'hidden'}><button type="button" id="auth-retry" class="primary">Coba lagi</button><button type="button" id="auth-switch">Gunakan akun lain</button></div></div></section></div>`;
+  syncThemeControls();
+  const again=document.querySelector('#auth-retry');if(again)again.onclick=()=>retry();
+  const other=document.querySelector('#auth-switch');if(other)other.onclick=()=>{resetWorkspace(true);login();};
+}
+async function restoreSession() {
+  if(startupBusy)return;
+  const saved=sessions?.read();if(!saved)return login();
+  startupBusy=true;
+  activeSessionId=saved.sessionId;store=saved.store;mode='live';
+  setRetryScope(config.url+':'+saved.userId);
+  loadingPage('Memulihkan sesi dan memuat data outlet…');
+  try {
+    await refresh();
+    if(activeSessionId!==saved.sessionId)return;
+    const allowed=visibleSections({...state.access,cashierOwner:state.me?.role==='owner'}).flatMap(group=>group.pages);
+    view=allowed.includes(saved.view)?saved.view:defaultView();
+    render();
+  } catch(error) {
+    if(activeSessionId!==saved.sessionId)return;
+    mode='';
+    if(error.authExpired||error.sessionChanged){resetWorkspace();login(error.message);}
+    else loadingPage('Sesi masih tersimpan. Coba sambungkan kembali.',error.name==='TimeoutError'?'Server belum merespons. Silakan coba lagi.':error.message);
+  } finally {startupBusy=false;}
 }
 async function refresh() {
   if (busy) throw Error("Tunggu proses simpan selesai.");
@@ -279,38 +315,39 @@ async function mutate(action, payload, {throwOnError = false} = {}) {
 }
 function login(message = "") {
   sidebar.reset();
-  app.innerHTML = `<div class="auth auth-workspace">${themeButton("auth-theme")}<section class="auth-form"><div><img class="auth-logo" src="logo.png" alt="Maniac Duren"><h1>Selamat datang kembali</h1><p class="muted auth-intro">Masuk untuk mengelola outlet Maniac Duren.</p>${config.configured ? "" : `<div class="notice">Akses POS belum tersedia. Hubungi pengelola.</div>`}<form id="login-form">${field("Email, username, atau nomor telepon", '<input name="identifier" required autocomplete="username" placeholder="Masukkan akun Anda">')}${field("Password", '<input name="password" type="password" required autocomplete="current-password" placeholder="Masukkan password">')}<p class="error" id="login-error" role="alert">${e(message)}</p><button class="primary full" type="submit" ${config.configured ? "" : "disabled"}>Masuk</button></form><a class="auth-back" href="/">Kembali ke website</a></div></section></div>`;
+  app.innerHTML = `<div class="auth auth-workspace">${themeButton("auth-theme")}<section class="auth-form"><div><img class="auth-logo" src="logo.png" alt="Maniac Duren"><h1>Selamat datang kembali</h1><p class="muted auth-intro">Masuk untuk mengelola outlet Maniac Duren.</p>${config.configured ? "" : `<div class="notice">Akses POS belum tersedia. Hubungi pengelola.</div>`}<form id="login-form">${field("Email, username, atau nomor telepon", '<input name="identifier" required autocomplete="username" placeholder="Masukkan akun Anda">')}${field("Password", '<input name="password" type="password" required autocomplete="current-password" placeholder="Masukkan password">')}<p class="error" id="login-error" role="alert">${e(message)}</p><button class="primary full" type="submit" ${config.configured ? "" : "disabled"}>Masuk</button>${sessionProgress('Memeriksa akun…',true)}</form>${installButton()}<a class="auth-back" href="/">Kembali ke website</a></div></section></div>`;
   syncThemeControls();
+  bindInstall();
   document.querySelector("#login-form").onsubmit = async (ev) => {
     ev.preventDefault();
-    const form = ev.currentTarget,
-      b = form.querySelector("button");
-    b.disabled = true;
+    if(authBusy)return;
+    const form=ev.currentTarget,attempt=++loginAttempt;
+    const values=Object.fromEntries(new FormData(form));
+    authBusy=true;
+    document.querySelector('#login-error').textContent='';
+    setLoginProgress(form,'Memeriksa akun…',true);
     try {
-      const values = Object.fromEntries(new FormData(form));
-      const response = await fetch("/api/pos-login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
+      const response=await fetch('/api/pos-login',{
+        method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(values),signal:AbortSignal.timeout(45000),
       });
-      const d = await response.json();
-      if (!response.ok) throw Error(d.error || "Login gagal. Coba lagi.");
-      if (!d.access_token || !d.user?.id) throw Error("Respons login tidak lengkap.");
-      token = d.access_token;
-      refreshToken = d.refresh_token;
-      expires = Date.now() + d.expires_in * 1000;
-      mode = "live";demoSource=null;
-      setRetryScope(config.url + ":" + d.user.id);
+      const data=await response.json();
+      if(attempt!==loginAttempt)return;
+      if(!response.ok)throw Error(data.error||'Login gagal. Coba lagi.');
+      const saved=sessions.save(data);
+      activeSessionId=saved.sessionId;token=saved.accessToken;mode='live';demoSource=null;
+      setRetryScope(config.url+':'+saved.userId);
+      setLoginProgress(form,'Memuat data outlet…',true);
       await refresh();
-      view=state.access?.sell?"orders":state.access?.kitchen?"kitchen":state.access?.attendance?"attendance":"guide";
-      render();
-    } catch (err) {
-      token = "";
-      refreshToken = "";
-      mode = "";
-      document.querySelector("#login-error").textContent = err.message;
+      if(attempt!==loginAttempt)return;
+      view=defaultView();render();
+      if(!sessions.persistent)toast('Browser membatasi penyimpanan sesi. Login dapat diminta kembali setelah refresh.');
+    } catch(error) {
+      if(attempt!==loginAttempt)return;
+      const message=error.name==='TimeoutError'?'Server belum merespons. Silakan coba lagi.':error.message;
+      if(activeSessionId && sessions.read()?.sessionId===activeSessionId){mode='';loadingPage('Akun sudah terverifikasi. Data outlet belum selesai dimuat.',message);}
+      else {token='';mode='';document.querySelector('#login-error').textContent=message;}
     } finally {
-      b.disabled = false;
+      if(attempt===loginAttempt){authBusy=false;setLoginProgress(form,'',false);}
     }
   };
 }
@@ -336,7 +373,7 @@ function shell(body) {
       <div class="sidebar-account">${accountProfile()}<button id="logout" class="sidebar-logout" type="button" aria-label="Logout" title="Logout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 4H4v16h5M14 8l4 4-4 4M8 12h10"/></svg><span>Logout</span></button></div>
     </aside>
     <button type="button" class="sidebar-backdrop" data-sidebar-close tabindex="-1" aria-label="Tutup sidebar"></button>
-    <main id="pos-main"><header class="topbar"><div class="workspace-heading"><button id="sidebar-toggle" type="button" class="sidebar-toggle" data-sidebar-toggle aria-controls="pos-sidebar" aria-label="Buka sidebar">${sidebarIcon}</button><h1>${e(title[view] || "Maniac Duren")}</h1></div><div class="workspace-tools"><span class="workspace-outlet">${icon("stores")}<span>${e(name("stores", store))}</span></span><button type="button" id="stock-demo-toggle" class="stock-demo-toggle" role="switch" aria-checked="${mode==='stock-demo'}"><span class="stock-demo-track" aria-hidden="true"></span>Mode demo</button>${themeButton()}</div></header><div class="workspace-content">${mode==='stock-demo'?'<aside class="stock-demo-banner" role="status"><div><b>MODE DEMO · Stok awal 100</b><p>Data uji hanya di tab ini. Semua penyimpanan demo terpisah dari database asli. Harga dan resep mengikuti master.</p><small>Buah: 100 kg + 100 butir. Bahan / produk stok: 100 sesuai satuannya. ${e(itemTypes.recipe)} mengikuti bahan.</small></div><button type="button" id="stock-demo-reset">Reset demo</button></aside>':''}${body}<p class="page-foot">Maniac Duren · ${e(name("stores", store))}</p></div></main>
+    <main id="pos-main"><header class="topbar"><div class="workspace-heading"><button id="sidebar-toggle" type="button" class="sidebar-toggle" data-sidebar-toggle aria-controls="pos-sidebar" aria-label="Buka sidebar">${sidebarIcon}</button><h1>${e(title[view] || "Maniac Duren")}</h1></div><div class="workspace-tools">${installButton()}<span class="workspace-outlet">${icon("stores")}<span>${e(name("stores", store))}</span></span><button type="button" id="stock-demo-toggle" class="stock-demo-toggle" role="switch" aria-checked="${mode==='stock-demo'}"><span class="stock-demo-track" aria-hidden="true"></span>Mode demo</button>${themeButton()}</div></header><div class="workspace-content">${mode==='stock-demo'?'<aside class="stock-demo-banner" role="status"><div><b>MODE DEMO · Stok awal 100</b><p>Data uji hanya di tab ini. Semua penyimpanan demo terpisah dari database asli. Harga dan resep mengikuti master.</p><small>Buah: 100 kg + 100 butir. Bahan / produk stok: 100 sesuai satuannya. ${e(itemTypes.recipe)} mengikuti bahan.</small></div><button type="button" id="stock-demo-reset">Reset demo</button></aside>':''}${body}<p class="page-foot">Maniac Duren · ${e(name("stores", store))}</p></div></main>
   </div>`;
 }
 function dashboard() {
@@ -433,6 +470,7 @@ function directoryPage(kind) {
 }
 function render() {
   if(["salesreport","finance","batches","trace"].includes(view)){selectReportTab(({salesreport:"summary",finance:"expenses",batches:"batches",trace:"stock"})[view]);view="reports";}
+  sessions?.location(activeSessionId,store,view);
   sidebar.capture();
   app.innerHTML = shell(
     {
@@ -452,6 +490,7 @@ function render() {
     }[view](),
   );
   syncThemeControls();
+  bindInstall();
   sidebar.mount();
   document.querySelector("#stock-demo-toggle")?.addEventListener("click",()=>switchStockDemo());
   document.querySelector("#stock-demo-reset")?.addEventListener("click",()=>switchStockDemo(true));
@@ -484,16 +523,7 @@ function render() {
   document.querySelector("#logout").onclick = () => {
     if (!mayLeave(busy)) return;
     if (cart.length && !confirm("Keluar dan kosongkan pesanan?")) return;
-    token = "";
-    refreshToken = "";
-    expires = 0;
-    mode = "";demoSource=null;lastSale=null;
-    stateRevision++;
-    seenKitchen.clear();
-    cart = [];
-    state = emptyState();
-    view = "dashboard";
-    clearOrderDraft();
+    resetWorkspace(true);
     login();
   };
   document
@@ -816,13 +846,24 @@ function receipt(saleId) {
   d.showModal();
 }
 
-try {
-  const r = await fetch("/api/pos-config", { signal: AbortSignal.timeout(15000) });
-  config = r.ok ? await r.json() : {};
-} catch {
-  config = {};
+async function bootstrap() {
+  loadingPage('Menghubungkan ke layanan POS…','',bootstrap);
+  try {
+    const response=await fetch('/api/pos-config',{signal:AbortSignal.timeout(15000),cache:'no-store'});
+    if(!response.ok)throw Error('Layanan POS belum dapat dihubungi. Coba lagi.');
+    config=await response.json();
+    if(!config.configured){login();return;}
+    sessions=createSessionManager({url:config.url,key:config.key});
+    if(sessions.read())await restoreSession();else login();
+  } catch(error) {
+    loadingPage('Periksa koneksi internet Anda.',error.name==='TimeoutError'?'Server belum merespons.':error.message,bootstrap);
+  }
 }
-login();
+function handleSessionStorage(event) {
+  if(!sessions || (event.key!==sessions.storageKey && event.key!==null))return;
+  if(activeSessionId && sessions.read()?.sessionId!==activeSessionId){resetWorkspace();login('Sesi keluar atau akun berganti di tab lain. Silakan masuk kembali.');}
+}
+await bootstrap();
 
 function masterDetailFields(kind, p = {}) {
   return kind === "stores"
@@ -880,14 +921,14 @@ function observeKitchen(){
 }
 setInterval(async()=>{
  if(mode!=='live'||busy||polling||!['orders','kitchen','discounts'].includes(view))return;
- polling=true;const revision=stateRevision,sessionToken=token;
+ polling=true;const revision=stateRevision,sessionId=activeSessionId;
  try{
   const fresh=await request('/rest/v1/rpc/pos_read',{});
-  if(mode!=='live'||busy||revision!==stateRevision||sessionToken!==token)return;
+  if(mode!=='live'||busy||revision!==stateRevision||sessionId!==activeSessionId)return;
   state=fresh;observeKitchen();
   if(['kitchen','discounts'].includes(view)&&!document.querySelector('dialog[open]'))render();
   else document.querySelector('#order-products')?.dispatchEvent(new CustomEvent('stock-refresh',{detail:state}));
   const status=document.querySelector('#kitchen-sync');if(status)status.textContent='Terhubung · diperbarui '+new Date().toLocaleTimeString('id-ID');
- }catch(err){if(mode!=='live'||revision!==stateRevision||sessionToken!==token)return;const status=document.querySelector('#kitchen-sync');if(status)status.textContent='Koneksi terputus. Mencoba lagi otomatis; tekan Perbarui untuk mencoba sekarang.';}
+ }catch(err){if(mode!=='live'||revision!==stateRevision||sessionId!==activeSessionId)return;const status=document.querySelector('#kitchen-sync');if(status)status.textContent='Koneksi terputus. Mencoba lagi otomatis; tekan Perbarui untuk mencoba sekarang.';}
  finally{polling=false;}
 },5000);

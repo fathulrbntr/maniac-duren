@@ -1,3 +1,9 @@
+# Loading login, sesi, dan UI laporan — patch 073
+
+Ikuti **PETUNJUK-PATCH-073.txt** untuk update ini. Login sekali setelah deploy;
+sesi berikutnya dipulihkan saat refresh. Tidak ada SQL atau reset database.
+Patch mempertahankan laporan/admin 071 dan instalasi PWA 072.
+
 # Instalasi aplikasi POS — patch 072
 
 Untuk mengaktifkan instalasi POS di HP/laptop, ikuti **PASANG-PWA-072.txt**.

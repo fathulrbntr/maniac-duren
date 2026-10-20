@@ -12,7 +12,8 @@ globalThis.HTMLInputElement=class {get value(){return this.raw||""}set value(v){
 globalThis.MutationObserver=class{observe(){}};
 globalThis.document={documentElement:{dataset:{theme:'light'}},addEventListener:(type,cb)=>{(listeners[type]??=[]).push(cb)},querySelector:selector=>({'#app':app,'#login-form':form,'#login-error':error}[selector]??elements[selector]??null),querySelectorAll:selector=>selector==='[data-theme-toggle]'?[themeButton]:selector==='[data-view]'?nav:[]};
 globalThis.window={posConfigReady:Promise.resolve({configured:true,url:'https://fixture.invalid',key:'fixture'}),addEventListener:(type,cb)=>windowListeners[type]=cb};
-globalThis.localStorage={setItem(){},getItem(){return null}};
+const storage=new Map();
+globalThis.localStorage={setItem:(k,v)=>storage.set(k,v),getItem:k=>storage.get(k)??null,removeItem:k=>storage.delete(k)};
 globalThis.setInterval=()=>0;
 globalThis.FormData=class{*[Symbol.iterator](){yield ['identifier','test'];yield ['password','test-password'];}};
 let calls=0,reads=0,accepted=false;

@@ -1,0 +1,83 @@
+MANIAC DUREN — PATCH 073
+Loading login, sesi tetap masuk setelah refresh, dan UI laporan HP.
+
+DASAR PROYEK
+maniac-duren(7).zip + patch laporan/admin 071 + PWA 072.
+Screenshot halaman Laporan cocok dengan modul laporan 071; integrasi laporan
+dan admin tersebut dipertahankan saat memperbarui app.js dan index.html.
+Paket ini berisi hanya file baru/berubah terhadap gabungan versi tersebut.
+
+CARA PASANG
+1. Ekstrak ZIP, salin seluruh isinya ke folder utama proyek (sejajar vercel.json).
+   Gabungkan folder pos/tests dan pilih Replace/Timpa file yang sama.
+   Jangan menghapus file lainnya.
+2. Jalankan di terminal Git Bash pada folder proyek:
+
+   git add pos/app.js pos/index.html pos/session.mjs pos/auth.css pos/reports-ui.mjs pos/reports-admin.css tests/session.test.mjs tests/login-session.test.mjs tests/rollback-startup.test.mjs README.md PETUNJUK-PATCH-073.txt
+   git commit -m "Fix persistent login and mobile report layout"
+   git push
+
+3. Tunggu deployment Vercel Ready. Muat ulang /pos/.
+4. Login sekali. Setelah itu coba refresh: akun, menu utama, dan outlet aktif
+   dipulihkan selama sesi masih valid.
+
+Tidak ada SQL, migrasi, reset database, atau instalasi dependensi baru.
+Patch ini mengasumsikan laporan/admin 071 sudah terpasang seperti screenshot.
+
+KENAPA SEBELUMNYA REFRESH MEMINTA LOGIN?
+Token sebelumnya hanya berada di variabel JavaScript dalam memori halaman.
+Refresh mengulang aplikasi dan menghilangkan variabel tersebut. Startup lama
+selalu membuka form login, tanpa mencoba memulihkan sesi.
+
+SEKARANG
+- Loading bar bergerak saat memuat aplikasi, memeriksa akun, memuat data outlet,
+  dan memulihkan sesi. Teks menunjukkan tahap proses tanpa persentase palsu.
+- Klik login ganda dicegah; input kembali aktif jika login gagal.
+- Access/refresh token disimpan di browser. Password tidak disimpan.
+- Sesi dengan token masih berlaku langsung dipakai; tidak ada login password
+  atau refresh token tambahan yang tidak diperlukan.
+- Token yang hampir kedaluwarsa diperbarui dan hasil rotasinya disimpan.
+- Pembaruan token diselaraskan antartab melalui Web Locks bila tersedia.
+- Gangguan jaringan/server sementara tidak menghapus sesi. Tersedia Coba lagi.
+- Token yang benar-benar ditolak/berakhir membawa pengguna ke form login.
+- Logout menghapus sesi tersimpan dan mengembalikan halaman login; tab lain
+  pada origin browser yang sama ikut memperbarui status login.
+- Respons lama yang datang setelah logout/pergantian akun tidak boleh
+  menghidupkan lagi sesi sebelumnya.
+- Data operasional tetap dimuat dari server; patch tidak mengaktifkan cache
+  atau transaksi offline. Keranjang/isian yang belum disimpan tidak dipulihkan
+  oleh patch ini saat refresh.
+
+UI LAPORAN (SESUAI BAGIAN PADA SCREENSHOT)
+- Perbarui, Excel, dan PDF memakai tiga kolom sejajar di layar HP.
+- Aturan toolbar umum max-width 180 px tidak lagi membatasi toolbar laporan.
+- Tab laporan membungkus ke baris berikutnya, tanpa scrollbar horizontal tab.
+- Periode dan Toko selebar panel; Dari dan Sampai bersebelahan.
+- Jarak label, input, dan panel dipadatkan secara khusus pada laporan.
+- Kartu ringkasan menyesuaikan lebar layar.
+- Tabel data yang lebar tetap dapat digeser di dalam pembungkus tabelnya.
+- Halaman login dan kontrol header ikut dirapikan untuk layar kecil.
+
+CATATAN SESI
+Sesi mengikuti kebijakan Supabase. Logout, sesi yang dicabut/kedaluwarsa,
+penghapusan data browser, atau penyimpanan browser yang diblokir tetap dapat
+meminta login kembali. Penyimpanan sesi terpisah untuk domain/origin berbeda
+(contoh maniacduren.com dan www.maniacduren.com).
+
+VERIFIKASI
+Lulus pengujian otomatis lokal:
+node --test tests/session.test.mjs
+node tests/login-session.test.mjs
+node tests/rollback-startup.test.mjs
+node tests/reports.test.mjs
+node tests/pwa.test.mjs
+node tests/cache-recovery.test.mjs
+
+Cakupan: login dan indikator proses, penolakan login, restore setelah refresh,
+rotasi token, request paralel/antartab, penolakan token, koneksi gagal dan retry,
+logout, respons terlambat, pergantian outlet/menu, serta perhitungan laporan,
+ekspor, PWA dan mekanisme retirement worker yang sudah ada.
+
+Uji visual Chromium/HP belum dapat dijalankan karena unduhan Chromium gagal
+di lingkungan pengerjaan. Setelah deploy, periksa halaman login serta Laporan
+pada HP. Perubahan belum dipublikasikan langsung ke website produksi.
