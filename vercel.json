@@ -8,6 +8,15 @@
   ],
   "headers": [
     {
+      "source": "/pos/manifest.webmanifest",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/manifest+json"
+        }
+      ]
+    },
+    {
       "source": "/pos/sw.js",
       "headers": [
         {

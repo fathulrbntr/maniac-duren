@@ -2,10 +2,12 @@
   "id":"/pos/",
   "name":"Maniac Duren POS",
   "short_name":"Maniac POS",
+  "description":"Kasir, stok, dan operasional outlet Maniac Duren.",
   "lang":"id",
   "start_url":"/pos/",
   "scope":"/pos/",
   "display":"standalone",
+  "prefer_related_applications":false,
   "background_color":"#f4f5f1",
   "theme_color":"#28543e",
   "icons":[

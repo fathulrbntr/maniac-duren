@@ -1,0 +1,14 @@
+.pos-install[hidden], .pos-install [hidden] { display:none!important; }
+.pos-install { position:relative; flex-shrink:0; }
+.pos-install-button { display:inline-flex; align-items:center; justify-content:center; gap:8px; }
+.pos-install-button svg { width:18px; height:18px; flex-shrink:0; }
+.pos-install-status { display:block; color:var(--muted); font-size:12px; }
+.auth-form .pos-install { margin:0 0 18px; text-align:center; }
+.auth-form .pos-install-button { width:100%; min-height:46px; border-radius:100px; }
+.topbar .pos-install-button { min-height:34px; padding:7px 10px; font-size:12px; }
+.topbar .pos-install-status { position:absolute; right:0; top:24px; width:230px; padding:12px; border:1px solid var(--line); border-radius:10px; background:var(--surface); }
+@media(max-width:700px) {
+  .topbar .pos-install-button { width:34px; padding:7px; }
+  .topbar .pos-install-button>span { display:none; }
+}
+@media print { .pos-install { display:none!important; } }

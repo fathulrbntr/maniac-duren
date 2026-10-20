@@ -1,6 +1,12 @@
-# Rollback ke patch 027
+# Instalasi aplikasi POS — patch 072
 
-Ikuti **ROLLBACK-027.txt** untuk pemasangan pada database aktif. Jalankan hanya `database/rollback-027-compat.sql`, bukan instalasi ulang atau reset database.
+Untuk mengaktifkan instalasi POS di HP/laptop, ikuti **PASANG-PWA-072.txt**.
+Patch ini hanya mengubah frontend; tidak memerlukan SQL, migrasi, reset database,
+atau script rollback. Data operasional tetap menggunakan koneksi internet.
+
+# Riwayat rollback ke patch 027
+
+**ROLLBACK-027.txt** adalah panduan rollback lama, bukan langkah pemasangan patch PWA 072.
 
 # Maniac Duren — hasil audit alur, update 08
 

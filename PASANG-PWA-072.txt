@@ -1,0 +1,83 @@
+MANIAC DUREN POS — PATCH INSTALASI PWA 072
+Dasar: maniac-duren(7).zip yang dikirim pada 20 Oktober 2026.
+
+CARA PASANG
+1. Ekstrak ZIP patch ini.
+2. Salin semua isinya ke folder utama proyek Maniac Duren, sejajar dengan
+   vercel.json. Pilih Replace/Timpa untuk file dengan nama sama.
+   Gabungkan folder pos dan tests dengan folder yang sudah ada.
+   Jangan menghapus folder proyek atau file lain.
+3. Buka terminal Git Bash di folder proyek, kemudian jalankan:
+
+   git add pos/index.html pos/app.js pos/manifest.webmanifest pos/pwa.mjs pos/pwa.css vercel.json README.md PASANG-PWA-072.txt tests/pwa.test.mjs
+   git commit -m "Enable lightweight POS app installation"
+   git push
+
+4. Tunggu deployment Vercel berstatus Ready.
+5. Di Chrome Android, buka https://maniacduren.com/pos/ lalu muat ulang.
+   Ketuk halaman dan tunggu sebentar bila tombol belum muncul.
+   Pilih tombol Install aplikasi atau menu tiga titik > Install.
+6. Buka ikon Maniac POS dari daftar aplikasi/layar utama. Aplikasi membuka
+   halaman /pos/ dalam jendela tersendiri tanpa bar alamat browser.
+
+Tidak memerlukan SQL, reset database, npm install, atau build frontend.
+Jangan jalankan script rollback-027-clean.mjs untuk memasang patch ini;
+script tersebut adalah alat rollback lama yang menghapus file PWA.
+
+YANG BERUBAH
+- Manifest dihubungkan ke halaman POS. Identitas aplikasi dan scope /pos/
+  dipertahankan, dengan mode tampilan standalone.
+- Tombol Install aplikasi muncul di halaman login dan header setelah login
+  ketika browser menyediakan izin/prompt pemasangan.
+- Pada layar kecil, tombol header menggunakan ikon dengan label aksesibilitas.
+- Tombol hilang sesudah pemasangan atau saat berjalan dalam mode standalone.
+- Pembatalan instalasi tidak menghapus isian login atau memuat ulang halaman.
+- Header MIME manifest ditambahkan ke vercel.json.
+- Logo/ikon 192 dan 512 yang sudah ada digunakan kembali tanpa perubahan.
+
+DATA DAN KINERJA
+POS tetap menggunakan koneksi internet untuk login, stok, dan transaksi.
+Patch ini tidak mendaftarkan service worker baru, tidak membuat cache aset,
+dan tidak mengaktifkan antrean transaksi offline.
+Service worker retirement yang sudah ada tetap tersedia untuk browser lama.
+Pembaruan web dimuat saat halaman dimuat ulang/dibuka kembali; patch ini
+tidak memaksa reload saat kasir sedang mengisi transaksi.
+
+JIKA BELUM BISA INSTALL
+- Pastikan deployment sudah selesai dan Chrome memakai halaman HTTPS terbaru.
+- Buka URL langsung di Chrome, bukan browser di dalam aplikasi lain.
+- Tombol dalam web hanya tampil jika browser mengirim beforeinstallprompt;
+  ketersediaan prompt tetap ditentukan browser/perangkat.
+- Setelah menolak prompt, coba lagi lewat menu Chrome atau buka ulang halaman.
+- Periksa https://maniacduren.com/pos/manifest.webmanifest: harus berisi JSON.
+- Jika masih gagal, di Chrome desktop buka F12 > Application > Manifest,
+  lalu kirim pesan error dan screenshotnya untuk pemeriksaan lanjutan.
+
+Di Chrome desktop, gunakan tombol Install di web atau menu pemasangan Chrome.
+Di iPhone/iPad, gunakan Safari > Bagikan > Tambahkan ke Layar Utama.
+
+VERIFIKASI
+Lulus:
+- node tests/pwa.test.mjs
+  Memeriksa manifest, dimensi ikon PNG, alur klik install, pembatalan,
+  kegagalan prompt, pergantian tampilan, serta status standalone/terpasang.
+- node tests/rollback-startup.test.mjs
+  Startup aplikasi, login gagal/berhasil, tema, navigasi, pergantian outlet,
+  dan logout menggunakan data uji lokal.
+- node tests/cache-recovery.test.mjs
+  Memastikan mekanisme retirement/cache lama tetap berperilaku sama.
+
+Uji browser visual/instalasi Android belum dilakukan: unduhan Chromium untuk
+pengujian otomatis gagal di lingkungan pengerjaan. Perlu verifikasi akhir
+pada Chrome Android setelah deployment. Patch belum dipublikasikan ke website.
+
+ISI ZIP: HANYA FILE BARU/BERUBAH
+pos/index.html
+pos/app.js
+pos/manifest.webmanifest
+pos/pwa.mjs
+pos/pwa.css
+vercel.json
+README.md
+PASANG-PWA-072.txt
+tests/pwa.test.mjs
