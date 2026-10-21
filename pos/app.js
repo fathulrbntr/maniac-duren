@@ -1,3 +1,4 @@
+import {dashboardPage,bindDashboard,resetDashboard,followDashboardStore} from './dashboard-ui.mjs?v=75';
 import {createSessionManager} from './session.mjs?v=73';
 import {installButton,bindInstall} from './pwa.mjs?v=72';
 import {reportsPage,bindReports,selectReportTab} from './reports-ui.mjs?v=73';
@@ -213,6 +214,7 @@ async function request(path, body, auth = true, allowDemoRead = false) {
 }
 function resetWorkspace(forget=false) {
   if(forget)sessions?.clear(activeSessionId || undefined);
+  resetDashboard();
   loginAttempt++;authBusy=false;activeSessionId='';token='';mode='';demoSource=null;lastSale=null;
   stateRevision++;seenKitchen.clear();cart=[];state=emptyState();view='dashboard';store='';clearOrderDraft();
   document.querySelectorAll('dialog[open]').forEach(dialog=>dialog.close());
@@ -369,7 +371,7 @@ function accountProfile() {
   return `<div class="account-profile" aria-label="Akun yang login">${photo ? `<img src="${e(photo)}" alt="Foto ${e(accountName)}">` : `<span class="account-avatar" aria-hidden="true">${e(initials)}</span>`}<div><strong>${e(accountName)}</strong><span>${e(role)}</span></div></div>`;
 }
 function shell(body) {
-  return `<div class="shell ${["products","stock"].includes(view)?"inventory-shell":""}" ${sidebar.attributes()}>
+  return `<div class="shell ${["products","stock"].includes(view)?"inventory-shell":""} ${view==="dashboard"?"dashboard-shell":""}" ${sidebar.attributes()}>
     <aside class="sidebar" id="pos-sidebar" aria-label="Sidebar Maniac Duren">
       <div class="sidebar-header">
         <div class="sidebar-brand-row"><div class="brand"><img src="logo.png" alt=""><div><strong>Maniac Duren</strong><span>Operations / POS</span></div></div><button type="button" class="sidebar-toggle" data-sidebar-toggle aria-controls="pos-sidebar" aria-label="Tutup sidebar">${sidebarIcon}</button></div>
@@ -382,43 +384,8 @@ function shell(body) {
     <main id="pos-main"><header class="topbar"><div class="workspace-heading"><button id="sidebar-toggle" type="button" class="sidebar-toggle" data-sidebar-toggle aria-controls="pos-sidebar" aria-label="Buka sidebar">${sidebarIcon}</button><h1>${e(title[view] || "Maniac Duren")}</h1></div><div class="workspace-tools">${installButton()}<span class="workspace-outlet">${icon("stores")}<span>${e(name("stores", store))}</span></span><button type="button" id="stock-demo-toggle" class="stock-demo-toggle" role="switch" aria-checked="${mode==='stock-demo'}"><span class="stock-demo-track" aria-hidden="true"></span>Mode demo</button>${themeButton()}</div></header><div class="workspace-content">${mode==='stock-demo'?'<aside class="stock-demo-banner" role="status"><div><b>MODE DEMO · Stok awal 100</b><p>Data uji hanya di tab ini. Semua penyimpanan demo terpisah dari database asli. Harga jual demo Rp150.000 per satuan; resep mengikuti master.</p><small>Buah: 100 kg + 100 butir. Bahan / produk stok: 100 sesuai satuannya. ${e(itemTypes.recipe)} mengikuti bahan.</small></div><button type="button" id="stock-demo-reset">Reset demo</button></aside>':''}${body}<p class="page-foot">Maniac Duren · ${e(name("stores", store))}</p></div></main>
   </div>`;
 }
-function dashboard() {
-  const rows = saleRows(state, { from: today(), to: today(), store }),
-    s = summarize(rows),
-    lots = state.lots.filter((x) => x.storeId === store),
-    kg = lots.reduce((a, x) => a + x.kg, 0),
-    pieces = lots.reduce((a, x) => a + x.pieces, 0);
-  const receiptCount = new Set(rows.map((x) => x.saleId)).size;
-  return `<div class="intro"><div><h2>Ringkasan hari ini</h2><div class="muted">${e(name("stores", store))} · ${new Intl.DateTimeFormat("id-ID", { dateStyle: "full", timeZone: "Asia/Jakarta" }).format(new Date())}</div></div><button class="primary" data-view="orders">${icon("cashier")} Transaksi baru</button></div><div class="stats">${stat("Omzet hari ini", money(s.total), `${receiptCount} transaksi selesai`)}${stat("Stok durian utuh", num(kg) + " kg", num(pieces) + " butir di store ini")}${stat("Omzet jual per butir", money(s.pieceRevenue), "Menggunakan " + num(s.pieceKg) + " kg stok")}${stat("Durian terjual", num(s.kg) + " kg", num(s.pieces) + " butir terjual")}</div><div class="split"><section class="panel"><div class="header-row"><h3>Penjualan terbaru</h3><button class="small" data-view="reports">Lihat laporan</button></div>${salesTable(rows.slice(-6).reverse(), false)}</section><section class="panel"><h3>Omzet berdasarkan cara jual</h3>${[
-    "KG",
-    "BUTIR",
-  ]
-    .map((u, i) => {
-      const value = i ? s.pieceRevenue : s.kgRevenue;
-      return `<div class="bar-row"><span>Per ${i ? "butir" : "kg"}</span><div class="bar"><div style="width:${s.total ? (value / s.total) * 100 : 0}%"></div></div><b>${money(value)}</b></div>`;
-    })
-    .join(
-      "",
-    )}<div class="callout">Penjualan per butir menggunakan <b>${num(s.pieceKg)} kg</b> stok dan menghasilkan <b>${money(s.pieceRevenue)}</b>.</div><h3 style="margin-top:25px">Omzet 7 hari</h3><div class="trend">${Array.from(
-    { length: 7 },
-    (_, i) => {
-      const d = new Date(today() + "T00:00:00Z");
-      d.setUTCDate(d.getUTCDate() - 6 + i);
-      const day = d.toISOString().slice(0, 10);
-      const val = summarize(
-        saleRows(state, { from: day, to: day, store }),
-      ).total;
-      return { day, val };
-    },
-  )
-    .map(
-      (x, _, a) =>
-        `<div class="trend-col" title="${x.day}: ${money(x.val)}"><div style="height:${Math.max(1, (x.val / Math.max(1, ...a.map((x) => x.val))) * 105)}px"></div><small>${x.day.slice(8)}</small></div>`,
-    )
-    .join(
-      "",
-    )}</div></section></div><section class="panel"><h3>Stok per produk</h3>${inventoryTable(lots)}</section>`;
-}
+function dashboard() {return dashboardPage(state,store);}
+
 function inventoryTable(lots) {
   const grouped = state.products.filter(isLegacyStock).map((p) => ({
     ...p,
@@ -474,6 +441,13 @@ function directoryPage(kind) {
     label = isStore ? "Store" : "Supplier";
   return `<div class="intro"><div><h2>Master ${label}</h2><p class="muted">${isStore ? "Ubah nama toko dan lokasi melalui tombol Edit toko." : "Kelola supplier, nomor telepon, dan alamat."}</p></div><button class="primary" data-master="${kind}">Tambah ${label}</button></div><section class="panel"><div class="table-wrap"><table><thead><tr><th>NAMA</th>${isStore ? "<th>LOKASI</th>" : "<th>NOMOR TELEPON</th><th>ALAMAT</th>"}<th>ACTION</th></tr></thead><tbody>${state[kind].map((p) => `<tr><td><b>${e(p.name)}</b></td>${isStore ? `<td>${e(p.location || "—")}</td>` : `<td>${e(p.phone || "—")}</td><td>${e(p.address || "—")}</td>`}<td><button class="small" data-edit-kind="${kind}" data-edit-id="${e(p.id)}">${icon("edit")}${isStore ? "Edit toko" : "Edit"}</button></td></tr>`).join("") || `<tr><td colspan="${isStore ? 3 : 4}" class="empty">Belum ada ${label.toLowerCase()}.</td></tr>`}</tbody></table></div></section>`;
 }
+function changeStore(next) {
+  if(!state.stores.some(x=>x.id===next)||!mayLeave(busy))return false;
+  if(next===store){followDashboardStore();render();return true;}
+  if((cart.length||hasOrderDraft())&&!confirm('Ganti toko akan mengosongkan pesanan. Lanjutkan?'))return false;
+  store=next;cart=[];clearOrderDraft();followDashboardStore();render();return true;
+}
+
 function render() {
   if(["salesreport","finance","batches","trace"].includes(view)){selectReportTab(({salesreport:"summary",finance:"expenses",batches:"batches",trace:"stock"})[view]);view="reports";}
   sessions?.location(activeSessionId,store,view);
@@ -509,23 +483,11 @@ function render() {
         render();
       }),
   );
-  document.querySelector("#active-store").onchange = (ev) => {
-    if (!mayLeave(busy)) {
-      ev.target.value = store;
-      return;
-    }
-    if (
-      cart.length &&
-      !confirm("Ganti store akan mengosongkan pesanan. Lanjutkan?")
-    ) {
-      ev.target.value = store;
-      return;
-    }
-    store = ev.target.value;
-    cart = [];
-    clearOrderDraft();
-    render();
+  document.querySelector("#active-store").onchange = ev => {
+    if(!changeStore(ev.target.value))ev.target.value=store;
   };
+  if(view==='dashboard')bindDashboard(state,store,{render,refresh,toast,changeStore,isBusy:()=>busy});
+
   document.querySelector("#logout").onclick = () => {
     if (!mayLeave(busy)) return;
     if (cart.length && !confirm("Keluar dan kosongkan pesanan?")) return;

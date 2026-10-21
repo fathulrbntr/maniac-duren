@@ -1,0 +1,56 @@
+MANIAC DUREN — PATCH 075: DASHBOARD SESUAI REFERENSI
+
+Pasang setelah patch 074. ZIP hanya berisi file yang ditambah/diubah.
+Tidak memerlukan SQL, migrasi, atau reset database.
+
+TAMPILAN
+- Profil akun dengan foto/inisial, nama dan role.
+- Pilihan Store di dashboard: satu toko atau semua toko yang dapat diakses.
+- Tombol Transaksi, Stock, Supplier, Reject, Customer sesuai hak akses akun.
+- Kartu Omzet dan Transaksi dengan rincian metode pembayaran yang tercatat.
+- Grafik traffic penjualan dan 5 produk dengan omzet tertinggi.
+- Navigasi bawah: Menu, Beranda, Kasir (Laporan untuk akun tanpa akses kasir).
+- Tema Dark mengikuti warna arang/abu-abu pada referensi; Light tetap tersedia.
+- Susunan menyesuaikan HP dan desktop. Tidak menambahkan font eksternal.
+
+FILTER DAN PERHITUNGAN
+- Periode: Hari ini, Kemarin, Minggu ini, Bulan ini, atau Pilih tanggal.
+- Minggu dan bulan dihitung sampai hari ini. Custom tidak menerima tanggal
+  terbalik, tidak valid, atau di masa depan.
+- Omzet menggunakan perhitungan menu Laporan: penjualan lunas setelah
+  diskon, termasuk buah, produk jual langsung, olahan, dan menu resep.
+- Transaksi batal/refund dikecualikan. Satu transaksi dihitung satu kali,
+  bukan berdasarkan jumlah baris produknya.
+- Pembayaran mengikuti data yang disimpan. Saat ini POS menggunakan
+  Tunai, QRIS, Transfer; bank/debit tertentu tidak dibuat sebagai angka contoh.
+- Grafik satu hari dikelompokkan per 4 jam WIB. Transaksi tanpa jam yang
+  sesuai ditampilkan terpisah dan tetap termasuk total omzet.
+- Grafik beberapa hari memakai kelompok tanggal agar tetap terbaca di HP.
+- Stock menampilkan posisi fisik saat ini, dengan kg/g/ml/pcs terpisah.
+  Filter tanggal dinonaktifkan pada tab Stock agar tidak disangka stok historis.
+- Customer memakai nama penerima invoice terbit yang terkait transaksi POS
+  lunas pada periode terpilih. Nama yang sama digabung; bukan hitungan
+  pelanggan unik atau pengunjung. Transaksi tanpa nama ditampilkan terpisah.
+- Memilih semua toko hanya mengubah cakupan dashboard. Toko kasir tetap
+  menggunakan outlet aktif. Memilih satu toko menyinkronkan dropdown sidebar.
+
+CARA PASANG
+1. Ekstrak isi ZIP ke folder utama proyek, sejajar package.json.
+2. Timpa file bernama sama, lalu jalankan Git Bash di bawah.
+3. Tunggu deployment selesai, muat ulang /pos/, lalu buka Dashboard.
+4. Gunakan tema Dark untuk tampilan seperti referensi.
+
+GIT BASH
+git add pos/app.js pos/index.html pos/dashboard-data.mjs pos/dashboard-ui.mjs pos/dashboard.css
+git add tests/dashboard.test.mjs tests/dashboard-app.test.mjs README.md PETUNJUK-PATCH-075.txt
+git commit -m "Rapikan dashboard POS sesuai referensi"
+git push
+
+VERIFIKASI
+Lulus uji perhitungan omzet, transaksi, pembayaran, produk teratas, pemisahan
+toko, periode dan jam WIB, stok per satuan, reject, customer dari invoice,
+handler UI dan integrasi app.js, serta regresi sesi login, navigasi dan PWA.
+Pergantian tab/periode/toko memakai data yang sudah dimuat tanpa permintaan
+database tambahan. Tombol Perbarui tetap tersedia. Demo tetap terpisah.
+Uji UI memakai adapter DOM; belum diuji visual di browser/HP dan belum
+di-deploy ke produksi oleh asisten.

@@ -1,3 +1,11 @@
+# Dashboard sesuai referensi — patch 075
+
+Ikuti **PETUNJUK-PATCH-075.txt** untuk dashboard dengan profil akun, pilihan
+toko/periode, kartu omzet/transaksi, grafik traffic, lima produk teratas,
+ringkasan Stock/Supplier/Reject/Customer, dan navigasi bawah.
+Perhitungan penjualan mengikuti menu Laporan. Pasang di atas patch 074;
+tidak ada SQL baru.
+
 # Harga POS dan dokumen demo — patch 074
 
 Ikuti **PETUNJUK-PATCH-074.txt**. Semua produk jual di mode demo memakai
