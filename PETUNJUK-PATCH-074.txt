@@ -1,0 +1,58 @@
+MANIAC DUREN — PATCH 074: HARGA POS & DOKUMEN DEMO
+
+Pasang setelah patch 073. Paket hanya berisi file baru/berubah.
+Tidak ada SQL, migrasi, atau reset database.
+
+PEMASANGAN
+1. Ekstrak ZIP ke folder utama proyek, sejajar dengan package.json.
+2. Timpa file bernama sama, lalu commit/push dengan perintah di bawah.
+3. Tunggu deployment berhasil, lalu muat ulang POS.
+
+HARGA POS DEMO
+- Aktifkan Mode demo setelah login.
+- Semua produk yang bisa dijual, termasuk varian dan menu resep, mendapat
+  harga Rp150.000 per satuan. Buah: Rp150.000/kg dan Rp150.000/butir.
+- Harga berlaku juga untuk produk yang belum memiliki harga asli, produk
+  yang ditambahkan/diedit dalam demo, serta setelah Reset demo.
+- Bahan baku dan bahan olahan yang tidak dijual tidak diubah harganya.
+- Stok awal tetap 100 sesuai satuan; buah 100 kg + 100 butir.
+
+DOKUMEN DEMO
+1. Aktifkan Mode demo, lalu buka Admin Dokumen.
+2. Klik Buat contoh dokumen. Toko yang dipakai adalah toko aktif POS.
+   Contoh mencakup PO, pembelian dari PO, invoice dan surat jalan dari POS.
+   Tombol tersedia bagi akun dengan akses finance, stock, dan sell.
+   Dibutuhkan setidaknya satu produk jual langsung pada master produk.
+3. Contoh membeli 2 satuan dan menjual 1 satuan produk tersebut. Stok dan
+   laporan DEMO ikut berubah agar angka dokumen dan transaksi sesuai.
+4. Buka Detail untuk membaca riwayat dan Cetak A4 / PDF untuk cetakan.
+   Pilih Simpan sebagai PDF pada dialog cetak browser jika ingin PDF.
+5. Bisa juga buat dokumen sendiri melalui tombol + jenis dokumen:
+   - PO: simpan/edit draft, terbitkan, lanjut pembelian.
+   - Pembelian: terbitkan untuk menambah stok demo, termasuk penerimaan
+     sebagian dari PO. Dokumen dari penerimaan lama tidak menambah stok lagi.
+   - Invoice: pilih transaksi POS demo yang sudah lunas.
+   - Surat jalan: pilih transaksi POS demo atau transfer stok ke toko lain.
+   - Kop surat: owner dapat mengubah kop demo; kop dokumen yang sudah
+     terbit tetap menggunakan salinan kop saat penerbitan.
+6. Draft dan dokumen yang memenuhi aturan bisa dibatalkan. Pembelian atau
+   transfer yang sudah mencatat stok tetap menjadi riwayat, seperti alur asli.
+
+Setiap nomor dan cetakan memuat DEMO. Semua perubahan hanya di memori tab;
+tidak dikirim ke database operasional. Reset demo, refresh, keluar akun,
+atau keluar mode demo membuang latihan. Untuk membuat ulang contoh,
+gunakan Reset demo. Hak akses akun tetap berlaku.
+
+GIT BASH — JALANKAN DARI FOLDER UTAMA PROYEK
+git add pos/app.js pos/index.html pos/stock-demo.mjs pos/documents-demo.mjs pos/documents-ui.mjs
+git add tests/documents-demo.test.mjs tests/documents-demo-ui.test.mjs tests/stock-demo.test.mjs tests/stock-demo-isolation.test.mjs
+git add README.md MODE-DEMO.txt PETUNJUK-PATCH-074.txt
+git commit -m "Tambah harga POS dan dokumen mode demo"
+git push
+
+VERIFIKASI
+Lulus uji engine harga/stok, alur dokumen dan handler UI, contoh dokumen,
+pemisahan database asli, penomoran, konflik versi, kirim ulang, hak akses,
+stok pembelian/transfer, laporan, sesi login dan instalasi PWA.
+Tidak ada koneksi ke database produksi pada pengujian.
+Belum diuji visual di HP atau di-deploy ke situs produksi oleh asisten.

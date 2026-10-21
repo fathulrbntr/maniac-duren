@@ -3,10 +3,11 @@ import {id} from '../pos/core.mjs';
 import {createStockDemo,applyStockDemoAction as apply} from '../pos/stock-demo.mjs';
 import {availableStock,menuStatus} from '../pos/order-stock.mjs';
 import {categoryPayload} from '../pos/pos-categories.mjs';
-import {fixture,day,line,order,qty} from './stock-demo-fixture.mjs';
+import {fixture,day,order,qty} from './stock-demo-fixture.mjs';
 const f=fixture(),{state:real,store,otherStore,fruit,small,large,water,prep,raw,menu,otherMenu,unpriced}=f,before=structuredClone(real);
+const line=(p,qty=1)=>({productId:p.id,qty,price:150000});
 let s=createStockDemo(real);
-assert.deepEqual(real,before);assert.deepEqual(s.products,real.products);assert.deepEqual(s.recipes,real.recipes);assert.deepEqual(s.access,real.access);
+assert.deepEqual(real,before);for(const p of s.products){const original=real.products.find(x=>x.id===p.id);if(['raw','prep'].includes(p.itemType))assert.deepEqual(p,original);else if(p.stockUnit==='kg_butir')assert.deepEqual(p,{...original,priceKg:150000,pricePiece:150000});else assert.deepEqual(p,{...original,salePrice:150000});}assert.deepEqual(s.recipes,real.recipes);assert.deepEqual(s.access,real.access);
 for(const key of ['orders','events','journal','money','attendance'])assert.deepEqual(s[key],[]);
 for(const branch of s.stores){
  const lot=s.lots.find(l=>l.storeId===branch.id);assert.equal(lot.kg,100);assert.equal(lot.pieces,100);assert.equal(lot.quality,'ready');assert.notEqual(lot.id,real.lots[0].id);
@@ -14,7 +15,7 @@ for(const branch of s.stores){
  assert.equal(qty(s,menu,branch.id),0,'Recipe remains made to order');
 }
 assert(menuStatus(s,store,menu,[],day).ok);
-const fruitLot=s.lots.find(l=>l.storeId===store),fruitLine={productId:fruit.id,lotId:fruitLot.id,unit:'KG',kg:3,pieces:2,qty:3,price:fruit.priceKg};
+const fruitLot=s.lots.find(l=>l.storeId===store),fruitLine={productId:fruit.id,lotId:fruitLot.id,unit:'KG',kg:3,pieces:2,qty:3,price:150000};
 const paid=order(store,[line(small,2),line(large),fruitLine]);
 s=apply(s,'order_create',paid);assert.equal(qty(s,small,store),98);assert.equal(qty(s,large,store),99);assert.equal(qty(s,small,otherStore),100);assert.equal(s.lots.find(l=>l.id===fruitLot.id).kg,97);assert.equal(s.lots.find(l=>l.id===fruitLot.id).pieces,98);assert.equal(s.orders[0].status,'paid');
 assert.equal(apply(s,'order_create',paid),s,'Same request cannot consume twice');assert.throws(()=>apply(s,'order_create',{...paid,note:'changed'}),/ID pengiriman/);
@@ -26,17 +27,18 @@ action('order_start',mixed.id);assert.equal(qty(s,prep,store),40);assert.equal(q
 action('order_ready',mixed.id);action('order_complete',mixed.id);assert.equal(s.orders.at(-1).status,'paid');assert.equal(qty(s,prep,store),40);
 const queued=order(store,[line(otherMenu)]);s=apply(s,'order_create',queued);action('order_cancel',queued.id,{reason:'Uji batal',refundConfirmed:true});assert.equal(qty(s,prep,store),40);assert.equal(availableStock(s,store,day).get('product:'+prep.id).qty,40);
 const started=order(store,[line(otherMenu)]);s=apply(s,'order_create',started);action('order_start',started.id);action('order_cancel',started.id,{reason:'Sudah dibuat',refundConfirmed:true});assert.equal(qty(s,prep,store),20,'Already consumed stock is not silently returned');
+s=apply(s,'order_create',order(store,[line(unpriced)]));assert.equal(qty(s,unpriced,store),99,'Previously unpriced products can be sold in demo');
 const snapshot=structuredClone(s);
-for(const payload of [order(store,[line(small,101)]),order(otherStore,[fruitLine]),order(store,[line(unpriced)]),order(store,[line(small,.5)]),order(store,[{...line(water),price:1}]),order('unavailable',[line(water)]),order(store,[line(raw)]),order(store,[line(water)],{date:'2026-02-30'}),order(store,[line(water)],{payment:'QRIS',paid:6000}),order(store,[line(water)],{paid:0})])assert.throws(()=>apply(s,'order_create',payload));
+for(const payload of [order(store,[line(small,101)]),order(otherStore,[fruitLine]),order(store,[line(small,.5)]),order(store,[{...line(water),price:1}]),order('unavailable',[line(water)]),order(store,[line(raw)]),order(store,[line(water)],{date:'2026-02-30'}),order(store,[line(water)],{payment:'QRIS',paid:6000}),order(store,[line(water)],{paid:0})])assert.throws(()=>apply(s,'order_create',payload));
 assert.deepEqual(s,snapshot,'Failed actions are atomic');
 assert.throws(()=>apply({...s,access:{sell:false}},'order_create',order(store,[line(water)])),/Hak akses/);
 for(const actionName of ['receipt','unit_receipt','produce','waste_process','employee_save','attendance_in'])assert.throws(()=>apply(s,actionName,{id:id()}),/belum tersedia/);
 const category=s.posCategories.find(c=>c.name==='Durpas');
 s=apply(s,'pos_category_save',categoryPayload(s,{id:id(),categoryId:category.id,name:category.name,productIds:[small.id],mode:'add'}));assert(s.products.find(p=>p.id===small.id).posCategoryIds.includes(category.id));
 s=apply(s,'pos_category_save',categoryPayload(s,{id:id(),categoryId:category.id,name:category.name,mode:'delete'}));assert(!s.posCategories.some(c=>c.id===category.id));assert(s.products.some(p=>p.id===small.id));
-for(const salePrice of [6000,7000])s=apply(s,'product_update',{...water,salePrice});assert.equal(s.products.find(p=>p.id===water.id).salePrice,7000,'Repeated edits use entity ID safely');assert.equal(qty(s,water,store),98,'Edits do not refill consumed stock');
+for(const salePrice of [6000,7000])s=apply(s,'product_update',{...water,salePrice});assert.equal(s.products.find(p=>p.id===water.id).salePrice,150000,'All sellable products retain the demo price');assert.equal(qty(s,water,store),98,'Edits do not refill consumed stock');
 const added={...water,id:id(),sku:id(),name:'Air demo baru'};s=apply(s,'product_save',added);assert.equal(qty(s,added,store),100);assert.equal(qty(s,added,otherStore),100);
 const exhausted=createStockDemo(real),sellAll=order(store,[line(small,100)]);let empty=apply(exhausted,'order_create',sellAll);empty=apply(empty,'product_update',{...small,salePrice:42000});assert.equal(qty(empty,small,store),0,'Sold-out lots are not reseeded');
 const changed=createStockDemo(real),pending=order(store,[line(menu)]);let changedRecipe=apply(changed,'order_create',pending);changedRecipe.recipes[0].version++;assert.throws(()=>apply(changedRecipe,'order_start',{id:id(),storeId:store,date:day,orderId:pending.id}),/Resep berubah/);
 const reset=createStockDemo(real);assert.equal(qty(reset,small,store),100);assert.notEqual(reset.stockDemo.sessionId,s.stockDemo.sessionId);assert.equal(reset.orders.length,0);assert.deepEqual(real,before);
-console.log('PASS stock demo: 100 per physical SKU/outlet, unchanged master/recipes, local fruit/variant sales, kitchen reservations/consumption/cancellation, retries, atomic validation, permissions, categories, repeat edits, no auto-refill, reset.');
+console.log('PASS stock demo: 100 per physical SKU/outlet, Rp150000 demo prices, unchanged source/recipes, local fruit/variant sales, kitchen reservations/consumption/cancellation, retries, atomic validation, permissions, categories, repeat edits, no auto-refill, reset.');

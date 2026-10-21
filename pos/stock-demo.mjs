@@ -3,6 +3,7 @@ import {rejectActions,rejectDemo} from './reject-flow.mjs?v=63';
 import {collapseSingleVariants} from './product-stock.mjs?v=60';
 import {cashierActions,cashierDemo} from './cashier-demo.mjs?v=66';
 import {sumProducts} from './decimal-totals.mjs?v=66';
+import {documentDemoActions,applyDocumentDemo,readDemoDocument,createDocumentExamples} from './documents-demo.mjs?v=74';
 // In-memory training data only. This module never sends requests or persists data.
 import {emptyState,today,id,applyAction} from './core.mjs?v=60';
 import {checkOrder,requirements} from './order-stock.mjs?v=12';
@@ -14,6 +15,14 @@ const clone=x=>structuredClone(x);
 const positive=(value,label)=>{const n=Number(value);if(!Number.isFinite(n)||n<=0)throw Error(label+' harus lebih dari 0');return n;};
 const unitQty=(value,unit)=>{const n=positive(value,'Jumlah');if(['pcs','porsi'].includes(unit)&&!Number.isInteger(n))throw Error('Jumlah harus bilangan bulat');return n;};
 const validDate=value=>{if(!/^\d{4}-\d{2}-\d{2}$/.test(value||'')||new Date(value+'T00:00:00Z').toISOString().slice(0,10)!==value)throw Error('Tanggal tidak valid');return value;};
+function setDemoPrices(s){
+ for(const p of s.products){
+  if(['raw','prep'].includes(p.itemType))continue;
+  if(p.stockUnit==='kg_butir'){p.priceKg=150000;p.pricePiece=150000;}
+  else p.salePrice=150000;
+ }
+}
+export const readStockDemo=(s,name,p)=>readDemoDocument(s,name,p);
 function seedMissingStock(s){
  const supplierId=s.stockDemo.supplierId,date=s.stockDemo.date;
  const existing=new Set([...s.lots,...s.unitLots].map(l=>l.storeId+':'+l.productId));
@@ -31,10 +40,11 @@ export function createStockDemo(source){
  const s={...emptyState(),...clone(Object.fromEntries(Object.entries(source).filter(([key])=>!transactionKeys.includes(key))))};
  for(const key of transactionKeys)s[key]=[];
  collapseSingleVariants(s.products);
+ setDemoPrices(s);
  s.stockDemo={sessionId:id(),supplierId:id(),date:today(),initialQty:100};
  s.suppliers.push({id:s.stockDemo.supplierId,name:'Supplier demo',phone:'',address:''});
  s.opsVersion=Math.max(s.opsVersion||0,19);s.orderStockVersion=Math.max(s.orderStockVersion||0,11);s.orderRoutingVersion=Math.max(s.orderRoutingVersion||0,13);
- s.storeProfileVersion=64;s.rejectFlowVersion=63;s.cashierVersion=54;s.discounts||=[];seedMissingStock(s);return s;
+ s.storeProfileVersion=64;s.rejectFlowVersion=63;s.cashierVersion=54;s.reportsAdminVersion=74;s.discounts||=[];seedMissingStock(s);return s;
 }
 function requireAccess(s,permission){if(s.access&&!s.access[permission])throw Error('Hak akses '+permission+' diperlukan.');}
 function event(s,action,p,storeId=p.storeId){s.events.push({id:localMaster.has(action)?id():p.id,action,store_id:storeId||null,business_date:p.date||today(),employee_id:s.me?.id||null,payload:clone(p),demo:true});}
@@ -115,13 +125,15 @@ export function applyStockDemoAction(source,action,payload){
  const prior=!localMaster.has(action)&&source.events.find(x=>x.id===p.id);
  if(prior){if(prior.action!==action||JSON.stringify(prior.payload)!==JSON.stringify(p))throw Error('ID pengiriman sudah digunakan untuk data lain');return source;}
  let s=clone(source);
- if(action==='store_save')saveStoreDemo(s,p);
+ if(documentDemoActions.has(action))applyDocumentDemo(s,action,p);
+ else if(action==='document_examples')createDocumentExamples(s,p.storeId,payload=>{cashierDemo(s,'order_create',payload,createOrder);event(s,'order_create',payload);});
+ else if(action==='store_save')saveStoreDemo(s,p);
  else if(rejectActions.has(action))rejectDemo(s,action,p);
  else if(cashierActions.has(action)||action==='order_create'||(action==='order_cancel'&&source.cashierVersion>=54))cashierDemo(s,action,p,createOrder);
  else if(action.startsWith('order_'))updateOrder(s,action,p);
  else if(action==='pos_category_save'){requireAccess(s,'master');savePosCategory(s,p);return s;}
- else if(action==='product_variants_save'){requireAccess(s,'master');saveVariantProducts(s,p);seedMissingStock(s);return s;}
- else if(localMaster.has(action)){requireAccess(s,'master');s=applyAction(s,action,p);seedMissingStock(s);}
- else throw Error('Mode demo mendukung uji kasir, kitchen, serta pengaturan produk, kategori dan resep. Aksi ini belum tersedia dalam demo.');
+ else if(action==='product_variants_save'){requireAccess(s,'master');saveVariantProducts(s,p);setDemoPrices(s);seedMissingStock(s);return s;}
+ else if(localMaster.has(action)){requireAccess(s,'master');s=applyAction(s,action,p);setDemoPrices(s);seedMissingStock(s);}
+ else throw Error('Mode demo mendukung uji kasir, kitchen, dokumen, serta pengaturan produk, kategori dan resep. Aksi ini belum tersedia dalam demo.');
  event(s,action,p);return s;
 }

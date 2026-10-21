@@ -1,3 +1,11 @@
+# Harga POS dan dokumen demo — patch 074
+
+Ikuti **PETUNJUK-PATCH-074.txt**. Semua produk jual di mode demo memakai
+harga Rp150.000 per satuan. Admin Dokumen mendukung latihan PO, pembelian,
+invoice, surat jalan, dan kop surat, dengan tombol **Buat contoh dokumen**.
+Perubahan latihan hanya di tab demo; tidak memerlukan SQL baru.
+Pasang di atas patch 073.
+
 # Loading login, sesi, dan UI laporan — patch 073
 
 Ikuti **PETUNJUK-PATCH-073.txt** untuk update ini. Login sekali setelah deploy;

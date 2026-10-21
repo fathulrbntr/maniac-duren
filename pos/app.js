@@ -1,7 +1,7 @@
 import {createSessionManager} from './session.mjs?v=73';
 import {installButton,bindInstall} from './pwa.mjs?v=72';
 import {reportsPage,bindReports,selectReportTab} from './reports-ui.mjs?v=73';
-import {documentsPage,bindDocuments} from './documents-ui.mjs?v=71';
+import {documentsPage,bindDocuments} from './documents-ui.mjs?v=74';
 import { variantGroupDialog, productVariantDialog } from "./variant-editor.mjs?v=45";
 import {createSidebarController,sidebarIcon} from './sidebar.mjs?v=42';
 const sidebar = createSidebarController();
@@ -142,7 +142,13 @@ function toast(text) {
   toast.timer = setTimeout(() => (t.style.display = "none"), 5000);
 }
 let stockDemoModule,demoSource=null;
-const demoEngine=()=>stockDemoModule ||= import('./stock-demo.mjs?v=71').catch(error=>{stockDemoModule=null;throw error;});
+const demoEngine=()=>stockDemoModule ||= import('./stock-demo.mjs?v=74').catch(error=>{stockDemoModule=null;throw error;});
+async function adminRpc(name,p){
+  if(mode!=='stock-demo')return request('/rest/v1/rpc/'+name,p);
+  const snapshot=state,engine=await demoEngine();
+  if(mode!=='stock-demo'||state!==snapshot)throw Error('Sesi demo berubah. Buka kembali dokumen.');
+  return engine.readStockDemo(snapshot,name,p);
+}
 function assertDemoRequest(path,allowDemoRead){
   if(mode==='stock-demo'&&!(allowDemoRead&&['/rest/v1/rpc/pos_read','/auth/v1/token?grant_type=refresh_token'].includes(path)))throw Error('Mode demo tidak mengirim perubahan ke database asli.');
 }
@@ -153,7 +159,7 @@ async function switchStockDemo(reset=false){
   if(pendingRetry())return toast('Periksa pengiriman yang belum terkonfirmasi sebelum mengganti mode.');
   if(!mayLeave(false))return;
   if((cart.length||hasOrderDraft())&&!confirm('Pergantian mode akan mengosongkan keranjang yang belum disimpan. Lanjutkan?'))return;
-  if(reset&&!confirm('Ulangi demo dari data master asli dan stok 100? Semua perubahan demo akan dibuang.'))return;
+  if(reset&&!confirm('Ulangi demo dengan harga Rp150.000 dan stok 100? Semua perubahan demo akan dibuang.'))return;
   busy=true;stateRevision++;
   const switchingControls=[...document.querySelectorAll('button,input,select,textarea')].map(node=>({node,disabled:node.disabled}));
   switchingControls.forEach(({node})=>node.disabled=true);
@@ -373,7 +379,7 @@ function shell(body) {
       <div class="sidebar-account">${accountProfile()}<button id="logout" class="sidebar-logout" type="button" aria-label="Logout" title="Logout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 4H4v16h5M14 8l4 4-4 4M8 12h10"/></svg><span>Logout</span></button></div>
     </aside>
     <button type="button" class="sidebar-backdrop" data-sidebar-close tabindex="-1" aria-label="Tutup sidebar"></button>
-    <main id="pos-main"><header class="topbar"><div class="workspace-heading"><button id="sidebar-toggle" type="button" class="sidebar-toggle" data-sidebar-toggle aria-controls="pos-sidebar" aria-label="Buka sidebar">${sidebarIcon}</button><h1>${e(title[view] || "Maniac Duren")}</h1></div><div class="workspace-tools">${installButton()}<span class="workspace-outlet">${icon("stores")}<span>${e(name("stores", store))}</span></span><button type="button" id="stock-demo-toggle" class="stock-demo-toggle" role="switch" aria-checked="${mode==='stock-demo'}"><span class="stock-demo-track" aria-hidden="true"></span>Mode demo</button>${themeButton()}</div></header><div class="workspace-content">${mode==='stock-demo'?'<aside class="stock-demo-banner" role="status"><div><b>MODE DEMO · Stok awal 100</b><p>Data uji hanya di tab ini. Semua penyimpanan demo terpisah dari database asli. Harga dan resep mengikuti master.</p><small>Buah: 100 kg + 100 butir. Bahan / produk stok: 100 sesuai satuannya. ${e(itemTypes.recipe)} mengikuti bahan.</small></div><button type="button" id="stock-demo-reset">Reset demo</button></aside>':''}${body}<p class="page-foot">Maniac Duren · ${e(name("stores", store))}</p></div></main>
+    <main id="pos-main"><header class="topbar"><div class="workspace-heading"><button id="sidebar-toggle" type="button" class="sidebar-toggle" data-sidebar-toggle aria-controls="pos-sidebar" aria-label="Buka sidebar">${sidebarIcon}</button><h1>${e(title[view] || "Maniac Duren")}</h1></div><div class="workspace-tools">${installButton()}<span class="workspace-outlet">${icon("stores")}<span>${e(name("stores", store))}</span></span><button type="button" id="stock-demo-toggle" class="stock-demo-toggle" role="switch" aria-checked="${mode==='stock-demo'}"><span class="stock-demo-track" aria-hidden="true"></span>Mode demo</button>${themeButton()}</div></header><div class="workspace-content">${mode==='stock-demo'?'<aside class="stock-demo-banner" role="status"><div><b>MODE DEMO · Stok awal 100</b><p>Data uji hanya di tab ini. Semua penyimpanan demo terpisah dari database asli. Harga jual demo Rp150.000 per satuan; resep mengikuti master.</p><small>Buah: 100 kg + 100 butir. Bahan / produk stok: 100 sesuai satuannya. ${e(itemTypes.recipe)} mengikuti bahan.</small></div><button type="button" id="stock-demo-reset">Reset demo</button></aside>':''}${body}<p class="page-foot">Maniac Duren · ${e(name("stores", store))}</p></div></main>
   </div>`;
 }
 function dashboard() {
@@ -483,7 +489,7 @@ function render() {
       waste: () => wastePage(state, store),
       losses: () => wastePage(state, store),
       reports: () => reportsPage(state),
-      documents: () => documentsPage(state),
+      documents: () => documentsPage(state,store),
       products: productsPage,
       stores: () => directoryPage("stores"),
       suppliers: () => directoryPage("suppliers"),
@@ -569,7 +575,7 @@ function render() {
   observeKitchen();
   trackForms();
   bindProduction(view, state, store, { modal, mutate, render, toast, refresh });
-  const adminContext={modal,mutate,render,toast,refresh,getState:()=>state,rpc:(name,p)=>request("/rest/v1/rpc/"+name,p)};
+  const adminContext={modal,mutate,render,toast,refresh,getState:()=>state,rpc:adminRpc};
   if(view === "reports")bindReports(state,store,adminContext);
   if(view === "documents")bindDocuments(state,store,adminContext);
   bindWaste(view, state, store, {
