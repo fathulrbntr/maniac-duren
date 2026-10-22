@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
-import {emptyState,money} from '../pos/core.mjs';
+import {emptyState,money as formatMoney} from '../pos/core.mjs';
 import {inventoryPanel} from '../pos/inventory-ui.mjs';
 import {deleteProduct,collapseSingleVariants} from '../pos/product-stock.mjs';
 import {posMenuEntries} from '../pos/pos-menu.mjs';
 import {Node} from './variant-dom.mjs';
+const money=value=>formatMoney(value).replace(/^Rp\s*/, 'Rp');
 const product=(id,name,extra={})=>({id,name,sku:id,itemType:'finished',stockUnit:'pcs',category:'Olahan Duren',salePrice:50000,buyPrice:30000,...extra});
 const a=product('a','Durpas A',{variantGroupId:'group',variantGroupName:'Durpas',variant:'A',variantOptions:[{name:'Rasa',value:'A'}],photo:'data:image/png;base64,AAAA'});
 const b=product('b','Durpas B',{variantGroupId:'group',variantGroupName:'Durpas',variant:'B',variantOptions:[{name:'Rasa',value:'B'}],salePrice:'135000',buyPrice:90000,photo:'data:image/png;base64,BBBB'});
@@ -48,7 +49,7 @@ Object.assign(b,{itemType:'direct',stockUnit:'kg_butir',category:'Buah',priceKg:
 summary=render().querySelector('.has-variants summary');
 assert.equal(summary.querySelector('[data-card-sale] strong').textContent,`${money(70000)} – ${money(90000)}`);
 assert.match(summary.querySelector('[data-card-sale]').textContent,/\/kg/);
-assert(summary.querySelector('[data-card-sale]').textContent.includes(`${money(140000)} – ${money(180000)} / butir`));
+assert(summary.querySelector('[data-card-sale]').textContent.includes(`${money(140000)} – ${money(180000)} /butir`));
 
 // Deleting a sibling must preserve the survivor, including used stock/history.
 state.lots=[{id:'lot',productId:a.id,storeId:'outlet',kg:9,pieces:3}];

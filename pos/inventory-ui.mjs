@@ -42,19 +42,20 @@ function leafCards(rows,mode,state){return rows.map(row=>{
  const sale=priceRange([p],amount),buy=priceRange([p],p=>p.buyPrice,true);
  return `<div class="inv-card-container"><article class="inv-card"><div class="inv-card-top">
   <div class="inv-photo">${productPhoto(p)?`<img src="${e(productPhoto(p))}" alt="" loading="lazy" decoding="async">`:`<span>${icon('box')}</span>`}</div>
-  <div class="inv-copy"><h3>${e(p.name)}</h3><span class="inv-sku">${e(p.sku||'—')}</span><small>${e(itemTypes[p.itemType]||p.itemType)}${variant?` · ${e(variant)}`:''}</small><span class="inv-meta" data-product-categories>${e(posCategoryName(state,p))}</span><p class="inv-stockline">${stockLabel([row])}</p>${expired?'<span class="inv-expired">Ada kedaluwarsa</span>':''}</div>
+  <div class="inv-copy"><h3 title="${e(p.name)}">${e(p.name)}</h3><span class="inv-sku" title="${e(p.sku||'—')}">${e(p.sku||'—')}</span><small>${e(itemTypes[p.itemType]||p.itemType)}${variant?` · ${e(variant)}`:''}</small><span class="inv-meta" title="${e(posCategoryName(state,p))}" data-product-categories>${e(posCategoryName(state,p))}</span><p class="inv-stockline">${stockLabel([row])}</p>${expired?'<span class="inv-expired">Ada kedaluwarsa</span>':''}</div>
   </div>${statusDot(ready)}
   <button class="inv-more" type="button" ${mode==='products'?`data-edit-product="${e(p.id)}"`:`data-stock-detail="${e(p.id)}"`} aria-label="${mode==='products'?'Edit':'Detail stok'} ${e(p.name)}">${mode==='products'?'Edit barang':'Detail stok'} ${icon('arrow')}</button>
-  <div class="inv-metric" data-card-sale><span>HARGA JUAL</span><div class="inv-price-value"><strong>${e(sale.label)}</strong>${!isMaterial(p)&&!sale.missing?`<em>/${e(unit)}</em>`:''}</div><small>${isMaterial(p)?'Bahan internal':dual?`${e(priceRange([p],p=>p.pricePiece).label)} / butir`:sale.missing?'Belum diisi':''}</small></div>
-  <div class="inv-metric inv-secondary" data-card-buy><span>HARGA BELI</span><div class="inv-price-value"><strong>${e(buy.label)}</strong>${!buy.missing?`<em>/${e(unit)}</em>`:''}</div><small>${dual?`${e(priceRange([p],p=>p.buyPricePiece,true).label)} / butir`:buy.missing?'Belum diisi':'Harga referensi'}</small></div>
+  <div class="inv-metric" data-card-sale><span>HARGA JUAL</span><div class="inv-price-value"><strong>${e(sale.label)}</strong>${!isMaterial(p)&&!sale.missing?`<em>/${e(unit)}</em>`:''}</div><small>${isMaterial(p)?'Bahan internal':dual?`${e(priceRange([p],p=>p.pricePiece).label)} /butir`:sale.missing?'Belum diisi':''}</small></div>
+  <div class="inv-metric inv-secondary" data-card-buy><span>HARGA BELI</span><div class="inv-price-value"><strong>${e(buy.label)}</strong>${!buy.missing?`<em>/${e(unit)}</em>`:''}</div><small>${dual?`${e(priceRange([p],p=>p.buyPricePiece,true).label)} /butir`:buy.missing?'Belum diisi':'Harga referensi'}</small></div>
   ${mode==='stock'?`<div class="inv-stock-details"><span>Tersedia dipakai <b>${num(usable)} ${e(unit)}${dual?` · ${num(availablePieces)} butir`:''}</b></span><span>${own.filter(l=>Number(dual?l.kg:l.qty)>0).length} penerimaan</span></div>`:''}
  </article></div>`;
 }).join('')||'<div class="inv-empty">Tidak ada item yang sesuai.<br><small>Coba kata kunci lain atau reset filter.</small></div>';}
+const cardMoney=value=>money(value).replace(/^Rp\s*/, 'Rp');
 function priceRange(products, value, allowZero=false) {
  const values=products.map(value).filter(v=>v!==null&&v!==undefined&&v!=='').map(Number).filter(n=>Number.isFinite(n)&&(allowZero?n>=0:n>0));
  if(!values.length)return {label:'—',missing:products.length};
  const low=Math.min(...values),high=Math.max(...values);
- return {label:low===high?money(low):`${money(low)} – ${money(high)}`,missing:products.length-values.length};
+ return {label:low===high?cardMoney(low):`${cardMoney(low)} – ${cardMoney(high)}`,missing:products.length-values.length,range:low!==high};
 }
 function summaryPrices(group) {
  const products=group.map(row=>row.p),p=products[0],dual=isLegacyStock(p),material=isMaterial(p);
@@ -62,8 +63,8 @@ function summaryPrices(group) {
  const unit=dual?'kg':p.stockUnit;
  const missing=range=>range.missing?(range.missing===products.length?'Belum diisi':`${range.missing} harga belum diisi`):'';
  return `<span class="inv-summary-prices">
-  <span class="inv-summary-metric" data-card-sale><span>HARGA JUAL</span><span class="inv-price-value"><strong>${e(sale.label)}</strong>${!material&&sale.missing<products.length?`<em>/${e(unit)}</em>`:''}</span><small>${material?'Bahan internal':dual?`${e(priceRange(products,p=>p.pricePiece).label)} / butir`:''}</small>${!material&&missing(sale)?`<small>${e(missing(sale))}</small>`:''}</span>
-  <span class="inv-summary-metric" data-card-buy><span>HARGA BELI</span><span class="inv-price-value"><strong>${e(buy.label)}</strong>${buy.missing<products.length?`<em>/${e(unit)}</em>`:''}</span><small>${dual?`${e(priceRange(products,p=>p.buyPricePiece,true).label)} / butir`:e(missing(buy)||'Harga referensi')}</small></span>
+  <span class="inv-summary-metric" data-card-sale><span>HARGA JUAL</span><span class="inv-price-value ${sale.range?'is-range':''}"><strong>${e(sale.label)}</strong>${!material&&sale.missing<products.length?`<em>/${e(unit)}</em>`:''}</span><small>${material?'Bahan internal':dual?`${e(priceRange(products,p=>p.pricePiece).label)} /butir`:''}</small>${!material&&missing(sale)?`<small>${e(missing(sale))}</small>`:''}</span>
+  <span class="inv-summary-metric" data-card-buy><span>HARGA BELI</span><span class="inv-price-value ${buy.range?'is-range':''}"><strong>${e(buy.label)}</strong>${buy.missing<products.length?`<em>/${e(unit)}</em>`:''}</span><small>${dual?`${e(priceRange(products,p=>p.buyPricePiece,true).label)} /butir`:e(missing(buy)||'Harga referensi')}</small></span>
  </span>`;
 }
 function cards(rows,mode,state){
@@ -74,13 +75,13 @@ function cards(rows,mode,state){
  return [...groups.values()].map(group=>{
   const p=group[0].p,total=totals.get(p.variantGroupId)||1,grouped=!!p.variantGroupId&&total>1;
   const title=grouped?p.variantGroupName:p.name;
-  const subtitle=grouped?`${group.length===total?total:`${group.length} dari ${total}`} varian`:'Belum memiliki varian';
+  const subtitle=grouped?`${group.length===total?total:`${group.length} dari ${total}`} variant`:'';
   const categoryNames=posCategories(state).filter(c=>group.some(row=>inPosCategory(state,row.p,c.id))).map(c=>c.name).join(' · ')||'Semua';
   // The thumbnail follows the first row actually shown after sorting/filtering.
   const photo=productPhoto(p)?`<img src="${e(productPhoto(p))}" alt="" loading="lazy" decoding="async">`:`<span>${icon('box')}</span>`;
-  const action=grouped?'<span class="variant-tag">Lihat varian</span>':`<button type="button" class="inv-add-first-variant" data-add-product-variant="${e(p.id)}" aria-label="Tambah varian ${e(p.name)}">+ Tambah varian</button>`;
+  const action=`<button type="button" class="inv-add-first-variant" ${grouped?`data-add-variant="${e(p.variantGroupId)}"`:`data-add-product-variant="${e(p.id)}"`} aria-label="Tambah variant ${e(title)}"><span aria-hidden="true">+</span> Tambah Variant</button>`;
   const detailRows=!grouped&&p.variantGroupId?group.map(row=>({...row,p:{...row.p,variant:'',variantOptions:[]}})):group;
-  return `<article class="inv-catalog-card ${grouped?'has-variants':'no-variants'}" data-catalog-product="${e(p.id)}"><details class="inv-variant-group"><summary aria-label="${grouped?'Lihat varian':'Lihat detail'} ${e(title)}"><span class="inv-card-top"><span class="inv-summary-photo">${photo}</span><span class="inv-summary-copy"><b>${e(title)}</b><span class="inv-sku">${e(p.sku||'—')}</span><small>${e(itemTypes[p.itemType])} · ${subtitle}</small><small class="inv-summary-categories" data-product-categories>${e(categoryNames)}</small><span class="inv-stockline">${stockLabel(group)}</span>${group.some(row=>row.expired)?'<small class="inv-expired">Ada kedaluwarsa</small>':''}</span></span>${statusDot(group.some(row=>row.ready))}${summaryPrices(group)}${action}</summary><div class="variant-group-actions">${grouped?`<button type="button" data-add-variant="${e(p.variantGroupId)}">+ Tambah varian</button>`:''}<small>${grouped?'Pilih Edit pada varian':'Pilih Edit pada barang'} untuk mengubah harga, SKU, barcode, atau foto.</small></div><div class="variant-group-items">${leafCards(detailRows,mode,state)}</div></details></article>`;
+  return `<article class="inv-catalog-card ${grouped?'has-variants':'no-variants'}" data-catalog-product="${e(p.id)}"><details class="inv-variant-group"><summary aria-label="${grouped?'Lihat varian':'Lihat detail'} ${e(title)}"><span class="inv-card-top"><span class="inv-summary-photo">${photo}</span><span class="inv-summary-copy"><b title="${e(title)}">${e(title)}</b><span class="inv-sku" title="${e(p.sku||'—')}">${e(p.sku||'—')}</span><small class="inv-kind" title="${e(itemTypes[p.itemType])}${subtitle?` · ${e(subtitle)}`:''}">${e(itemTypes[p.itemType])}${subtitle?` · <span data-variant-count>${e(subtitle)}</span>`:''}</small><small class="inv-summary-categories" title="${e(categoryNames)}" data-product-categories>${e(categoryNames)}</small><span class="inv-stockline">${stockLabel(group)}</span>${group.some(row=>row.expired)?'<small class="inv-expired">Ada kedaluwarsa</small>':''}</span></span>${statusDot(group.some(row=>row.ready))}${summaryPrices(group)}${action}</summary><div class="variant-group-actions"><small>${grouped?'Pilih Edit pada varian':'Pilih Edit pada barang'} untuk mengubah harga, SKU, barcode, atau foto.</small></div><div class="variant-group-items">${leafCards(detailRows,mode,state)}</div></details></article>`;
  }).join('')||leafCards([],mode,state);
 }
 export function inventoryPanel(state,store,filter={},mode='products'){
@@ -120,7 +121,7 @@ export function bindInventory(state,store,filter,mode,ctx){
   const layout=ev.target.closest('[data-inv-view]');if(layout){filter.layout=layout.dataset.invView;root.querySelector('.inv-results').classList.toggle('is-grid',filter.layout==='grid');root.querySelectorAll('[data-inv-view]').forEach(b=>{const active=b===layout;b.classList.toggle('selected',active);b.setAttribute('aria-pressed',String(active));});}
   if(ev.target.closest('[data-inv-reset]')){for(const k of Object.keys(filter))if(k!=='layout')delete filter[k];form.reset();root.querySelectorAll('input').forEach(i=>{if(i.type==='checkbox')i.checked=false;else i.value='';});form.elements.itemType.value='';form.elements.category.value='';form.elements.sort.value='az';draw();}
   const firstVariant=ev.target.closest('[data-add-product-variant]');if(firstVariant){ev.preventDefault();ctx.addProductVariant?.(firstVariant.dataset.addProductVariant);return;}
-  const addVariant=ev.target.closest('[data-add-variant]');if(addVariant)ctx.addVariant?.(addVariant.dataset.addVariant);
+  const addVariant=ev.target.closest('[data-add-variant]');if(addVariant){ev.preventDefault();ctx.addVariant?.(addVariant.dataset.addVariant);return;}
   const edit=ev.target.closest('[data-edit-product]');if(edit)ctx.edit(edit.dataset.editProduct);
   const detail=ev.target.closest('[data-stock-detail]');if(detail){const {p,own}=rows.find(x=>x.p.id===detail.dataset.stockDetail),dual=isLegacyStock(p);const d=ctx.modal('Stok '+e(p.name),`<p>${e(itemTypes[p.itemType])} · ${e(p.sku)}</p><p>Kategori: ${e(posCategoryName(state,p))}</p><div class="table-wrap"><table><thead><tr><th>Tanggal / lot</th><th>Supplier / asal</th><th>Sisa fisik</th><th>Kondisi / kedaluwarsa</th></tr></thead><tbody>${own.map(l=>`<tr><td>${e(l.date)}<small>${e(l.id)}</small></td><td>${e((state.suppliers||[]).find(s=>s.id===l.supplierId)?.name||l.kind||'—')}</td><td>${dual?`${num(l.kg)} kg / ${num(l.pieces)} butir`:`${num(l.qty)} ${e(p.stockUnit)}`}</td><td>${dual?e(({ready:'Matang / siap jual',unripe:'Belum matang',unsorted:'Belum disortir',reject:'Reject'})[l.quality]||l.quality||'—'):e(l.expiry||'Tanpa tanggal')}<small>${e(l.note||'')}</small>${l.weighings?.length?`<button type="button" data-weigh-log="${e(l.id)}">Riwayat timbang</button>`:''}</td></tr>`).join('')||'<tr><td colspan="4">Belum ada penerimaan di toko ini.</td></tr>'}</tbody></table></div>`);d.querySelector('[type=submit]').hidden=true;d.querySelectorAll('[data-weigh-log]').forEach(b=>b.onclick=()=>showWeighingHistory(own.find(l=>l.id===b.dataset.weighLog),ctx));}
  });

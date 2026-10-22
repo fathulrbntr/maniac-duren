@@ -1,0 +1,52 @@
+MANIAC DUREN — PATCH 078: KARTU SESUAI REFERENSI TERBARU
+
+Basis: patch 077 sudah terpasang. Tidak memerlukan SQL tambahan.
+Referensi: card product_1.png, ukuran 1418 × 626.
+
+CARA PASANG
+1. Ekstrak ZIP ke folder utama proyek dan timpa file dengan nama yang sama.
+2. Jalankan Git Bash di bawah dari folder utama proyek.
+3. Tunggu deployment selesai, lalu muat ulang /pos/ dengan Ctrl+Shift+R.
+4. Tema Dark memakai warna dari gambar. Tema Light tetap mengikuti tema POS.
+
+GIT BASH
+git add pos/app.js pos/catalog-ui.mjs pos/index.html pos/inventory-ui.mjs pos/inventory.css
+git add tests/product-buy-piece.test.mjs tests/product-card-summary.test.mjs tests/variants-unified-ui.test.mjs PETUNJUK-PATCH-078.txt
+git commit -m "Presisikan kartu produk sesuai desain dan rapikan jumlah variant"
+git push
+
+PERUBAHAN
+- Foto dan blok deskripsi mempunyai tinggi sama; foto tetap berbentuk kotak.
+- Ukuran foto, jarak, font, warna, serta radius mengikuti proporsi referensi.
+- Produk dengan beberapa varian menampilkan jumlah, misalnya "2 variant".
+  Saat difilter dapat tampil "1 dari 2 variant".
+- Produk tanpa varian tidak menampilkan label varian atau titik pemisah sisa.
+- Grup yang tinggal satu produk diperlakukan sebagai produk tanpa varian.
+- Harga beli, harga jual, dan tombol berada dalam tiga kolom pada baris sama.
+  Tombol di kanan bawah mengikuti posisi pada gambar, di samping harga jual.
+- Aturan lama yang memindahkan tombol ke bawah harga pada layar kecil dihapus.
+- Di ruang sempit, mode grid memakai satu kartu per baris agar tiga kolom di
+  dalam kartu tetap dapat dibaca. Font dan lebar kolom menyesuaikan kartu.
+- Tombol Tambah Variant juga tersedia di kartu grup. Tombol membuka form tambah
+  varian; klik bagian lain kartu tetap membuka detail barang/varian.
+- Harga di kartu memakai format Rp100.000 dan /butir sesuai contoh.
+  Rentang harga tetap ditampilkan pada grup dengan harga yang berbeda.
+- Nama dan kategori yang panjang dibatasi pada barisnya; teks lengkap tersedia
+  melalui title/tooltip. Data nama dan kategori tersimpan tetap utuh.
+- Indikator ketersediaan tetap lingkaran dengan jarak atas dan kanan sama.
+- Harga beli per butir dan penyimpanan dari patch 077 tetap digunakan.
+
+VERIFIKASI
+- 5 file pengujian lulus: ringkasan kartu, harga beli per butir, UI varian,
+  kategori bersama, dan alur kartu/tambah varian.
+- Diperiksa: label tanpa varian kosong, jumlah varian, grup tersaring,
+  klik tambah pada kartu grup, perubahan jumlah setelah penghapusan,
+  harga satuan/rentang, dan thumbnail varian pertama.
+- Sintaks JavaScript dan CSS lulus. Perhitungan tata letak diperiksa pada
+  lebar kartu 320, 360, 420, 560, 709, 1000, dan 1418 px: foto/deskripsi
+  sama tinggi dan tiga kolom harga/tombol tetap pada baris kedua.
+- Pengukuran ini berdasarkan kode dan proporsi gambar; rendering visual
+  browser belum dapat diverifikasi di lingkungan ini. Belum dideploy oleh asisten.
+
+TES OPSIONAL
+node --test tests/product-card-summary.test.mjs tests/product-buy-piece.test.mjs tests/variants-unified-ui.test.mjs tests/shared-categories.test.mjs tests/product-variants-ui.test.mjs

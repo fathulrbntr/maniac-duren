@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
 import {randomUUID as id} from 'node:crypto';
-import {emptyState,applyAction,money} from '../pos/core.mjs';
+import {emptyState,applyAction,money as formatMoney} from '../pos/core.mjs';
 import {normalizeProduct} from '../pos/catalog.mjs';
 import {productDialog} from '../pos/product-dialog.mjs';
 import {inventoryPanel} from '../pos/inventory-ui.mjs';
 import {Node,FormDataAdapter,makeModal} from './variant-dom.mjs';
 
+const money=value=>formatMoney(value).replace(/^Rp\s*/, 'Rp');
 const fruit={id:id(),name:'Durian',sku:'DURIAN',itemType:'direct',category:'Buah',stockUnit:'kg_butir',priceKg:100000,pricePiece:200000,buyPrice:60000};
 assert(!Object.hasOwn(normalizeProduct(fruit),'buyPricePiece'),'Older payloads preserve the existing optional field');
 for(const value of [null,'','  '])assert.equal(normalizeProduct({...fruit,buyPricePiece:value}).buyPricePiece,null);
@@ -19,19 +20,19 @@ assert.equal(state.products[0].buyPricePiece,75000);
 assert.equal(state.products[0].buyPrice,60000);
 const root=new Node();
 root.innerHTML=inventoryPanel(state,'outlet',{},'products');
-assert(root.querySelector('.inv-variant-group summary [data-card-buy] small').textContent.includes(`${money(75000)} / butir`));
+assert(root.querySelector('.inv-variant-group summary [data-card-buy] small').textContent.includes(`${money(75000)} /butir`));
 assert.equal(root.querySelector('.inv-ready-dot').attrs['aria-label'],'Habis / belum siap');
 state.lots.push({id:id(),productId:fruit.id,storeId:'outlet',kg:6,pieces:2,date:'2000-01-01',quality:'ready'});
 root.innerHTML=inventoryPanel(state,'outlet',{},'stock');
 assert.equal(root.querySelector('.inv-ready-dot').attrs['aria-label'],'Tersedia');
-assert(root.querySelector('[data-card-buy] small').textContent.includes(`${money(75000)} / butir`));
+assert(root.querySelector('[data-card-buy] small').textContent.includes(`${money(75000)} /butir`));
 const groupId=id();state.products[0].variantGroupId=groupId;
 state.products.push({...fruit,id:id(),sku:'DURIAN-2',variantGroupId:groupId,buyPricePiece:90000});
 root.innerHTML=inventoryPanel(state,'outlet',{},'products');
-assert(root.querySelector('.inv-variant-group summary [data-card-buy] small').textContent.includes(`${money(75000)} – ${money(90000)} / butir`));
+assert(root.querySelector('.inv-variant-group summary [data-card-buy] small').textContent.includes(`${money(75000)} – ${money(90000)} /butir`));
 delete state.products[1].buyPricePiece;state.products[0].buyPricePiece=null;
 root.innerHTML=inventoryPanel(state,'outlet',{},'products');
-assert.equal(root.querySelector('.inv-variant-group summary [data-card-buy] small').textContent,'— / butir');
+assert.equal(root.querySelector('.inv-variant-group summary [data-card-buy] small').textContent,'— /butir');
 
 const original=globalThis.FormData;globalThis.FormData=FormDataAdapter;
 try {
