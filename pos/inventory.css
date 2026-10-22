@@ -1,4 +1,4 @@
-/* Master Barang / Stok — shared reference layout; product cards 078. */
+/* Master Barang / Stok — card reference 078, desktop layout 079. */
 .inventory-shell {
   --inv-bg:#f5f5f3; --inv-panel:#ffffff; --inv-field:#f7f7f5;
   --inv-photo:#e4e5e2; --inv-ink:#222321; --inv-muted:#636662;
@@ -44,6 +44,7 @@
 .inventory-workspace [data-inventory-category-manage] { padding:5px 8px; border:0; border-radius:9px; background:var(--inv-bg); color:var(--inv-ink); font-size:10px; font-weight:500; line-height:1.35; }
 .inv-layout-tools { display:flex; align-items:center; justify-content:flex-end; gap:14px; min-width:0; }
 .inv-view { display:flex; gap:4px; padding:3px; border-radius:12px; background:var(--inv-field); }
+.inv-layout-count { display:none; }
 .inventory-workspace .inv-view button,.inventory-workspace .inv-reset { display:grid; place-items:center; width:46px; height:46px; min-width:0; margin:0; padding:10px; border:1px solid transparent; border-radius:11px; background:transparent; color:var(--inv-muted); }
 .inventory-workspace .inv-view button.selected { background:var(--inv-active); color:var(--inv-ink); border-color:transparent; }
 .inventory-workspace .inv-reset { color:var(--inv-ink); }
@@ -132,11 +133,6 @@
 .inventory-history .panel { background:var(--inv-panel); border-color:var(--inv-line); color:var(--inv-ink); }
 .inventory-history th,.inventory-history td { border-color:var(--inv-line); color:var(--inv-ink); }
 .inventory-history th { background:var(--inv-field); }
-@media(min-width:1100px) {
- .inv-filters form { grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1.2fr) auto; }
- .inv-advanced { grid-column:1/-1; }
- .inv-advanced-fields { grid-template-columns:1fr 2fr auto; align-items:center; }
-}
 @media(max-width:700px) {
  .inventory-workspace { margin-top:30px; }
  .inv-toolbar { gap:10px; margin-bottom:14px; }
@@ -166,8 +162,10 @@
 }
 /* Preserve the same three-column footer on phones. Grid becomes one card
    per row when two reference-shaped cards would be too small to read. */
-@container inventory-results (max-width:620px) {
- .inv-results.is-grid { grid-template-columns:minmax(0,1fr); }
+@media(max-width:1099px) {
+ @container inventory-results (max-width:620px) {
+  .inv-results.is-grid { grid-template-columns:minmax(0,1fr); }
+ }
 }
 @container(max-width:420px) {
  .inv-variant-group>summary,.inv-card { grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(76px,.8fr); column-gap:8px; }
@@ -188,4 +186,51 @@
  .inv-category-heading { flex-wrap:wrap; align-items:flex-start; }
  .inv-status-filters { gap:7px; }
  .inventory-workspace .inv-status-filters button { padding:12px 10px; }
+}
+/* Desktop: a persistent left filter and exactly 3 / 6 cards across.
+   Counts depend on the viewport, not the width of a single card/container. */
+@media(min-width:1100px) {
+ .inventory-workspace { max-width:none; }
+ .inv-layout { grid-template-columns:clamp(200px,15vw,240px) minmax(0,1fr); gap:20px; align-items:start; }
+ .inv-filters { position:sticky; top:16px; align-self:start; padding:16px; max-height:calc(100dvh - 32px); overflow-y:auto; scrollbar-width:thin; scrollbar-color:var(--inv-line) transparent; }
+ .inv-filters form { grid-template-columns:minmax(0,1fr); gap:18px; }
+ .inv-filter-section,.inv-advanced,.inv-layout-tools { grid-column:1; }
+ .inv-advanced-fields,.inv-price-filters { grid-template-columns:minmax(0,1fr); }
+ .inv-filters select { min-height:44px; font-size:12px; }
+ .inv-layout-tools { justify-content:flex-start; gap:8px; }
+ .inventory-workspace .inv-view button { display:flex; align-items:center; justify-content:center; gap:5px; width:52px; height:40px; padding:8px; }
+ .inv-view svg { width:18px; height:18px; }
+ .inv-layout-count { display:inline; font-size:10px; line-height:1; }
+ .inventory-workspace .inv-reset { width:36px; height:40px; padding:6px; }
+ .inv-content { overflow-x:auto; scrollbar-width:thin; scrollbar-color:var(--inv-line) transparent; }
+ .inv-results { grid-template-columns:repeat(3,minmax(240px,1fr)); gap:12px; }
+ .inv-results.is-grid { grid-template-columns:repeat(6,minmax(128px,1fr)); gap:10px; }
+ /* Small horizontal cards retain enough height for the five metadata lines. */
+ .inv-results:not(.is-grid) .inv-variant-group>summary,.inv-results:not(.is-grid) .inv-card { --photo-edge:max(64px,calc(322 * var(--card-unit))); }
+ .inv-results:not(.is-grid) .inv-card-top:has(.inv-expired) { --photo-edge:max(78px,calc(380 * var(--card-unit))); }
+ /* Six-column mode uses portrait cards. The action remains next to the sale
+    price, while purchase price gets a separate full-width row for readability. */
+ .inv-results.is-grid .inv-variant-group { border-radius:12px; }
+ .inv-results.is-grid .inv-variant-group>summary,.inv-results.is-grid .inv-card { --status-inset:10px; grid-template-columns:minmax(0,1fr) minmax(0,.85fr); gap:10px 6px; padding:10px; border-radius:12px; }
+ .inv-results.is-grid .inv-card-top { display:flex; flex-direction:column; gap:9px; }
+ .inv-results.is-grid .inv-photo,.inv-results.is-grid .inv-summary-photo { width:100%; height:auto; min-height:0; aspect-ratio:1; border-radius:9px; }
+ .inv-results.is-grid .inv-photo img,.inv-results.is-grid .inv-summary-photo img { padding:4px; }
+ .inv-results.is-grid .inv-copy,.inv-results.is-grid .inv-summary-copy { height:auto; min-height:112px; padding:0; gap:4px; justify-content:flex-start; }
+ .inv-results.is-grid .inv-copy h3,.inv-results.is-grid .inv-summary-copy>b { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; white-space:normal; overflow-wrap:anywhere; font-size:clamp(11px,7cqw,15px); line-height:1.25; min-height:2.5em; }
+ .inv-results.is-grid .inv-sku,.inv-results.is-grid .inv-meta,.inv-results.is-grid .inv-copy>small,.inv-results.is-grid .inv-summary-copy>small { font-size:clamp(9px,5.7cqw,11px); line-height:1.25; }
+ .inv-results.is-grid .inv-stockline { margin-top:auto; font-size:clamp(10px,6.3cqw,12px); line-height:1.25; }
+ .inv-results.is-grid .inv-ready-dot { width:10px; height:10px; box-shadow:0 0 0 3px var(--inv-panel); }
+ .inv-results.is-grid .inv-summary-metric,.inv-results.is-grid .inv-metric { min-height:0; }
+ .inv-results.is-grid [data-card-buy] { grid-column:1/-1; grid-row:2; }
+ .inv-results.is-grid [data-card-sale] { grid-column:1; grid-row:3; }
+ .inv-results.is-grid .inv-add-first-variant,.inv-results.is-grid .inv-more { grid-column:2; grid-row:3; min-height:34px; padding:5px 3px; border-radius:9px; gap:3px; font-size:clamp(8px,5.6cqw,10px); line-height:1.25; white-space:normal; }
+ .inv-results.is-grid .inv-summary-metric>span:not(.inv-price-value),.inv-results.is-grid .inv-metric>span { font-size:clamp(8px,5.7cqw,10px); }
+ .inv-results.is-grid .inv-price-value { margin-top:4px; gap:2px; font-size:clamp(10px,6.8cqw,13px); line-height:1.25; }
+ .inv-results.is-grid .inv-price-value.is-range { font-size:clamp(9px,6cqw,11px); }
+ .inv-results.is-grid .inv-summary-metric small,.inv-results.is-grid .inv-metric small { margin-top:3px; font-size:clamp(9px,5.7cqw,11px); line-height:1.25; }
+ .inv-results.is-grid .inv-stock-details { grid-row:4; font-size:10px; gap:6px; padding-top:8px; }
+ .inv-results.is-grid .inv-stock-details b { font-size:10px; }
+ .inv-results.is-grid .variant-group-actions { padding:10px; }
+ .inv-results.is-grid .variant-group-actions small { font-size:10px; }
+ .inv-results.is-grid .variant-group-items { padding:0 6px 6px; }
 }

@@ -1,0 +1,44 @@
+MANIAC DUREN — PATCH 079: LAYOUT DESKTOP MASTER BARANG DAN STOK
+
+Basis: patch 078 sudah terpasang. Tidak memerlukan SQL tambahan.
+
+CARA PASANG
+1. Ekstrak ZIP ke folder utama proyek dan timpa file dengan nama yang sama.
+2. Jalankan perintah Git Bash di bawah dari folder utama proyek.
+3. Tunggu deployment selesai, lalu muat ulang /pos/ dengan Ctrl+Shift+R.
+
+GIT BASH
+git add pos/app.js pos/catalog-ui.mjs pos/index.html pos/inventory-ui.mjs pos/inventory.css PETUNJUK-PATCH-079.txt
+git commit -m "Atur desktop Master Barang dan Stok menjadi 3 dan 6 kolom"
+git push
+
+PERUBAHAN
+- Pada desktop dengan lebar viewport minimal 1100 px, filter tetap berada
+  di kolom kiri. Form filter disusun vertikal dan mengikuti saat halaman digulir.
+- Area Master Barang dan Stok menggunakan lebar ruang utama yang tersedia.
+- Tampilan Baris: 3 kartu ke samping per baris.
+- Tampilan Kolom: 6 kartu ke samping per baris dengan bentuk kartu tegak.
+- Tombol pilihan tampilan menampilkan angka 3 dan 6 pada desktop.
+- Kartu tegak menampilkan foto kotak, deskripsi, harga beli, lalu harga jual
+  dengan tombol di sampingnya. Indikator stok tetap di pojok kanan atas.
+- Pada desktop sempit, area hasil dapat digulir horizontal untuk menjaga
+  ukuran minimum kartu dan mempertahankan susunan 3 atau 6 kolom.
+  Kolom filter tetap di kiri. Pergantian mode mengembalikan gulir ke awal.
+- Tampilan ponsel dan tablet di bawah 1100 px tetap memakai aturan sebelumnya.
+- Jumlah variant, harga beli per butir, dan perilaku kartu dari patch 078
+  tetap digunakan. Tidak ada perubahan data produk, stok, atau database.
+- Versi cache CSS dan modul tampilan diperbarui menjadi 79.
+
+VERIFIKASI
+- 5 file pengujian terkait lulus: kategori bersama, ringkasan kartu,
+  harga beli per butir, UI varian, dan alur kartu/tambah varian.
+- Handler pergantian tampilan Master Barang dan Stok diperiksa dengan
+  klik kedua pilihan: mode aktif, aria-pressed, reset gulir, dan jumlah
+  kartu benar; data produk tidak berubah.
+- Sintaks JavaScript dan parsing CSS lulus. Aturan kolom desktop 3/6,
+  filter kiri, dan pemisahan aturan responsif ponsel diperiksa.
+- Rendering visual browser belum dapat diverifikasi di lingkungan ini.
+  Patch belum dideploy oleh asisten.
+
+TES OPSIONAL
+node --test tests/shared-categories.test.mjs tests/product-card-summary.test.mjs tests/product-buy-piece.test.mjs tests/variants-unified-ui.test.mjs tests/product-variants-ui.test.mjs
