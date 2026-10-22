@@ -1,0 +1,57 @@
+MANIAC DUREN — PATCH 076: UI MASTER BARANG & STOK
+
+Basis: proyek Maniac Duren dengan patch 071–075 sudah terpasang.
+ZIP ini berisi file pengganti untuk tampilan Master Barang dan Stok.
+Tidak memerlukan SQL atau perubahan database.
+
+CARA PASANG
+1. Ekstrak ZIP ini ke folder utama proyek, sejajar dengan package.json.
+2. Timpa file yang namanya sama. Jangan menghapus file proyek lainnya.
+3. Jalankan perintah Git Bash di bawah, lalu tunggu deployment Vercel selesai.
+4. Muat ulang /pos/ (Ctrl+Shift+R). Pilih tema Dark agar sesuai referensi.
+
+GIT BASH
+git add pos/app.js pos/catalog-ui.mjs pos/index.html pos/inventory-ui.mjs pos/inventory.css pos/variants.css tests/product-card-summary.test.mjs PETUNJUK-PATCH-076.txt
+git commit -m "Sesuaikan UI Master Barang dan Stok dengan referensi"
+git push
+
+PERUBAHAN
+- Tema arang untuk Dark dan tampilan Light yang tetap tersedia.
+- Judul serta tombol tambah barang di atas; pencarian selebar halaman.
+- Tiga tombol ketersediaan: Semua, Tersedia, Habis dengan jumlah item.
+- Jenis item, urutan, kategori, list/grid, dan reset di dalam satu panel.
+- Filter harga dan kedaluwarsa tetap ada di bagian Filter lainnya.
+- Kartu menampilkan foto, nama, SKU, jenis/varian, kategori, jumlah fisik,
+  indikator ketersediaan, harga beli dan harga jual.
+- Harga beli di kiri, harga jual di kanan. Harga varian tampil sebagai
+  rentang; detail masing-masing varian menampilkan harga tetap.
+- Tambah varian tetap tersedia pada Master Barang; buka kartu untuk
+  mengakses varian atau tombol Edit barang.
+- Stok memakai tampilan yang sama, dengan tombol Detail stok, jumlah
+  tersedia dipakai, penerimaan, serta akses Transfer dan Barang masuk.
+- Tata letak daftar/grid menyesuaikan HP, tablet, dan desktop.
+- Aturan CSS kartu disatukan di inventory.css agar tidak bertumpuk
+  dengan aturan kartu lama di variants.css.
+
+CATATAN DATA
+- Harga beli memakai buyPrice yang sudah tersimpan (buah: referensi/kg).
+  Sistem belum memiliki kolom harga beli referensi/butir, sehingga angka
+  itu tidak dibuat otomatis. Harga jual/kg dan /butir tetap ditampilkan.
+- Stok kartu = stok fisik outlet aktif. Indikator ketersediaan tetap
+  mempertimbangkan tanggal, kondisi, kedaluwarsa dan cadangan pesanan.
+- Filter Habis mencakup stok kosong atau barang yang belum siap digunakan.
+- Angka pada tombol filter menghitung item/SKU, termasuk masing-masing
+  varian. Grup di Master Barang bisa mewakili beberapa SKU.
+- Tidak mengubah harga, stok, transaksi, resep, kategori atau database.
+
+VERIFIKASI
+- 20 pemeriksaan lulus melalui 15 file pengujian: kartu/varian, kategori,
+  produk, ketersediaan, kasir, mode demo dan isolasinya, sesi login,
+  integrasi dashboard serta PWA. Pemeriksaan sintaks JavaScript lulus.
+- Selector pengujian kartu diperjelas karena Filter lainnya sekarang
+  juga menggunakan elemen summary.
+- Uji lama instant-navigation.test.mjs berhenti pada top-level await;
+  hasil yang sama terjadi pada basis 075 sebelum perubahan ini.
+- Pemeriksaan visual browser belum selesai karena lingkungan browser
+  tidak dapat membuka preview lokal. Tata letak perlu dilihat setelah
+  pemasangan. Asisten belum melakukan deploy ke website produksi.
