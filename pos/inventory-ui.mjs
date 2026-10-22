@@ -3,7 +3,7 @@ import {posCategories,inPosCategory,posCategoryName} from './pos-categories.mjs?
 import {posCategoryManager,posCategoryDialog} from './pos-categories-ui.mjs?v=65';
 import {showWeighingHistory} from './receipt-weighing.mjs?v=19';
 import {escape as e,money,num,today} from './core.mjs?v=9';
-import {productDefaults,itemTypes,isMaterial,isLegacyStock} from './catalog.mjs?v=59';
+import {productDefaults,itemTypes,isMaterial,isLegacyStock} from './catalog.mjs?v=77';
 import {availableStock,menuStatus} from './order-stock.mjs?v=12';
 const icons={search:'M21 21l-5-5 M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16',list:'M8 5h13 M8 12h13 M8 19h13 M3 5h.01 M3 12h.01 M3 19h.01',grid:'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z',box:'M3 7l9-4 9 4-9 4z M3 7v10l9 4 9-4V7 M12 11v10',plus:'M12 5v14 M5 12h14',reset:'M3 11a9 9 0 1 1 2 7 M3 4v7h7',arrow:'M5 12h14 M13 6l6 6-6 6'};
 const icon=k=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${icons[k]}"/></svg>`;
@@ -40,15 +40,15 @@ function leafCards(rows,mode,state){return rows.map(row=>{
  const dual=isLegacyStock(p),unit=dual?'kg':p.stockUnit;
  const variant=p.variantOptions?.length?p.variantOptions.map(o=>o.value).join(' / '):p.variant;
  const sale=priceRange([p],amount),buy=priceRange([p],p=>p.buyPrice,true);
- return `<article class="inv-card">
+ return `<div class="inv-card-container"><article class="inv-card"><div class="inv-card-top">
   <div class="inv-photo">${productPhoto(p)?`<img src="${e(productPhoto(p))}" alt="" loading="lazy" decoding="async">`:`<span>${icon('box')}</span>`}</div>
   <div class="inv-copy"><h3>${e(p.name)}</h3><span class="inv-sku">${e(p.sku||'—')}</span><small>${e(itemTypes[p.itemType]||p.itemType)}${variant?` · ${e(variant)}`:''}</small><span class="inv-meta" data-product-categories>${e(posCategoryName(state,p))}</span><p class="inv-stockline">${stockLabel([row])}</p>${expired?'<span class="inv-expired">Ada kedaluwarsa</span>':''}</div>
-  ${statusDot(ready)}
+  </div>${statusDot(ready)}
   <button class="inv-more" type="button" ${mode==='products'?`data-edit-product="${e(p.id)}"`:`data-stock-detail="${e(p.id)}"`} aria-label="${mode==='products'?'Edit':'Detail stok'} ${e(p.name)}">${mode==='products'?'Edit barang':'Detail stok'} ${icon('arrow')}</button>
-  <div class="inv-metric" data-card-sale><span>HARGA JUAL${dual?' / KG':''}</span><div class="inv-price-value"><strong>${e(sale.label)}</strong>${!isMaterial(p)&&!sale.missing?`<em>/${e(unit)}</em>`:''}</div><small>${isMaterial(p)?'Bahan internal':dual?`${e(priceRange([p],p=>p.pricePiece).label)} / butir`:sale.missing?'Belum diisi':''}</small></div>
-  <div class="inv-metric inv-secondary" data-card-buy><span>HARGA BELI</span><div class="inv-price-value"><strong>${e(buy.label)}</strong>${!buy.missing?`<em>/${e(unit)}</em>`:''}</div><small>${buy.missing?'Belum diisi':'Harga referensi'}</small></div>
+  <div class="inv-metric" data-card-sale><span>HARGA JUAL</span><div class="inv-price-value"><strong>${e(sale.label)}</strong>${!isMaterial(p)&&!sale.missing?`<em>/${e(unit)}</em>`:''}</div><small>${isMaterial(p)?'Bahan internal':dual?`${e(priceRange([p],p=>p.pricePiece).label)} / butir`:sale.missing?'Belum diisi':''}</small></div>
+  <div class="inv-metric inv-secondary" data-card-buy><span>HARGA BELI</span><div class="inv-price-value"><strong>${e(buy.label)}</strong>${!buy.missing?`<em>/${e(unit)}</em>`:''}</div><small>${dual?`${e(priceRange([p],p=>p.buyPricePiece,true).label)} / butir`:buy.missing?'Belum diisi':'Harga referensi'}</small></div>
   ${mode==='stock'?`<div class="inv-stock-details"><span>Tersedia dipakai <b>${num(usable)} ${e(unit)}${dual?` · ${num(availablePieces)} butir`:''}</b></span><span>${own.filter(l=>Number(dual?l.kg:l.qty)>0).length} penerimaan</span></div>`:''}
- </article>`;
+ </article></div>`;
 }).join('')||'<div class="inv-empty">Tidak ada item yang sesuai.<br><small>Coba kata kunci lain atau reset filter.</small></div>';}
 function priceRange(products, value, allowZero=false) {
  const values=products.map(value).filter(v=>v!==null&&v!==undefined&&v!=='').map(Number).filter(n=>Number.isFinite(n)&&(allowZero?n>=0:n>0));
@@ -62,8 +62,8 @@ function summaryPrices(group) {
  const unit=dual?'kg':p.stockUnit;
  const missing=range=>range.missing?(range.missing===products.length?'Belum diisi':`${range.missing} harga belum diisi`):'';
  return `<span class="inv-summary-prices">
-  <span class="inv-summary-metric" data-card-sale><span>HARGA JUAL${dual?' / KG':''}</span><span class="inv-price-value"><strong>${e(sale.label)}</strong>${!material&&sale.missing<products.length?`<em>/${e(unit)}</em>`:''}</span><small>${material?'Bahan internal':dual?`${e(priceRange(products,p=>p.pricePiece).label)} / butir`:''}</small>${!material&&missing(sale)?`<small>${e(missing(sale))}</small>`:''}</span>
-  <span class="inv-summary-metric" data-card-buy><span>HARGA BELI</span><span class="inv-price-value"><strong>${e(buy.label)}</strong>${buy.missing<products.length?`<em>/${e(unit)}</em>`:''}</span><small>${e(missing(buy)||'Harga referensi')}</small></span>
+  <span class="inv-summary-metric" data-card-sale><span>HARGA JUAL</span><span class="inv-price-value"><strong>${e(sale.label)}</strong>${!material&&sale.missing<products.length?`<em>/${e(unit)}</em>`:''}</span><small>${material?'Bahan internal':dual?`${e(priceRange(products,p=>p.pricePiece).label)} / butir`:''}</small>${!material&&missing(sale)?`<small>${e(missing(sale))}</small>`:''}</span>
+  <span class="inv-summary-metric" data-card-buy><span>HARGA BELI</span><span class="inv-price-value"><strong>${e(buy.label)}</strong>${buy.missing<products.length?`<em>/${e(unit)}</em>`:''}</span><small>${dual?`${e(priceRange(products,p=>p.buyPricePiece,true).label)} / butir`:e(missing(buy)||'Harga referensi')}</small></span>
  </span>`;
 }
 function cards(rows,mode,state){
@@ -80,7 +80,7 @@ function cards(rows,mode,state){
   const photo=productPhoto(p)?`<img src="${e(productPhoto(p))}" alt="" loading="lazy" decoding="async">`:`<span>${icon('box')}</span>`;
   const action=grouped?'<span class="variant-tag">Lihat varian</span>':`<button type="button" class="inv-add-first-variant" data-add-product-variant="${e(p.id)}" aria-label="Tambah varian ${e(p.name)}">+ Tambah varian</button>`;
   const detailRows=!grouped&&p.variantGroupId?group.map(row=>({...row,p:{...row.p,variant:'',variantOptions:[]}})):group;
-  return `<article class="inv-catalog-card ${grouped?'has-variants':'no-variants'}" data-catalog-product="${e(p.id)}"><details class="inv-variant-group"><summary aria-label="${grouped?'Lihat varian':'Lihat detail'} ${e(title)}"><span class="inv-summary-photo">${photo}</span><span class="inv-summary-copy"><b>${e(title)}</b><span class="inv-sku">${e(p.sku||'—')}</span><small>${e(itemTypes[p.itemType])} · ${subtitle}</small><small class="inv-summary-categories" data-product-categories>${e(categoryNames)}</small><span class="inv-stockline">${stockLabel(group)}</span>${group.some(row=>row.expired)?'<small class="inv-expired">Ada kedaluwarsa</small>':''}</span>${statusDot(group.some(row=>row.ready))}${summaryPrices(group)}${action}</summary><div class="variant-group-actions">${grouped?`<button type="button" data-add-variant="${e(p.variantGroupId)}">+ Tambah varian</button>`:''}<small>${grouped?'Pilih Edit pada varian':'Pilih Edit pada barang'} untuk mengubah harga, SKU, barcode, atau foto.</small></div><div class="variant-group-items">${leafCards(detailRows,mode,state)}</div></details></article>`;
+  return `<article class="inv-catalog-card ${grouped?'has-variants':'no-variants'}" data-catalog-product="${e(p.id)}"><details class="inv-variant-group"><summary aria-label="${grouped?'Lihat varian':'Lihat detail'} ${e(title)}"><span class="inv-card-top"><span class="inv-summary-photo">${photo}</span><span class="inv-summary-copy"><b>${e(title)}</b><span class="inv-sku">${e(p.sku||'—')}</span><small>${e(itemTypes[p.itemType])} · ${subtitle}</small><small class="inv-summary-categories" data-product-categories>${e(categoryNames)}</small><span class="inv-stockline">${stockLabel(group)}</span>${group.some(row=>row.expired)?'<small class="inv-expired">Ada kedaluwarsa</small>':''}</span></span>${statusDot(group.some(row=>row.ready))}${summaryPrices(group)}${action}</summary><div class="variant-group-actions">${grouped?`<button type="button" data-add-variant="${e(p.variantGroupId)}">+ Tambah varian</button>`:''}<small>${grouped?'Pilih Edit pada varian':'Pilih Edit pada barang'} untuk mengubah harga, SKU, barcode, atau foto.</small></div><div class="variant-group-items">${leafCards(detailRows,mode,state)}</div></details></article>`;
  }).join('')||leafCards([],mode,state);
 }
 export function inventoryPanel(state,store,filter={},mode='products'){

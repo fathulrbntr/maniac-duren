@@ -5,10 +5,10 @@ import {cashierActions,cashierDemo} from './cashier-demo.mjs?v=66';
 import {sumProducts} from './decimal-totals.mjs?v=66';
 import {documentDemoActions,applyDocumentDemo,readDemoDocument,createDocumentExamples} from './documents-demo.mjs?v=74';
 // In-memory training data only. This module never sends requests or persists data.
-import {emptyState,today,id,applyAction} from './core.mjs?v=60';
+import {emptyState,today,id,applyAction} from './core.mjs?v=77';
 import {checkOrder,requirements} from './order-stock.mjs?v=12';
 import {savePosCategory} from './pos-categories.mjs?v=52';
-import {saveVariantProducts} from './product-variants.mjs?v=45';
+import {saveVariantProducts} from './product-variants.mjs?v=77';
 const localMaster=new Set(['master','master_details','product_save','product_update','product_delete','recipe_save']);
 const transactionKeys=['documents','expenses','adminEvents','lots','unitLots','sales','movements','orders','events','journal','money','moneyJournal','origins','productions','wasteRuns','stockAdjustments','batchProcesses','receiptShipments','rejectRecords','batchOpenOrders','attendance','cashierApprovals'];
 const clone=x=>structuredClone(x);

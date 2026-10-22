@@ -3,13 +3,13 @@ import {createSessionManager} from './session.mjs?v=73';
 import {installButton,bindInstall} from './pwa.mjs?v=72';
 import {reportsPage,bindReports,selectReportTab} from './reports-ui.mjs?v=73';
 import {documentsPage,bindDocuments} from './documents-ui.mjs?v=74';
-import { variantGroupDialog, productVariantDialog } from "./variant-editor.mjs?v=45";
+import { variantGroupDialog, productVariantDialog } from "./variant-editor.mjs?v=77";
 import {createSidebarController,sidebarIcon} from './sidebar.mjs?v=42';
 const sidebar = createSidebarController();
-import {installMoneyInputs} from './money-input.mjs?v=44';
+import {installMoneyInputs} from './money-input.mjs?v=77';
 installMoneyInputs();
 import { openWeighingReceipt, showWeighingHistory } from './receipt-weighing.mjs?v=19';
-import {inventoryPanel,bindInventory} from "./inventory-ui.mjs?v=76";
+import {inventoryPanel,bindInventory} from "./inventory-ui.mjs?v=77";
 import {opsPages,opsPage,bindOps,clearOrderDraft,hasOrderDraft} from './operations-ui.mjs?v=71';
 import {printReceipt} from './receipt-printer.mjs?v=64';
 import {storesPage,storeDialog} from './store-settings.mjs?v=64';
@@ -46,8 +46,8 @@ import {
   saleRows,
   summarize,
 } from "./core.mjs?v=60";
-import { isLegacyStock, itemTypes } from "./catalog.mjs?v=59";
-import { catalogPanel, productDialog } from "./catalog-ui.mjs?v=76";
+import { isLegacyStock, itemTypes } from "./catalog.mjs?v=77";
+import { catalogPanel, productDialog } from "./catalog-ui.mjs?v=77";
 const themeKey = "maniac-pos-theme";
 function themeButton(extraClass = "") {
   return `<button type="button" class="small theme-toggle ${extraClass}" data-theme-toggle aria-label="Ganti tema"><svg class="theme-light-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></svg><svg class="theme-dark-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M20 15.5A9 9 0 0 1 8.5 4 9 9 0 1 0 20 15.5Z"/></svg><span data-theme-label></span></button>`;
@@ -143,7 +143,7 @@ function toast(text) {
   toast.timer = setTimeout(() => (t.style.display = "none"), 5000);
 }
 let stockDemoModule,demoSource=null;
-const demoEngine=()=>stockDemoModule ||= import('./stock-demo.mjs?v=74').catch(error=>{stockDemoModule=null;throw error;});
+const demoEngine=()=>stockDemoModule ||= import('./stock-demo.mjs?v=77').catch(error=>{stockDemoModule=null;throw error;});
 async function adminRpc(name,p){
   if(mode!=='stock-demo')return request('/rest/v1/rpc/'+name,p);
   const snapshot=state,engine=await demoEngine();

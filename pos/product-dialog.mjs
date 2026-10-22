@@ -1,6 +1,6 @@
 import {dummyProductPhoto} from './product-photos.mjs?v=65';
 import {posCategoryName} from './pos-categories.mjs?v=52';
-import { variantEditorMarkup, bindVariantEditor } from "./variant-editor.mjs?v=45";
+import { variantEditorMarkup, bindVariantEditor } from "./variant-editor.mjs?v=77";
 import {
   categories,
   itemTypes,
@@ -8,9 +8,9 @@ import {
   productDefaults,
   isLegacyStock,
   normalizeProduct,
-} from "./catalog.mjs?v=59";
+} from "./catalog.mjs?v=77";
 import { escape as e, id, num, money } from "./core.mjs?v=9";
-import { preparePhoto } from "./product-details.mjs?v=9";
+import { preparePhoto } from "./product-details.mjs?v=77";
 import { productStock, productUsed } from "./product-stock.mjs?v=60";
 const options = (values, selected) =>
   Object.entries(values)
@@ -46,7 +46,7 @@ export function productDialog({
  <p class="muted">${locked ? "Jenis dan satuan mengikuti barang yang sudah terdaftar." : "Gunakan gram untuk berat bahan dan ml untuk cairan."}</p>
  <section class="product-shared-categories" aria-label="Kategori produk"><span>Kategori</span><strong data-product-category-names>${e(editing?posCategoryName(state,p):'Semua')}</strong><p data-product-category-help>Kategori mengikuti Master Barang, Stok, dan POS. Setelah menyimpan barang, gunakan Kelola kategori → pilih kategori → Tambah produk dari master.</p></section>
  ${editing ? (p.variantGroupId?`<p class="variant-notice">Varian dari <b>${e(p.variantGroupName)}</b>. Nama lengkap tetap digunakan dalam stok dan Olah Reject.</p>`:'') : '<label class="variant-toggle"><input type="checkbox" name="hasVariants"><span><b>Memiliki varian</b><small>Aktifkan jika barang memiliki pilihan ukuran, rasa, atau kondisi.</small></span></label>'}
- <fieldset id="single-product-fields"><div class="form-grid">${editing?field("Keterangan varian", `<input name="variant" value="${e(p.variant || "")}" maxlength="100" ${p.variantGroupId?'readonly':''}>`):''}${field("SKU", `<input name="sku" value="${e(p.sku || "")}" required maxlength="40" placeholder="Kode unik barang">`)}${field("Barcode (opsional)", `<input name="barcode" value="${e(p.barcode || "")}" maxlength="80" placeholder="Ketik atau scan barcode">`)}${field("Harga beli referensi (Rp / satuan; durian per kg)", `<input name="buyPrice" type="number" min="0" max="1000000000000" step="any" value="${e(p.buyPrice ?? "")}" placeholder="Opsional">`)}</div><p id="scale-barcode-help" class="muted" hidden>Untuk label timbangan CAS POS KG, isi Barcode dengan Item Code 4 digit, misalnya 0001 untuk Monthong. Pertahankan nol di depan; jangan masukkan seluruh barcode label. Setiap buah/varian memakai kode berbeda. Samakan harga jual per kg dengan timbangan.</p><p class="muted">Harga beli adalah referensi; harga jual berlaku di semua outlet.</p><div id="catalog-prices" class="form-grid"></div></fieldset>
+ <fieldset id="single-product-fields"><div class="form-grid">${editing?field("Keterangan varian", `<input name="variant" value="${e(p.variant || "")}" maxlength="100" ${p.variantGroupId?'readonly':''}>`):''}${field("SKU", `<input name="sku" value="${e(p.sku || "")}" required maxlength="40" placeholder="Kode unik barang">`)}${field("Barcode (opsional)", `<input name="barcode" value="${e(p.barcode || "")}" maxlength="80" placeholder="Ketik atau scan barcode">`)}${field("Harga beli referensi (Rp / satuan; durian per kg)", `<input name="buyPrice" type="number" min="0" max="1000000000000" step="any" value="${e(p.buyPrice ?? "")}" placeholder="Opsional">`)}${field("Harga beli referensi / butir (Rp)", `<input name="buyPricePiece" type="number" min="0" max="1000000000000" step="any" value="${e(p.buyPricePiece ?? "")}" placeholder="Opsional">`)}</div><p id="scale-barcode-help" class="muted" hidden>Untuk label timbangan CAS POS KG, isi Barcode dengan Item Code 4 digit, misalnya 0001 untuk Monthong. Pertahankan nol di depan; jangan masukkan seluruh barcode label. Setiap buah/varian memakai kode berbeda. Samakan harga jual per kg dengan timbangan.</p><p class="muted">Harga beli adalah referensi; harga jual berlaku di semua outlet.</p><div id="catalog-prices" class="form-grid"></div></fieldset>
  ${editing?'':`<fieldset id="variant-product-fields" hidden disabled>${variantEditorMarkup()}</fieldset>`}
  <fieldset class="product-stock-editor"><legend>Qty Stok · ${e(state.stores.find((x) => x.id === store)?.name || "Pilih store dahulu")}</legend><div id="current-stock"></div><label><input type="checkbox" name="adjustStock" ${store ? "" : "disabled"}> ${editing ? "Sesuaikan stok fisik" : "Isi stok awal"}</label><div id="stock-fields" hidden></div></fieldset>
  ${
@@ -161,6 +161,10 @@ export function productDialog({
         ),
       )
       .join("");
+    const pieceBuy = c("buyPricePiece");
+    const pieceBuyVisible = unit.value === "kg_butir" && state.access?.finance !== false;
+    pieceBuy.closest('label').hidden = !pieceBuyVisible;
+    pieceBuy.disabled = !pieceBuyVisible;
     d.querySelector("#scale-barcode-help").hidden = unit.value !== "kg_butir";
     drawStock();
     editor?.markDirty();
@@ -259,6 +263,8 @@ export function productDialog({
         kind: "products",
         editing,
       };
+      if (Object.hasOwn(payload,'buyPricePiece') && payload.buyPricePiece !== null && !state.stockDemo && state.opsVersion && state.productCostVersion !== 77)
+        throw Error('Jalankan SQL product-buy-piece-077.sql, lalu muat ulang POS sebelum menyimpan harga beli per butir.');
       if (c("adjustStock").checked) {
         const keys = stockDual ? ["kg", "pieces"] : ["qty"];
         payload.stock = {

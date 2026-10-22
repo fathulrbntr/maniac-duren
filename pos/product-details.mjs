@@ -28,7 +28,19 @@ export function productDetails(p) {
     (!Number.isFinite(buyPrice) || buyPrice < 0 || buyPrice > 1e12)
   )
     throw Error("Harga beli harus 0–1 triliun");
-  return { variant, barcode, buyPrice, photo: photoValue(p.photo) };
+  const extra = {};
+  if (Object.hasOwn(p, 'buyPricePiece')) {
+    const raw = p.buyPricePiece;
+    if (raw != null && typeof raw !== 'string' && typeof raw !== 'number')
+      throw Error('Harga beli per butir harus berupa angka');
+    const piece = raw == null || String(raw).trim() === '' ? null : Number(raw);
+    if (piece !== null && (!Number.isFinite(piece) || piece < 0 || piece > 1e12))
+      throw Error('Harga beli per butir harus 0–1 triliun');
+    if (piece !== null && p.stockUnit !== 'kg_butir')
+      throw Error('Harga beli per butir khusus barang kg + butir');
+    extra.buyPricePiece = piece;
+  }
+  return { variant, barcode, buyPrice, ...extra, photo: photoValue(p.photo) };
 }
 export async function preparePhoto(file, kind = 'product') {
   const result = await compressPhoto(file, kind);

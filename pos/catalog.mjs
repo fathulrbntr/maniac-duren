@@ -1,4 +1,4 @@
-import { productDetails } from "./product-details.mjs?v=9";
+import { productDetails } from "./product-details.mjs?v=77";
 export const categories = ["Buah", "Dessert", "Minuman", "Olahan Duren"];
 export const itemTypes = {
   direct: "Product Jual Langsung",
@@ -82,6 +82,7 @@ export function saveProduct(s, p, editing = false) {
   if (!editing && index !== -1) return;
   if (editing && index === -1) throw Error("Produk tidak ditemukan");
   const x = normalizeProduct(p);
+  if (x.stockUnit !== "kg_butir") x.buyPricePiece = null;
   if (
     s.products.some(
       (other) =>

@@ -47,7 +47,7 @@ Object.assign(a,{itemType:'direct',stockUnit:'kg_butir',category:'Buah',priceKg:
 Object.assign(b,{itemType:'direct',stockUnit:'kg_butir',category:'Buah',priceKg:90000,pricePiece:180000});
 summary=render().querySelector('.has-variants summary');
 assert.equal(summary.querySelector('[data-card-sale] strong').textContent,`${money(70000)} – ${money(90000)}`);
-assert.match(summary.querySelector('[data-card-sale]').textContent,/KG/);
+assert.match(summary.querySelector('[data-card-sale]').textContent,/\/kg/);
 assert(summary.querySelector('[data-card-sale]').textContent.includes(`${money(140000)} – ${money(180000)} / butir`));
 
 // Deleting a sibling must preserve the survivor, including used stock/history.

@@ -37,13 +37,13 @@
     <link rel="stylesheet" href="auth.css?v=73" />
     <link rel="stylesheet" href="reports-admin.css?v=73" />
     <link rel="stylesheet" href="dashboard.css?v=75" />
-    <link rel="stylesheet" href="inventory.css?v=76" />
+    <link rel="stylesheet" href="inventory.css?v=77" />
   </head>
   <body>
     <div id="app"><div class="auth auth-workspace auth-startup"><section class="auth-form"><div><img class="auth-logo" src="logo.png" alt="Maniac Duren"><h1>Menyiapkan POS</h1><div class="auth-progress"><div class="auth-progress-track" role="progressbar" aria-label="Memuat POS"></div><p class="auth-progress-text" role="status">Memuat aplikasi…</p></div></div></section></div></div>
     <div id="toast" role="status" aria-live="polite"></div>
     <script type="module">
-      import('./app.js?v=76').catch(() => {
+      import('./app.js?v=77').catch(() => {
         document.getElementById('app').innerHTML = '<section style="padding:32px"><h2>POS gagal dimuat</h2><p>Muat ulang halaman. Jika tetap gagal, pastikan deployment terbaru sudah selesai.</p><button onclick="location.reload()">Muat ulang</button></section>';
       });
     </script>

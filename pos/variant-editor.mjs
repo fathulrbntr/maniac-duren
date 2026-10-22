@@ -1,5 +1,5 @@
 import { escape as e } from './core.mjs?v=9';
-import { variantAxes, buildVariantRows, variantPayload, variantSourceSnapshot } from './product-variants.mjs?v=45';
+import { variantAxes, buildVariantRows, variantPayload, variantSourceSnapshot } from './product-variants.mjs?v=77';
 const field = (label,html) => `<label class="field">${label}${html}</label>`;
 export const variantEditorMarkup = () => `<section class="variant-editor" aria-label="Pilihan varian">
  <div class="variant-heading"><b>1. Tentukan pilihan varian</b><small>Satu pilihan per kolom. Pisahkan nilainya dengan koma.</small></div>
@@ -31,10 +31,11 @@ export function bindVariantEditor(root,{getCommon,state,groupId,operationId,exis
     });
   }
   const priceKeys = common => ['raw','prep'].includes(common.itemType)?[]:common.stockUnit==='kg_butir'?['priceKg','pricePiece']:['salePrice'];
-  const priceLabel = key => ({priceKg:'Harga jual / kg (Rp)',pricePiece:'Harga jual / butir (Rp)',salePrice:'Harga jual / satuan (Rp)',buyPrice:'Harga beli referensi (Rp)'})[key];
+  const priceLabel = key => ({priceKg:'Harga jual / kg (Rp)',pricePiece:'Harga jual / butir (Rp)',salePrice:'Harga jual / satuan (Rp)',buyPrice:'Harga beli referensi (Rp / satuan; buah per kg)',buyPricePiece:'Harga beli referensi / butir (Rp)'})[key];
   function drawRows() {
     const common=getCommon(), prices=priceKeys(common), count=rows.filter(p=>!p.existing).length;
-    results.innerHTML = `<div class="variant-heading"><b>2. Periksa ${rows.length} varian</b><small>${existing.length?`${existing.length} sudah tersimpan · `:''}${count} varian baru. SKU dibuat otomatis dan boleh diganti.</small></div>${count?`<div class="variant-bulk"><span>Isi harga yang sama untuk varian baru</span><div class="form-grid">${['buyPrice',...prices].map(k=>field(priceLabel(k),`<input data-bulk="${k}" type="number" min="${k==='buyPrice'?0:0.01}" step="any" placeholder="Opsional">`)).join('')}</div><button type="button" data-apply-prices>Terapkan ke varian baru</button></div>`:''}<div class="variant-cards">${rows.map(p=>`<article class="variant-row" data-variant-row="${e(p.id)}"><div class="variant-row-title"><b>${e(p.name)}</b><span class="variant-tag">${p.existing?'Sudah tersimpan':'Baru'}</span></div>${p.existing?`<small>${e(p.sku)} · Ubah harga dan foto melalui Edit pada varian ini.</small>`:`<div class="form-grid">${field('SKU',`<input data-value="sku" value="${e(p.sku)}" required maxlength="40">`)}${field('Barcode (opsional)',`<input data-value="barcode" value="${e(p.barcode)}" maxlength="80" placeholder="Ketik atau scan barcode">`)}${['buyPrice',...prices].map(k=>field(priceLabel(k),`<input data-value="${k}" type="number" min="${k==='buyPrice'?0:0.01}" max="1000000000000" step="any" value="${e(p[k]??'')}" ${(k==='buyPrice'||common.itemType==='finished')?'placeholder="Opsional"':'required'}>`)).join('')}</div>`}</article>`).join('')}</div><p class="muted">Stok tiap varian dicatat melalui Barang masuk. Foto dapat ditambahkan lewat Edit pada masing-masing varian.</p>`;
+    const allPrices=['buyPrice',...(common.stockUnit==='kg_butir' && state.access?.finance!==false?['buyPricePiece']:[]),...prices];
+    results.innerHTML = `<div class="variant-heading"><b>2. Periksa ${rows.length} varian</b><small>${existing.length?`${existing.length} sudah tersimpan · `:''}${count} varian baru. SKU dibuat otomatis dan boleh diganti.</small></div>${count?`<div class="variant-bulk"><span>Isi harga yang sama untuk varian baru</span><div class="form-grid">${allPrices.map(k=>field(priceLabel(k),`<input data-bulk="${k}" type="number" min="${k.startsWith('buyPrice')?0:0.01}" step="any" placeholder="Opsional">`)).join('')}</div><button type="button" data-apply-prices>Terapkan ke varian baru</button></div>`:''}<div class="variant-cards">${rows.map(p=>`<article class="variant-row" data-variant-row="${e(p.id)}"><div class="variant-row-title"><b>${e(p.name)}</b><span class="variant-tag">${p.existing?'Sudah tersimpan':'Baru'}</span></div>${p.existing?`<small>${e(p.sku)} · Ubah harga dan foto melalui Edit pada varian ini.</small>`:`<div class="form-grid">${field('SKU',`<input data-value="sku" value="${e(p.sku)}" required maxlength="40">`)}${field('Barcode (opsional)',`<input data-value="barcode" value="${e(p.barcode)}" maxlength="80" placeholder="Ketik atau scan barcode">`)}${allPrices.map(k=>field(priceLabel(k),`<input data-value="${k}" type="number" min="${k.startsWith('buyPrice')?0:0.01}" max="1000000000000" step="any" value="${e(p[k]??'')}" ${(k.startsWith('buyPrice')||common.itemType==='finished')?'placeholder="Opsional"':'required'}>`)).join('')}</div>`}</article>`).join('')}</div><p class="muted">Stok tiap varian dicatat melalui Barang masuk. Foto dapat ditambahkan lewat Edit pada masing-masing varian.</p>`;
     results.querySelector('[data-apply-prices]')?.addEventListener('click',()=>{
       for(const input of results.querySelectorAll('[data-bulk]')) if(input.value!=='') {
         if(!input.checkValidity()){input.reportValidity();return;}
@@ -62,6 +63,8 @@ export function bindVariantEditor(root,{getCommon,state,groupId,operationId,exis
       if(!rows.length || builtSignature!==signature())throw Error('Klik “Susun daftar varian” setelah mengubah nama, jenis, satuan, atau pilihan varian.');
       capture();
       const payload=variantPayload({id:operationId,groupId,name:getCommon().name,common:getCommon(),rows,existing:registered(),products:state.products});
+      if (payload.variants.some(p=>p.buyPricePiece!=null) && !state.stockDemo && state.opsVersion && state.productCostVersion!==77)
+        throw Error('Jalankan SQL product-buy-piece-077.sql, lalu muat ulang POS sebelum menyimpan harga beli per butir.');
       if(source)payload.adopt={productId:source.id,expected:variantSourceSnapshot(source),variantOptions:currentOptions()};
       return payload;
     },

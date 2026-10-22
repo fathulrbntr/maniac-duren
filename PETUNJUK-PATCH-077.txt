@@ -1,0 +1,65 @@
+MANIAC DUREN — PATCH 077: KARTU PRODUK & HARGA BELI PER BUTIR
+
+Basis: proyek dengan patch 071–076 sudah terpasang.
+ZIP ini berisi 18 file pengganti/tambahan. Ekstrak ke folder utama proyek.
+
+CARA PASANG
+1. Ekstrak dan timpa file bernama sama pada folder proyek, sejajar package.json.
+2. Buka Supabase SQL Editor. Jalankan seluruh isi:
+   database/product-buy-piece-077.sql
+   Hasil akhir: version 77, "Harga beli referensi per butir siap".
+   Migrasi aman diulang dan mempertahankan harga, stok, biaya penerimaan,
+   varian, serta riwayat yang sudah ada. Tidak perlu menjalankan ulang pos.sql.
+3. Setelah SQL berhasil, jalankan perintah Git Bash di bawah dari folder proyek.
+4. Tunggu deployment selesai, lalu muat ulang /pos/ dengan Ctrl+Shift+R.
+5. Pilih tema Dark untuk tampilan sesuai referensi. Harga beli per butir diisi
+   melalui Edit barang, atau saat membuat barang/varian baru satuan Kg + butir.
+
+GIT BASH
+git add pos/app.js pos/index.html pos/inventory.css pos/inventory-ui.mjs pos/catalog-ui.mjs pos/catalog.mjs pos/core.mjs pos/product-details.mjs pos/product-dialog.mjs pos/product-variants.mjs pos/variant-editor.mjs pos/money-input.mjs pos/stock-demo.mjs
+git add database/product-buy-piece-077.sql tests/product-buy-piece.test.mjs tests/product-buy-piece-sql.test.mjs tests/product-card-summary.test.mjs PETUNJUK-PATCH-077.txt
+git commit -m "Sesuaikan kartu produk dan tambah harga beli per butir"
+git push
+
+PERUBAHAN
+- Master Barang dan Stok memakai kartu dengan foto, nama, SKU, jenis/varian,
+  kategori, dan jumlah stok di bagian atas.
+- Harga beli berada di kiri, harga jual di kanan. Produk Kg + butir menampilkan
+  dua harga terpisah: /kg dan /butir. Grup varian menampilkan rentang harga.
+- Tombol Tambah varian berada di kanan bawah pada barang tanpa varian;
+  grup yang sudah mempunyai varian tetap menyediakan aksi tambah di detail.
+- Indikator tersedia berbentuk lingkaran dan menggunakan satu nilai inset
+  untuk jarak dari sisi atas maupun kanan kartu. Ukuran kartu mengikuti
+  ruang yang tersedia, termasuk tampilan grid dan varian yang dibuka.
+- Form harga beli per butir mendukung input Rupiah, kosong, Rp0, dan isi
+  harga massal untuk varian baru. Tampilan Light tetap tersedia.
+
+DATA DAN AKSES
+- Field baru buyPricePiece disimpan sebagai buy_price_piece.
+- Harga beli per kg yang sudah ada tetap memakai buyPrice/buy_price.
+- Nilai per butir yang belum diisi ditampilkan sebagai "— / butir".
+- Harga beli per butir adalah referensi produk; biaya penerimaan/HPP tetap
+  mengikuti transaksi penerimaan. Nilainya diisi terpisah dari harga per kg.
+- Data harga beli baru hanya dikirim kepada akun dengan akses finance.
+- Pengiriman dari aplikasi lama tanpa field baru mempertahankan nilai
+  yang tersimpan. Mengosongkan input secara eksplisit menghapus referensinya.
+- Saat barang yang belum digunakan diganti ke satuan selain Kg + butir,
+  referensi harga beli per butir dibersihkan. Aturan penguncian satuan lama
+  tetap berlaku untuk barang yang sudah digunakan.
+- Form mencegah penyimpanan harga beli per butir pada server lama yang belum
+  menjalankan migrasi 077. Mode demo tetap dapat menyimpannya secara lokal.
+
+VERIFIKASI
+- 13 file pengujian lulus: produk, kartu, varian, kategori, POS, foto,
+  harga uang, mode demo/isolasinya, serta harga beli per butir dan SQL-nya.
+- SQL diuji dengan PGlite/PostgreSQL, termasuk susunan migrasi hingga 071,
+  pengulangan pemasangan, kompatibilitas pembaca laporan, harga kosong/Rp0,
+  input tidak valid, transaksi varian atomik, retry, hak akses, dan stok/HPP.
+- Pemeriksaan sintaks JavaScript dan parser CSS lulus; aturan indikator
+  memiliki ukuran lebar/tinggi sama serta jarak atas/kanan sama.
+- Tampilan belum diverifikasi melalui browser karena preview lokal tidak
+  tersedia pada browser lingkungan ini. Asisten belum melakukan deploy.
+
+MENJALANKAN TES TAMBAHAN
+Dengan dependensi proyek terpasang (Node.js dan @electric-sql/pglite):
+node --test tests/product-buy-piece.test.mjs tests/product-buy-piece-sql.test.mjs tests/product-card-summary.test.mjs

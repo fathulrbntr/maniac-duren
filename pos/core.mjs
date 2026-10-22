@@ -1,7 +1,7 @@
 import { wasteAction } from "./waste.mjs?v=9";
 import { deleteProduct, adjustProductStock } from "./product-stock.mjs?v=60";
 import { productionAction } from "./production.mjs?v=9";
-import { saveProduct, isLegacyStock } from "./catalog.mjs?v=9";
+import { saveProduct, isLegacyStock } from "./catalog.mjs?v=77";
 export const today = () =>
   new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Jakarta" });
 export const money = (n) =>
