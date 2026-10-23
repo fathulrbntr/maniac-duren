@@ -54,6 +54,7 @@ function themeButton(extraClass = "") {
 }
 function syncThemeControls() {
   const dark = document.documentElement.dataset.theme === "dark";
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#202020' : '#f3f3f2');
   document.querySelectorAll('[data-theme-toggle]').forEach(button => {
     button.setAttribute('aria-label', dark ? 'Aktifkan mode light' : 'Aktifkan mode dark');
     button.setAttribute('aria-pressed', String(dark));

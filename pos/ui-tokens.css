@@ -1,0 +1,43 @@
+/* Patch 081: shared POS palette and type scale. Reference: Add Product 080.
+   Component styles consume these tokens instead of defining local palettes. */
+:root {
+ color-scheme:light;
+ --font-ui:"Segoe UI",system-ui,-apple-system,BlinkMacSystemFont,Arial,sans-serif;
+ --text-xs:12px; --text-sm:13px; --text-body:14px; --text-md:16px;
+ --text-lg:18px; --text-xl:22px; --text-2xl:24px; --text-3xl:28px; --text-4xl:32px;
+ --text-page:28px; --text-dialog:32px; --text-section:18px;
+ --text-control:14px; --text-label:14px; --text-dialog-label:16px;
+ --weight-normal:400; --weight-medium:500; --weight-semibold:600; --weight-bold:700;
+ --radius-control:12px; --radius-card:20px; --radius-modal:28px; --radius-pill:999px;
+ --control-height:44px; --dialog-control-height:48px; --sidebar-width:264px;
+ --bg:#f3f3f2; --surface:#ffffff; --surface-soft:#f0f0ef; --surface-raised:#e4e5e4;
+ --ink:#252625; --muted:#626562; --line:#d8dad8;
+ --sidebar:var(--surface); --sidebar-ink:var(--ink); --hover:#e8e9e8;
+ --action-bg:#939598; --action-ink:#171817; --action-large-ink:#ffffff;
+ --success:#42752f; --success-bg:#eaf2e5; --danger:#b63c45; --danger-bg:#f9e9eb;
+ --warning:#845d19; --warning-bg:#f7efdd; --info:#41677c; --info-bg:#e8eff3;
+ --stock-ready:#528b2d; --stock-empty:#af635b;
+ --focus:#626562; --backdrop:#0009; --shadow:0 8px 32px #0000000d;
+ --ui-chevron:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 16'%3E%3Cpath fill='%23252625' d='M2 1h20a1 1 0 0 1 .7 1.7l-10 11a1 1 0 0 1-1.4 0l-10-11A1 1 0 0 1 2 1Z'/%3E%3C/svg%3E");
+ /* Existing modules use these aliases for buttons, surfaces and copy. */
+ --green:var(--action-bg); --lime:var(--action-bg); --dark:var(--ink); --on-primary:var(--action-ink);
+ --text:var(--ink); --border:var(--line); --accent:var(--ink);
+ --accent-soft:var(--surface-raised); --surface-2:var(--surface-soft);
+}
+:root[data-theme=dark] {
+ color-scheme:dark;
+ --bg:#202020; --surface:#2a2b2a; --surface-soft:#202020; --surface-raised:#383a38;
+ --ink:#ffffff; --muted:#b4b5b5; --line:#414341;
+ --hover:#383a38; --action-bg:#939598; --action-ink:#171817;
+ --success:#88c85a; --success-bg:#293624; --danger:#ed9a9f; --danger-bg:#402b2e;
+ --warning:#dfbe7c; --warning-bg:#3b3324; --info:#a0bfd4; --info-bg:#2a353d;
+ --stock-ready:#75c043; --stock-empty:#c38179;
+ --focus:#c7c8c8; --shadow:0 12px 40px #0003;
+ --ui-chevron:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 16'%3E%3Cpath fill='%23fff' d='M2 1h20a1 1 0 0 1 .7 1.7l-10 11a1 1 0 0 1-1.4 0l-10-11A1 1 0 0 1 2 1Z'/%3E%3C/svg%3E");
+}
+@media(max-width:600px) {
+ :root { --text-page:24px; --text-dialog:26px; --text-control:16px; --text-dialog-label:14px; --radius-modal:22px; }
+}
+@media print {
+ :root,:root[data-theme=dark] { color-scheme:light; --bg:#fff; --surface:#fff; --surface-soft:#fff; --surface-raised:#eee; --ink:#000; --muted:#333; --line:#ccc; --shadow:none; }
+}

@@ -1,7 +1,7 @@
 .store-dialog{width:min(760px,calc(100vw - 32px));max-width:760px}
 .store-editor{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:24px;align-items:start}
 .store-fields{min-width:0}.store-fields textarea{resize:vertical;min-height:88px}
-.store-fields [data-store-logo-status]{font-size:12px;overflow-wrap:anywhere}
+.store-fields [data-store-logo-status]{font-size:var(--text-xs);overflow-wrap:anywhere}
 .store-preview> b{display:block;margin-bottom:12px}.store-preview{min-width:0}
 .store-receipt-preview{background:#fff;color:#000;border:1px solid #ddd;border-radius:8px;padding:20px 14px;max-width:302px;margin:auto;font:12px/1.35 'Courier New',monospace}
 .receipt-store-header{text-align:center;white-space:normal;overflow-wrap:anywhere;margin-bottom:12px}

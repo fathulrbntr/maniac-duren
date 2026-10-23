@@ -5,46 +5,49 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="robots" content="noindex,nofollow" />
     <title>Maniac Duren · POS</title>
+    <meta name="theme-color" content="#202020" />
     <script>
       (() => {
         let theme;
         try { theme = localStorage.getItem('maniac-pos-theme'); } catch {}
         document.documentElement.dataset.theme = ['light','dark'].includes(theme) ? theme : (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        document.querySelector('meta[name="theme-color"]').setAttribute('content', document.documentElement.dataset.theme === 'dark' ? '#202020' : '#f3f3f2');
       })();
     </script>
     <link rel="icon" href="logo.png" />
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="apple-touch-icon" href="icons/icon-192.png" />
-    <meta name="theme-color" content="#28543e" />
     <script type="module">
       import {startPWA} from './pwa.mjs?v=72';
       startPWA();
     </script>
-    <link rel="stylesheet" href="pos.css?v=27" />
-    <link rel="stylesheet" href="catalog-table.css?v=16.2" />
-    <link rel="stylesheet" href="employees.css?v=70" />
-    <link rel="stylesheet" href="workspace-ui.css?v=42" />
-    <link rel="stylesheet" href="variants.css?v=76" />
-    <link rel="stylesheet" href="pos-categories.css?v=52" />
-    <link rel="stylesheet" href="pos-menu.css?v=65" />
-    <link rel="stylesheet" href="stock-demo.css?v=53" />
-    <link rel="stylesheet" href="cashier.css?v=55" />
-    <link rel="stylesheet" href="devices.css?v=58" />
-    <link rel="stylesheet" href="fruit-sale.css?v=69" />
-    <link rel="stylesheet" href="reject-flow.css?v=63" />
-    <link rel="stylesheet" href="store-settings.css?v=64" />
-    <link rel="stylesheet" href="pwa.css?v=72" />
-    <link rel="stylesheet" href="auth.css?v=73" />
-    <link rel="stylesheet" href="reports-admin.css?v=73" />
-    <link rel="stylesheet" href="dashboard.css?v=75" />
-    <link rel="stylesheet" href="inventory.css?v=79" />
-    <link rel="stylesheet" href="product-dialog.css?v=80" />
+    <link rel="stylesheet" href="pos.css?v=81" />
+    <link rel="stylesheet" href="ui-tokens.css?v=81" />
+    <link rel="stylesheet" href="catalog-table.css?v=81" />
+    <link rel="stylesheet" href="employees.css?v=81" />
+    <link rel="stylesheet" href="workspace-ui.css?v=81" />
+    <link rel="stylesheet" href="variants.css?v=81" />
+    <link rel="stylesheet" href="pos-categories.css?v=81" />
+    <link rel="stylesheet" href="pos-menu.css?v=81" />
+    <link rel="stylesheet" href="stock-demo.css?v=81" />
+    <link rel="stylesheet" href="cashier.css?v=81" />
+    <link rel="stylesheet" href="devices.css?v=81" />
+    <link rel="stylesheet" href="fruit-sale.css?v=81" />
+    <link rel="stylesheet" href="reject-flow.css?v=81" />
+    <link rel="stylesheet" href="store-settings.css?v=81" />
+    <link rel="stylesheet" href="pwa.css?v=81" />
+    <link rel="stylesheet" href="auth.css?v=81" />
+    <link rel="stylesheet" href="reports-admin.css?v=81" />
+    <link rel="stylesheet" href="dashboard.css?v=81" />
+    <link rel="stylesheet" href="inventory.css?v=81" />
+    <link rel="stylesheet" href="product-dialog.css?v=81" />
+    <link rel="stylesheet" href="ui-system.css?v=81" media="screen" />
   </head>
   <body>
     <div id="app"><div class="auth auth-workspace auth-startup"><section class="auth-form"><div><img class="auth-logo" src="logo.png" alt="Maniac Duren"><h1>Menyiapkan POS</h1><div class="auth-progress"><div class="auth-progress-track" role="progressbar" aria-label="Memuat POS"></div><p class="auth-progress-text" role="status">Memuat aplikasi…</p></div></div></section></div></div>
     <div id="toast" role="status" aria-live="polite"></div>
     <script type="module">
-      import('./app.js?v=80').catch(() => {
+      import('./app.js?v=81').catch(() => {
         document.getElementById('app').innerHTML = '<section style="padding:32px"><h2>POS gagal dimuat</h2><p>Muat ulang halaman. Jika tetap gagal, pastikan deployment terbaru sudah selesai.</p><button onclick="location.reload()">Muat ulang</button></section>';
       });
     </script>

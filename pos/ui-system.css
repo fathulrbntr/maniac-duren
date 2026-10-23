@@ -1,0 +1,126 @@
+/* Shared screen components, loaded last. Layout, data and print rules live in
+   their existing modules. Compact inventory cards retain their measured grid. */
+body { font-family:var(--font-ui); font-size:var(--text-body); line-height:1.5; letter-spacing:0; }
+button,input,select,textarea { font-family:var(--font-ui); }
+h1,h2,h3,h4 { font-weight:var(--weight-bold); letter-spacing:0; font-style:normal; color:var(--ink); }
+.intro h2,.team-workspace h2,.inv-heading h2,.auth-workspace h1 { font-size:var(--text-page); line-height:1.25; font-weight:var(--weight-bold); }
+.panel h3,.team-panel h3,.order-catalog-head h3,.order-summary h3,.device-heading h3,
+.dash-section-head h2,.dash-metric h2,.kitchen-lane>h3 { font-size:var(--text-section); line-height:1.35; font-weight:var(--weight-bold); }
+.shell .topbar h1 { font-size:var(--text-md); font-weight:var(--weight-semibold); }
+.muted,.field small,.panel>p,.team-panel p,.page-foot { color:var(--muted); }
+.shell .nav .nav-item { font-size:var(--text-sm); line-height:1.45; }
+.shell .nav .nav-heading { font-size:var(--text-xs); letter-spacing:.03em; }
+.shell .nav .nav-item.active,.shell .nav .nav-item.active:hover { background:var(--surface-raised); color:var(--ink); font-weight:var(--weight-semibold); }
+.shell .sidebar #active-store { background:var(--surface-soft); }
+.shell .topbar .theme-toggle,.shell .topbar .stock-demo-toggle { border:1px solid var(--line); background:var(--surface); color:var(--ink); }
+.panel,.stat,.summary-card,.recipe-card,.production-card,.order-catalog,.order-summary,
+.team-panel,.team-stats>div,.employee-card,.dash-metric,.dash-panel,.kitchen-lane,.device-card {
+ background:var(--surface); color:var(--ink); border-color:var(--line); border-radius:var(--radius-card); box-shadow:none;
+}
+.stat:first-child,.stat:first-child strong { background:var(--surface); color:var(--ink); }
+.stat:first-child small { color:var(--muted); }
+.stat strong,.team-stats strong,.attendance-times strong,#report-result .stat strong { font-size:var(--text-3xl); font-weight:var(--weight-bold); line-height:1.25; font-variant-numeric:tabular-nums; }
+.kitchen-ticket,.variant-row,.variant-bulk { border-color:var(--line); border-radius:var(--radius-control); }
+.kitchen-lane { background:var(--surface-soft); }
+.kitchen-ticket { background:var(--surface); }
+.employee-avatar,.employee-photo-placeholder { background:var(--surface-soft); color:var(--muted); }
+.employee-card-v22 .employee-username,.employee-card-v22 .employee-role { font-size:var(--text-body); font-style:normal; line-height:1.4; }
+.employee-card-v22 .employee-role { color:var(--muted); }
+.employee-card-v22:hover,.employee-card-v22:focus-visible { box-shadow:none; border-color:var(--focus); }
+.dash-profile h2 { font-size:var(--text-2xl); font-weight:var(--weight-bold); text-transform:none; }
+.dash-profile p { font-size:var(--text-body); font-style:normal; text-transform:none; }
+.dash-metric-value { font-style:normal; font-weight:var(--weight-bold); letter-spacing:0; }
+.dash-tabs button { white-space:normal; overflow-wrap:anywhere; font-size:var(--text-xs); font-style:normal; text-transform:none; }
+.dash-tabs button[aria-pressed=true] { background:var(--action-bg); color:var(--action-ink); border-color:var(--action-bg); box-shadow:none; }
+.dash-tabs button[aria-pressed=true]::after { background:currentColor; }
+.dash-store select,.dash-period select { border-radius:var(--radius-control); font-size:var(--text-control); font-weight:var(--weight-normal); color-scheme:inherit; background:var(--surface-soft); color:var(--ink); border-color:var(--line); }
+.dash-dock { background:var(--surface); }
+button,.button { border-radius:var(--radius-control); font-weight:var(--weight-semibold); }
+.toolbar button,.team-actions button,.intro-actions button,.report-actions button,.doc-toolbar button,
+.modal-actions button,.inventory-workspace .inv-add,.inventory-workspace .inv-transfer {
+ min-height:var(--control-height); padding:10px 16px; font-size:var(--text-body); border-radius:var(--radius-pill);
+}
+button.primary,.primary,.lime,.order-save,.team-workspace button.primary,.inventory-workspace .inv-add,
+.modal .modal-actions button.primary,.product-entry-modal .modal-actions [type=submit] {
+ background:var(--action-bg); color:var(--action-ink); border-color:var(--action-bg); font-weight:var(--weight-bold);
+}
+button.primary:hover:not(:disabled),.primary:hover:not(:disabled),.order-save:hover:not(:disabled),
+.team-workspace button.primary:hover:not(:disabled),.inventory-workspace .inv-add:hover:not(:disabled) {
+ background:var(--action-bg); color:var(--action-ink); border-color:var(--action-bg); filter:brightness(1.06); opacity:1;
+}
+.order-category.selected,.tabs-mini button.selected,.report-tabs button.selected {
+ background:var(--surface-raised); color:var(--ink); border-color:var(--focus); font-weight:var(--weight-bold);
+}
+.order-product-add { background:var(--action-bg); color:var(--action-ink); }
+.order-product:hover .order-product-add { background:var(--action-bg); color:var(--action-ink); }
+.order-product-photo,.pos-sale-variant-photo { background:var(--surface-soft); border-radius:var(--radius-control); }
+.order-product-info strong { font-size:var(--text-body); font-weight:var(--weight-bold); }
+.order-total-row strong,.total { color:var(--ink); font-weight:var(--weight-bold); }
+.field { font-size:var(--text-label); font-weight:var(--weight-semibold); color:var(--ink); }
+.field>input,.field>select,.field>textarea { margin-top:6px; }
+.field>button { margin-top:8px; }
+input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not([type=hidden]),select,textarea {
+ min-height:var(--control-height); color:var(--ink); background-color:var(--surface-soft);
+ border-color:var(--line); border-radius:var(--radius-control); font-size:var(--text-control); font-weight:var(--weight-normal);
+}
+textarea { line-height:1.5; }
+.team-workspace input,.team-workspace select,.device-card textarea { background:var(--surface-soft); }
+.inventory-workspace select,#report-filters input,#report-filters select { min-height:var(--control-height); height:auto; font-size:var(--text-control); font-weight:var(--weight-normal); }
+.inventory-workspace .inv-search { background:var(--surface); border-radius:var(--radius-control); }
+.inv-search input,.inv-price input { min-height:0; border:0; border-radius:0; background:transparent; }
+.inv-label,#report-filters .field,.dash-custom label { font-size:var(--text-sm); font-weight:var(--weight-semibold); letter-spacing:0; }
+.inventory-workspace .inv-status-filters button { border-radius:var(--radius-control); }
+.inventory-workspace .inv-status-filters button.selected { border-color:var(--focus); background:var(--surface-raised); }
+.inventory-workspace .inv-view button.selected { color:var(--action-ink); background:var(--action-bg); }
+th { background:var(--surface-soft); color:var(--muted); font-size:var(--text-xs); font-weight:var(--weight-semibold); letter-spacing:0; }
+td { border-color:var(--line); font-size:var(--text-sm); }
+.table-wrap { border-radius:var(--radius-control); }
+.modal { max-height:calc(100dvh - 32px); overflow:auto; border:1px solid var(--line); border-radius:var(--radius-modal); background:var(--surface); color:var(--ink); box-shadow:var(--shadow); scrollbar-width:thin; scrollbar-color:var(--line) transparent; }
+.modal::backdrop { background:var(--backdrop); }
+.modal .modal-head { align-items:flex-start; gap:16px; margin-bottom:24px; }
+.modal .modal-head h2,.employee-password-dialog .modal-head h2,.product-entry-modal .modal-head h2 { font-size:var(--text-dialog); font-weight:var(--weight-bold); line-height:1.2; margin:0; letter-spacing:0; }
+.modal:not(.product-entry-modal) .modal-head .close {
+ flex:0 0 32px; width:32px; height:32px; min-height:32px; margin:0; padding:0; border:2px solid currentColor; border-radius:50%;
+ display:flex; align-items:center; justify-content:center; color:var(--ink); background:transparent; font-size:24px; line-height:1; font-weight:var(--weight-normal);
+}
+.modal .field { font-size:var(--text-dialog-label); }
+.modal input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not([type=hidden]),.modal select {
+ min-height:var(--dialog-control-height); font-size:var(--text-control); font-weight:var(--weight-normal); background-color:var(--surface-soft); color:var(--ink);
+}
+.modal .form-grid { row-gap:16px; }
+.modal .form-grid>.field { margin-bottom:0; }
+.modal .form-grid+.field { display:block; margin-top:16px; }
+.modal .modal-actions { gap:10px; padding-top:18px; border-top:1px solid var(--line); }
+.modal .modal-actions button:not(.primary):not([type=submit]) { background:var(--surface-soft); color:var(--ink); }
+.product-entry-modal .product-entry-top>.field>span,.product-entry-modal .product-price-grid .field>span,.product-entry-modal .product-photo-controls>b { font-size:var(--text-dialog-label); }
+.product-entry-modal .product-photo-editor { grid-template-columns:minmax(0,148px) minmax(0,1fr); }
+.product-entry-modal .product-upload { font-size:var(--text-control); }
+.product-entry-modal [data-toggle-product-variants] { font-size:var(--text-xl); font-weight:var(--weight-bold); color:var(--action-large-ink); }
+.product-entry-modal .modal-actions button { font-size:var(--text-body); }
+.product-entry-modal .field>input,.product-entry-modal .field>select { margin-top:0; }
+.document-dialog .field>input,.document-dialog .field>select,.document-dialog .field>textarea,#report-filters .field>input,#report-filters .field>select { margin-top:0; }
+.document-dialog .doc-line .field { font-size:var(--text-sm); }
+.document-dialog .doc-line button { height:var(--dialog-control-height); }
+.variant-editor .field { font-size:var(--text-sm); }
+.auth-workspace input { background:var(--surface-soft); border-radius:var(--radius-control); }
+.auth-workspace .primary { font-size:var(--text-body); }
+.auth-workspace .auth-theme { background:var(--surface); }
+.error,.auth-session-error,.danger,.sidebar-logout,.order-cart-actions .order-remove { color:var(--danger); }
+.modal .modal-actions .danger { color:var(--danger); background:var(--danger-bg); border-color:var(--danger); }
+/* Paper previews intentionally keep the print palette in either UI theme. */
+.receipt-print,.store-receipt-preview,.doc-preview { --ink:#000; --muted:#444; --line:#ddd; --surface:#fff; --surface-soft:#fff; color-scheme:light; }
+.receipt-print th,.receipt-print td,.store-receipt-preview th,.store-receipt-preview td { background:#fff; color:#000; }
+:focus-visible { outline-color:var(--focus); }
+@media(max-width:700px) {
+ .product-entry-modal .product-photo-editor { grid-template-columns:minmax(0,1fr); }
+ .product-entry-modal .product-photo-frame { width:min(100%,120px); }
+ .dash-section-head h2,.dash-metric h2 { font-size:var(--text-md); }
+ .stat strong,.team-stats strong,.attendance-times strong { font-size:var(--text-2xl); }
+ .modal .modal-actions { flex-wrap:wrap; }
+ .modal .modal-actions button { flex:1 1 auto; }
+}
+@media(max-width:480px) {
+ .product-entry-modal .product-photo-editor { grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
+ .product-entry-modal .product-photo-frame { width:100%; }
+ .report-actions button { padding:10px 8px; font-size:var(--text-xs); white-space:normal; }
+}

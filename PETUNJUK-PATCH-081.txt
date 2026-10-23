@@ -1,0 +1,73 @@
+MANIAC DUREN — PATCH 081: PENYELARASAN SELURUH UI POS
+
+Basis: patch 080 sudah terpasang. Tidak memerlukan SQL tambahan.
+Acuan visual: popup Add Product terbaru, dipakai sebagai gaya bersama POS.
+
+CARA PASANG
+1. Ekstrak ZIP ke folder utama proyek dan timpa file dengan nama yang sama.
+2. Jalankan perintah Git Bash berikut dari folder utama proyek.
+3. Tunggu deployment selesai, lalu buka /pos/ dan tekan Ctrl+Shift+R.
+
+GIT BASH
+git add pos/*.css pos/index.html pos/app.js pos/manifest.webmanifest PETUNJUK-PATCH-081.txt
+git commit -m "Selaraskan font, ukuran, dan warna seluruh UI POS"
+git push
+
+CAKUPAN
+- Login, sidebar, dashboard, kasir, kitchen, Master Barang, Stok, resep,
+  produksi, waste/reject, karyawan, absensi, laporan, dokumen, pengaturan
+  toko/perangkat, serta popup memakai skala teks dan palet bersama.
+- Berlaku pada aplikasi /pos/. Landing page dan /menu berada di luar patch ini.
+
+FONT DAN UKURAN
+- Satu keluarga font: Segoe UI dengan fallback system-ui, Apple system,
+  Arial, lalu sans-serif. Tidak memuat font dari layanan eksternal.
+- Teks utama 14 px; keterangan 12–13 px; subjudul 18 px; judul halaman
+  28 px; judul popup 32 px. Judul mengecil pada ponsel.
+- Input umum minimal 44 px; input popup 48 px. Ukuran input pada ponsel
+  16 px agar tetap terbaca dan menghindari zoom otomatis saat mengetik.
+- Label, bobot huruf, tombol, radius panel/input, dan gaya fokus diselaraskan.
+- Gaya miring lama pada dashboard dan informasi karyawan dihapus.
+- Kartu padat tetap menyesuaikan ruangnya; nama karyawan panjang masih
+  memakai fungsi penyesuaian ukuran yang sudah ada.
+
+WARNA
+- Tema Dark: latar #202020, panel #2a2b2a, input #202020, teks #ffffff,
+  keterangan #b4b5b5, tombol abu-abu #939598.
+- Tema Light memakai satu pasangan warna netral yang sama di seluruh menu.
+- Palet terpisah pada dashboard, inventory, dan popup diganti dengan acuan
+  bersama sehingga perpindahan halaman tidak berganti nuansa warna.
+- Warna status tersedia, habis, peringatan, dan hapus tetap dibedakan.
+- Teks tombol kecil memakai warna gelap di atas abu-abu agar kontrasnya
+  cukup; tombol besar Add Variant mempertahankan tulisan putih dari referensi.
+- Warna bilah aplikasi mengikuti tema aktif. Warna peluncuran PWA memakai
+  arang netral, menggantikan warna hijau lama.
+
+STRUKTUR
+- ui-tokens.css menjadi acuan warna, font, ukuran, dan radius.
+- ui-system.css menyatukan gaya komponen dan dimuat khusus layar.
+- Semua stylesheet diperbarui versinya menjadi 81 untuk memuat gaya terbaru.
+- Desktop Master Barang/Stok tetap memakai filter kiri, Baris 3 kartu,
+  dan Kolom 6 kartu. Struktur form/fitur yang sudah ada tetap digunakan.
+- Aturan cetak yang sudah ada tidak diubah. Pratinjau kertas tetap putih.
+- Tidak ada perubahan perhitungan transaksi, stok, harga, atau database.
+
+VERIFIKASI
+- 21 stylesheet berhasil diparsing; semua referensi file CSS tersedia.
+- Acuan warna dashboard, inventory, dan popup cocok dengan palet global
+  pada tema Light maupun Dark. Kontras teks utama, keterangan, input,
+  serta teks tombol kecil terhadap latarnya minimal 4,5:1.
+- Aturan desktop 3/6 kolom dan filter kiri diperiksa. Blok @media print
+  dari versi sebelumnya identik; gaya komponen baru hanya dimuat di layar.
+- 25 hasil pengujian terkait lulus, mencakup dashboard, sidebar, login/sesi,
+  popup produk, kategori, harga per butir, varian, reject, detail karyawan,
+  toko/struk, laporan, dan dokumen demo.
+- Dua tes lama gagal dengan hasil identik ketika dijalankan pada baseline
+  patch 080: cashier-ui.test.mjs masih mengharapkan total demo Rp4.500
+  sementara data demo menghasilkan Rp135.000; login-startup.test.mjs
+  belum menyediakan respons konfigurasi login yang dipakai versi sekarang.
+  Pengujian login-session.test.mjs yang lebih baru lulus pada tujuh skenario.
+- Sintaks app.js lulus. Perubahan JavaScript hanya menyelaraskan warna
+  bilah aplikasi dengan tema yang aktif.
+- Rendering visual di browser belum dapat diverifikasi di lingkungan ini.
+  Patch belum dideploy oleh asisten.
