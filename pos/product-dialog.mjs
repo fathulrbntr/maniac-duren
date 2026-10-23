@@ -1,5 +1,5 @@
 import {dummyProductPhoto} from './product-photos.mjs?v=65';
-import {posCategoryName} from './pos-categories.mjs?v=52';
+import {posCategoryName, posCategories, categoryPayload} from './pos-categories.mjs?v=52';
 import { variantEditorMarkup, bindVariantEditor } from "./variant-editor.mjs?v=77";
 import {
   categories,
@@ -19,10 +19,11 @@ const options = (values, selected) =>
         `<option value="${e(key)}" ${key === selected ? "selected" : ""}>${e(text)}</option>`,
     )
     .join("");
-const field = (name, input) => `<label class="field">${name}${input}</label>`;
+const field = (name, input, className = '') => `<label class="field ${className}"><span>${name}</span>${input}</label>`;
 export function productDialog({
   product,
   state,
+  getState,
   store,
   modal,
   mutate,
@@ -37,17 +38,34 @@ export function productDialog({
   let photo = p.photo || "",
     photoBusy = false,
     photoSequence = 0,
-    saving = false;
+    saving = false,
+    savedProducts = null,
+    pendingCategory = null;
   const d = modal(
-    editing ? "Edit produk / bahan" : "Tambah produk / bahan",
+    editing ? "Edit Product" : "Add Product",
     `
- <div class="product-photo-editor"><img id="photo-preview" alt="Pratinjau foto produk" ${photo ? `src="${e(photo)}"` : "hidden"}><div>${field("Foto produk", '<input id="photo-file" type="file" accept="image/jpeg,image/png,image/webp">')}<small>JPG, PNG, WebP. Otomatis diperkecil; hasil maksimal 2 MB.</small><small id="photo-dummy-note"></small><p id="photo-status" role="status"></p><button type="button" id="remove-photo">Hapus foto</button></div></div>
- <div class="form-grid">${field("Nama barang", `<input name="name" value="${e(p.name || "")}" required maxlength="100" placeholder="Contoh: Durian Musang King" ${p.variantGroupId?'readonly':''}>`)}${field("Jenis barang", `<select name="itemType" ${locked ? "disabled" : ""}>${options(itemTypes, p.itemType)}</select>`)}<input type="hidden" name="category" value="${e(p.category||'')}">${field("Satuan stok", `<select name="stockUnit" ${locked ? "disabled" : ""}>${options(stockUnits, p.stockUnit)}</select>`)}</div>
+ <fieldset class="product-entry-fields">
+ <div class="product-entry-top">
+ ${field("Nama Barang", `<input name="name" value="${e(p.name || "")}" required maxlength="100" autocomplete="off" ${p.variantGroupId?'readonly':''}>`, 'product-name-field')}
+ <div class="field product-category-field"><span id="product-category-label">Kategori</span>${editing?`<details class="product-category-info"><summary data-product-category-names>${e(posCategoryName(state,p))}</summary><p>Kategori mengikuti Master Barang, Stok, dan POS. Gunakan Kelola kategori untuk mengubah pilihan.</p></details>`:`<select name="posCategory" aria-labelledby="product-category-label"><option value="">Semua</option>${options(Object.fromEntries(posCategories(state).map(c=>[c.id,c.name])), '')}</select><span data-product-category-names hidden>Semua</span>`}</div>
+ <div class="product-photo-editor"><div class="product-photo-frame"><img id="photo-preview" alt="Pratinjau foto produk" ${photo ? `src="${e(photo)}"` : "hidden"}></div><div class="product-photo-controls"><b>Foto Product</b><label class="product-upload"><span>Choose file</span><input id="photo-file" type="file" accept="image/jpeg,image/png,image/webp" aria-label="Pilih foto produk" aria-describedby="product-photo-help"></label><button type="button" id="remove-photo" ${photo?'':'hidden'}>Hapus foto</button></div><small id="photo-dummy-note" hidden></small><p id="photo-status" role="status" hidden></p></div>
+ ${field("Jenis Barang", `<select name="itemType" ${locked ? "disabled" : ""}>${options(itemTypes, p.itemType)}</select>`, 'product-type-field')}<input type="hidden" name="category" value="${e(p.category||'')}">
+ ${field("Satuan stock", `<select name="stockUnit" ${locked ? "disabled" : ""}>${options(stockUnits, p.stockUnit)}</select>`, 'product-unit-field')}
+ </div>
+ ${editing && p.variantGroupId?`<p class="variant-notice">Varian dari <b>${e(p.variantGroupName)}</b>. Nama lengkap tetap digunakan dalam stok dan Olah Reject.</p>`:''}
+ <fieldset id="single-product-fields"><div class="product-price-grid">
+ ${field("Harga Beli /kg", `<input name="buyPrice" type="number" min="0" max="1000000000000" step="any" inputmode="decimal" value="${e(p.buyPrice ?? "")}">`, 'product-buy-field')}
+ <div id="catalog-prices"></div>
+ ${field("SKU", `<input name="sku" value="${e(p.sku || "")}" required maxlength="40" autocomplete="off">`, 'product-sku-field')}
+ ${field("Harga Beli /butir", `<input name="buyPricePiece" type="number" min="0" max="1000000000000" step="any" inputmode="decimal" value="${e(p.buyPricePiece ?? "")}">`, 'product-piece-buy-field')}
+ ${field("Barcode", `<input name="barcode" value="${e(p.barcode || "")}" maxlength="80" autocomplete="off" title="Opsional. Ketik atau scan barcode.">`, 'product-barcode-field')}
+ </div>${editing?field("Keterangan varian", `<input name="variant" value="${e(p.variant || "")}" maxlength="100" ${p.variantGroupId?'readonly':''}>`, 'product-variant-note'):''}</fieldset>
+ ${editing?'':`<div class="product-variant-action"><input type="checkbox" name="hasVariants" hidden><button type="button" data-toggle-product-variants aria-expanded="false" aria-controls="variant-product-fields">+ Add Variant</button></div><fieldset id="variant-product-fields" hidden disabled>${variantEditorMarkup()}</fieldset>`}
+ <details class="product-extra"><summary>Stok & informasi tambahan</summary>
  <p class="muted">${locked ? "Jenis dan satuan mengikuti barang yang sudah terdaftar." : "Gunakan gram untuk berat bahan dan ml untuk cairan."}</p>
- <section class="product-shared-categories" aria-label="Kategori produk"><span>Kategori</span><strong data-product-category-names>${e(editing?posCategoryName(state,p):'Semua')}</strong><p data-product-category-help>Kategori mengikuti Master Barang, Stok, dan POS. Setelah menyimpan barang, gunakan Kelola kategori → pilih kategori → Tambah produk dari master.</p></section>
- ${editing ? (p.variantGroupId?`<p class="variant-notice">Varian dari <b>${e(p.variantGroupName)}</b>. Nama lengkap tetap digunakan dalam stok dan Olah Reject.</p>`:'') : '<label class="variant-toggle"><input type="checkbox" name="hasVariants"><span><b>Memiliki varian</b><small>Aktifkan jika barang memiliki pilihan ukuran, rasa, atau kondisi.</small></span></label>'}
- <fieldset id="single-product-fields"><div class="form-grid">${editing?field("Keterangan varian", `<input name="variant" value="${e(p.variant || "")}" maxlength="100" ${p.variantGroupId?'readonly':''}>`):''}${field("SKU", `<input name="sku" value="${e(p.sku || "")}" required maxlength="40" placeholder="Kode unik barang">`)}${field("Barcode (opsional)", `<input name="barcode" value="${e(p.barcode || "")}" maxlength="80" placeholder="Ketik atau scan barcode">`)}${field("Harga beli referensi (Rp / satuan; durian per kg)", `<input name="buyPrice" type="number" min="0" max="1000000000000" step="any" value="${e(p.buyPrice ?? "")}" placeholder="Opsional">`)}${field("Harga beli referensi / butir (Rp)", `<input name="buyPricePiece" type="number" min="0" max="1000000000000" step="any" value="${e(p.buyPricePiece ?? "")}" placeholder="Opsional">`)}</div><p id="scale-barcode-help" class="muted" hidden>Untuk label timbangan CAS POS KG, isi Barcode dengan Item Code 4 digit, misalnya 0001 untuk Monthong. Pertahankan nol di depan; jangan masukkan seluruh barcode label. Setiap buah/varian memakai kode berbeda. Samakan harga jual per kg dengan timbangan.</p><p class="muted">Harga beli adalah referensi; harga jual berlaku di semua outlet.</p><div id="catalog-prices" class="form-grid"></div></fieldset>
- ${editing?'':`<fieldset id="variant-product-fields" hidden disabled>${variantEditorMarkup()}</fieldset>`}
+ <p id="product-photo-help" class="muted">Foto JPG, PNG, atau WebP otomatis diperkecil hingga maksimal 2 MB.</p>
+ <p data-product-category-help class="muted"></p>
+ <p id="scale-barcode-help" class="muted" hidden>Untuk label timbangan CAS POS KG, isi Barcode dengan Item Code 4 digit, misalnya 0001 untuk Monthong. Pertahankan nol di depan; jangan masukkan seluruh barcode label. Setiap buah/varian memakai kode berbeda. Samakan harga jual per kg dengan timbangan.</p><p class="muted">Harga beli adalah referensi; harga jual berlaku di semua outlet.</p>
  <fieldset class="product-stock-editor"><legend>Qty Stok · ${e(state.stores.find((x) => x.id === store)?.name || "Pilih store dahulu")}</legend><div id="current-stock"></div><label><input type="checkbox" name="adjustStock" ${store ? "" : "disabled"}> ${editing ? "Sesuaikan stok fisik" : "Isi stok awal"}</label><div id="stock-fields" hidden></div></fieldset>
  ${
    editing
@@ -63,9 +81,9 @@ export function productDialog({
            .join("") || '<p class="muted">Belum ada penyesuaian.</p>'
        }</details><button type="button" class="danger" id="delete-product">Hapus produk</button>`
      : ""
- }`,
+ }</details></fieldset>${editing?'':'<button type="button" data-finish-product hidden>Selesai — periksa kategori nanti</button>'}`,
   );
-  d.classList.add("product-modal");
+  d.classList.add("product-modal", "product-entry-modal");
   const f = d.querySelector("form"),
     c = (n) => f.elements.namedItem(n),
     error = (message) => {
@@ -82,9 +100,24 @@ export function productDialog({
     d.querySelector(".product-photo-editor").hidden = enabled;
     d.querySelector(".product-stock-editor").hidden = enabled;
     if(enabled){c("adjustStock").checked=false;toggleStock();}
+    const button = d.querySelector('[data-toggle-product-variants]');
+    if(button){button.textContent=enabled?'− Tanpa Variant':'+ Add Variant';button.setAttribute('aria-expanded',String(enabled));}
+    d.classList.toggle('has-product-variants',enabled);
     d.querySelector('[type="submit"]').textContent=enabled?'Simpan semua varian':'Simpan';
   }
-  if(editor){c("hasVariants").onchange=toggleVariants;c("name").addEventListener('input',()=>editor.markDirty());}
+  if(editor){
+    c("hasVariants").onchange=toggleVariants;
+    c("name").addEventListener('input',()=>editor.markDirty());
+    d.querySelector('[data-toggle-product-variants]').onclick=()=>{
+      c('hasVariants').checked=!c('hasVariants').checked;
+      d.dataset.dirty='true';toggleVariants();
+      if(c('hasVariants').checked)d.querySelector('[data-axis-values]')?.focus();
+    };
+  }
+  c('posCategory')?.addEventListener('change',()=>{
+    const selected=posCategories(state).find(category=>category.id===c('posCategory').value);
+    d.querySelector('[data-product-category-names]').textContent=selected?.name||'Semua';
+  });
   const prices = {
     priceKg: p.priceKg ?? "",
     pricePiece: p.pricePiece ?? "",
@@ -142,7 +175,11 @@ export function productDialog({
       unit.value === "kg_butir" ? "Buah" : type === "finished" ? "Olahan Duren" : type === "recipe" ? "Dessert" : "Minuman";
     d.querySelector('[data-product-category-help]').textContent = material
       ? 'Bahan internal tersedia di Master Barang dan Stok. Gunakan filter Jenis item untuk Bahan Baku atau Bahan Produksi.'
-      : 'Kategori mengikuti Master Barang, Stok, dan POS. Setelah menyimpan barang, gunakan Kelola kategori → pilih kategori → Tambah produk dari master.';
+      : 'Kategori mengikuti Master Barang, Stok, dan POS. Pilih Semua bila belum ingin menentukan kategori. Kategori tambahan dapat diatur melalui Kelola kategori.';
+    if(c('posCategory'))c('posCategory').disabled=material;
+    const unitLabel={kg_butir:'kg',kg:'kg',g:'g',ml:'ml',pcs:'pcs',porsi:'porsi'}[unit.value];
+    d.querySelector('.product-buy-field span').textContent=`Harga Beli /${unitLabel}`;
+    d.querySelector('#single-product-fields').classList.toggle('is-material',material);
     d.querySelector("#catalog-prices").innerHTML = (
       material
         ? []
@@ -153,11 +190,12 @@ export function productDialog({
       .map((key) =>
         field(
           {
-            priceKg: "Harga jual / kg (Rp)",
-            pricePiece: "Harga jual / butir (Rp)",
-            salePrice: "Harga jual / satuan (Rp)",
+            priceKg: "Harga Jual /kg",
+            pricePiece: "Harga Jual /butir",
+            salePrice: `Harga Jual /${unitLabel}`,
           }[key],
-          `<input name="${key}" type="number" min="0.01" step="any" ${type === "finished" && key === "salePrice" ? 'placeholder="Belum diisi"' : "required"} value="${e(prices[key])}">`,
+          `<input name="${key}" type="number" min="0.01" step="any" inputmode="decimal" ${type === "finished" && key === "salePrice" ? 'placeholder="Belum diisi"' : "required"} value="${e(prices[key])}">`,
+          key==='pricePiece'?'product-piece-sale-field':'product-sale-field',
         ),
       )
       .join("");
@@ -177,11 +215,14 @@ export function productDialog({
   toggleVariants();
   const preview = () => {
     const img = d.querySelector("#photo-preview");
-    const placeholder=dummyProductPhoto({...p,name:c("name").value,itemType:c("itemType").value,stockUnit:c("stockUnit").value}),shown=photo||placeholder;
+    const placeholder=c('name').value.trim()?dummyProductPhoto({...p,name:c("name").value,itemType:c("itemType").value,stockUnit:c("stockUnit").value}):'',shown=photo||placeholder;
     img.hidden = !shown;
     if (shown) img.src = shown;
     else img.removeAttribute("src");
-    d.querySelector("#photo-dummy-note").textContent=!photo&&placeholder?"Foto dummy otomatis. Unggah foto untuk menggantinya.":"";
+    const note=d.querySelector("#photo-dummy-note");
+    note.textContent=!photo&&placeholder?"Foto dummy otomatis. Unggah foto untuk menggantinya.":"";
+    note.hidden=!note.textContent;
+    d.querySelector('#remove-photo').hidden=!photo;
   };
   c("name").addEventListener("input",preview);
   c("itemType").addEventListener("change",preview);
@@ -193,6 +234,7 @@ export function productDialog({
     const seq = ++photoSequence;
     photoBusy = true;
     error("");
+    d.querySelector("#photo-status").hidden = false;
     d.querySelector("#photo-status").textContent = "Memproses foto…";
     try {
       const result = await preparePhoto(file);
@@ -216,6 +258,7 @@ export function productDialog({
     photoBusy = false;
     photo = "";
     d.querySelector("#photo-file").value = "";
+    d.querySelector("#photo-status").hidden = false;
     d.querySelector("#photo-status").textContent =
       "Foto asli akan dihapus saat Simpan. Foto dummy tampil jika tersedia.";
     preview();
@@ -239,16 +282,46 @@ export function productDialog({
       }
     };
   });
+  const finish = (message) => {d.close();render();toast(message);};
+  async function finishCategory() {
+    try {
+      if(!pendingCategory){
+        const latest=getState?.()||state;
+        const category=posCategories(latest).find(x=>x.id===savedProducts.categoryId);
+        if(!category)throw Error('Kategori sudah tidak tersedia. Gunakan Kelola kategori setelah menutup form.');
+        // A confirmed product write may replace app state. Include the confirmed
+        // rows locally for callers without getState; never create a second product.
+        const products=[...latest.products,...savedProducts.rows.filter(row=>!latest.products.some(p=>p.id===row.id))];
+        pendingCategory=categoryPayload({...latest,products},{id:id(),categoryId:category.id,name:category.name,productIds:savedProducts.rows.map(p=>p.id),mode:'add'});
+      }
+      if(!await mutate('pos_category_save',pendingCategory,{throwOnError:true}))throw Error('Penambahan kategori belum terkonfirmasi.');
+      finish(savedProducts.message);
+    } catch(err) {
+      error(`Barang sudah tersimpan. Kategori belum terkonfirmasi: ${err.message} Klik Coba lagi kategori untuk melanjutkan.`);
+      d.querySelector('[type="submit"]').textContent='Coba lagi kategori';
+    }
+  }
+  async function afterSave(rows,message,categoryId) {
+    if(!categoryId){finish(message);return;}
+    savedProducts={rows,message,categoryId};
+    d.querySelector('.product-entry-fields').disabled=true;
+    d.querySelector('[data-finish-product]').hidden=false;
+    await finishCategory();
+  }
+  d.querySelector('[data-finish-product]')?.addEventListener('click',()=>finish('Barang tersimpan. Periksa kategorinya melalui Kelola kategori.'));
   f.onsubmit = async (ev) => {
     ev.preventDefault();
     if (saving) return;
     if (photoBusy && !c("hasVariants")?.checked) return error("Tunggu sampai foto selesai diproses.");
     error("");
     try {
+      if(savedProducts){saving=true;await finishCategory();return;}
+      const categoryId=c('posCategory')&&!c('posCategory').disabled?c('posCategory').value:'';
+      if(categoryId&&!posCategories(getState?.()||state).some(x=>x.id===categoryId))throw Error('Kategori sudah tidak tersedia. Pilih kategori lain atau Semua.');
       if(c("hasVariants")?.checked) {
         const payload=editor.payload();
         saving=true;
-        if(await mutate("product_variants_save",payload)){d.close();render();toast(`${payload.variants.length} varian tersimpan`);}
+        if(await mutate("product_variants_save",payload))await afterSave(payload.variants,`${payload.variants.length} varian tersimpan`,categoryId);
         return;
       }
       const values = Object.fromEntries(new FormData(f));
@@ -280,9 +353,7 @@ export function productDialog({
       }
       saving = true;
       if (await mutate("product_save", payload)) {
-        d.close();
-        render();
-        toast("Barang tersimpan");
+        await afterSave([payload],"Barang tersimpan",categoryId);
       }
     } catch (err) {
       error(err.message);

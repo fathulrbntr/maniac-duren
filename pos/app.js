@@ -47,7 +47,7 @@ import {
   summarize,
 } from "./core.mjs?v=60";
 import { isLegacyStock, itemTypes } from "./catalog.mjs?v=77";
-import { catalogPanel, productDialog } from "./catalog-ui.mjs?v=79";
+import { catalogPanel, productDialog } from "./catalog-ui.mjs?v=80";
 const themeKey = "maniac-pos-theme";
 function themeButton(extraClass = "") {
   return `<button type="button" class="small theme-toggle ${extraClass}" data-theme-toggle aria-label="Ganti tema"><svg class="theme-light-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></svg><svg class="theme-dark-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M20 15.5A9 9 0 0 1 8.5 4 9 9 0 1 0 20 15.5Z"/></svg><span data-theme-label></span></button>`;
@@ -620,7 +620,7 @@ function render() {
   if (["products", "stores", "suppliers"].includes(view)) {
     if (view === "products") {
       document.querySelector("#add-catalog-product").onclick = () =>
-        productDialog({ state, store, modal, mutate, render, toast });
+        productDialog({ state, store, modal, mutate, render, toast, getState:()=>state });
       bindInventory(state,store,catalogFilter,"products",{modal,mutate,render,toast,getState:()=>state,addProductVariant:productId=>productVariantDialog({productId,state,modal,mutate,render,toast}),addVariant:groupId=>variantGroupDialog({groupId,state,modal,mutate,render,toast}),edit:key=>productDialog({product:state.products.find(p=>p.id===key),state,store,modal,mutate,render,toast})});
     }
     document
@@ -746,7 +746,7 @@ function movement() {
 function addMaster(kind) {
   if(kind === "stores")return storeDialog(state,{...storeContext(),render:()=>{store=store||state.stores[0]?.id||"";render();}});
   if (kind === "products")
-    return productDialog({ state, store, modal, mutate, render, toast });
+    return productDialog({ state, store, modal, mutate, render, toast, getState:()=>state });
   const masterId = id();
   const d = modal(
     "Tambah " +

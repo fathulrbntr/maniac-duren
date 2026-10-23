@@ -1,0 +1,61 @@
+MANIAC DUREN — PATCH 080: POPUP ADD PRODUCT
+
+Basis: patch 079 sudah terpasang. Tidak memerlukan SQL tambahan.
+Referensi: pop up add product.png (1177 × 1177 px).
+
+CARA PASANG
+1. Ekstrak ZIP ke folder utama proyek, lalu timpa file dengan nama yang sama.
+2. Jalankan Git Bash berikut dari folder utama proyek.
+3. Tunggu deployment selesai, lalu buka /pos/ dan tekan Ctrl+Shift+R.
+
+GIT BASH
+git add pos/app.js pos/catalog-ui.mjs pos/index.html pos/product-dialog.mjs pos/product-dialog.css tests/product-dialog-ui.test.mjs PETUNJUK-PATCH-080.txt
+git commit -m "Sesuaikan popup tambah barang dengan desain referensi"
+git push
+
+TAMPILAN
+- Judul Add Product, tombol tutup berbentuk lingkaran, sudut popup membulat,
+  serta warna panel #2a2b2a dan input #202020 pada tema Dark mengikuti gambar.
+- Nama Barang dan Kategori berada di kiri; kotak foto dan Choose file di kanan.
+- Jenis Barang dan Satuan stock sejajar di baris berikutnya.
+- Untuk Kg + butir, kolom pertama berisi harga beli/kg dan harga beli/butir;
+  kolom kedua berisi harga jual/kg dan harga jual/butir; kolom ketiga SKU
+  dan Barcode. Nama satuan menyesuaikan bila jenis barang/satuan diganti.
+- Tombol + Add Variant berbentuk kapsul abu-abu dan berada di tengah bawah.
+- Informasi bantuan dan stok ditempatkan dalam Stok & informasi tambahan
+  yang dapat dibuka. Tombol Simpan dan Batal tetap tersedia di bagian bawah.
+- Popup dapat digulir pada layar pendek dan menyesuaikan susunan pada ponsel.
+- Tema Light mengikuti warna POS. Gaya baru hanya berlaku pada form produk.
+- Form Edit Product memakai gaya serupa; kategori produk lama tetap dikelola
+  melalui Kelola kategori agar keanggotaan beberapa kategori tetap terjaga.
+
+PERILAKU
+- + Add Variant membuka editor varian yang sudah ada; Tanpa Variant kembali
+  ke form satu barang tanpa menghapus harga/SKU yang telah diisi.
+- Pada barang baru, dropdown Kategori memakai daftar bersama Master Barang,
+  Stok, dan POS. Semua berarti tidak menambahkan kategori khusus.
+- Kategori yang dipilih diterapkan setelah barang berhasil disimpan,
+  termasuk ke semua varian baru. Bahan Baku/Produksi tidak masuk kategori POS.
+- Jika barang sudah tersimpan tetapi kategori belum terkonfirmasi, form
+  menampilkan status dan Coba lagi kategori. Pengulangan hanya mengirim
+  operasi kategori yang sama; tidak membuat barang atau stok lagi.
+- Foto yang diunggah tetap diproses dengan alur kompresi sebelumnya. Foto
+  dummy hanya pratinjau dan tidak disimpan sebagai foto unggahan.
+- Harga beli per butir tetap menggunakan fungsi patch 077, termasuk izin
+  akses dan pemeriksaan versi database yang sudah ada.
+- Tidak ada perubahan database, data stok, layout desktop 3/6, atau HPP.
+
+VERIFIKASI
+- 8 file pengujian terkait lulus: dialog produk, kategori bersama, ringkasan
+  kartu, harga beli per butir, UI varian, alur kartu/varian, detail produk,
+  dan foto produk.
+- Pengujian baru menjalankan handler tombol Add Variant dan penyimpanan:
+  perubahan mode, nilai tetap tersimpan dalam form, kategori produk/varian,
+  kegagalan sebelum/sesudah kategori tersimpan, pengulangan ID operasi yang
+  sama, barang mentah, serta pelestarian barcode dengan nol di depan.
+- Sintaks JavaScript dan parsing CSS lulus.
+- Rendering visual di browser belum dapat diverifikasi di lingkungan ini.
+  Patch belum dideploy oleh asisten.
+
+TES OPSIONAL
+node --test tests/product-dialog-ui.test.mjs tests/shared-categories.test.mjs tests/product-card-summary.test.mjs tests/product-buy-piece.test.mjs tests/variants-unified-ui.test.mjs tests/product-variants-ui.test.mjs tests/product-details.test.mjs tests/product-photos.test.mjs
