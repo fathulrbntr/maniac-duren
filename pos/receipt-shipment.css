@@ -1,0 +1,33 @@
+/* Receipt 082 follows the shared 081 typography and light/dark palette. */
+.receipt-shipment-dialog { width:min(780px,94vw);max-width:min(780px,94vw); }
+.receipt-shipment-dialog .receipt-section-head,.receipt-product-head { display:flex;align-items:center;justify-content:space-between;gap:12px; }
+.receipt-section-head { margin:24px 0 12px; }
+.receipt-section-head h3 { margin:0;font-size:var(--text-section); }
+.receipt-section-head>span { font-size:var(--text-sm);color:var(--muted);white-space:nowrap; }
+.receipt-lines { display:grid;gap:14px; }
+.receipt-product { min-width:0;padding:18px;border:1px solid var(--line);border-radius:var(--radius-card);background:var(--surface); }
+.receipt-product-head { margin-bottom:14px; }
+.receipt-product-head h4 { margin:0;font-size:var(--text-body); }
+.receipt-product .receipt-remove { color:var(--danger);font-size:var(--text-sm);padding:6px 10px;min-height:36px;background:transparent; }
+.receipt-product .form-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.receipt-product .field,.receipt-shipment-dialog input,.receipt-shipment-dialog select { min-width:0;max-width:100%; }
+.receipt-product-actions { margin:16px 0 12px; }
+.receipt-product-actions button { min-height:44px; }
+.receipt-line-summary { font-size:var(--text-sm);line-height:1.5; }
+.receipt-line-summary>b { display:block; }
+.receipt-line-summary p { margin:4px 0 0;color:var(--muted); }
+.receipt-shipment-dialog dl { margin:10px 0 0; }
+.receipt-shipment-dialog dl>div { display:flex;justify-content:space-between;gap:16px;margin:6px 0; }
+.receipt-shipment-dialog dt { color:var(--muted); }
+.receipt-shipment-dialog dd { margin:0;text-align:right;font-weight:var(--weight-semibold);overflow-wrap:anywhere; }
+.receipt-shipment-dialog .receipt-add { width:100%;min-height:46px;margin-top:14px;background:var(--surface-soft);border:1px dashed var(--line); }
+.receipt-shipping { display:block;margin-top:24px; }
+.receipt-total { background:var(--surface-soft);border-color:var(--line); }
+.receipt-grand-total { border-top:1px solid var(--line);padding-top:12px; }
+.receipt-grand-total dt,.receipt-grand-total dd { color:var(--ink);font-size:var(--text-md);font-weight:var(--weight-bold); }
+.receipt-shipment-dialog .modal-actions { flex-wrap:wrap; }
+@media(max-width:600px) {
+ .receipt-product { padding:14px; }
+ .receipt-product .form-grid { grid-template-columns:1fr; }
+ .receipt-shipment-dialog .modal-actions>button { width:100%; }
+}

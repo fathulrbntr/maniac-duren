@@ -17,7 +17,7 @@ const tracked = new Set([
   "product_variants_save", "pos_category_save",
   "order_direct", "order_complete", "order_create", "order_start", "order_ready", "order_pay", "order_cancel", "sort", "inventory_loss", "recover", "employee_save", "attendance_in", "attendance_out", "work_hours_save",
   "sale",
-  "receipt",
+  "receipt", "receipt_batch",
   "movement",
   "unit_receipt",
   "produce",
@@ -60,6 +60,9 @@ export function settleRetry(action, uncertain = false) {
 }
 export function reconcileRetry(state) {
   if (!pending) return false;
+  if (pending.action === "receipt_batch" && pending.payload.lines?.length && pending.payload.lines.every(line => (state.lots || []).some(lot => lot.id === line.id && lot.shipmentId === pending.id))) {
+    pending = null; persist(); return true;
+  }
   const rows =
     {
       document_save: state.adminEvents, document_issue: state.adminEvents, document_cancel: state.adminEvents, letterhead_save: state.adminEvents, expense_save: state.adminEvents, expense_void: state.adminEvents,

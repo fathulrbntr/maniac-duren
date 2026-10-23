@@ -8,7 +8,7 @@ import {createSidebarController,sidebarIcon} from './sidebar.mjs?v=42';
 const sidebar = createSidebarController();
 import {installMoneyInputs} from './money-input.mjs?v=77';
 installMoneyInputs();
-import { openWeighingReceipt, showWeighingHistory } from './receipt-weighing.mjs?v=19';
+import { openWeighingReceipt, showWeighingHistory } from './receipt-weighing.mjs?v=82';
 import {inventoryPanel,bindInventory} from "./inventory-ui.mjs?v=79";
 import {opsPages,opsPage,bindOps,clearOrderDraft,hasOrderDraft} from './operations-ui.mjs?v=71';
 import {printReceipt} from './receipt-printer.mjs?v=64';
@@ -27,7 +27,7 @@ import {
   reconcileRetry,
   pendingRetry,
   setRetryScope,
-} from "./retry.mjs?v=71";
+} from "./retry.mjs?v=82";
 import { wastePage, bindWaste } from "./waste-ui.mjs?v=63";
 import {
   recipesPage,
@@ -144,7 +144,7 @@ function toast(text) {
   toast.timer = setTimeout(() => (t.style.display = "none"), 5000);
 }
 let stockDemoModule,demoSource=null;
-const demoEngine=()=>stockDemoModule ||= import('./stock-demo.mjs?v=77').catch(error=>{stockDemoModule=null;throw error;});
+const demoEngine=()=>stockDemoModule ||= import('./stock-demo.mjs?v=82').catch(error=>{stockDemoModule=null;throw error;});
 async function adminRpc(name,p){
   if(mode!=='stock-demo')return request('/rest/v1/rpc/'+name,p);
   const snapshot=state,engine=await demoEngine();
@@ -303,6 +303,8 @@ async function mutate(action, payload, {throwOnError = false} = {}) {
         ? await request("/rest/v1/rpc/pos_menu_category_save", {payload})
         : action === "product_variants_save"
         ? await request("/rest/v1/rpc/pos_product_variants_save", { payload })
+        : action === "receipt_batch"
+        ? await request("/rest/v1/rpc/pos_receive_shipment", {payload})
         : await request("/rest/v1/rpc/pos_mutate_027", { action, payload });
     if(mode === "live") settleRetry(action);
     return true;

@@ -1,0 +1,62 @@
+PATCH 082 — BARANG MASUK: BEBERAPA PRODUK + NOMOR NOTA
+
+Dibuat untuk versi proyek dengan patch UI 081. Ini adalah patch pemasangan,
+bukan konfirmasi bahwa website produksi sudah diperbarui.
+
+PERUBAHAN
+- Popup Barang masuk untuk durian utuh dapat menambah/menghapus beberapa produk.
+- Nomor nota wajib diisi satu kali untuk seluruh penerimaan (maksimal 100 karakter).
+- Tanggal masuk, store, supplier dan ongkir berlaku untuk satu nota.
+- Setiap produk punya harga nota dan riwayat timbang sendiri (berat + butir).
+- Produk yang sudah dipilih tidak dapat dipilih lagi dalam nota yang sama.
+- Maksimal 50 produk, masing-masing maksimal 1.000 catatan timbang.
+- Ongkir dibagi menurut berat aktual. Modal per kg dan butir dihitung per produk.
+- Nomor nota tersimpan pada setiap batch dan terlihat saat membuka riwayat timbang.
+- Seluruh produk tersimpan dalam satu transaksi database: bila satu gagal,
+  seluruh penerimaan dibatalkan. Kirim ulang payload yang sama tidak menggandakan stok.
+- Mode demo mendukung uji penerimaan ini tanpa mengubah data asli.
+- Mengikuti font, warna, dark/light mode dan bentuk kontrol dari UI 081.
+
+CARA PASANG
+1. Ekstrak ZIP. Salin isi folder pos, database dan tests ke folder proyek yang
+   sama dengan versi 081, timpa file dengan nama yang sama.
+2. Buka Supabase SQL Editor untuk proyek POS yang digunakan website.
+   Jalankan seluruh isi database/receipt-shipment-082.sql.
+   SQL ini tidak menghapus data dan aman dijalankan ulang.
+   Jika prasyarat pos_mutate_027 belum ada, jalankan file yang sudah tersedia
+   di proyek: database/rollback-027-compat.sql, lalu ulangi SQL 082.
+   Jangan menjalankan reset-pos.sql atau pos.sql pada database produksi.
+3. Commit dan push file patch ke repository yang digunakan Vercel.
+   Contoh Git Bash dari folder proyek:
+
+   git add pos/app.js pos/index.html pos/receipt-weighing.mjs pos/receipt-shipment.mjs pos/receipt-shipment.css pos/retry.mjs pos/stock-demo.mjs database/receipt-shipment-082.sql tests/receipt-shipment.test.mjs tests/receipt-shipment-db.test.mjs tests/receipt-shipment-browser.mjs PETUNJUK-PATCH-082.txt
+   git commit -m "Fix multi-product receipts and add invoice numbers"
+   git push
+
+4. Setelah deployment selesai, muat ulang POS. Buka Stok & Penerimaan >
+   Barang masuk > Durian utuh (kg + butir).
+5. Isi tanggal/store/supplier/nomor nota, pilih produk pertama, isi harga nota
+   produk itu dan catat timbangannya. Klik + Tambah produk untuk jenis berikutnya.
+   Isi satu ongkir bersama, periksa total, lalu konfirmasi Penurunan selesai.
+
+CONTOH UJI DI MODE DEMO
+- Bawor: 20 kg / 5 butir, harga nota Rp1.000.000.
+- Monthong: 10 kg / 5 butir, harga nota Rp600.000.
+- Ongkir bersama: Rp300.000.
+- Bagian ongkir Bawor Rp200.000; Monthong Rp100.000.
+- Total modal: Rp1.900.000. Modal Bawor Rp60.000/kg; Monthong Rp70.000/kg.
+- Kedua batch memiliki nomor nota yang sama dan riwayat timbang terpisah.
+
+VALIDASI YANG SUDAH DIJALANKAN
+- Database lokal PostgreSQL/PGlite: basis 019 dan basis dengan 020/021,
+  pemasangan ulang, penyimpanan nomor nota, alokasi ongkir, pengiriman ulang,
+  penolakan produk ganda, pembatalan semua baris saat satu gagal, dan akses akun.
+- Uji logika/demo/retry serta regresi login, format Rupiah dan penimbangan lama.
+- Browser Chromium: tambah/hapus produk, edit timbang per produk, validasi nota,
+  nilai uang yang dikirim, lebar 360/390/1440 px, dark dan light mode.
+- Database dan website produksi belum diubah dari sesi ini.
+
+Untuk menjalankan tes kembali setelah npm install:
+node --test tests/receipt-shipment.test.mjs tests/receipt-shipment-db.test.mjs
+node tests/receipt-shipment-browser.mjs
+Uji browser memerlukan Chromium Playwright atau BROWSER_EXECUTABLE yang valid.

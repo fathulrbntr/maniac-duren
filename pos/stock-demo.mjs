@@ -1,3 +1,4 @@
+import {receiveShipmentDemo} from './receipt-shipment.mjs?v=82';
 import {saveStoreDemo} from './store-profile.mjs?v=64';
 import {rejectActions,rejectDemo} from './reject-flow.mjs?v=63';
 import {collapseSingleVariants} from './product-stock.mjs?v=60';
@@ -44,7 +45,7 @@ export function createStockDemo(source){
  s.stockDemo={sessionId:id(),supplierId:id(),date:today(),initialQty:100};
  s.suppliers.push({id:s.stockDemo.supplierId,name:'Supplier demo',phone:'',address:''});
  s.opsVersion=Math.max(s.opsVersion||0,19);s.orderStockVersion=Math.max(s.orderStockVersion||0,11);s.orderRoutingVersion=Math.max(s.orderRoutingVersion||0,13);
- s.storeProfileVersion=64;s.rejectFlowVersion=63;s.cashierVersion=54;s.reportsAdminVersion=74;s.discounts||=[];seedMissingStock(s);return s;
+ s.receiptShipmentVersion=82;s.storeProfileVersion=64;s.rejectFlowVersion=63;s.cashierVersion=54;s.reportsAdminVersion=74;s.discounts||=[];seedMissingStock(s);return s;
 }
 function requireAccess(s,permission){if(s.access&&!s.access[permission])throw Error('Hak akses '+permission+' diperlukan.');}
 function event(s,action,p,storeId=p.storeId){s.events.push({id:localMaster.has(action)?id():p.id,action,store_id:storeId||null,business_date:p.date||today(),employee_id:s.me?.id||null,payload:clone(p),demo:true});}
@@ -125,7 +126,8 @@ export function applyStockDemoAction(source,action,payload){
  const prior=!localMaster.has(action)&&source.events.find(x=>x.id===p.id);
  if(prior){if(prior.action!==action||JSON.stringify(prior.payload)!==JSON.stringify(p))throw Error('ID pengiriman sudah digunakan untuk data lain');return source;}
  let s=clone(source);
- if(documentDemoActions.has(action))applyDocumentDemo(s,action,p);
+ if(action==='receipt_batch')receiveShipmentDemo(s,p);
+ else if(documentDemoActions.has(action))applyDocumentDemo(s,action,p);
  else if(action==='document_examples')createDocumentExamples(s,p.storeId,payload=>{cashierDemo(s,'order_create',payload,createOrder);event(s,'order_create',payload);});
  else if(action==='store_save')saveStoreDemo(s,p);
  else if(rejectActions.has(action))rejectDemo(s,action,p);
