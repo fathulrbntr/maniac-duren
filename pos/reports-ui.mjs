@@ -1,7 +1,7 @@
 import {escape as e,today,money,num,id} from './core.mjs?v=9';
-import {label,periodRange,salesReport,expenseReport,stockReport,marginReport,reportSheets,batchReportSheets} from './reports.mjs?v=86';
+import {label,periodRange,salesReport,expenseReport,stockReport,marginReport,reportSheets,batchReportSheets} from './reports.mjs?v=87';
 import {downloadWorkbook,printWindow,reportPrint} from './report-export.mjs?v=71';
-import {batchReportPage,bindBatchReport} from './batch-report-ui.mjs?v=63';
+import {batchReportPage,bindBatchReport} from './batch-report-ui.mjs?v=87';
 const options=s=>`<option value="">Semua toko yang dapat diakses</option>${s.stores.map(t=>`<option value="${e(t.id)}">${e(t.name)}</option>`).join('')}`;
 const field=(label,body)=>`<label class="field"><span>${label}</span>${body}</label>`;
 const tabs={summary:'Ringkasan',payments:'Pembayaran',products:'Produk',stores:'Toko',suppliers:'Supplier',stock:'Stok',expenses:'Pengeluaran',margin:'HPP & Hasil',batches:'Batch supplier'};

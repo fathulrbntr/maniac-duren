@@ -1,3 +1,4 @@
+import {batchMetrics,batchStockCosts} from '../pos/batch-metrics.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {stockReport} from '../pos/reports.mjs';
@@ -50,6 +51,7 @@ try{
  assert.equal(rejected(s),0,'all marked reject was cancelled');
  const instant={...mark,id:id(),rejectLotId:id(),processNow:true,outputs:makeOutputs(),evidence:proof};s=await mut('reject_mark',instant);assert.equal(s.lots.find(l=>l.id===fl).kg,80);assert.equal(s.lots.find(l=>l.id===instant.rejectLotId).kg,0);assert.equal(s.rejectRecords.find(r=>r.id===instant.id).kind,'direct');
  assert.equal(rejected(s),20,'direct mark+process must not report 40');
+ const detail=batchReports(s,store).find(r=>r.root.id===fl),metrics=batchMetrics(detail);assert.equal(metrics.rows.find(x=>x.key==='processed').percent,20);assert.equal(metrics.outputKg,5);assert.equal(metrics.skinKg,15);assert.equal(metrics.yieldPercent,25);assert.equal(batchStockCosts(detail,detail.stock.find(x=>x.lot.id===instant.outputs[0].lotId)).unitCost,64000);
  await mut('reject_void',{id:id(),storeId:store,date,recordId:instant.id,reason:'Koreksi langsung'});assert.equal((await read()).lots.find(l=>l.id===fl).kg,100);
  assert.equal(rejected(await read()),0,'direct cancellation counts once');
  await assert.rejects(mut('reject_mark',{...mark,id:id(),rejectLotId:id(),kg:101,pieces:41}),/melebihi stok/);
