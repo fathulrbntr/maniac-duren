@@ -24,6 +24,7 @@ function harness(options={}){
 }
 const h=harness(),original=structuredClone(h.f.state);h.ui.draft=true;
 await h.switchStockDemo();assert.equal(h.getMode(),'stock-demo');assert.equal(qty(h.getState(),h.f.small,h.f.store),100);assert(!h.ui.draft);assert.equal(h.requests.length,0);assert.equal(h.retry.length,0);
+await h.mutate('cashier_shift_open',{id:crypto.randomUUID(),storeId:h.f.store,openingCash:0},{throwOnError:true});
 await h.mutate('order_create',order(h.f.store,[line(h.f.small,3)]),{throwOnError:true});assert.equal(qty(h.getState(),h.f.small,h.f.store),97);assert.equal(h.requests.length,0);assert.equal(h.retry.length,0);
 await h.mutate('product_update',{...h.f.water,salePrice:6500},{throwOnError:true});assert.equal(h.getState().products.find(p=>p.id===h.f.water.id).salePrice,150000);
 for(const path of ['/rest/v1/rpc/pos_mutate_027','/rest/v1/rpc/pos_menu_category_save','/rest/v1/rpc/pos_product_variants_save','/rest/v1/rpc/pos_account_target','/rest/v1/rpc/pos_employee_document','/rest/v1/rpc/pos_document_get','/rest/v1/rpc/pos_letterhead_get'])for(const allow of [false,true])await assert.rejects(h.request(path,{},true,allow),/tidak mengirim/);

@@ -3,13 +3,13 @@ export const sections = [
   { id: 'inventory', label: 'Inventory', pages: ['products', 'stock', 'waste'] },
   { id: 'produksi', label: 'Produksi', pages: ['recipes', 'production'] },
   { id: 'laporan', label: 'Laporan & Administrasi', pages: ['reports', 'documents'] },
-  { id: 'manajemen', label: 'Manajemen', pages: ['discounts', 'employees', 'attendance', 'stores', 'suppliers'] },
+  { id: 'manajemen', label: 'Manajemen', pages: ['crm', 'discounts', 'employees', 'attendance', 'stores', 'suppliers'] },
   { id: 'pengaturan', label: 'Pengaturan', pages: ['payments', 'devices'] },
   { id: 'bantuan', label: 'Bantuan', pages: ['guide'] },
 ];
 export function visibleSections(access) {
   const allowed = access ? {
-    payments: access.cashierOwner, devices: access.cashierOwner || access.sell || access.master, discounts: access.cashierOwner, salesreport: access.reports, orders: access.sell, kitchen: access.kitchen || access.sell,
+    crm: access.crmAdmin, payments: access.cashierOwner, devices: access.cashierOwner || access.sell || access.master, discounts: access.cashierOwner, salesreport: access.reports, orders: access.sell, kitchen: access.kitchen || access.sell,
     shifts: access.sell || access.reports || access.finance, dashboard: access.reports, stock: access.stock || access.produce,
     production: access.produce, waste: access.waste, losses: access.waste,
     batches: access.trace || access.finance || access.waste, reports: access.reports || access.finance || access.trace || access.waste, documents: access.finance || access.stock, finance: access.finance, trace: access.trace,

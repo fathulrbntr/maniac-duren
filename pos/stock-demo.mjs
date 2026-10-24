@@ -1,3 +1,4 @@
+import {mutateCrmDemo,recordCrmDemo,readCrmDemo} from './crm.mjs?v=85';
 import {savePaymentSettingsDemo,requireEnabledPayment,isPaymentLabel} from './payment-methods.mjs?v=84';
 import {mutateShiftDemo,recordShiftDemo} from './cashier-shifts.mjs?v=84';
 import {receiveShipmentDemo} from './receipt-shipment.mjs?v=82';
@@ -13,7 +14,7 @@ import {checkOrder,requirements} from './order-stock.mjs?v=12';
 import {savePosCategory} from './pos-categories.mjs?v=52';
 import {saveVariantProducts} from './product-variants.mjs?v=77';
 const localMaster=new Set(['master','master_details','product_save','product_update','product_delete','recipe_save']);
-const transactionKeys=['cashierShifts','cashierShiftEvents','cashierShiftEntries','documents','expenses','adminEvents','lots','unitLots','sales','movements','orders','events','journal','money','moneyJournal','origins','productions','wasteRuns','stockAdjustments','batchProcesses','receiptShipments','rejectRecords','batchOpenOrders','attendance','cashierApprovals'];
+const transactionKeys=['members','pointLedger','crmEvents','cashierShifts','cashierShiftEvents','cashierShiftEntries','documents','expenses','adminEvents','lots','unitLots','sales','movements','orders','events','journal','money','moneyJournal','origins','productions','wasteRuns','stockAdjustments','batchProcesses','receiptShipments','rejectRecords','batchOpenOrders','attendance','cashierApprovals'];
 const clone=x=>structuredClone(x);
 const positive=(value,label)=>{const n=Number(value);if(!Number.isFinite(n)||n<=0)throw Error(label+' harus lebih dari 0');return n;};
 const unitQty=(value,unit)=>{const n=positive(value,'Jumlah');if(['pcs','porsi'].includes(unit)&&!Number.isInteger(n))throw Error('Jumlah harus bilangan bulat');return n;};
@@ -25,7 +26,7 @@ function setDemoPrices(s){
   else p.salePrice=150000;
  }
 }
-export const readStockDemo=(s,name,p)=>readDemoDocument(s,name,p);
+export const readStockDemo=(s,name,p)=>name==='pos_crm_read'?readCrmDemo(s,p):readDemoDocument(s,name,p);
 function seedMissingStock(s){
  const supplierId=s.stockDemo.supplierId,date=s.stockDemo.date;
  const existing=new Set([...s.lots,...s.unitLots].map(l=>l.storeId+':'+l.productId));
@@ -47,7 +48,7 @@ export function createStockDemo(source){
  s.stockDemo={sessionId:id(),supplierId:id(),date:today(),initialQty:100};
  s.suppliers.push({id:s.stockDemo.supplierId,name:'Supplier demo',phone:'',address:''});
  s.opsVersion=Math.max(s.opsVersion||0,19);s.orderStockVersion=Math.max(s.orderStockVersion||0,11);s.orderRoutingVersion=Math.max(s.orderRoutingVersion||0,13);
- s.paymentMethodsVersion=84;s.cashierShiftVersion=83;s.receiptShipmentVersion=82;s.storeProfileVersion=64;s.rejectFlowVersion=63;s.cashierVersion=54;s.reportsAdminVersion=74;s.discounts||=[];seedMissingStock(s);return s;
+ s.crmVersion=85;s.pointRules||=[];s.paymentMethodsVersion=84;s.cashierShiftVersion=83;s.receiptShipmentVersion=82;s.storeProfileVersion=64;s.rejectFlowVersion=63;s.cashierVersion=54;s.reportsAdminVersion=74;s.discounts||=[];seedMissingStock(s);return s;
 }
 function requireAccess(s,permission){if(s.access&&!s.access[permission])throw Error('Hak akses '+permission+' diperlukan.');}
 function event(s,action,p,storeId=p.storeId){s.events.push({id:localMaster.has(action)?id():p.id,action,store_id:storeId||null,business_date:p.date||today(),employee_id:s.me?.id||null,payload:clone(p),demo:true});}
@@ -131,7 +132,8 @@ export function applyStockDemoAction(source,action,payload){
  const prior=!localMaster.has(action)&&source.events.find(x=>x.id===p.id);
  if(prior){if(prior.action!==action||JSON.stringify(prior.payload)!==JSON.stringify(p))throw Error('ID pengiriman sudah digunakan untuk data lain');return source;}
  let s=clone(source);
- if(action==='payment_settings_save')savePaymentSettingsDemo(s,p);
+ if(action==='crm_member_save'||action==='crm_rule_save')mutateCrmDemo(s,action,p);
+ else if(action==='payment_settings_save')savePaymentSettingsDemo(s,p);
  else if(['cashier_shift_open','cashier_shift_close'].includes(action))mutateShiftDemo(s,action,p);
  else if(action==='receipt_batch')receiveShipmentDemo(s,p);
  else if(documentDemoActions.has(action))applyDocumentDemo(s,action,p);
@@ -144,5 +146,5 @@ export function applyStockDemoAction(source,action,payload){
  else if(action==='product_variants_save'){requireAccess(s,'master');saveVariantProducts(s,p);setDemoPrices(s);seedMissingStock(s);return s;}
  else if(localMaster.has(action)){requireAccess(s,'master');s=applyAction(s,action,p);setDemoPrices(s);seedMissingStock(s);}
  else throw Error('Mode demo mendukung uji kasir, kitchen, dokumen, serta pengaturan produk, kategori dan resep. Aksi ini belum tersedia dalam demo.');
- recordShiftDemo(s,source,action,p);event(s,action,p);return s;
+ recordShiftDemo(s,source,action,p);recordCrmDemo(s,action,p);event(s,action,p);return s;
 }

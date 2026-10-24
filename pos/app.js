@@ -1,3 +1,4 @@
+import {crmPage,bindCrm,memberFields,bindMemberPicker} from './crm-ui.mjs?v=85';
 import {paymentsPage,bindPayments,paymentOptions} from './payment-methods-ui.mjs?v=84';
 import {requireEnabledPayment} from './payment-methods.mjs?v=84';
 import {validPayment} from './cashier.mjs?v=84';
@@ -15,24 +16,24 @@ import {installMoneyInputs} from './money-input.mjs?v=83';
 installMoneyInputs();
 import { openWeighingReceipt, showWeighingHistory } from './receipt-weighing.mjs?v=82';
 import {inventoryPanel,bindInventory} from "./inventory-ui.mjs?v=79";
-import {opsPages,opsPage,bindOps,clearOrderDraft,hasOrderDraft} from './operations-ui.mjs?v=84';
+import {opsPages,opsPage,bindOps,clearOrderDraft,hasOrderDraft} from './operations-ui.mjs?v=85';
 import {printReceipt} from './receipt-printer.mjs?v=64';
 import {storesPage,storeDialog} from './store-settings.mjs?v=64';
 import {receiptHeader,fillReceiptLogo} from './store-profile.mjs?v=64';
-const storeContext=()=>({modal,mutate,render,toast,demo:mode==='stock-demo',loadStoreLogo:(storeId,version)=>request('/rest/v1/rpc/pos_store_logo',{store_id:storeId,expected_version:version||null})});
+const storeContext=()=>({modal,mutate,render,toast,crmRead:async payload=>{const session=activeSessionId,currentMode=mode,demoSession=state.stockDemo?.sessionId;const data=await adminRpc('pos_crm_read',{payload});if(session!==activeSessionId||currentMode!==mode||demoSession!==state.stockDemo?.sessionId)throw Error('Sesi berubah. Buka kembali CRM.');return data;},demo:mode==='stock-demo',loadStoreLogo:(storeId,version)=>request('/rest/v1/rpc/pos_store_logo',{store_id:storeId,expected_version:version||null})});
 import {
   navigation,
   visibleSections,
   mayLeave,
   trackForms,
-} from "./navigation.mjs?v=84";
+} from "./navigation.mjs?v=85";
 import {
   prepareRetry,
   settleRetry,
   reconcileRetry,
   pendingRetry,
   setRetryScope,
-} from "./retry.mjs?v=84";
+} from "./retry.mjs?v=85";
 import { wastePage, bindWaste } from "./waste-ui.mjs?v=63";
 import {
   recipesPage,
@@ -97,6 +98,7 @@ let state = emptyState(),
 const app = document.querySelector("#app"),
   filter = { from: today(), to: today(), store: "", supplier: "" };
 const title = {
+  crm: "Member & Poin",
   payments: "Metode Pembayaran", shifts: "Shift Kasir", devices: "Printer & Scanner",
   discounts: "Diskon & Persetujuan", dashboard: "Dashboard", orders: "Kasir / POS", kitchen: "Kitchen Display",
   products: "Master Barang", stock: "Stok & Penerimaan", losses: "Reject & Waste", waste: "Reject & Waste", batches: "Laporan Batch Supplier",
@@ -106,6 +108,7 @@ const title = {
   cashier: "Kasir buah cepat",
 };
 const paths = {
+  crm: "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0 M20 8v6 M17 11h6",
   payments: "M3 5h18v14H3z M3 10h18 M6 15h5",
   shifts: "M4 4h16v16H4z M8 8h8 M8 12h3 M15 12v5 M12 15h6",
   documents: "M4 3h11l5 5v13H4z M15 3v6h5 M8 13h8 M8 17h5",
@@ -151,7 +154,7 @@ function toast(text) {
   toast.timer = setTimeout(() => (t.style.display = "none"), 5000);
 }
 let stockDemoModule,demoSource=null;
-const demoEngine=()=>stockDemoModule ||= import('./stock-demo.mjs?v=84').catch(error=>{stockDemoModule=null;throw error;});
+const demoEngine=()=>stockDemoModule ||= import('./stock-demo.mjs?v=85').catch(error=>{stockDemoModule=null;throw error;});
 async function adminRpc(name,p){
   if(mode!=='stock-demo')return request('/rest/v1/rpc/'+name,p);
   const snapshot=state,engine=await demoEngine();
@@ -255,7 +258,7 @@ async function restoreSession() {
   try {
     await refresh();
     if(activeSessionId!==saved.sessionId)return;
-    const allowed=visibleSections({...state.access,cashierOwner:state.me?.role==='owner'}).flatMap(group=>group.pages);
+    const allowed=visibleSections({...state.access,cashierOwner:state.me?.role==='owner',crmAdmin:['owner','manager'].includes(state.me?.role)}).flatMap(group=>group.pages);
     view=allowed.includes(saved.view)?saved.view:defaultView();
     render();
   } catch(error) {
@@ -391,7 +394,7 @@ function shell(body) {
         <div class="sidebar-brand-row"><div class="brand"><img src="logo.png" alt=""><div><strong>Maniac Duren</strong><span>Operations / POS</span></div></div><button type="button" class="sidebar-toggle" data-sidebar-toggle aria-controls="pos-sidebar" aria-label="Tutup sidebar">${sidebarIcon}</button></div>
         <div class="sidebar-store"><label for="active-store">Outlet aktif</label><div class="store-select-wrap">${icon("stores")}<select id="active-store" aria-label="Outlet aktif" title="${e(name("stores", store))}">${options("stores", store)}</select></div></div>
       </div>
-      <nav class="nav" id="pos-navigation" aria-label="Navigasi POS">${navigation(title, view, icon, {...state.access,cashierOwner:state.me?.role==='owner'}, sidebar.closedGroups)}</nav>
+      <nav class="nav" id="pos-navigation" aria-label="Navigasi POS">${navigation(title, view, icon, {...state.access,cashierOwner:state.me?.role==='owner',crmAdmin:['owner','manager'].includes(state.me?.role)}, sidebar.closedGroups)}</nav>
       <div class="sidebar-account">${accountProfile()}<button id="logout" class="sidebar-logout" type="button" aria-label="Logout" title="Logout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 4H4v16h5M14 8l4 4-4 4M8 12h10"/></svg><span>Logout</span></button></div>
     </aside>
     <button type="button" class="sidebar-backdrop" data-sidebar-close tabindex="-1" aria-label="Tutup sidebar"></button>
@@ -428,7 +431,7 @@ function cashier() {
       })
       .join("") ||
     '<div class="empty">Tambah produk dan barang masuk dahulu.</div>'
-  }</div></section><aside class="panel receipt"><div class="header-row"><h3>Pesanan</h3><span class="tag">${cart.length} item</span></div>${cart.map((l, i) => `<div class="cart-item"><div class="cart-line"><b>${e(name("products", l.productId))}</b><button data-remove="${i}" aria-label="Hapus ${e(name("products", l.productId))}">×</button></div><div class="muted">${num(l.kg)} kg · ${l.pieces} butir · per ${l.unit === "KG" ? "kg" : "butir"}</div><div class="muted">${e(name("suppliers", l.supplierId))} · ${short(l.lotId)}</div><div style="text-align:right;margin-top:9px"><b>${money(l.total)}</b></div></div>`).join("") || '<div class="empty">Pilih produk untuk mulai.</div>'}<div class="total"><span>Total</span><span>${money(total)}</span></div><form id="checkout">${field("Tanggal penjualan", `<input type="date" name="date" value="${today()}" required>`)}${field("Metode pembayaran", `<select name="payment" required>${paymentOptions(state,store)}</select>`)}${field("Nominal diterima (Rp)", `<input name="paid" type="number" min="${total}" step="any" value="${total || ""}" required>`)}<p class="muted" id="change">Kembalian ${money(0)}</p><button type="submit" class="primary full" ${cart.length ? "" : "disabled"}>Simpan transaksi</button></form></aside></div>`;
+  }</div></section><aside class="panel receipt"><div class="header-row"><h3>Pesanan</h3><span class="tag">${cart.length} item</span></div>${cart.map((l, i) => `<div class="cart-item"><div class="cart-line"><b>${e(name("products", l.productId))}</b><button data-remove="${i}" aria-label="Hapus ${e(name("products", l.productId))}">×</button></div><div class="muted">${num(l.kg)} kg · ${l.pieces} butir · per ${l.unit === "KG" ? "kg" : "butir"}</div><div class="muted">${e(name("suppliers", l.supplierId))} · ${short(l.lotId)}</div><div style="text-align:right;margin-top:9px"><b>${money(l.total)}</b></div></div>`).join("") || '<div class="empty">Pilih produk untuk mulai.</div>'}<div class="total"><span>Total</span><span>${money(total)}</span></div><form id="checkout">${memberFields(state)}${field("Tanggal penjualan", `<input type="date" name="date" value="${today()}" required>`)}${field("Metode pembayaran", `<select name="payment" required>${paymentOptions(state,store)}</select>`)}${field("Nominal diterima (Rp)", `<input name="paid" type="number" min="${total}" step="any" value="${total || ""}" required>`)}<p class="muted" id="change">Kembalian ${money(0)}</p><button type="submit" class="primary full" ${cart.length ? "" : "disabled"}>Simpan transaksi</button></form></aside></div>`;
 }
 function stockPage() {return inventoryPanel(state,store,stockFilter,"stock")+`<details class="inventory-history"><summary>Rincian penerimaan, asal barang & riwayat pergerakan</summary>${stockHistoryPage()}</details>`;}
 function stockHistoryPage() {
@@ -469,6 +472,7 @@ function render() {
   app.innerHTML = shell(
     {
       ...Object.fromEntries(opsPages.map(key=>[key,()=>opsPage(key,state,store)])),
+      crm:()=>crmPage(state),
       payments:()=>paymentsPage(state,store),
       shifts:()=>shiftsPage(state,store),
       dashboard,
@@ -487,6 +491,7 @@ function render() {
   );
   if(view==='orders'||view==='cashier'){const banner=document.createElement("div");banner.dataset.shiftBanner="";banner.innerHTML=shiftBanner(state,store);document.querySelector("main").prepend(banner);}
   const shiftContext={...storeContext(),getState:()=>state,refresh,showLegacyReceipt:receipt,readShifts:async filters=>{if(mode==='stock-demo')return readShiftsDemo(state,filters);const sessionId=activeSessionId,revision=stateRevision;const data=await request('/rest/v1/rpc/pos_cashier_shifts_read',{filters});if(mode!=='live'||sessionId!==activeSessionId)throw Error('Sesi berubah. Muat ulang halaman shift.');if(revision===stateRevision)state.cashierShifts=data.active;return data;}};
+  if(view==='crm')bindCrm(shiftContext);
   if(view==='payments')bindPayments(shiftContext,store);
   bindShiftBanner(shiftContext,store);if(view==='shifts')bindShiftsPage(shiftContext,store);
   document.querySelector('#order-products')?.addEventListener('stock-refresh',()=>{const banner=document.querySelector('[data-shift-banner]');if(banner){banner.innerHTML=shiftBanner(state,store);bindShiftBanner(shiftContext,store,banner);}});
@@ -596,6 +601,7 @@ function render() {
       }
     };
     const form = document.querySelector("#checkout");
+    const memberPicker=bindMemberPicker(shiftContext,form,()=>cart);
     form.paid.oninput = () => {
       const change =
         Number(form.paid.value) - cart.reduce((a, l) => a + l.total, 0);
@@ -611,6 +617,7 @@ function render() {
         storeId: store,
         paid: Number(form.paid.value),
         lines: cart,
+        memberId:memberPicker.get()?.id||null,
       };
       try{requireEnabledPayment(state,store,payload.payment);validPayment(payload,cart.reduce((a,l)=>a+l.total,0));}catch(error){toast(error.message);return;}
       if (await mutate("sale", payload)) {
@@ -801,6 +808,7 @@ function receipt(saleId) {
   const lines = [
     "#" + short(s.id) + " · " + s.date,
     "Kasir: " + cashierName(s),
+    ...(s.customer?["Member: "+s.customer.name,(s.pointsReversed?"Poin dibatalkan: ":"Poin diperoleh: ")+(s.pointsEarned||0)]:[]),
     "--------------------------------",
     ...s.lines.flatMap((l) => [
       name("products", l.productId),

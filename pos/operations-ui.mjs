@@ -1,6 +1,6 @@
 import {cashierName} from './cashier-shifts.mjs?v=84';
 import {itemTypes} from './catalog.mjs?v=59';
-import {cashierFields,bindCheckout,discountsPage,bindDiscounts,voidDialog,showReceipt,payExistingOrder} from './cashier-ui.mjs?v=84';
+import {cashierFields,bindCheckout,discountsPage,bindDiscounts,voidDialog,showReceipt,payExistingOrder} from './cashier-ui.mjs?v=85';
 import {devicesPage,bindDevices} from './devices-ui.mjs?v=66';
 import {readDeviceSettings} from './device-settings.mjs?v=58';
 import {barcodeProduct,bindBarcodeInput} from './barcode-scanner.mjs?v=66';

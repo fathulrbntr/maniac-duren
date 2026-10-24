@@ -30,7 +30,7 @@ try{
  // Owner config uses its real form; cashier cannot see or save settings.
  view='discounts';render();await root.querySelector('#new-discount').fire('click');let d=m.latest;field(d,'name').value='Diskon uji';field(d,'kind').value='percent';field(d,'value').value='10';await submit(d);assert.equal(state.discounts.length,1);const policy=state.discounts[0];
  state.me=cashier;state=apply(state,'cashier_shift_open',{id:id(),storeId:f.store,openingCash:0});assert.match(discountsPage(state),/hanya untuk owner/);assert.throws(()=>apply(state,'discount_save',{id:id(),discountId:id(),expectedVersion:0,name:'Bebas',kind:'amount',value:1000,active:true}),/owner/);
- view='orders';clearOrderDraft();render();assert(root.querySelector('#order-table'));assert.equal(root.querySelector('#order-note').attrs.placeholder,'Nama pelanggan / permintaan khusus');
+ view='orders';clearOrderDraft();render();assert(root.querySelector('#order-table'));assert.equal(root.querySelector('#order-note').attrs.placeholder,'Permintaan khusus / catatan tambahan');
  await pick(f.water);root.querySelector('#order-table').value='7';root.querySelector('#order-note').value='Tanpa es';root.querySelector('#order-discount').value=policy.id;await refreshCheckout();assert(root.querySelector('#save-order').disabled);
  await root.querySelector('#request-discount').fire('click');let a=state.cashierApprovals.at(-1);assert.equal(a.status,'pending');assert.equal(state.orders.length,0);assert.equal(qty(state,f.water,f.store),100);
  assert.throws(()=>apply(state,'cashier_approval_decide',{id:id(),approvalId:a.id,decision:'approved'}),/owner/);

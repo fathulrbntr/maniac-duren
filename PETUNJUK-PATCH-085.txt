@@ -1,0 +1,82 @@
+PATCH 085 — CRM MEMBER & POIN PRODUK
+Basis: proyek Maniac Duren sampai patch 084. Patch tambahan, bukan proyek lengkap.
+
+FITUR
+1. Customer/member opsional di Kasir/POS dan kasir buah lama. Kosong = tamu.
+2. Cari member pada database berdasarkan nama/nomor. Tambah melalui popup:
+   nama dan telepon wajib, email opsional. Format 08…, 628…, +628… dinormalisasi.
+   Nomor tidak boleh ganda; nama yang sama diperbolehkan. Member berlaku lintas outlet.
+3. Menu Manajemen > Member & Poin untuk owner/manager: pencarian, saldo, riwayat
+   transaksi/poin, edit kontak, status aktif, persetujuan promosi, ekspor kontak.
+   Kasir dapat mencari member aktif dan mendaftarkan member; tidak dapat membuka
+   daftar CRM lengkap, mengedit member, mengatur poin atau mengekspor kontak.
+4. Owner mengatur poin per produk/varian di tab Aturan poin produk.
+   Default produk tanpa aturan: 0 poin (tidak ada angka hadiah yang diasumsikan).
+   Contoh: 10 poin setiap 1 kg Monthong; 5 poin setiap 1 porsi Es Durian.
+   Buah: pilih kg aktual atau butir, berlaku terlepas dari cara penjualannya.
+   Produk lain: menggunakan satuan produk. Satu aturan per SKU/varian.
+   Qty SKU yang sama digabung dalam satu transaksi, lalu floor(qty/kelipatan)*poin.
+   Contoh 2,5 kg dengan aturan 10 poin/1 kg = 20 poin.
+   Sisa pecahan tidak dibawa ke transaksi berikutnya. Diskon tidak mengurangi qty.
+5. Poin dihitung dari rincian penjualan tervalidasi di server setelah lunas.
+   Transaksi, stok, member dan poin tersimpan dalam satu transaksi database.
+   Kirim ulang dengan ID yang sama tidak menggandakan poin. Void/refund penuh
+   membatalkan poin asal satu kali. Perubahan aturan/nama tidak mengubah struk lama.
+   Transaksi lama tidak memperoleh poin retroaktif. Belum ada penukaran/masa berlaku
+   poin atau refund sebagian dalam patch ini.
+6. Struk menampilkan nama member dan poin transaksi. Saldo member mencakup seluruh
+   outlet; riwayat manager dibatasi ke outlet yang dapat diakses akun tersebut.
+7. Mode demo mengosongkan data member/ledger asli dan menyimpan latihan hanya di tab.
+
+WHATSAPP
+- Sudah tersedia checkbox persetujuan promosi (default tidak dicentang), pencatatan
+  waktu/petugas/nomor/persetujuan, opt-out melalui Ubah member, dan ekspor CSV hanya
+  untuk member aktif yang menyetujui. Mengubah nomor mengosongkan checkbox di form
+  agar petugas meminta persetujuan ulang. Admin harus mencatat permintaan berhenti.
+- Belum menghubungkan akun WhatsApp, mengirim broadcast, atau menerima webhook.
+- Integrasi otomatis dapat memakai WhatsApp Business Platform / Cloud API atau
+  penyedia resmi. Kampanye yang memulai percakapan perlu template disetujui dan
+  penerima yang telah opt-in. Nomor/email saja bukan persetujuan promosi.
+- Tahap integrasi berikutnya memerlukan akun/nomor bisnis, kredensial di backend,
+  template marketing, antrean pengiriman, pencatatan status, serta webhook untuk
+  delivery dan opt-out. Status persetujuan perlu dicek ulang sebelum tiap pengiriman.
+  Jangan menaruh access token WhatsApp pada JavaScript browser.
+- Ekspor CSV tidak mengirim pesan. Hindari memakai daftar lama setelah ada opt-out.
+- Kebijakan resmi diperiksa 24 Oktober 2026:
+  https://business.whatsapp.com/policy
+
+PEMASANGAN WINDOWS
+1. Pastikan proyek sudah memakai patch 084. Cadangkan database dan commit/salin
+   perubahan lokal Anda. Tidak perlu menjalankan ulang seluruh pos.sql.
+2. Ekstrak ZIP ini ke ROOT repository (folder yang berisi package.json), izinkan
+   overwrite file yang sama. Tidak ada node_modules, rahasia, atau data pelanggan
+   nyata di ZIP ini.
+3. Supabase > SQL Editor: jalankan SELURUH database/crm-loyalty-085.sql sebagai
+   admin database. Script memakai BEGIN/COMMIT dan dapat dijalankan ulang.
+   Script membuat tabel baru; tidak menghapus transaksi/member yang sudah tersimpan.
+4. Deploy frontend melalui alur Git/deployment Anda. Contoh Git Bash, dari root repo:
+
+   git status --short
+   git add pos/app.js pos/index.html pos/navigation.mjs pos/cashier-ui.mjs pos/operations-ui.mjs pos/stock-demo.mjs pos/retry.mjs pos/crm.mjs pos/crm-ui.mjs pos/crm.css database/crm-loyalty-085.sql tests/crm.test.mjs tests/crm-db.test.mjs tests/crm-browser.mjs tests/cashier-ui.test.mjs tests/stock-demo-isolation.test.mjs PETUNJUK-PATCH-085.txt HASIL-UJI-PATCH-085.txt
+   git commit -m "Add optional CRM members and product loyalty points"
+   git push
+
+   Periksa git diff sebelum commit jika Anda memiliki perubahan setelah patch 084.
+5. Refresh paksa browser Windows dengan Ctrl+F5. Masuk sebagai owner.
+6. Manajemen > Member & Poin > Aturan poin produk: atur poin sebelum mulai program.
+7. Buka shift, pilih produk, pilih/tambah member, bayar, periksa struk dan saldo CRM.
+   Uji di Mode demo terlebih dahulu. Pendaftaran member tetap tersimpan meski
+   pelanggan membatalkan pembelian; poin hanya diberikan setelah pembayaran.
+
+VALIDASI LOKAL (jika ingin mengulang)
+   npm ci
+   node tests/crm.test.mjs
+   node tests/crm-db.test.mjs
+   npx playwright install chromium
+   node tests/crm-browser.mjs
+
+Database test menggunakan PostgreSQL lokal melalui PGlite, bukan database live.
+Browser test memakai app sebenarnya dengan backend simulasi. Pengujian pada akun
+Supabase/hosting live dan pengiriman WhatsApp belum dilakukan.
+Jangan menjalankan ulang migration 054/083/084 setelah 085; script lama dapat
+mengganti wrapper RPC terbaru. Bila terlanjur, pasang 085 lagi setelah script lama.

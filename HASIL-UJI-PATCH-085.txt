@@ -1,0 +1,34 @@
+VALIDASI PATCH 085 — 24 Oktober 2026
+
+LULUS
+- CRM model: normalisasi/duplikasi nomor, validasi data, poin per SKU, gabungan
+  beberapa baris produk, desimal kg, transaksi tamu, void, retry, opt-out, escaping
+  CSV, hak akses, rekonsiliasi retry, dan isolasi data member pada mode demo.
+- PostgreSQL/PGlite: migrasi dua kali; RPC member/rule/search; akses kasir vs owner;
+  consent audit; export opt-in; aturan unit/jumlah; poin setelah lunas; tamu;
+  rollback penuh jika member invalid; replay tidak menggandakan; order_pay;
+  kasir buah lama; pembelian berdiskon dengan nilai net; perubahan aturan dan
+  nama tidak mengubah snapshot; nonaktif member; refund membalik poin awal;
+  rerun migration tidak mengubah saldo; RLS dan grant authenticated/anon.
+- Chromium pada aplikasi yang dikirim: aturan poin owner, popup member, checkbox
+  default off, pencarian nomor, transaksi member/tamu, struk, riwayat poin,
+  ekspor CSV sesuai opt-in, opt-out, reload, navigasi sesuai role, lebar 360/390/1440,
+  tema terang/gelap dan tidak ada pageerror. Screenshot hanya untuk QA internal.
+- Regresi: cashier-ui, cashier-shifts, payment-methods, retry, stock-demo,
+  stock-demo-isolation, order-stock, product-details, production, receipt-print,
+  waste; serta SQL dan browser payment-methods 084.
+
+PENYESUAIAN TEST
+- cashier-ui: placeholder catatan sekarang berbeda karena tersedia kolom member.
+- stock-demo-isolation: buka shift sebelum transaksi agar mengikuti syarat patch083.
+
+CATATAN TEST LAMA
+- tests/instant-navigation.test.mjs masih memakai fixture startup/API lama
+  (pos_bootstrap/window.posConfigReady), sementara aplikasi memakai /api/pos-config.
+  Test berhenti pada unsettled top-level await. Hasil sama telah direproduksi dengan
+  app.js asli patch084; bukan regresi CRM. File lama ini tidak diubah.
+
+BATAS PENGUJIAN
+Belum diterapkan ke akun Supabase/hosting live pengguna. Browser menggunakan
+backend demo; SQL terpisah diuji pada PostgreSQL/PGlite. Tidak ada pengiriman
+WhatsApp atau koneksi akun WhatsApp, printer fisik, maupun perangkat EDC.
