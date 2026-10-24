@@ -59,8 +59,33 @@ export function expenseReport(s,f){
  return {rows:rows.sort((a,b)=>b.date.localeCompare(a.date)),purchases:rows.filter(x=>x.kind==='purchase').reduce((a,x)=>a+n(x.amount),0),operating:rows.filter(x=>x.kind==='expense').reduce((a,x)=>a+n(x.amount),0),unknown:rows.filter(x=>x.amount==null).length,total:rows.reduce((a,x)=>a+n(x.amount),0)};
 }
 const actionLabels={receipt:'Barang datang',unit_receipt:'Barang datang',movement:'Transfer',unit_transfer:'Transfer',sale:'Terjual',order_create:'Terjual',order_direct:'Terjual',order_start:'Terjual / bahan pesanan',void:'Retur penjualan',order_void:'Retur / waste',reject_mark:'Reject',reject_process:'Olah reject',reject_coral:'Olah Coral',reject_loss:'Waste',inventory_loss:'Waste / susut',produce:'Produksi',production_void:'Batal produksi',reject_void:'Batal reject',waste_process:'Olah reject',recover:'Olah reject'};
+// One reject_mark can contain three fruit movements: -source, +reject,
+// and -reject when processed immediately. Only -source marks new reject.
+// Metadata wins over the lot's current quality; journal quality is the fallback.
+function rejectMovement(j,events,lotById,records,voids){
+ const q=n(j.qty),event=events.get(j.event_id),undo=j.action==='reject_void';
+ if(!['reject_mark','reject_process','reject_void'].includes(j.action))return {delta:0,label:actionLabels[j.action]||j.action};
+ const record=undo?(voids.get(j.event_id)||records.get(event?.payload?.recordId)):records.get(j.event_id);
+ const original=undo?events.get(record?.id||event?.payload?.recordId):event;
+ const payload=original?.payload||{},action=undo?original?.action:j.action;
+ const isMark=['mark','direct'].includes(record?.kind)||action==='reject_mark';
+ const isProcess=record?.kind==='process'||action==='reject_process';
+ const source=record?.sourceLotId||payload.sourceLotId,target=record?.rejectLotId||payload.rejectLotId;
+ const lot=lotById.get(j.lot_id),quality=j.quality??lot?.quality;
+ const isSource=source?j.lot_id===source:['ready','unripe'].includes(quality);
+ const isReject=target?j.lot_id===target:quality==='reject';
+ if(isMark){
+  if(isSource&&(undo?q>0:q<0))return {delta:-q,label:undo?'Batal penandaan reject':'Ditandai reject (stok asal)'};
+  if(isReject)return {delta:0,label:undo?(q<0?'Batal masuk stok reject':'Bahan olahan kembali ke reject'):(q>0?'Masuk stok reject':'Reject dipakai untuk olahan')};
+  if(undo?q<0:q>0)return {delta:0,label:undo?'Batal hasil olahan reject':'Hasil olahan reject'};
+  return {delta:0,label:'Reject — periksa asal pergerakan',unknown:true};
+ }
+ if(isProcess)return {delta:0,label:undo?(q>0?'Bahan olahan kembali ke reject':'Batal hasil olahan reject'):(q<0?'Reject dipakai untuk olahan':'Hasil olahan reject')};
+ return {delta:0,label:actionLabels[j.action]||j.action,unknown:undo&&!record&&!original};
+}
 export function stockReport(s,f){
  const events=new Map((s.events||[]).map(x=>[x.id,x])),lots=[...s.lots||[],...s.unitLots||[]],groups=new Map(),details=[];
+ const lotById=new Map(lots.map(l=>[l.id,l])),records=new Map((s.rejectRecords||[]).map(r=>[r.id,r])),voids=new Map((s.rejectRecords||[]).filter(r=>r.voidEventId).map(r=>[r.voidEventId,r]));let rejectUnclassified=0;
  const row=(productId,storeId,unit)=>{const key=[productId,storeId,unit].join('|');if(!groups.has(key))groups.set(key,{productId,storeId,name:label(s,'products',productId),store:label(s,'stores',storeId),unit,opening:0,incoming:0,sold:0,rejected:0,loss:0,transferIn:0,transferOut:0,other:0,closing:0,current:0,rejectCurrent:0,pieces:0});return groups.get(key);};
  const journal=(s.journal||[]).map(j=>({...j,date:j.date||events.get(j.event_id)?.business_date||'',action:j.action||events.get(j.event_id)?.action||'unknown'}));
  // Older lots might precede the stock journal. Backfill only missing receipt entries.
@@ -83,14 +108,15 @@ export function stockReport(s,f){
    else if(['movement','unit_transfer'].includes(j.action))bucket=q>0?'transferIn':'transferOut';
    else if(['sale','order_create','order_direct','order_start','void','order_void'].includes(j.action))bucket='sold';
    else if(['inventory_loss','reject_loss'].includes(j.action))bucket='loss';
-   // Reject is a quality transfer, not another stock deduction. Negative side is informational.
-   if(j.action==='reject_mark'&&q<0)r.rejected-=q;
+   // Count marking once, and reverse it on the cancellation date. Processing
+   // still affects the stock balance through its original signed journal rows.
+   const reject=rejectMovement(j,events,lotById,records,voids);r.rejected+=reject.delta;if(reject.unknown)rejectUnclassified++;
    r[bucket]+=bucket==='sold'||bucket==='loss'||bucket==='transferOut'?-q:q;
-   details.push({...j,product:label(s,'products',j.product_id),store:label(s,'stores',j.store_id),supplier:label(s,'suppliers',j.supplier_id),label:actionLabels[j.action]||j.action});
+   details.push({...j,product:label(s,'products',j.product_id),store:label(s,'stores',j.store_id),supplier:label(s,'suppliers',j.supplier_id),label:reject.label});
   }
  }
  for(const r of groups.values()){r.closing+=r.current;const delta=r.incoming-r.sold-r.loss+r.transferIn-r.transferOut+r.other;r.opening=r.closing-delta;}
- return {rows:[...groups.values()].sort((a,b)=>a.name.localeCompare(b.name)),details:details.sort((a,b)=>b.date.localeCompare(a.date)),incomplete:journal.some(j=>!j.date)||lots.some(l=>!s.journal?.some(j=>j.lot_id===l.id))};
+ return {rows:[...groups.values()].sort((a,b)=>a.name.localeCompare(b.name)),details:details.sort((a,b)=>b.date.localeCompare(a.date)),rejectUnclassified,incomplete:journal.some(j=>!j.date)||lots.some(l=>!s.journal?.some(j=>j.lot_id===l.id))};
 }
 
 export function marginReport(s,f){
@@ -124,7 +150,7 @@ export function reportSheets(s,f){
  }
  if(!s.access||s.access.finance){const m=marginReport(s,f);add('HPP dan hasil',['Penjualan','HPP tercatat','Waste tercatat','Operasional','Hasil setelah biaya','Biaya belum lengkap'],[[m.revenue,m.cogs,m.loss,m.operating,m.result??'Belum lengkap',m.unknown]]);add('Margin produk',['Tanggal','Toko','Produk','Penjualan','HPP','Laba kotor','Memakai olahan reject'],m.rows.map(r=>[r.date,label(s,'stores',r.storeId),r.name,r.revenue,r.cost??'Belum diketahui',r.cost==null?'Belum diketahui':r.revenue-r.cost,r.recovered?'Ya':'Tidak']));}
  if(!s.access||s.access.finance)add('Pengeluaran',['Tanggal','Toko','Kategori','Keterangan','Supplier','Nominal','Referensi'],x.rows.map(r=>[r.date,label(s,'stores',r.storeId),r.category,r.description,r.supplier||'',r.amount??'Belum diketahui',r.reference]));
- add('Keterangan',['Keterangan','Nilai'],[['Periode',f.from+' s.d. '+f.to],['Toko',f.store?label(s,'stores',f.store):'Semua toko yang dapat diakses'],['Penjualan','Transaksi lunas aktif, setelah diskon; pembatalan dikeluarkan dari periode penjualan asal.'],['Supplier','Alokasi bahan memakai proporsi modal; belum terpetakan tetap ditampilkan.'],['Pengeluaran','Biaya pembelian termasuk ongkir + operasional. PO, invoice, transfer, HPP, dan waste tidak dijumlahkan ulang. Bukan laporan arus kas pembayaran utang.'],['Stok *','Awal/akhir direkonstruksi dari stok sekarang dan jurnal. Riwayat sebelum jurnal atau koreksi lama yang tidak tercatat perlu rekonsiliasi.'],['Reject **','Perubahan kualitas, bukan pengurangan stok tambahan.'],['Stok fisik','Terjual/bahan pesanan mengikuti tanggal pemotongan stok, dapat berbeda dari tanggal pembayaran.']]);
+ add('Keterangan',['Keterangan','Nilai'],[['Periode',f.from+' s.d. '+f.to],['Toko',f.store?label(s,'stores',f.store):'Semua toko yang dapat diakses'],['Penjualan','Transaksi lunas aktif, setelah diskon; pembatalan dikeluarkan dari periode penjualan asal.'],['Supplier','Alokasi bahan memakai proporsi modal; belum terpetakan tetap ditampilkan.'],['Pengeluaran','Biaya pembelian termasuk ongkir + operasional. PO, invoice, transfer, HPP, dan waste tidak dijumlahkan ulang. Bukan laporan arus kas pembayaran utang.'],['Stok *','Awal/akhir direkonstruksi dari stok sekarang dan jurnal. Riwayat sebelum jurnal atau koreksi lama yang tidak tercatat perlu rekonsiliasi.'],['Reject **','Buah yang ditandai reject, dikurangi pembatalan pada periode ini. Perubahan kualitas dihitung sekali; pemakaian untuk olahan tidak dihitung ulang. Bisa berasal dari stok awal. Nilai negatif berarti pembatalan melebihi penandaan pada periode ini.'],['Kelengkapan reject',st.rejectUnclassified?st.rejectUnclassified+' baris belum terpetakan; periksa jejak stok.':'Pergerakan reject terpetakan.'],['Stok fisik','Terjual/bahan pesanan mengikuti tanggal pemotongan stok, dapat berbeda dari tanggal pembayaran.']]);
  return sheets;
 }
 

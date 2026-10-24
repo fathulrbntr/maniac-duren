@@ -1,0 +1,71 @@
+PATCH 086 — PERBAIKAN HITUNGAN REJECT DI LAPORAN
+Basis proyek: patch 085 (CRM). Ini patch tambahan, bukan proyek lengkap.
+
+PENYEBAB
+Ketika memilih Catat & langsung olah, satu transaksi menghasilkan:
+-400 kg dari stok buah asal,
++400 kg masuk ke lot reject,
+-400 kg dari lot reject untuk proses olahan,
+dan penambahan stok produk hasil olahan.
+Laporan lama menjumlahkan kedua baris negatif sebagai reject baru: 800 kg.
+Padahal penandaan reject hanya 400 kg; pengurangan berikutnya adalah pemakaian
+buah reject yang sama untuk menjadi produk olahan. Saldo stok tetap memakai
+seluruh perubahan jurnal bertanda + dan -.
+
+HASIL UNTUK CONTOH GAMBAR
+Barang datang               500 kg
+Penjualan                    30,24 kg
+Buah ditandai reject        400 kg
+Buah reject dipakai olahan  400 kg (tahap berikutnya, bukan reject baru)
+Sisa buah                    69,76 kg
+Sisa reject belum diolah      0 kg
+Hasil olahan: Coral 127 kg, Durpas 1 kg 70 pcs, Durpas 500 gr 60 pcs.
+
+PERBAIKAN
+- Reject ditandai dihitung hanya dari perpindahan stok buah asal ke reject.
+- Tahap pemakaian reject untuk olahan tidak menambah hitungan reject baru.
+- Label jejak stok membedakan Ditandai reject, Masuk stok reject,
+  Reject dipakai untuk olahan, dan Hasil olahan reject.
+- Pembatalan penandaan mengurangi angka reject pada tanggal pembatalan.
+  Pembatalan olahan saja tidak membatalkan penandaan reject asal.
+- Hitungan yang sama digunakan tampilan laporan, Excel dan PDF.
+- Riwayat yang tidak cukup untuk menentukan tahap diberi peringatan,
+  tidak ditebak atau dibatasi paksa ke angka barang masuk.
+- Stok, jurnal, bukti foto, hasil olahan, dan modal tidak diubah.
+
+CATATAN PERIODE
+Reject dapat berasal dari stok awal, sehingga pada filter periode tertentu
+angka reject memang dapat melebihi barang datang DALAM PERIODE itu.
+Pembatalan atas reject periode lalu dapat membuat angka reject periode ini
+negatif. Catatan ini berbeda dari bug hitungan ganda pada contoh gambar.
+
+CARA PASANG WINDOWS
+1. Pastikan patch 085 sudah ada di repository. Simpan/commit perubahan lokal Anda.
+2. Ekstrak ZIP ke root repository (folder package.json), overwrite file yang sama.
+3. TIDAK ADA SQL BARU. Jangan hapus/reset jurnal atau koreksi stok secara manual.
+4. Buka Git Bash dari folder repository, periksa diff, lalu:
+
+   git diff --stat
+   git add pos/reports.mjs pos/reports-ui.mjs pos/app.js pos/index.html tests/reject-report-fixture.mjs tests/reject-report.test.mjs tests/reject-report-browser.mjs tests/reject-flow-sql.test.mjs PETUNJUK-PATCH-086.txt
+   git commit -m "Fix double-counted reject in stock reports"
+   git push origin main
+
+5. Tunggu deploy Vercel selesai, lalu Ctrl+F5. Laporan lama ikut terkoreksi
+   dari jurnal yang sama; tidak perlu menginput ulang reject.
+6. Periksa periode/outlet yang sama. Reject ditandai harus menjadi 400 kg;
+   sisa buah tetap 69,76 kg pada data contoh. Ekspor ulang Excel/PDF jika perlu.
+
+PENGUJIAN
+Lulus 17 pemeriksaan model/regresi laporan, batch, reject UI/demo dan pembayaran.
+Lulus test database PostgreSQL/PGlite untuk mark-only, olah bertahap, olah langsung,
+pembatalan berurutan, dan penolakan reject melebihi stok fisik yang tersedia.
+Lulus Chromium dengan app sebenarnya dan fixture angka dari gambar: reject 400,
+sisa 69,76, label 11 baris jurnal, Excel/PDF, desktop/mobile, tanpa RPC mutasi.
+Belum diterapkan pada database atau hosting live pengguna.
+
+Untuk menjalankan ulang pengujian:
+   npm ci
+   node --test tests/reject-report.test.mjs tests/reports.test.mjs tests/batch-report.test.mjs tests/reject-flow-ui.test.mjs tests/payment-methods.test.mjs
+   node tests/reject-flow-sql.test.mjs
+   npx playwright install chromium
+   node tests/reject-report-browser.mjs

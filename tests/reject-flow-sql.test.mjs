@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import {stockReport} from '../pos/reports.mjs';
 import {batchReports} from '../pos/batch-report.mjs';
 import {menuStatus} from '../pos/order-stock.mjs';
 import {randomUUID as id} from 'node:crypto';
@@ -27,13 +28,16 @@ try{
  await mut('waste_process',old);await mut('waste_void',{id:id(),date,wasteId:old.id,reason:'Koreksi riwayat lama'});
  await assert.rejects(mut('recover',{id:id(),storeId:store,date,lotId:fl}),/menu Reject/);
  await assert.rejects(db.query('select public.pos_reject_mutate($1,$2)', ['reject_mark',{}]),/permission denied/);
+ const rejected=s=>stockReport(s,{from:date,to:date,store}).rows.find(r=>r.productId===fruit.id)?.rejected||0;
  const mark={id:id(),storeId:store,date,sourceLotId:fl,rejectLotId:id(),kg:20,pieces:8,cause:'taste',reason:'Rasa tidak enak',evidence:{reject:image}};
  await as(cashier);await assert.rejects(mut('reject_mark',mark),/Hak akses/);await as(kitchen);await assert.rejects(mut('reject_mark',{...mark,storeId:foreign}),/Hak akses/);
  let s=await mut('reject_mark',mark);await mut('reject_mark',mark);assert.equal(s.lots.find(l=>l.id===fl).kg,80);assert.equal(s.lots.find(l=>l.id===mark.rejectLotId).quality,'reject');assert.equal(s.lots.reduce((n,l)=>n+l.kg,0),100);assert.equal(s.rejectRecords.length,1);assert.equal(s.rejectRecords[0].processedBy,'kitchen');assert.equal(s.rejectRecords[0].inputCost,undefined);assert(!JSON.stringify(s).includes(image),'No evidence photos in normal read');
+ assert.equal(rejected(s),20,'mark-only counted once from SQL journal');
  await assert.rejects(mut('reject_mark',{...mark,kg:21}),/ID pengiriman/);
  await as(owner);
  const process={id:id(),storeId:store,date,sourceLotId:mark.rejectLotId,kg:10,pieces:4,reason:'Olah separuh reject',outputs:makeOutputs(),evidence:{durpas500:image,durpas1000:image,coral:image}};
  s=await mut('reject_process',process);assert.equal(s.lots.find(l=>l.id===fl).kg,80);assert.equal(s.lots.find(l=>l.id===mark.rejectLotId).kg,10);assert.equal(s.rejectRecords.find(r=>r.id===process.id).lossKg,5);
+ assert.equal(rejected(s),20,'later processing adds no newly marked reject');
  const result=s.unitLots.filter(l=>process.outputs.some(o=>o.lotId===l.id));assert.equal(result.reduce((n,l)=>n+l.qty*l.unitCost,0),320000);assert(result.every(l=>l.supplierId===supplier));
  const coral=process.outputs.find(o=>o.key==='coral');
  const cp={id:id(),storeId:store,date,sourceLotId:coral.lotId,kg:1,netKg:0.65,outputLotId:id(),expiry:date,reason:'Pisahkan biji Coral',evidence:{coral:image,daging:image}};
@@ -43,8 +47,12 @@ try{
  s=await mut('reject_loss',loss);assert.equal(s.unitLots.find(l=>l.id===flesh.id).qty,.5);assert(Math.abs(s.money.find(m=>m.event_id===loss.id).cost-64000*.15/.65)<1e-6);
  for(const r of [loss.id,cp.id,process.id,mark.id])await mut('reject_void',{id:id(),storeId:store,date,recordId:r,reason:'Koreksi berurutan'});
  s=await read();assert.equal(s.lots.find(l=>l.id===fl).kg,100);assert.equal(s.money.filter(m=>m.category==='loss').reduce((n,m)=>n+m.cost,0),0);
+ assert.equal(rejected(s),0,'all marked reject was cancelled');
  const instant={...mark,id:id(),rejectLotId:id(),processNow:true,outputs:makeOutputs(),evidence:proof};s=await mut('reject_mark',instant);assert.equal(s.lots.find(l=>l.id===fl).kg,80);assert.equal(s.lots.find(l=>l.id===instant.rejectLotId).kg,0);assert.equal(s.rejectRecords.find(r=>r.id===instant.id).kind,'direct');
+ assert.equal(rejected(s),20,'direct mark+process must not report 40');
  await mut('reject_void',{id:id(),storeId:store,date,recordId:instant.id,reason:'Koreksi langsung'});assert.equal((await read()).lots.find(l=>l.id===fl).kg,100);
+ assert.equal(rejected(await read()),0,'direct cancellation counts once');
+ await assert.rejects(mut('reject_mark',{...mark,id:id(),rejectLotId:id(),kg:101,pieces:41}),/melebihi stok/);
  const total={...mark,id:id(),rejectLotId:id(),processNow:true,outputs:makeOutputs().map(o=>({...o,qty:0})),evidence:proof};s=await mut('reject_mark',total);assert.equal(s.money.find(m=>m.event_id===total.id).cost,640000);
  await mut('reject_void',{id:id(),storeId:store,date,recordId:total.id,reason:'Koreksi waste total'});
  const collision={...instant,id:id(),rejectLotId:id(),outputs:makeOutputs()};collision.outputs[0].lotId=fl;await assert.rejects(mut('reject_mark',collision),/ID batch hasil/);
