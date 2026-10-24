@@ -7,7 +7,7 @@ import {activeShift,cashierName,readShiftsDemo} from './cashier-shifts.mjs?v=84'
 import {dashboardPage,bindDashboard,resetDashboard,followDashboardStore} from './dashboard-ui.mjs?v=75';
 import {createSessionManager} from './session.mjs?v=73';
 import {installButton,bindInstall} from './pwa.mjs?v=72';
-import {reportsPage,bindReports,selectReportTab} from './reports-ui.mjs?v=87';
+import {reportsPage,bindReports,selectReportTab} from './reports-ui.mjs?v=88';
 import {documentsPage,bindDocuments} from './documents-ui.mjs?v=74';
 import { variantGroupDialog, productVariantDialog } from "./variant-editor.mjs?v=77";
 import {createSidebarController,sidebarIcon} from './sidebar.mjs?v=42';
@@ -85,6 +85,7 @@ let sessions, activeSessionId = "", loginAttempt = 0, authBusy = false, startupB
 const stockFilter = {};
 const catalogFilter = { query: "", category: "", itemType: "" };
 let stateRevision=0, polling=false, soundEnabled=false, audioContext;
+let reportRefreshPending=false,reportRefreshRevision=0;
 const seenKitchen=new Map();
 let state = emptyState(),
   mode = "",
@@ -564,7 +565,7 @@ function render() {
   observeKitchen();
   trackForms();
   bindProduction(view, state, store, { modal, mutate, render, toast, refresh });
-  const adminContext={modal,mutate,render,toast,refresh,getState:()=>state,rpc:adminRpc};
+  const adminContext={modal,mutate,render,toast,refresh,getState:()=>state,rpc:adminRpc,refreshBatchState:async()=>{reportRefreshPending=true;reportRefreshRevision++;try{await refresh();}finally{reportRefreshPending=false;}}};
   if(view === "reports")bindReports(state,store,adminContext);
   if(view === "documents")bindDocuments(state,store,adminContext);
   bindWaste(view, state, store, {
@@ -921,15 +922,18 @@ function observeKitchen(){
  if(incoming.length){toast(`${incoming.length} pesanan baru masuk ke kitchen`);beepKitchen();}
 }
 setInterval(async()=>{
- if(mode!=='live'||busy||polling||!['orders','kitchen','discounts'].includes(view))return;
- polling=true;const revision=stateRevision,sessionId=activeSessionId;
+ const liveBatch=view==='reports'&&document.querySelector('#batch-results');
+ if(mode!=='live'||busy||polling||(!['orders','kitchen','discounts'].includes(view)&&!liveBatch))return;
+ if(liveBatch&&(document.hidden||reportRefreshPending))return;
+ polling=true;const revision=stateRevision,sessionId=activeSessionId,reportRevision=reportRefreshRevision;
  try{
   const fresh=await request('/rest/v1/rpc/pos_read',{});
-  if(mode!=='live'||busy||revision!==stateRevision||sessionId!==activeSessionId)return;
+  if(mode!=='live'||busy||revision!==stateRevision||sessionId!==activeSessionId||reportRevision!==reportRefreshRevision)return;
   state=fresh;observeKitchen();
+  if(view==='reports')document.querySelector('#report-result')?.dispatchEvent(new CustomEvent('report-sync',{detail:{state}}));
   if(['kitchen','discounts'].includes(view)&&!document.querySelector('dialog[open]'))render();
   else document.querySelector('#order-products')?.dispatchEvent(new CustomEvent('stock-refresh',{detail:state}));
   const status=document.querySelector('#kitchen-sync');if(status)status.textContent='Terhubung · diperbarui '+new Date().toLocaleTimeString('id-ID');
- }catch(err){if(mode!=='live'||revision!==stateRevision||sessionId!==activeSessionId)return;const status=document.querySelector('#kitchen-sync');if(status)status.textContent='Koneksi terputus. Mencoba lagi otomatis; tekan Perbarui untuk mencoba sekarang.';}
+ }catch(err){if(mode!=='live'||revision!==stateRevision||sessionId!==activeSessionId||reportRevision!==reportRefreshRevision)return;if(view==='reports')document.querySelector('#report-result')?.dispatchEvent(new CustomEvent('report-sync',{detail:{error:true}}));const status=document.querySelector('#kitchen-sync');if(status)status.textContent='Koneksi terputus. Mencoba lagi otomatis; tekan Perbarui untuk mencoba sekarang.';}
  finally{polling=false;}
 },5000);

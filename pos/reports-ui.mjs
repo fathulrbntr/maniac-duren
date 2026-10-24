@@ -1,7 +1,7 @@
 import {escape as e,today,money,num,id} from './core.mjs?v=9';
-import {label,periodRange,salesReport,expenseReport,stockReport,marginReport,reportSheets,batchReportSheets} from './reports.mjs?v=87';
+import {label,periodRange,salesReport,expenseReport,stockReport,marginReport,reportSheets,batchReportSheets} from './reports.mjs?v=88';
 import {downloadWorkbook,printWindow,reportPrint} from './report-export.mjs?v=71';
-import {batchReportPage,bindBatchReport} from './batch-report-ui.mjs?v=87';
+import {batchReportPage,bindBatchReport} from './batch-report-ui.mjs?v=88';
 const options=s=>`<option value="">Semua toko yang dapat diakses</option>${s.stores.map(t=>`<option value="${e(t.id)}">${e(t.name)}</option>`).join('')}`;
 const field=(label,body)=>`<label class="field"><span>${label}</span>${body}</label>`;
 const tabs={summary:'Ringkasan',payments:'Pembayaran',products:'Produk',stores:'Toko',suppliers:'Supplier',stock:'Stok',expenses:'Pengeluaran',margin:'HPP & Hasil',batches:'Batch supplier'};
@@ -20,9 +20,19 @@ export function bindReports(s,store,ctx){
  $('#report-period').value=filters.period;$('#report-from').value=filters.from;$('#report-to').value=filters.to;$('#report-store').value=filters.store;
  const filter=()=>({from:$('#report-from').value,to:$('#report-to').value,store:$('#report-store').value,period:$('#report-period').value});
  const valid=()=>{const f=filter(),ok=tab==='batches'||(f.from&&f.to&&f.from<=f.to);$('#report-error').textContent=ok?'':'Isi periode yang valid: tanggal awal tidak boleh melewati akhir.';$('#report-excel').disabled=!ok;$('#report-pdf').disabled=!ok;return ok;};
+ const applyBatchState=update=>{
+  if(update.state){
+   s=update.state;
+   if(!allowed(s,'batches')){document.querySelectorAll('dialog.reject-modal[open]').forEach(d=>d.close());ctx.render();return;}
+  }
+  $('#batch-results')?.dispatchEvent(new CustomEvent('batch-state',{detail:update}));
+ };
+ let refreshingBatch=false;
+ const refreshBatch=async()=>{if(refreshingBatch)return;refreshingBatch=true;try{await (ctx.refreshBatchState||ctx.refresh)();applyBatchState({state:ctx.getState()});}catch(error){applyBatchState({error:true});throw error;}finally{refreshingBatch=false;}};
+ result.addEventListener('report-sync',event=>{if(tab==='batches')applyBatchState(event.detail);});
  const draw=()=>{
   if(!valid()){result.innerHTML='';return;}filters=filter();
-  if(tab==='batches'){result.innerHTML=batchReportPage(s,store);bindBatchReport(s,store,ctx);return;}
+  if(tab==='batches'){result.innerHTML=batchReportPage(s,store);bindBatchReport(s,store,{...ctx,refreshBatch});return;}
   const a=salesReport(s,filters),x=expenseReport(s,filters),st=stockReport(s,filters);let rows=[],headers=[],intro='';
   if(tab==='summary'){intro=`<div class="stats">${stat('Penjualan bersih',money(a.total))}${stat('Transaksi lunas aktif',num(a.tx.length))}${stat('Rata-rata transaksi',money(a.tx.length?a.total/a.tx.length:0))}${(!s.access||s.access.finance)?stat('Pembelian + operasional',x.unknown?'Belum lengkap':money(x.total)):''}</div><p class="muted">Setelah diskon; transaksi batal/refund dikeluarkan dari periode penjualan asal. Invoice tidak menambah omzet.</p>`;headers=['Tanggal','Transaksi','Penjualan bersih'];rows=a.days.map(r=>[e(r.date),num(r.count),money(r.total)]);}
   if(tab==='payments'){headers=['Metode pembayaran','Transaksi','Penjualan bersih'];rows=a.payments.map(r=>[e(r.name),num(r.count),money(r.total)]);intro=`<div class="stats">${stat('Penjualan bersih',money(a.total))}</div><p class="muted">Setelah diskon; transaksi batal/refund dikeluarkan dari periode penjualan asal. Nominal ini bukan saldo pencairan penyedia pembayaran.</p>`;}
@@ -41,7 +51,7 @@ export function bindReports(s,store,ctx){
  document.querySelectorAll('[data-report-tab]').forEach(b=>b.onclick=()=>{filters=filter();tab=b.dataset.reportTab;page=0;ctx.render();});
  $('#report-period').onchange=()=>{if($('#report-period').value!=='custom'){const f=periodRange($('#report-period').value,today());$('#report-from').value=f.from;$('#report-to').value=f.to;}page=0;draw();};
  for(const k of ['from','to','store'])$('#report-'+k).onchange=()=>{if(k!=='store')$('#report-period').value='custom';page=0;draw();};
- $('#report-refresh').onclick=async()=>{try{await ctx.refresh();ctx.render();}catch(err){ctx.toast(err.message);}};
+ $('#report-refresh').onclick=async()=>{try{if(tab==='batches')await refreshBatch();else{await ctx.refresh();ctx.render();}}catch(err){ctx.toast(err.message);}};
  const exportSheets=()=>tab==='batches'?batchReportSheets(s,Object.fromEntries(['from','to','supplier','status'].map(k=>[k,$('#batch-'+k).value]).concat([['store',$('#batch-outlet').value],['query',$('#batch-search').value.trim()]]))):reportSheets(s,filters);
  $('#report-excel').onclick=()=>{if(valid())downloadWorkbook(exportSheets(),'Laporan-Maniac-Duren-'+filters.from+'-'+filters.to);};
  // Open synchronously to keep mobile popup blockers from swallowing the print action.
