@@ -78,3 +78,7 @@ test('letterhead snapshots, permissions, reset, UI enabling and unsupported RPC 
  assert.throws(()=>read(s,'pos_read',{}),/belum tersedia/);assert.throws(()=>read({...s,stockDemo:null},'pos_letterhead_get',{store_id:store}),/belum aktif/);
  assert.match(documentsPage(s,store),/Buat contoh dokumen/);assert(!/data-new-document="PO" disabled/.test(documentsPage(s,store)));assert(!documentsPage({...s,stockDemo:null}).includes('documents-examples'));
 });
+
+ test('document examples use an enabled payment method when cash is disabled',async()=>{
+ const {defaultPaymentSettings}=await import('../pos/payment-methods.mjs');const f=setup();const config=defaultPaymentSettings();config.groups.cash=false;config.groups.qris=false;config.groups.bank=false;config.groups.ewallet=true;let s=apply(f.s,'payment_settings_save',{id:id(),storeId:f.store,expectedRevision:0,config});s=apply(s,'document_examples',{id:id(),storeId:f.store});assert.equal(s.orders[0].payment,'GoPay');assert.equal(s.cashierShifts[0].summary.expectedCash,0);
+});

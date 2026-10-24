@@ -1,3 +1,4 @@
+import {isPaymentLabel} from './payment-methods.mjs?v=84';
 import {today} from './core.mjs?v=10';
 import {sumProducts} from './decimal-totals.mjs?v=66';
 export const isOwner=s=>s.me?.role==='owner';
@@ -44,6 +45,6 @@ export function checkoutTotals(s,p){
  return {quote,subtotal:quote.subtotal,discount,discountAmount:amount,total:sumProducts([[quote.subtotal],[-amount]])};
 }
 export function validPayment(p,total){
- const paid=Number(p.paid);if(!['Tunai','QRIS','Transfer'].includes(p.payment)||!Number.isFinite(paid)||paid<total)throw Error('Pembayaran belum sesuai total');
+ const paid=Number(p.paid);if(!isPaymentLabel(p.payment)||!Number.isFinite(paid)||paid<total)throw Error('Pembayaran belum sesuai total');
  if(p.payment!=='Tunai'&&paid!==total)throw Error('Pembayaran non-tunai harus sesuai total');return paid;
 }

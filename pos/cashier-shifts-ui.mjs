@@ -1,6 +1,6 @@
 import {id,today,money,escape as e} from './core.mjs?v=77';
-import {activeShift} from './cashier-shifts.mjs?v=83';
-import {showReceipt} from './cashier-ui.mjs?v=83';
+import {activeShift} from './cashier-shifts.mjs?v=84';
+import {showReceipt} from './cashier-ui.mjs?v=84';
 const time=v=>v?new Date(v).toLocaleString('id-ID',{timeZone:'Asia/Jakarta',dateStyle:'medium',timeStyle:'short'})+' WIB':'—';
 const outlet=(s,key)=>s.stores.find(x=>x.id===key)?.name||'Outlet';
 const canClose=(s,sh)=>sh.cashierId===s.me?.id||s.me?.role==='owner'||s.access?.finance;
@@ -10,8 +10,8 @@ const field=(label,html)=>`<label class="field">${label}${html}</label>`;
 const cashInput=(name,value='')=>`<input name="${name}" type="number" min="0" max="9000000000000000" step="any" value="${e(value)}" required inputmode="decimal">`;
 const noteInput=()=>'<textarea name="note" maxlength="300" rows="3" placeholder="Catatan serah terima / penjelasan selisih"></textarea>';
 const summary=sh=>{
- const t=sh.summary||{};
- return `<dl class="shift-totals"><dt>Uang awal</dt><dd>${money(sh.openingCash)}</dd><dt>Penjualan (${t.salesCount||0} transaksi)</dt><dd>${money(t.sales||0)}</dd><dt>Refund (${t.refundCount||0} transaksi)</dt><dd>−${money(t.refunds||0)}</dd><dt>Tunai bersih</dt><dd>${money((t.cashSales||0)-(t.cashRefunds||0))}</dd><dt>QRIS bersih</dt><dd>${money((t.qrisSales||0)-(t.qrisRefunds||0))}</dd><dt>Transfer bersih</dt><dd>${money((t.transferSales||0)-(t.transferRefunds||0))}</dd><dt class="shift-total">Kas yang seharusnya</dt><dd class="shift-total">${money(t.expectedCash||0)}</dd>${sh.closedAt?`<dt>Kas aktual</dt><dd>${money(sh.closingCash)}</dd><dt>Selisih</dt><dd class="${t.difference?'error':''}">${money(t.difference||0)}</dd>`:''}</dl>`;
+ const t=sh.summary||{},payments=t.payments||[{payment:'Tunai',sales:t.cashSales,refunds:t.cashRefunds},{payment:'QRIS',sales:t.qrisSales,refunds:t.qrisRefunds},{payment:'Transfer',sales:t.transferSales,refunds:t.transferRefunds}];
+ return `<dl class="shift-totals"><dt>Uang awal</dt><dd>${money(sh.openingCash)}</dd><dt>Penjualan (${t.salesCount||0} transaksi)</dt><dd>${money(t.sales||0)}</dd><dt>Refund (${t.refundCount||0} transaksi)</dt><dd>−${money(t.refunds||0)}</dd>${payments.map(x=>`<dt>${e(x.payment)} bersih</dt><dd>${money((x.sales||0)-(x.refunds||0))}</dd>`).join('')}<dt class="shift-total">Kas yang seharusnya</dt><dd class="shift-total">${money(t.expectedCash||0)}</dd>${sh.closedAt?`<dt>Kas aktual</dt><dd>${money(sh.closingCash)}</dd><dt>Selisih</dt><dd class="${t.difference?'error':''}">${money(t.difference||0)}</dd>`:''}</dl>`;
 };
 export function shiftBanner(s,store){
  if(s.access&&!s.access.sell)return '';
@@ -35,7 +35,7 @@ export function openShiftDialog(ctx,store){
 export async function closeShiftDialog(ctx,key){
  let sh;
  try{sh=(await ctx.readShifts({shiftId:key})).shift;if(!sh||sh.closedAt)throw Error('Shift sudah ditutup. Perbarui halaman.');}catch(x){return ctx.toast(x.message);}
- const d=ctx.modal('Tutup kasir',`<p><b>${e(sh.cashierName)}</b><br>${e(outlet(ctx.getState(),sh.storeId))} · ${e(time(sh.openedAt))}</p><div data-close-summary>${summary(sh)}</div><p class="muted">Kas seharusnya = uang awal + penjualan tunai − refund tunai. QRIS, transfer, dan petty cash terpisah dari laci kasir.</p><button type="button" data-recount>Perbarui perhitungan</button>${field('Uang tunai yang dihitung (Rp)',cashInput('closingCash'))}<p data-cash-difference role="status">Hitung uang tunai di laci, lalu isi jumlah aktual.</p>${field('Catatan / alasan selisih',noteInput())}<p class="muted">Catatan wajib jika ada selisih atau menutup shift kasir lain. Setelah ditutup, buka shift baru untuk pembayaran berikutnya.</p>`,'Konfirmasi tutup kasir');
+ const d=ctx.modal('Tutup kasir',`<p><b>${e(sh.cashierName)}</b><br>${e(outlet(ctx.getState(),sh.storeId))} · ${e(time(sh.openedAt))}</p><div data-close-summary>${summary(sh)}</div><p class="muted">Kas seharusnya = uang awal + penjualan tunai − refund tunai. Pembayaran non-tunai dan petty cash terpisah dari laci kasir.</p><button type="button" data-recount>Perbarui perhitungan</button>${field('Uang tunai yang dihitung (Rp)',cashInput('closingCash'))}<p data-cash-difference role="status">Hitung uang tunai di laci, lalu isi jumlah aktual.</p>${field('Catatan / alasan selisih',noteInput())}<p class="muted">Catatan wajib jika ada selisih atau menutup shift kasir lain. Setelah ditutup, buka shift baru untuk pembayaran berikutnya.</p>`,'Konfirmasi tutup kasir');
  d.classList.add('shift-dialog');const f=d.querySelector('form'),actual=f.elements.closingCash,requestId=id();let saving=false,loading=false;
  const diff=()=>{d.querySelector('[data-cash-difference]').textContent=actual.value===''?'Isi jumlah uang tunai aktual.':'Selisih: '+money(Number(actual.value)-sh.summary.expectedCash);f.elements.note.required=actual.value!==''&&(Number(actual.value)!==sh.summary.expectedCash||sh.cashierId!==ctx.getState().me?.id);f.elements.note.minLength=f.elements.note.required?3:0;};actual.oninput=diff;diff();
  d.querySelector('[data-recount]').onclick=async()=>{if(saving||loading)return;loading=true;submit(d).disabled=true;

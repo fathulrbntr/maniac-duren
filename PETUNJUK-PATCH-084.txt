@@ -1,0 +1,89 @@
+PATCH 084 — METODE PEMBAYARAN PER OUTLET
+Maniac Duren POS · 24 Oktober 2026
+
+Patch ini disusun dari proyek maniac-duren(7).zip dan patch 071–083.
+Gunakan pada proyek yang sudah memakai patch 083 (shift kasir).
+File proyek dan database live belum diubah oleh paket ini.
+
+FITUR
+• Menu owner: Pengaturan > Metode Pembayaran.
+• Kategori ON/OFF dan checklist metode; disimpan per outlet di database.
+• 25 pilihan:
+  Tunai; QRIS;
+  Transfer umum, BCA, BRI, BNI, Mandiri, CIMB Niaga, Permata, BSI;
+  Kartu Debit dan Kartu Kredit;
+  GoPay, OVO, DANA, ShopeePay, LinkAja;
+  Shopee, Tokopedia, TikTok Shop, Lazada, E-Commerce Lainnya;
+  GoFood, GrabFood, ShopeeFood.
+• Ubah detail: bank/penyedia, pemilik akun, nomor rekening/akun, catatan.
+  Nomor disimpan sebagai teks agar angka nol di depan tetap ada.
+• Checkout hanya menampilkan metode aktif pada toko terkait.
+  Non-tunai harus persis total dan kasir perlu mengonfirmasi pemeriksaan pembayaran.
+• Nama metode tersimpan pada transaksi, struk, log kasir dan laporan.
+• Laporan > Pembayaran: jumlah transaksi dan penjualan bersih per metode.
+  Sheet Pembayaran juga masuk ekspor Excel dan PDF/cetak laporan.
+• Tutup kasir menampilkan rincian semua metode. Hanya Tunai dihitung ke laci.
+• Menonaktifkan metode tidak mengubah riwayat atau menghalangi refund.
+• Riwayat shift yang sudah ditutup tetap memakai rekap pada waktu penutupan.
+• Validasi database, hak owner, konflik revisi, dan retry idempotent.
+• Mode demo tetap terpisah dari data asli; contoh dokumen mengikuti metode aktif.
+
+BATAS FUNGSI
+Ini pencatatan pembayaran manual. Tidak ada koneksi API ke bank, QRIS, e-wallet,
+marketplace, atau aplikasi pesan antar; tidak membuat QRIS dinamis, menarik
+pesanan marketplace, memverifikasi status pembayaran, atau mencairkan saldo.
+Memilih kategori/metode tidak mendaftarkan akun merchant pada penyedia tersebut.
+Untuk QRIS dari e-wallet, catat sekali sebagai QRIS. Metode e-wallet digunakan
+untuk penerimaan langsung melalui akun/channel e-wallet yang bersangkutan.
+Pencairan, biaya layanan, dan potongan marketplace tidak dihitung otomatis.
+Satu transaksi memakai satu metode; split payment belum termasuk paket ini.
+Detail rekening pada gambar referensi tidak diisikan otomatis; owner mengisinya.
+
+CARA PASANG
+1. Ekstrak ZIP. Salin folder pos, database, tests, dan petunjuk ini ke folder
+   utama repo Maniac Duren. Timpa file dengan nama sama. Paket hanya memuat
+   file yang berubah dari baseline 083; tidak perlu menghapus folder lama.
+2. Buka Supabase > SQL Editor. Jalankan seluruh isi:
+   database/payment-methods-084.sql
+   Syarat: cashier-shifts-083.sql sudah berhasil dijalankan.
+   Jalankan SQL 084 setelah patch database sebelumnya. Jangan menjalankan
+   pos.sql atau patch lama setelahnya karena dapat mengganti fungsi terbaru.
+   SQL 084 dapat dijalankan ulang; tidak menghapus transaksi lama.
+3. Commit/push perubahan front-end menggunakan daftar file di bawah, dari
+   folder utama repo. Tunggu deployment Vercel selesai.
+4. Muat ulang POS dan masuk sebagai owner. Pilih outlet di header/sidebar.
+   Buka Pengaturan > Metode Pembayaran. Aktifkan kategori, centang metode,
+   isi detail opsional melalui Ubah, lalu Simpan pengaturan.
+5. Ulangi untuk outlet lain. Minimal satu metode harus aktif di setiap outlet.
+   Konfigurasi awal mempertahankan Tunai, QRIS, dan Transfer umum.
+
+UJI CEPAT SETELAH PASANG
+• Buka kasir, tambahkan produk, pilih Transfer BCA / ShopeePay / Shopee.
+• Periksa nominal, konfirmasi pembayaran, simpan lalu periksa struk.
+• Laporan > Pembayaran harus menampilkan metode dan nilai penjualan tersebut.
+• Shift Kasir > Detail: pembayaran non-tunai tidak menambah kas seharusnya.
+• Nonaktifkan metode, simpan, lalu buka checkout baru: metode itu tidak muncul.
+• Beralih outlet: pengaturan outlet lain harus tetap terpisah.
+
+VALIDASI LOKAL
+Lulus: seluruh 25 metode pada model demo dan database PostgreSQL (PGlite),
+hak owner, isolasi outlet, konflik revisi, retry tanpa transaksi ganda,
+jumlah non-tunai, penolakan metode nonaktif, refund setelah metode nonaktif,
+penjualan lama/order_pay, diskon, rekap shift, ekspor laporan, dan SQL rerun.
+Lulus browser Chromium memakai entry point POS asli dengan backend fixture:
+simpan/reload pengaturan, detail rekening, checkout, konfirmasi non-tunai,
+struk, laporan, shift, dark/light, serta ukuran layar 360/390/1440 px.
+Ini uji lokal; koneksi Supabase dan transaksi merchant live belum diuji.
+
+Menjalankan uji (Node.js dan dependency dev pada package.json diperlukan):
+node tests/payment-methods.test.mjs
+node tests/payment-methods-db.test.mjs
+node tests/payment-methods-browser.mjs
+Jika Chromium belum tersedia: npx playwright install chromium
+Alternatif: set BROWSER_EXECUTABLE ke executable Chromium lokal.
+
+GIT BASH
+git status
+git add -- PETUNJUK-PATCH-084.txt database/payment-methods-084.sql pos/app.js pos/cashier-demo.mjs pos/cashier-shifts-ui.mjs pos/cashier-shifts.mjs pos/cashier-ui.mjs pos/cashier.mjs pos/dashboard-data.mjs pos/documents-demo.mjs pos/documents-ui.mjs pos/index.html pos/navigation.mjs pos/operations-ui.mjs pos/payment-methods-ui.mjs pos/payment-methods.css pos/payment-methods.mjs pos/production-ui.mjs pos/reports-ui.mjs pos/reports.mjs pos/retry.mjs pos/stock-demo.mjs tests/cashier-ui.test.mjs tests/documents-demo.test.mjs tests/payment-methods-browser.mjs tests/payment-methods-db.test.mjs tests/payment-methods.test.mjs
+git commit -m "Add configurable payment methods per outlet"
+git push origin main

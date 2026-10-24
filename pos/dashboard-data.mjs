@@ -1,6 +1,6 @@
 // Read-only dashboard summaries use the same paid transactions as Laporan.
 import {today} from './core.mjs?v=60';
-import {salesReport,periodRange} from './reports.mjs?v=71';
+import {salesReport,periodRange} from './reports.mjs?v=84';
 const number=v=>Number(v)||0;
 const dayMs=86400000;
 const shift=(day,days)=>new Date(Date.parse(day+'T00:00:00Z')+days*dayMs).toISOString().slice(0,10);

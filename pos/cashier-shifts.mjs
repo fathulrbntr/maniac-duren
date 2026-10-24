@@ -9,7 +9,8 @@ export function requireShift(s,store){
 export function shiftSummary(s,sh){
  if(sh.closedAt&&sh.summary)return sh.summary;
  const entries=(s.cashierShiftEntries||[]).filter(x=>x.shiftId===sh.id),sum=(kind,payment)=>sumProducts(entries.filter(x=>x.kind===kind&&(!payment||x.payment===payment)).map(x=>[x.amount]));
- return {salesCount:entries.filter(x=>x.kind==='sale').length,refundCount:entries.filter(x=>x.kind==='refund').length,sales:sum('sale'),refunds:sum('refund'),cashSales:sum('sale','Tunai'),cashRefunds:sum('refund','Tunai'),qrisSales:sum('sale','QRIS'),qrisRefunds:sum('refund','QRIS'),transferSales:sum('sale','Transfer'),transferRefunds:sum('refund','Transfer'),expectedCash:sumProducts([[sh.openingCash],[sum('sale','Tunai')],[-1,sum('refund','Tunai')]])};
+ const payments=[...new Set(entries.map(x=>x.payment))].sort().map(payment=>({payment,sales:sum('sale',payment),refunds:sum('refund',payment)}));
+ return {payments,salesCount:entries.filter(x=>x.kind==='sale').length,refundCount:entries.filter(x=>x.kind==='refund').length,sales:sum('sale'),refunds:sum('refund'),cashSales:sum('sale','Tunai'),cashRefunds:sum('refund','Tunai'),qrisSales:sum('sale','QRIS'),qrisRefunds:sum('refund','QRIS'),transferSales:sum('sale','Transfer'),transferRefunds:sum('refund','Transfer'),expectedCash:sumProducts([[sh.openingCash],[sum('sale','Tunai')],[-1,sum('refund','Tunai')]])};
 }
 const manager=s=>s.me?.role==='owner'||!!(s.access?.reports||s.access?.finance);
 const visible=(s,sh)=>sh.cashierId===s.me?.id||manager(s);

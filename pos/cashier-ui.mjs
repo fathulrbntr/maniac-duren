@@ -1,6 +1,8 @@
-import {cashierName,requireShift,activeShift} from './cashier-shifts.mjs?v=83';
+import {requireEnabledPayment,availablePayments} from './payment-methods.mjs?v=84';
+import {paymentOptions,paymentInfo} from './payment-methods-ui.mjs?v=84';
+import {cashierName,requireShift,activeShift} from './cashier-shifts.mjs?v=84';
 import {id,today,money,num,escape as e} from './core.mjs?v=10';
-import {isOwner,tableLabel,cashierQuote,checkoutTotals,findDiscountApproval,validPayment} from './cashier.mjs?v=66';
+import {isOwner,tableLabel,cashierQuote,checkoutTotals,findDiscountApproval,validPayment} from './cashier.mjs?v=84';
 import {checkOrder} from './order-stock.mjs?v=12';
 import {printReceipt} from './receipt-printer.mjs?v=64';
 import {receiptHeader,fillReceiptLogo} from './store-profile.mjs?v=64';
@@ -82,12 +84,13 @@ export function payExistingOrder(ctx,store,orderId){
  paymentDialog(ctx,{id:id(),orderId,storeId:store,date:today(),tableNo:o.table_no,note:o.note,lines:o.lines},{subtotal:o.subtotal??o.total,discountAmount:o.discount?.amount||0,total:o.total},()=>{});
 }
 function paymentDialog(ctx,p,t,onSaved){
- const s=ctx.getState(),d=ctx.modal('Pembayaran pesanan',`<h3>${money(t.total)}</h3><p>${e(tableLabel(p.tableNo))}</p><label class="field">Metode pembayaran<select name="payment"><option>Tunai</option><option>QRIS</option><option>Transfer</option></select></label><label class="field">Uang diterima<input type="number" name="paid" min="${t.total}" step="any" value="${t.total}" required></label><p id="payment-change"></p><p class="muted">${s.stockDemo?'Simulasi pembayaran demo.':'QRIS / transfer dicatat manual. Pastikan dana sudah diterima.'}</p>`,'Lanjut konfirmasi');
+ const s=ctx.getState();if(!availablePayments(s,p.storeId).length)return ctx.toast('Tidak ada metode pembayaran aktif. Hubungi owner.');
+ const d=ctx.modal('Pembayaran pesanan',`<h3>${money(t.total)}</h3><p>${e(tableLabel(p.tableNo))}</p><label class="field">Metode pembayaran<select name="payment" required>${paymentOptions(s,p.storeId)}</select></label><label class="field">Uang diterima<input type="number" name="paid" min="${t.total}" step="any" value="${t.total}" required></label><p id="payment-change"></p><p class="payment-account-info" data-payment-info></p><label class="payment-receive-confirm" data-receive-label hidden><input type="checkbox" name="paymentConfirmed"><span>Saya sudah memeriksa dan memastikan pembayaran berhasil di aplikasi / mesin EDC.</span></label><p class="muted">${s.stockDemo?'Simulasi pembayaran demo.':'Pembayaran non-tunai dicatat manual setelah diverifikasi kasir.'}</p>`,'Lanjut konfirmasi');
  const f=d.querySelector('form'),method=f.elements.namedItem('payment'),amount=f.elements.namedItem('paid');
- const update=()=>{amount.readOnly=method.value!=='Tunai';if(amount.readOnly)amount.value=t.total;d.querySelector('#payment-change').textContent='Kembalian: '+money(Math.max(0,Number(amount.value)-t.total));};method.onchange=update;amount.oninput=update;update();
+ const update=()=>{amount.readOnly=method.value!=='Tunai';if(amount.readOnly)amount.value=t.total;d.querySelector('#payment-change').textContent='Kembalian: '+money(Math.max(0,Number(amount.value)-t.total));};const received=f.elements.namedItem('paymentConfirmed');const methodChanged=()=>{received.checked=false;received.required=method.value!=='Tunai';d.querySelector('[data-receive-label]').hidden=!received.required;d.querySelector('[data-payment-info]').textContent=paymentInfo(ctx.getState(),p.storeId,method.value);update();};method.onchange=methodChanged;amount.oninput=update;methodChanged();
  let advanced=false,cancelled=false;const cancel=()=>{if(advanced||cancelled)return;cancelled=true;resultPopup(ctx,{success:false,title:'Pembayaran dibatalkan',message:'Pesanan belum disimpan. Keranjang tetap tersedia.'});};
  d.addEventListener('close',cancel);
- f.onsubmit=ev=>{ev.preventDefault();try{const payment={...p,payment:method.value,paid:amount.value};validPayment(payment,t.total);advanced=true;d.close();confirmPayment(ctx,payment,t,onSaved);}catch(error){err(d,error);}};
+ f.onsubmit=ev=>{ev.preventDefault();try{const payment={...p,payment:method.value,paid:amount.value};requireEnabledPayment(ctx.getState(),p.storeId,method.value);if(method.value!=='Tunai'&&!received.checked)throw Error('Periksa dan konfirmasi pembayaran terlebih dahulu');validPayment(payment,t.total);advanced=true;d.close();confirmPayment(ctx,payment,t,onSaved);}catch(error){err(d,error);}};
 }
 function confirmPayment(ctx,p,t,onSaved){
  const autoPrint=readDeviceSettings().printer.autoPrint;
@@ -100,7 +103,7 @@ function confirmPayment(ctx,p,t,onSaved){
    requireShift(ctx.getState(),p.storeId);
    const existing=p.orderId?ctx.getState().orders.find(o=>o.id===p.orderId):null;
    if(p.orderId&&(!existing||existing.payment_status!=='unpaid'||existing.status==='cancelled'))throw Error('Pesanan sudah dibayar atau dibatalkan');
-   const current=existing?{total:existing.total}:checkoutTotals(ctx.getState(),p);validPayment(p,current.total);
+   const current=existing?{total:existing.total}:checkoutTotals(ctx.getState(),p);validPayment(p,current.total);requireEnabledPayment(ctx.getState(),p.storeId,p.payment);
    if(current.total!==t.total)throw Error('Total berubah. Tutup dan periksa kembali pesanan');
    sent=true;const ok=await ctx.mutate(p.orderId?'order_pay':'order_create',p,{throwOnError:true});if(!ok)throw Error('Transaksi belum tersimpan');
    done=true;onSaved();d.close();ctx.render();resultPopup(ctx,{success:true,title:'Pesanan berhasil',message:'Pembayaran tersimpan. Struk siap dicetak.',orderId:p.orderId||p.id,print:autoPrint});

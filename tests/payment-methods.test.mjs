@@ -1,0 +1,36 @@
+import assert from 'node:assert/strict';
+import {randomUUID as id} from 'node:crypto';
+import {paymentMethods,paymentGroups,defaultPaymentSettings,normalizePaymentSettings,availablePayments,paymentSettingsFor} from '../pos/payment-methods.mjs';
+import {validPayment} from '../pos/cashier.mjs';
+import {createStockDemo,applyStockDemoAction as apply} from '../pos/stock-demo.mjs';
+import {shiftSummary} from '../pos/cashier-shifts.mjs';
+import {salesReport,reportSheets} from '../pos/reports.mjs';
+import {fixture,day} from './stock-demo-fixture.mjs';
+const f=fixture();let s=createStockDemo(f.state);const store=f.store;
+assert.deepEqual(availablePayments(s,store).map(m=>m.label),['Tunai','QRIS','Transfer']);
+const config=defaultPaymentSettings();for(const g of paymentGroups)config.groups[g.id]=true;for(const m of paymentMethods)config.methods[m.id].enabled=true;
+config.methods.bca.accountNumber='0012345678';config.methods.bca.accountName='<Owner>';
+const change={id:id(),storeId:store,expectedRevision:0,config};s=apply(s,'payment_settings_save',change);s=apply(s,'payment_settings_save',change);
+assert.equal(paymentSettingsFor(s,store).revision,1);assert.equal(availablePayments(s,store).length,25);assert.equal(availablePayments(s,f.otherStore).length,3);
+assert.equal(paymentSettingsFor(s,store).config.methods.bca.accountNumber,'0012345678');
+assert.throws(()=>apply(s,'payment_settings_save',{...change,id:id()}),/Pengaturan berubah/);
+assert.throws(()=>apply({...s,me:{...s.me,role:'cashier'}},'payment_settings_save',{...change,id:id(),expectedRevision:1}),/Hanya owner/);
+const none=structuredClone(config);for(const g of paymentGroups)none.groups[g.id]=false;assert.throws(()=>normalizePaymentSettings(none),/minimal satu/);
+assert.throws(()=>normalizePaymentSettings({...config,extra:1}),/tidak dikenal/);
+const bad=structuredClone(config);bad.methods.cash.enabled='false';assert.throws(()=>normalizePaymentSettings(bad),/tidak valid/);
+const sh=id();s=apply(s,'cashier_shift_open',{id:sh,storeId:store,openingCash:50000});
+const product=s.products.find(x=>x.id===f.water.id),sales=[];
+for(const method of paymentMethods){
+ const p={id:id(),storeId:store,date:day,lines:[{productId:product.id,qty:1,price:product.salePrice}],payment:method.label,paid:product.salePrice+(method.id==='cash'?50000:0)};
+ validPayment(p,product.salePrice);s=apply(s,'order_create',p);s=apply(s,'order_create',p);sales.push(p);
+}
+const summary=shiftSummary(s,s.cashierShifts.find(x=>x.id===sh));assert.equal(summary.payments.length,25);assert.equal(summary.salesCount,25);assert.equal(summary.expectedCash,200000);assert.equal(summary.sales,25*150000);
+assert.throws(()=>validPayment({payment:'GoPay',paid:150001},150000),/sesuai total/);
+assert.throws(()=>validPayment({payment:'Palsu',paid:150000},150000),/belum sesuai/);
+const cfg=structuredClone(config);cfg.groups.ewallet=false;s=apply(s,'payment_settings_save',{id:id(),storeId:store,expectedRevision:1,config:cfg});
+const go=sales.find(x=>x.payment==='GoPay');assert.throws(()=>apply(s,'order_create',{...go,id:id()}),/tidak aktif/);assert.equal(apply(s,'order_create',go),s,'retry after disabling does not create a second order');
+const req={id:id(),storeId:store,date:day,kind:'void',orderId:go.id,reason:'Uji refund',returnStock:true};s=apply(s,'cashier_approval_request',req);s=apply(s,'order_void',{id:id(),storeId:store,date:day,orderId:go.id,approvalId:req.id,refundConfirmed:true});
+assert.equal(shiftSummary(s,s.cashierShifts[0]).payments.find(x=>x.payment==='GoPay').refunds,150000);assert.equal(shiftSummary(s,s.cashierShifts[0]).expectedCash,200000);
+s.access.reports=true;const report=salesReport(s,{from:day,to:day,store});assert.equal(report.total,24*150000);assert.equal(report.payments.length,24);assert(!report.payments.some(x=>x.name==='GoPay'));
+assert(reportSheets(s,{from:day,to:day,store}).some(x=>x.name==='Pembayaran'));
+console.log('PASS payment model: 25 methods, outlet isolation, owner-only settings, revisions, leading zeros, no-active prevention, exact noncash totals, retries, disabled-method refund, shift and report totals');

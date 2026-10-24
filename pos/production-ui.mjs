@@ -1,5 +1,5 @@
 import { itemTypes } from "./catalog.mjs?v=59";
-import { mayLeave } from "./navigation.mjs?v=9";
+import { mayLeave } from "./navigation.mjs?v=84";
 import { escape as e, num, today, id } from "./core.mjs?v=9";
 import {
   scalar,

@@ -1,10 +1,10 @@
 import {escape as e,today,money,num,id} from './core.mjs?v=9';
-import {label,periodRange,salesReport,expenseReport,stockReport,marginReport,reportSheets,batchReportSheets} from './reports.mjs?v=71';
+import {label,periodRange,salesReport,expenseReport,stockReport,marginReport,reportSheets,batchReportSheets} from './reports.mjs?v=84';
 import {downloadWorkbook,printWindow,reportPrint} from './report-export.mjs?v=71';
 import {batchReportPage,bindBatchReport} from './batch-report-ui.mjs?v=63';
 const options=s=>`<option value="">Semua toko yang dapat diakses</option>${s.stores.map(t=>`<option value="${e(t.id)}">${e(t.name)}</option>`).join('')}`;
 const field=(label,body)=>`<label class="field"><span>${label}</span>${body}</label>`;
-const tabs={summary:'Ringkasan',products:'Produk',stores:'Toko',suppliers:'Supplier',stock:'Stok',expenses:'Pengeluaran',margin:'HPP & Hasil',batches:'Batch supplier'};
+const tabs={summary:'Ringkasan',payments:'Pembayaran',products:'Produk',stores:'Toko',suppliers:'Supplier',stock:'Stok',expenses:'Pengeluaran',margin:'HPP & Hasil',batches:'Batch supplier'};
 let tab='summary',filters={...periodRange('month',today()),store:'',period:'month'},page=0;
 const allowed=(s,t)=>!s.access||(['expenses','margin'].includes(t)?s.access.finance:t==='batches'?(s.access.trace||s.access.finance||s.access.waste):t==='stock'?s.access.trace:s.access.reports);
 export function selectReportTab(t){tab=t;}
@@ -25,6 +25,7 @@ export function bindReports(s,store,ctx){
   if(tab==='batches'){result.innerHTML=batchReportPage(s,store);bindBatchReport(s,store,ctx);return;}
   const a=salesReport(s,filters),x=expenseReport(s,filters),st=stockReport(s,filters);let rows=[],headers=[],intro='';
   if(tab==='summary'){intro=`<div class="stats">${stat('Penjualan bersih',money(a.total))}${stat('Transaksi lunas aktif',num(a.tx.length))}${stat('Rata-rata transaksi',money(a.tx.length?a.total/a.tx.length:0))}${(!s.access||s.access.finance)?stat('Pembelian + operasional',x.unknown?'Belum lengkap':money(x.total)):''}</div><p class="muted">Setelah diskon; transaksi batal/refund dikeluarkan dari periode penjualan asal. Invoice tidak menambah omzet.</p>`;headers=['Tanggal','Transaksi','Penjualan bersih'];rows=a.days.map(r=>[e(r.date),num(r.count),money(r.total)]);}
+  if(tab==='payments'){headers=['Metode pembayaran','Transaksi','Penjualan bersih'];rows=a.payments.map(r=>[e(r.name),num(r.count),money(r.total)]);intro=`<div class="stats">${stat('Penjualan bersih',money(a.total))}</div><p class="muted">Setelah diskon; transaksi batal/refund dikeluarkan dari periode penjualan asal. Nominal ini bukan saldo pencairan penyedia pembayaran.</p>`;}
   if(tab==='products'){headers=['Produk','Satuan','Jumlah','Kg aktual','Butir','Penjualan bersih'];rows=a.products.map(r=>[e(r.name),e(r.unit),num(r.qty),num(r.kg),num(r.pieces),money(r.revenue)]);}
   if(tab==='stores'){headers=['Toko','Transaksi','Penjualan bersih'];rows=a.stores.map(r=>[e(r.name),num(r.count),money(r.total)]);intro=`<div class="stats">${stat('Total toko terpilih',money(a.total))}</div>`;}
   if(tab==='suppliers'){headers=['Supplier','Metode','Penjualan bersih'];rows=a.suppliers.map(r=>[e(r.name),e(r.method),money(r.revenue)]);intro='<p class="muted">Produk campuran dialokasikan menurut modal bahan. Nilai tanpa asal/modal lengkap tetap dicatat sebagai Belum terpetakan; tidak diasumsikan milik supplier tertentu.</p>';}

@@ -1,6 +1,7 @@
+import {availablePayments} from './payment-methods.mjs?v=84';
 // Document training runs entirely inside the current stock-demo state.
 import {id,today} from './core.mjs?v=60';
-import {transactions} from './reports.mjs?v=71';
+import {transactions} from './reports.mjs?v=84';
 import {sumProducts} from './decimal-totals.mjs?v=66';
 
 export const documentDemoActions=new Set(['document_save','document_issue','document_cancel','letterhead_save']);
@@ -153,7 +154,7 @@ export function createDocumentExamples(s,storeId,createSale){
  const body={supplierId,shipping:0,lines:[{productId:product.id,qty:2,pieces:fruit?2:0,price:150000}],note:'Contoh latihan dokumen — bukan transaksi nyata.'};
  const po=make('PO',body),purchase=make('PUR',{...body,sourceType:'po',sourceId:po.id});
  const saleId=id(),price=fruit?product.priceKg:product.salePrice,line={productId:product.id,qty:1,price,...(fruit?{unit:'KG',kg:1,pieces:1,lotId:purchase.body.lines[0].receiptId}:{})};
- createSale({id:saleId,storeId,date:dt,lines:[line],payment:'Tunai',paid:price});
+ createSale({id:saleId,storeId,date:dt,lines:[line],payment:availablePayments(s,storeId)[0]?.label||'Tunai',paid:price});
  const saleBody={sourceType:'order',sourceId:saleId,party:'Pelanggan Demo',address:'Alamat contoh pelanggan',note:body.note};
  make('INV',saleBody);make('DO',saleBody);(s.stockDemo.documentExamples||={})[storeId]=true;
 }

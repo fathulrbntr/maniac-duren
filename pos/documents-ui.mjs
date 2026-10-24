@@ -1,5 +1,5 @@
 import {escape as e,id,today,money,num} from './core.mjs?v=9';
-import {transactions,label} from './reports.mjs?v=71';
+import {transactions,label} from './reports.mjs?v=84';
 import {printWindow,letterheadHTML} from './report-export.mjs?v=71';
 export const documentKinds={PO:'Purchase Order',PUR:'Pembelian Barang',INV:'Invoice',DO:'Delivery Order / Surat Jalan'};
 const statusNames={draft:'Draft',issued:'Terbit',cancelled:'Dibatalkan'};

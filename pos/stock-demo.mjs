@@ -1,11 +1,12 @@
-import {mutateShiftDemo,recordShiftDemo} from './cashier-shifts.mjs?v=83';
+import {savePaymentSettingsDemo,requireEnabledPayment,isPaymentLabel} from './payment-methods.mjs?v=84';
+import {mutateShiftDemo,recordShiftDemo} from './cashier-shifts.mjs?v=84';
 import {receiveShipmentDemo} from './receipt-shipment.mjs?v=82';
 import {saveStoreDemo} from './store-profile.mjs?v=64';
 import {rejectActions,rejectDemo} from './reject-flow.mjs?v=63';
 import {collapseSingleVariants} from './product-stock.mjs?v=60';
-import {cashierActions,cashierDemo} from './cashier-demo.mjs?v=66';
+import {cashierActions,cashierDemo} from './cashier-demo.mjs?v=84';
 import {sumProducts} from './decimal-totals.mjs?v=66';
-import {documentDemoActions,applyDocumentDemo,readDemoDocument,createDocumentExamples} from './documents-demo.mjs?v=74';
+import {documentDemoActions,applyDocumentDemo,readDemoDocument,createDocumentExamples} from './documents-demo.mjs?v=84';
 // In-memory training data only. This module never sends requests or persists data.
 import {emptyState,today,id,applyAction} from './core.mjs?v=77';
 import {checkOrder,requirements} from './order-stock.mjs?v=12';
@@ -46,13 +47,13 @@ export function createStockDemo(source){
  s.stockDemo={sessionId:id(),supplierId:id(),date:today(),initialQty:100};
  s.suppliers.push({id:s.stockDemo.supplierId,name:'Supplier demo',phone:'',address:''});
  s.opsVersion=Math.max(s.opsVersion||0,19);s.orderStockVersion=Math.max(s.orderStockVersion||0,11);s.orderRoutingVersion=Math.max(s.orderRoutingVersion||0,13);
- s.cashierShiftVersion=83;s.receiptShipmentVersion=82;s.storeProfileVersion=64;s.rejectFlowVersion=63;s.cashierVersion=54;s.reportsAdminVersion=74;s.discounts||=[];seedMissingStock(s);return s;
+ s.paymentMethodsVersion=84;s.cashierShiftVersion=83;s.receiptShipmentVersion=82;s.storeProfileVersion=64;s.rejectFlowVersion=63;s.cashierVersion=54;s.reportsAdminVersion=74;s.discounts||=[];seedMissingStock(s);return s;
 }
 function requireAccess(s,permission){if(s.access&&!s.access[permission])throw Error('Hak akses '+permission+' diperlukan.');}
 function event(s,action,p,storeId=p.storeId){s.events.push({id:localMaster.has(action)?id():p.id,action,store_id:storeId||null,business_date:p.date||today(),employee_id:s.me?.id||null,payload:clone(p),demo:true});}
 function payment(p,total){
  const paid=Number(p.paid);
- if(!['Tunai','QRIS','Transfer'].includes(p.payment)||!Number.isFinite(paid)||paid<total)throw Error('Pembayaran tidak valid atau belum lunas');
+ if(!isPaymentLabel(p.payment)||!Number.isFinite(paid)||paid<total)throw Error('Pembayaran tidak valid atau belum lunas');
  if(p.payment!=='Tunai'&&paid!==total)throw Error('Pembayaran non-tunai harus sesuai total');
  return {payment_status:'paid',paid_date:p.date,paid,payment:p.payment};
 }
@@ -77,7 +78,7 @@ function consume(s,order,lines,eventId,date=order.business_date){
  }
 }
 function createOrder(s,p){
- requireAccess(s,'sell');validDate(p.date);
+ requireAccess(s,'sell');validDate(p.date);requireEnabledPayment(s,p.storeId,p.payment);
  if(!s.stores.some(x=>x.id===p.storeId))throw Error('Pilih outlet yang tersedia');
  if(!Array.isArray(p.lines)||!p.lines.length||p.lines.length>100)throw Error('Isi pesanan, maksimal 100 baris');
  const lines=p.lines.map(l=>{
@@ -105,7 +106,10 @@ function updateOrder(s,action,p){
  if(p.date<o.business_date)throw Error('Tanggal sebelum pesanan');
  requireAccess(s,action==='order_cancel'?'cancel':['order_start','order_ready'].includes(action)?'kitchen':'sell');
  const kitchen=o.lines.filter(l=>l.itemType==='recipe');
- if(action==='order_start'){
+ if(action==='order_pay'){
+  if(o.payment_status!=='unpaid'||o.status==='cancelled')throw Error('Pesanan sudah dibayar atau dibatalkan');
+  requireEnabledPayment(s,p.storeId,p.payment);Object.assign(o,payment(p,o.total));
+ }else if(action==='order_start'){
   if(o.status!=='queued'||o.payment_status!=='paid'||!kitchen.length)throw Error('Pesanan tidak dapat mulai dibuat');
   for(const l of kitchen){const r=s.recipes.find(r=>r.id===l.recipeId);if(!r||r.version!==l.recipeVersion)throw Error('Resep berubah setelah pesanan dibuat');}
   stockCheck({...s,orders:s.orders.filter(x=>x.id!==o.id)},o.store_id,kitchen,p.date);
@@ -127,7 +131,8 @@ export function applyStockDemoAction(source,action,payload){
  const prior=!localMaster.has(action)&&source.events.find(x=>x.id===p.id);
  if(prior){if(prior.action!==action||JSON.stringify(prior.payload)!==JSON.stringify(p))throw Error('ID pengiriman sudah digunakan untuk data lain');return source;}
  let s=clone(source);
- if(['cashier_shift_open','cashier_shift_close'].includes(action))mutateShiftDemo(s,action,p);
+ if(action==='payment_settings_save')savePaymentSettingsDemo(s,p);
+ else if(['cashier_shift_open','cashier_shift_close'].includes(action))mutateShiftDemo(s,action,p);
  else if(action==='receipt_batch')receiveShipmentDemo(s,p);
  else if(documentDemoActions.has(action))applyDocumentDemo(s,action,p);
  else if(action==='document_examples')createDocumentExamples(s,p.storeId,payload=>{const before=clone(s);cashierDemo(s,'order_create',payload,createOrder);recordShiftDemo(s,before,'order_create',payload);event(s,'order_create',payload);});

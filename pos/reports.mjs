@@ -25,9 +25,10 @@ export function transactions(s){
  return rows;
 }
 export function salesReport(s,f){
- const tx=transactions(s).filter(t=>scope(t.storeId,f)&&within(t.date,f)),products=new Map(),stores=new Map(),days=new Map(),suppliers=new Map();
+ const tx=transactions(s).filter(t=>scope(t.storeId,f)&&within(t.date,f)),products=new Map(),stores=new Map(),days=new Map(),suppliers=new Map(),payments=new Map();
  const supplier=(key,amount,method)=>{const k=(key||'unknown')+'|'+method;const r=suppliers.get(k)||{supplierId:key,name:key?label(s,'suppliers',key):'Belum terpetakan',method,revenue:0};r.revenue+=amount;suppliers.set(k,r);};
  for(const t of tx){
+  const key=t.payment||'Tidak tercatat',pay=payments.get(key)||{name:key,total:0,count:0};pay.total+=t.total;pay.count++;payments.set(key,pay);
   const st=stores.get(t.storeId)||{id:t.storeId,name:label(s,'stores',t.storeId),total:0,count:0};st.total+=t.total;st.count++;stores.set(t.storeId,st);
   const day=days.get(t.date)||{date:t.date,total:0,count:0};day.total+=t.total;day.count++;days.set(t.date,day);
   for(const l of t.lines){
@@ -45,7 +46,7 @@ export function salesReport(s,f){
    let part=0;origins.forEach((x,i)=>{const amount=i===origins.length-1?l.revenue-part:Math.round(l.revenue*n(x.cost)/base*100)/100;part+=amount;supplier(x.supplierId,amount,'Alokasi bahan');});
   }
  }
- return {tx,total:tx.reduce((a,t)=>a+t.total,0),products:[...products.values()].sort((a,b)=>b.revenue-a.revenue),stores:[...stores.values()].sort((a,b)=>b.total-a.total),days:[...days.values()].sort((a,b)=>a.date.localeCompare(b.date)),suppliers:[...suppliers.values()].sort((a,b)=>b.revenue-a.revenue)};
+ return {tx,payments:[...payments.values()].sort((a,b)=>b.total-a.total),total:tx.reduce((a,t)=>a+t.total,0),products:[...products.values()].sort((a,b)=>b.revenue-a.revenue),stores:[...stores.values()].sort((a,b)=>b.total-a.total),days:[...days.values()].sort((a,b)=>a.date.localeCompare(b.date)),suppliers:[...suppliers.values()].sort((a,b)=>b.revenue-a.revenue)};
 }
 export function expenseReport(s,f){
  const rows=[];
@@ -114,6 +115,7 @@ export function reportSheets(s,f){
  add('Produk',['Produk','Satuan','Jumlah','Kg aktual','Butir aktual','Penjualan bersih'],a.products.map(r=>[r.name,r.unit,r.qty,r.kg,r.pieces,r.revenue]));
  add('Toko',['Toko','Transaksi','Penjualan bersih'],a.stores.map(r=>[r.name,r.count,r.total]));
  add('Supplier',['Supplier','Metode','Penjualan bersih'],a.suppliers.map(r=>[r.name,r.method,r.revenue]));
+ add('Pembayaran',['Metode pembayaran','Transaksi','Penjualan bersih'],a.payments.map(r=>[r.name,r.count,r.total]));
  add('Transaksi',['Tanggal','ID transaksi','Toko','Pembayaran','Penjualan bersih'],a.tx.map(t=>[t.date,t.id,label(s,'stores',t.storeId),t.payment,t.total]));
  }
  if(!s.access||s.access.trace){

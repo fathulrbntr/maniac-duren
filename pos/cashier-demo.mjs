@@ -1,5 +1,5 @@
 import {id,today} from './core.mjs?v=10';
-import {isOwner,cashierQuote,discountAmount,checkoutTotals,validPayment} from './cashier.mjs?v=66';
+import {isOwner,cashierQuote,discountAmount,checkoutTotals,validPayment} from './cashier.mjs?v=84';
 const owner=s=>{if(!isOwner(s))throw Error('Persetujuan / pengaturan diskon hanya untuk owner');};
 export const cashierActions=new Set(['discount_save','cashier_approval_request','cashier_approval_decide','order_void']);
 export function cashierDemo(s,action,p,createOrder){
