@@ -11,6 +11,8 @@ import {fixture,qty} from './stock-demo-fixture.mjs';
 import {printDocument} from './receipt-print-dom.mjs';
 const f=fixture(),owner={...f.state.me},cashier={id:id(),role:'cashier',name:'Kasir'},root=new Node(),m=makeModal(),posted=[];
 let state=createStockDemo(f.state),view='orders',prints=0,failure=null;
+// Keep the focused discount fixture at Rp5,000 despite demo's standard prices.
+state.products.find(p=>p.id===f.water.id).salePrice=5000;
 const globals={document:globalThis.document,FormData:globalThis.FormData,fetch:globalThis.fetch,requestAnimationFrame:globalThis.requestAnimationFrame,window:globalThis.window};
 const descriptor=Object.getOwnPropertyDescriptor(Node.prototype,'elements'),oldClose=Node.prototype.close;
 Object.defineProperty(Node.prototype,'elements',{configurable:true,get(){return new Proxy({namedItem:name=>this.querySelector(`[name="${name}"]`)},{get:(target,k)=>k in target?target[k]:this.querySelector(`[name="${k}"]`)});}});
@@ -27,7 +29,7 @@ try{
  assert(!visibleSections({sell:true}).flatMap(s=>s.pages).includes('discounts'));assert(visibleSections({sell:true,cashierOwner:true}).flatMap(s=>s.pages).includes('discounts'));
  // Owner config uses its real form; cashier cannot see or save settings.
  view='discounts';render();await root.querySelector('#new-discount').fire('click');let d=m.latest;field(d,'name').value='Diskon uji';field(d,'kind').value='percent';field(d,'value').value='10';await submit(d);assert.equal(state.discounts.length,1);const policy=state.discounts[0];
- state.me=cashier;assert.match(discountsPage(state),/hanya untuk owner/);assert.throws(()=>apply(state,'discount_save',{id:id(),discountId:id(),expectedVersion:0,name:'Bebas',kind:'amount',value:1000,active:true}),/owner/);
+ state.me=cashier;state=apply(state,'cashier_shift_open',{id:id(),storeId:f.store,openingCash:0});assert.match(discountsPage(state),/hanya untuk owner/);assert.throws(()=>apply(state,'discount_save',{id:id(),discountId:id(),expectedVersion:0,name:'Bebas',kind:'amount',value:1000,active:true}),/owner/);
  view='orders';clearOrderDraft();render();assert(root.querySelector('#order-table'));assert.equal(root.querySelector('#order-note').attrs.placeholder,'Nama pelanggan / permintaan khusus');
  await pick(f.water);root.querySelector('#order-table').value='7';root.querySelector('#order-note').value='Tanpa es';root.querySelector('#order-discount').value=policy.id;await refreshCheckout();assert(root.querySelector('#save-order').disabled);
  await root.querySelector('#request-discount').fire('click');let a=state.cashierApprovals.at(-1);assert.equal(a.status,'pending');assert.equal(state.orders.length,0);assert.equal(qty(state,f.water,f.store),100);
@@ -38,7 +40,7 @@ try{
  // Cancel before confirming does not post an order and keeps the cart.
  const before=posted.length;await root.querySelector('#save-order').fire('click');d=m.latest;field(d,'payment').value='QRIS';await field(d,'payment').fire('change');await submit(d);assert.match(m.latest.textContent,/Konfirmasi pembayaran/);assert.equal(posted.length,before);m.latest.close();assert.match(m.latest.textContent,/Pembayaran dibatalkan/);assert(hasOrderDraft());assert.equal(state.orders.length,0);assert.equal(prints,0);
  // Confirm twice: one sale, one print, net amount on receipt and separate table/note.
- await root.querySelector('#save-order').fire('click');d=m.latest;field(d,'payment').value='QRIS';await field(d,'payment').fire('change');await submit(d);const confirm=m.latest;await submit(confirm);await submit(confirm);
+ await root.querySelector('#save-order').fire('click');d=m.latest;field(d,'payment').value='QRIS';await field(d,'payment').fire('change');await submit(d);const confirm=m.latest;await submit(confirm);await submit(confirm);await new Promise(resolve=>setImmediate(resolve));
  assert.equal(posted.filter(p=>p.action==='order_create').length,1);assert.equal(state.orders.length,1);let o=state.orders[0];assert.equal(o.total,4500);assert.equal(o.subtotal,5000);assert.equal(o.table_no,7);assert.equal(o.note,'Tanpa es');assert.equal(qty(state,f.water,f.store),99);assert(!hasOrderDraft());assert.equal(prints,1);assert.match(m.latest.textContent,/Pesanan berhasil/);assert.match(m.latest.textContent,/Meja 7/);assert.match(m.latest.textContent,/Diskon Diskon uji/);
  assert.equal(orderMargins(state,[o])[0].revenue,4500);
  // Cashier requests void, owner approves, cashier confirms refund; direct stock returns once.

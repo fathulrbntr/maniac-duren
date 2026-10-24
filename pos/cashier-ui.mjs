@@ -1,3 +1,4 @@
+import {cashierName,requireShift,activeShift} from './cashier-shifts.mjs?v=83';
 import {id,today,money,num,escape as e} from './core.mjs?v=10';
 import {isOwner,tableLabel,cashierQuote,checkoutTotals,findDiscountApproval,validPayment} from './cashier.mjs?v=66';
 import {checkOrder} from './order-stock.mjs?v=12';
@@ -21,7 +22,7 @@ export function resultPopup(ctx,{success,title,message,orderId,print=false}){
 export function showReceipt(ctx,orderId,autoPrint=false,result){
  const s=ctx.getState(),o=s.orders.find(x=>x.id===orderId);if(!o)return ctx.toast('Pesanan tidak ditemukan');
  const outlet=s.stores.find(x=>x.id===o.store_id),logoContext={...ctx,demo:!!s.stockDemo};
- const d=ctx.modal(result?.title||'Detail / struk',`${result?`<p class="checkout-success" role="status">✓ ${e(result.message)}</p>`:''}<div class="receipt-print">${s.stockDemo?'<h3>DEMO · BUKAN TRANSAKSI NYATA</h3>':''}${receiptHeader(outlet)}${o.status==='cancelled'?'<h3>VOID / DIBATALKAN</h3>':''}<p>${e(o.business_date)}<br>#${e(o.id)}<br><b>${e(tableLabel(o.table_no))}</b><br>${e(o.note)}</p><table><thead><tr><th>Produk</th><th>Jumlah</th><th>Subtotal</th></tr></thead><tbody>${o.lines.map(l=>`<tr><td>${e(l.name)}</td><td>${num(l.qty)} ${e(l.unit)}</td><td>${money(l.qty*l.price)}</td></tr>`).join('')}</tbody></table><p>Subtotal: ${money(o.subtotal??o.total)}${o.discount?`<br>Diskon ${e(o.discount.name)}: −${money(o.discount.amount)}<br>Disetujui: ${e(o.discount.approvedName)}`:''}<br><b>Total: ${money(o.total)}</b><br>${e(o.payment)} · Diterima ${money(o.paid)}<br>Kembalian: ${money(Number(o.paid)-o.total)}</p>${o.void_meta?`<p>Alasan void: ${e(o.void_meta.reason)}<br>Pelaksana: ${e(o.void_meta.byName)}<br>Persetujuan: ${e(o.void_meta.approvedName)}</p>`:''}</div><p class="muted no-print">Transaksi sudah tersimpan. Menutup dialog printer hanya membatalkan cetak.</p><button id="print-order" type="button">Cetak struk</button>`,'Selesai');
+ const d=ctx.modal(result?.title||'Detail / struk',`${result?`<p class="checkout-success" role="status">✓ ${e(result.message)}</p>`:''}<div class="receipt-print">${s.stockDemo?'<h3>DEMO · BUKAN TRANSAKSI NYATA</h3>':''}${receiptHeader(outlet)}${o.status==='cancelled'?'<h3>VOID / DIBATALKAN</h3>':''}<p>${e(o.business_date)}<br>#${e(o.id)}<br>Kasir: ${e(cashierName(o))}<br><b>${e(tableLabel(o.table_no))}</b><br>${e(o.note)}</p><table><thead><tr><th>Produk</th><th>Jumlah</th><th>Subtotal</th></tr></thead><tbody>${o.lines.map(l=>`<tr><td>${e(l.name)}</td><td>${num(l.qty)} ${e(l.unit)}</td><td>${money(l.qty*l.price)}</td></tr>`).join('')}</tbody></table><p>Subtotal: ${money(o.subtotal??o.total)}${o.discount?`<br>Diskon ${e(o.discount.name)}: −${money(o.discount.amount)}<br>Disetujui: ${e(o.discount.approvedName)}`:''}<br><b>Total: ${money(o.total)}</b><br>${e(o.payment)} · Diterima ${money(o.paid)}<br>Kembalian: ${money(Number(o.paid)-o.total)}</p>${o.void_meta?`<p>Alasan void: ${e(o.void_meta.reason)}<br>Pelaksana: ${e(o.void_meta.byName)}<br>Persetujuan: ${e(o.void_meta.approvedName)}</p>`:''}</div><p class="muted no-print">Transaksi sudah tersimpan. Menutup dialog printer hanya membatalkan cetak.</p><button id="print-order" type="button">Cetak struk</button>`,'Selesai');
  // The POS print stylesheet hides every body child except a receipt dialog.
  d.classList.add('receipt-dialog','cashier-receipt-dialog');
  d.querySelector('form').onsubmit=ev=>{ev.preventDefault();d.close();};d.querySelectorAll('.modal-actions .close').forEach(b=>b.textContent='Tutup');
@@ -54,6 +55,7 @@ export function bindCheckout(ctx,store,getDraft,clearDraft){
   status.textContent=lastError||reason;requestButton.hidden=!selected||!getDraft().length||a?.status==='approved';requestButton.disabled=requesting||a?.status==='pending';
   const stock=checkOrder(s,store,getDraft(),today());save.disabled=!getDraft().length||!stock.ok||!!(selected&&a?.status!=='approved');
   if(!(s.cashierVersion>=54)){save.disabled=true;status.textContent='Jalankan SQL kasir 054 terlebih dahulu.';}
+  if(!(s.cashierShiftVersion>=83)||!activeShift(s,store)){save.disabled=true;status.textContent=s.cashierShiftVersion>=83?'Buka kasir sebelum menerima pembayaran.':'Pasang SQL cashier-shifts-083 terlebih dahulu.';}
   document.querySelector('#order-total').textContent=money(total);save.textContent=`${s.stockDemo?'Uji pembayaran':'Bayar sekarang'} · ${money(total)}`;
  };
  for(const node of [table,note,select]){node.addEventListener('change',()=>{lastError='';update();});node.addEventListener('input',()=>{lastError='';update();});}
@@ -65,7 +67,7 @@ export function bindCheckout(ctx,store,getDraft,clearDraft){
  };
  save.onclick=()=>{
   try{
-   ready(ctx.getState());const {s,p,a}=approval();if(select.value&&a?.status!=='approved')throw Error('Tunggu persetujuan owner');
+   ready(ctx.getState());requireShift(ctx.getState(),store);const {s,p,a}=approval();if(select.value&&a?.status!=='approved')throw Error('Tunggu persetujuan owner');
    if(a)p.discountApprovalId=a.id;const t=checkoutTotals(s,p);if(!checkOrder(s,store,p.lines,p.date).ok)throw Error('Stok berubah. Periksa pesanan');
    paymentDialog(ctx,{...p,id:id()},t,()=>{clearDraft();});
   }catch(error){ctx.toast(error.message);}
@@ -74,6 +76,7 @@ export function bindCheckout(ctx,store,getDraft,clearDraft){
  update();return update;
 }
 export function payExistingOrder(ctx,store,orderId){
+ try{requireShift(ctx.getState(),store);}catch(error){return ctx.toast(error.message);}
  const s=ctx.getState(),o=s.orders.find(o=>o.id===orderId&&o.store_id===store);
  if(!o||o.payment_status!=='unpaid'||o.status==='cancelled')return ctx.toast('Pesanan sudah dibayar atau dibatalkan');
  paymentDialog(ctx,{id:id(),orderId,storeId:store,date:today(),tableNo:o.table_no,note:o.note,lines:o.lines},{subtotal:o.subtotal??o.total,discountAmount:o.discount?.amount||0,total:o.total},()=>{});
@@ -94,6 +97,7 @@ function confirmPayment(ctx,p,t,onSaved){
  d.querySelector('form').onsubmit=async ev=>{
   ev.preventDefault();if(saving||done)return;saving=true;submitted(d).disabled=true;let sent=false;
   try{
+   requireShift(ctx.getState(),p.storeId);
    const existing=p.orderId?ctx.getState().orders.find(o=>o.id===p.orderId):null;
    if(p.orderId&&(!existing||existing.payment_status!=='unpaid'||existing.status==='cancelled'))throw Error('Pesanan sudah dibayar atau dibatalkan');
    const current=existing?{total:existing.total}:checkoutTotals(ctx.getState(),p);validPayment(p,current.total);
@@ -109,11 +113,11 @@ export function voidDialog(ctx,store,orderId){
  const o=s.orders.find(o=>o.id===orderId);if(!o||o.status==='cancelled')return ctx.toast('Pesanan sudah void atau tidak ditemukan');
  const approval=(s.cashierApprovals||[]).filter(a=>a.kind==='void'&&a.requested_by===s.me.id&&a.details.orderId===orderId&&a.status!=='used'&&new Date(a.expires_at)>new Date()).sort((a,b)=>b.created_at.localeCompare(a.created_at))[0];
  const approved=approval?.status==='approved';
- const d=ctx.modal(approved?'Konfirmasi void':'Void pesanan',`<p>#${e(o.id.slice(0,8))} · ${e(tableLabel(o.table_no))}<br>Total pengembalian: <b>${money(o.total)}</b></p>${approved?`<p>Disetujui ${e(approval.decided_name)}<br>Alasan: ${e(approval.details.reason)}<br>${approval.details.returnStock?'Barang siap jual yang layak dikembalikan ke stok.':'Barang yang telah keluar tidak dikembalikan ke stok.'}</p>${o.payment_status==='paid'?`<label><input type="checkbox" name="refundConfirmed" required> ${s.stockDemo?'Konfirmasi simulasi refund':'Saya sudah mengembalikan pembayaran kepada pelanggan'}</label>`:''}`:`<label class="field">Alasan void<input name="reason" minlength="3" maxlength="300" required></label><label class="field">Barang siap jual<select name="returnStock"><option value="false">Tidak kembali / tidak layak jual</option><option value="true">Kembali dan masih layak jual</option></select></label>${approval?`<p>${e(statusName[approval.status])}</p>`:''}`}<p class="muted">Bahan menu yang sudah dibuat kitchen tidak kembali menjadi stok. Bahan yang belum dipakai dilepas dari cadangan.</p>`,approved?'Konfirmasi void':isOwner(s)?'Setujui void':'Minta persetujuan owner');
+ const d=ctx.modal(approved?'Konfirmasi void':'Void pesanan',`<p>#${e(o.id.slice(0,8))} · ${e(tableLabel(o.table_no))}<br>Total pengembalian: <b>${money(o.total)}</b></p>${approved?`<p>Disetujui ${e(approval.decided_name)}<br>Alasan: ${e(approval.details.reason)}<br>${approval.details.returnStock?'Barang siap jual yang layak dikembalikan ke stok.':'Barang yang telah keluar tidak dikembalikan ke stok.'}</p>${o.payment_status==='paid'?`<label><input type="checkbox" name="refundConfirmed" required> ${s.stockDemo?'Konfirmasi simulasi refund':'Saya sudah mengembalikan pembayaran kepada pelanggan'}</label><p class="muted">Refund dicatat sebagai ${e(o.payment)} pada shift kasir yang memproses pengembalian.</p>`:''}`:`<label class="field">Alasan void<input name="reason" minlength="3" maxlength="300" required></label><label class="field">Barang siap jual<select name="returnStock"><option value="false">Tidak kembali / tidak layak jual</option><option value="true">Kembali dan masih layak jual</option></select></label>${approval?`<p>${e(statusName[approval.status])}</p>`:''}`}<p class="muted">Bahan menu yang sudah dibuat kitchen tidak kembali menjadi stok. Bahan yang belum dipakai dilepas dari cadangan.</p>`,approved?'Konfirmasi void':isOwner(s)?'Setujui void':'Minta persetujuan owner');
  if(approval?.status==='pending'){submitted(d).disabled=true;return d;}
  let saving=false,requestId=id();d.querySelector('form').onsubmit=async ev=>{ev.preventDefault();if(saving)return;saving=true;
   try{const f=ev.currentTarget;let payload={id:requestId,storeId:store,date:today(),orderId};
-   if(approved){payload={...payload,approvalId:approval.id,refundConfirmed:!!f.elements.namedItem('refundConfirmed')?.checked};await ctx.mutate('order_void',payload,{throwOnError:true});d.close();ctx.render();resultPopup(ctx,{success:true,title:'Pesanan dibatalkan',message:'Void tersimpan beserta alasan dan persetujuan owner.',orderId});}
+   if(approved){if(o.payment_status==='paid')requireShift(ctx.getState(),store);payload={...payload,approvalId:approval.id,refundConfirmed:!!f.elements.namedItem('refundConfirmed')?.checked};await ctx.mutate('order_void',payload,{throwOnError:true});d.close();ctx.render();resultPopup(ctx,{success:true,title:'Pesanan dibatalkan',message:'Void tersimpan beserta alasan dan persetujuan owner.',orderId});}
    else{await ctx.mutate('cashier_approval_request',{...payload,kind:'void',reason:f.elements.namedItem('reason').value,returnStock:f.elements.namedItem('returnStock').value==='true'},{throwOnError:true});d.close();ctx.render();if(isOwner(s))voidDialog(ctx,store,orderId);else resultPopup(ctx,{success:true,title:'Permintaan void terkirim',message:'Menunggu persetujuan owner. Pesanan belum dibatalkan.'});}
   }catch(error){err(d,error);}finally{saving=false;}
  };return d;

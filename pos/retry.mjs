@@ -10,6 +10,7 @@ export function setRetryScope(scope) {
   }
 }
 const tracked = new Set([
+  "cashier_shift_open", "cashier_shift_close",
   "document_save", "document_issue", "document_cancel", "letterhead_save", "expense_save", "expense_void",
   "store_save",
   "reject_mark", "reject_process", "reject_coral", "reject_loss", "reject_void",
@@ -66,6 +67,7 @@ export function reconcileRetry(state) {
   const rows =
     {
       document_save: state.adminEvents, document_issue: state.adminEvents, document_cancel: state.adminEvents, letterhead_save: state.adminEvents, expense_save: state.adminEvents, expense_void: state.adminEvents,
+      cashier_shift_open: state.cashierShiftEvents, cashier_shift_close: state.cashierShiftEvents,
       order_create: state.orders,
       sale: state.sales,
       receipt: state.lots,

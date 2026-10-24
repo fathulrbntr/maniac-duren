@@ -1,0 +1,93 @@
+PATCH 083 — BUKA / TUTUP KASIR, KASIR AKTIF, LOG, DAN NAMA PADA STRUK
+
+Patch ini untuk proyek Maniac Duren yang sudah memakai patch 082.
+Fitur telah diuji lokal. ZIP ini belum memasang SQL atau men-deploy website Anda.
+
+PEMASANGAN
+1. Selesaikan pembayaran yang sedang berjalan sebelum mengganti versi.
+2. Ekstrak isi ZIP ke folder utama proyek (folder yang berisi pos/ dan database/).
+   Gabungkan folder dan replace file yang namanya sama. Jangan hapus folder proyek.
+3. Pastikan SQL kasir 054 (database/pos-cashier-controls.sql) dan SQL barang masuk
+   082 (database/receipt-shipment-082.sql) sudah pernah berhasil dijalankan.
+4. Di SQL Editor Supabase, jalankan seluruh isi database/cashier-shifts-083.sql.
+   SQL 083 dapat dijalankan ulang dan tidak menghapus transaksi lama.
+   Jangan jalankan ulang SQL patch lama setelah 083: fungsi pembungkusnya dapat
+   menimpa versi baru. Untuk instalasi baru, gunakan urutan patch yang benar.
+5. Commit dan push perubahan frontend dengan Git Bash di bawah. Tunggu deployment
+   Vercel selesai, kemudian muat ulang POS di semua perangkat kasir.
+6. Masuk dengan akun masing-masing, pilih outlet, lalu klik Buka kasir.
+   Setelah SQL 083 terpasang, pembayaran/refund wajib memiliki shift terbuka.
+   Perangkat yang masih membuka versi lama harus memuat ulang untuk membuka shift.
+
+CARA PAKAI
+- Buka kasir: isi uang awal yang benar-benar ada di laci. Nama kasir berasal
+  dari akun karyawan yang sedang login, bukan isian bebas.
+- Satu akun hanya mempunyai satu shift terbuka, termasuk jika memakai beberapa
+  perangkat atau berganti outlet. Beberapa akun dapat membuka shift di outlet sama.
+- Kasir aktif: buka menu Shift Kasir. Tekan Perbarui untuk mengambil data terbaru.
+  Aktif berarti shift terbuka, bukan indikator perangkat sedang online.
+  Logout atau menutup browser tidak menutup shift secara otomatis.
+- Pemilik / akun berizin laporan atau keuangan dapat melihat shift sesuai akses
+  outlet. Akun kasir biasa melihat shift dan log miliknya sendiri.
+- Log transaksi: filter tanggal, outlet, kasir; gunakan halaman Berikutnya atau
+  buka Detail shift. Tombol Lihat / cetak membuka struk transaksi terkait.
+- Tutup kasir: hitung uang fisik, isi uang aktual, lalu konfirmasi. Catatan wajib
+  jika ada selisih atau jika pengelola keuangan menutup shift kasir lain.
+  Gunakan Perbarui perhitungan jika ada pembayaran baru saat menghitung uang.
+- Pembayaran berikutnya membutuhkan shift baru. Rekap shift yang sudah ditutup
+  tidak berubah ketika ada refund di shift berikutnya.
+- Nama kasir muncul di antrean, log transaksi, struk, dan cetak ulang. Mengganti
+  nama akun kemudian tidak mengganti nama yang sudah tersimpan pada transaksi.
+
+PERHITUNGAN KAS
+Kas seharusnya = uang awal + penjualan Tunai setelah diskon - refund Tunai.
+Penjualan memakai nilai transaksi bersih, bukan uang diterima sebelum kembalian.
+QRIS dan Transfer ditampilkan terpisah. Refund mengikuti metode pembayaran awal
+dan masuk ke shift kasir yang memproses refund; persetujuan void tetap mengikuti
+aturan owner yang sudah ada. Pembayaran QRIS/Transfer tetap harus diverifikasi
+oleh kasir sesuai alur POS yang sudah ada.
+Petty cash tidak otomatis mengubah saldo laci. Catat penjelasan jika kas fisik
+berbeda akibat pengeluaran / setoran di luar transaksi POS.
+
+DATA LAMA DAN DEMO
+- Riwayat shift serta log baru mulai dicatat sejak SQL 083 dipasang. Transaksi
+  lama tidak dibuatkan shift fiktif. Nama pada data lama diambil dari pembuat
+  transaksi yang tersimpan; jika tidak tersedia ditampilkan "Tidak tercatat".
+- Demo memiliki shift tersendiri dalam memori dan tidak mengirim transaksi ke
+  Supabase. Reset demo menghapus shift demo. Buka kasir demo sebelum membayar
+  atau membuat contoh dokumen yang berisi transaksi POS.
+- Monitoring memakai RPC khusus, log dibatasi 20 baris per halaman, dan tidak
+  menambah polling otomatis. Tombol Perbarui mengambil data terbaru.
+
+GIT BASH (JALANKAN DARI FOLDER UTAMA PROYEK)
+Pastikan patch 082 sudah ikut commit/push sebelumnya. Setelah ZIP 083 diekstrak:
+
+git status
+git add -- pos/app.js pos/index.html pos/cashier-ui.mjs pos/cashier-shifts.mjs pos/cashier-shifts-ui.mjs pos/cashier-shifts.css pos/money-input.mjs pos/navigation.mjs pos/operations-ui.mjs pos/retry.mjs pos/stock-demo.mjs
+git add -- database/cashier-shifts-083.sql PETUNJUK-PATCH-083.txt
+git add -- tests/cashier-shifts.test.mjs tests/cashier-shifts-db.test.mjs tests/cashier-shifts-browser.mjs tests/cashier-shifts-app-browser.mjs tests/stock-demo.test.mjs tests/stock-demo-ui.test.mjs tests/cashier-ui.test.mjs tests/documents-demo.test.mjs
+git diff --cached --stat
+git commit -m "Add cashier shifts, transaction log and cashier names on receipts"
+git push origin main
+
+"Changes not staged" / "Untracked files" berarti file belum dimasukkan ke commit.
+Perintah git add di atas memasukkannya. Git push tidak menjalankan SQL Supabase.
+
+VERIFIKASI DEVELOPER
+node tests/cashier-shifts.test.mjs
+node tests/cashier-shifts-db.test.mjs
+node tests/stock-demo.test.mjs
+node tests/stock-demo-ui.test.mjs
+node tests/cashier-ui.test.mjs
+node tests/documents-demo.test.mjs
+node tests/retry.test.mjs
+node tests/money-input.test.mjs
+node tests/receipt-shipment.test.mjs
+node tests/cashier-shifts-browser.mjs
+node tests/cashier-shifts-app-browser.mjs
+
+Uji database memakai @electric-sql/pglite secara lokal; tidak memakai Supabase
+produksi. Uji browser memakai Playwright Chromium. Jika perlu, tentukan binary
+browser dengan environment BROWSER_EXECUTABLE. Test database mencakup guard
+pembayaran, rollback stok, diskon/kembalian, refund lintas shift, revisi tutup,
+transaksi lama, retry, pagination, izin akses, dan pemasangan ulang.

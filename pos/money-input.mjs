@@ -1,5 +1,5 @@
 // Display Indonesian grouping while preserving the numeric .value contract used by POS.
-const moneyName = /^(?:price|priceKg|pricePiece|salePrice|buyPrice|buyPricePiece|minPrice|maxPrice|purchaseCost|shippingCost|totalCost|paid|salary|wage)$/i;
+const moneyName = /^(?:price|priceKg|pricePiece|salePrice|buyPrice|buyPricePiece|minPrice|maxPrice|purchaseCost|shippingCost|totalCost|paid|openingCash|closingCash|salary|wage)$/i;
 export function formatMoneyInput(value) {
   const raw = String(value ?? '');
   if (!raw) return '';

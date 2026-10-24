@@ -1,5 +1,5 @@
 export const sections = [
-  { id: 'utama', label: 'Utama', pages: ['dashboard', 'orders', 'kitchen'] },
+  { id: 'utama', label: 'Utama', pages: ['dashboard', 'orders', 'shifts', 'kitchen'] },
   { id: 'inventory', label: 'Inventory', pages: ['products', 'stock', 'waste'] },
   { id: 'produksi', label: 'Produksi', pages: ['recipes', 'production'] },
   { id: 'laporan', label: 'Laporan & Administrasi', pages: ['reports', 'documents'] },
@@ -10,7 +10,7 @@ export const sections = [
 export function visibleSections(access) {
   const allowed = access ? {
     devices: access.cashierOwner || access.sell || access.master, discounts: access.cashierOwner, salesreport: access.reports, orders: access.sell, kitchen: access.kitchen || access.sell,
-    dashboard: access.reports, stock: access.stock || access.produce,
+    shifts: access.sell || access.reports || access.finance, dashboard: access.reports, stock: access.stock || access.produce,
     production: access.produce, waste: access.waste, losses: access.waste,
     batches: access.trace || access.finance || access.waste, reports: access.reports || access.finance || access.trace || access.waste, documents: access.finance || access.stock, finance: access.finance, trace: access.trace,
     employees: access.employees, attendance: access.attendance, products: access.master,
@@ -30,7 +30,7 @@ export function mayLeave(busy) {
   return !dirty || confirm('Isian belum disimpan. Tinggalkan halaman ini?');
 }
 export function trackForms() {
-  document.querySelectorAll('main form:not(#filters):not(#catalog-filter)').forEach(form => {
+  document.querySelectorAll('main form:not(#filters):not(#catalog-filter):not([data-shift-filters])').forEach(form => {
     form.addEventListener('input', () => (form.dataset.dirty = 'true'));
     form.addEventListener('change', () => (form.dataset.dirty = 'true'));
   });

@@ -1,3 +1,4 @@
+import {id} from '../pos/core.mjs';
 import assert from 'node:assert/strict';
 import {createStockDemo,applyStockDemoAction} from '../pos/stock-demo.mjs';
 import {opsPage,bindOps,clearOrderDraft,hasOrderDraft} from '../pos/operations-ui.mjs';
@@ -5,6 +6,7 @@ import {Node,makeModal,FormDataAdapter} from './variant-dom.mjs';
 import {fixture,qty} from './stock-demo-fixture.mjs';
 import {printDocument} from './receipt-print-dom.mjs';
 const f=fixture(),m=makeModal(),root=new Node(),posted=[];let state=createStockDemo(f.state);
+state=applyStockDemoAction(state,'cashier_shift_open',{id:id(),storeId:f.store,openingCash:0});
 const globals={document:globalThis.document,FormData:globalThis.FormData,fetch:globalThis.fetch,requestAnimationFrame:globalThis.requestAnimationFrame,window:globalThis.window};
 const descriptor=Object.getOwnPropertyDescriptor(Node.prototype,'elements');
 Object.defineProperty(Node.prototype,'elements',{configurable:true,get(){return new Proxy({namedItem:name=>this.querySelector(`[name="${name}"]`)},{get:(target,k)=>k in target?target[k]:this.querySelector(`[name="${k}"]`)});}});

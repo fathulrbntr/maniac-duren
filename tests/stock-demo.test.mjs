@@ -16,6 +16,7 @@ for(const branch of s.stores){
 }
 assert(menuStatus(s,store,menu,[],day).ok);
 const fruitLot=s.lots.find(l=>l.storeId===store),fruitLine={productId:fruit.id,lotId:fruitLot.id,unit:'KG',kg:3,pieces:2,qty:3,price:150000};
+s=apply(s,'cashier_shift_open',{id:id(),storeId:store,openingCash:0});
 const paid=order(store,[line(small,2),line(large),fruitLine]);
 s=apply(s,'order_create',paid);assert.equal(qty(s,small,store),98);assert.equal(qty(s,large,store),99);assert.equal(qty(s,small,otherStore),100);assert.equal(s.lots.find(l=>l.id===fruitLot.id).kg,97);assert.equal(s.lots.find(l=>l.id===fruitLot.id).pieces,98);assert.equal(s.orders[0].status,'paid');
 assert.equal(apply(s,'order_create',paid),s,'Same request cannot consume twice');assert.throws(()=>apply(s,'order_create',{...paid,note:'changed'}),/ID pengiriman/);
@@ -38,7 +39,7 @@ s=apply(s,'pos_category_save',categoryPayload(s,{id:id(),categoryId:category.id,
 s=apply(s,'pos_category_save',categoryPayload(s,{id:id(),categoryId:category.id,name:category.name,mode:'delete'}));assert(!s.posCategories.some(c=>c.id===category.id));assert(s.products.some(p=>p.id===small.id));
 for(const salePrice of [6000,7000])s=apply(s,'product_update',{...water,salePrice});assert.equal(s.products.find(p=>p.id===water.id).salePrice,150000,'All sellable products retain the demo price');assert.equal(qty(s,water,store),98,'Edits do not refill consumed stock');
 const added={...water,id:id(),sku:id(),name:'Air demo baru'};s=apply(s,'product_save',added);assert.equal(qty(s,added,store),100);assert.equal(qty(s,added,otherStore),100);
-const exhausted=createStockDemo(real),sellAll=order(store,[line(small,100)]);let empty=apply(exhausted,'order_create',sellAll);empty=apply(empty,'product_update',{...small,salePrice:42000});assert.equal(qty(empty,small,store),0,'Sold-out lots are not reseeded');
-const changed=createStockDemo(real),pending=order(store,[line(menu)]);let changedRecipe=apply(changed,'order_create',pending);changedRecipe.recipes[0].version++;assert.throws(()=>apply(changedRecipe,'order_start',{id:id(),storeId:store,date:day,orderId:pending.id}),/Resep berubah/);
+const exhausted=apply(createStockDemo(real),'cashier_shift_open',{id:id(),storeId:store,openingCash:0}),sellAll=order(store,[line(small,100)]);let empty=apply(exhausted,'order_create',sellAll);empty=apply(empty,'product_update',{...small,salePrice:42000});assert.equal(qty(empty,small,store),0,'Sold-out lots are not reseeded');
+const changed=apply(createStockDemo(real),'cashier_shift_open',{id:id(),storeId:store,openingCash:0}),pending=order(store,[line(menu)]);let changedRecipe=apply(changed,'order_create',pending);changedRecipe.recipes[0].version++;assert.throws(()=>apply(changedRecipe,'order_start',{id:id(),storeId:store,date:day,orderId:pending.id}),/Resep berubah/);
 const reset=createStockDemo(real);assert.equal(qty(reset,small,store),100);assert.notEqual(reset.stockDemo.sessionId,s.stockDemo.sessionId);assert.equal(reset.orders.length,0);assert.deepEqual(real,before);
 console.log('PASS stock demo: 100 per physical SKU/outlet, Rp150000 demo prices, unchanged source/recipes, local fruit/variant sales, kitchen reservations/consumption/cancellation, retries, atomic validation, permissions, categories, repeat edits, no auto-refill, reset.');

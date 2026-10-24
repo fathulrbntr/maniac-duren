@@ -5,13 +5,13 @@ import {createStockDemo,applyStockDemoAction as apply,readStockDemo as read} fro
 import {documentPrint,documentsPage} from '../pos/documents-ui.mjs';
 import {salesReport,expenseReport,stockReport} from '../pos/reports.mjs';
 import {fixture,qty} from './stock-demo-fixture.mjs';
-const setup=()=>{const f=fixture();Object.assign(f.state.access,{stock:true,finance:true,reports:true});return {...f,s:createStockDemo(f.state)};};
+const setup=()=>{const f=fixture();Object.assign(f.state.access,{stock:true,finance:true,reports:true});return {...f,s:apply(createStockDemo(f.state),'cashier_shift_open',{id:id(),storeId:f.store,openingCash:0})};};
 const draft=(s,storeId,kind,body)=>{const documentId=id();return {s:apply(s,'document_save',{id:id(),documentId,storeId,kind,body,date:today(),version:0}),documentId};};
 const issue=(s,documentId)=>{const d=s.documents.find(x=>x.id===documentId);return apply(s,'document_issue',{id:id(),documentId,storeId:d.store_id,version:d.version});};
 const get=(s,documentId)=>read(s,'pos_document_get',{document_id:documentId});
 
 test('examples form a consistent PO → purchase → paid POS → invoice/delivery flow, entirely in demo',()=>{
- const {state,store,fruit}=setup(),before=structuredClone(state),empty=createStockDemo(state),p={id:id(),storeId:store};
+ const {state,store,fruit}=setup(),before=structuredClone(state),empty=apply(createStockDemo(state),'cashier_shift_open',{id:id(),storeId:store,openingCash:0}),p={id:id(),storeId:store};
  const s=apply(empty,'document_examples',p);assert.deepEqual(state,before);assert.equal(empty.documents.length,0);
  assert.equal(s.documents.length,4);assert.equal(s.orders.length,1);assert(s.documents.every(d=>d.status==='issued'&&d.number.startsWith('DEMO/MD/')));
  const po=s.documents.find(d=>d.kind==='PO'),pur=s.documents.find(d=>d.kind==='PUR'),inv=s.documents.find(d=>d.kind==='INV'),delivery=s.documents.find(d=>d.kind==='DO');

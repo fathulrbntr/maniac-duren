@@ -1,3 +1,5 @@
+import {shiftBanner,bindShiftBanner,shiftsPage,bindShiftsPage} from './cashier-shifts-ui.mjs?v=83';
+import {activeShift,cashierName,readShiftsDemo} from './cashier-shifts.mjs?v=83';
 import {dashboardPage,bindDashboard,resetDashboard,followDashboardStore} from './dashboard-ui.mjs?v=75';
 import {createSessionManager} from './session.mjs?v=73';
 import {installButton,bindInstall} from './pwa.mjs?v=72';
@@ -6,11 +8,11 @@ import {documentsPage,bindDocuments} from './documents-ui.mjs?v=74';
 import { variantGroupDialog, productVariantDialog } from "./variant-editor.mjs?v=77";
 import {createSidebarController,sidebarIcon} from './sidebar.mjs?v=42';
 const sidebar = createSidebarController();
-import {installMoneyInputs} from './money-input.mjs?v=77';
+import {installMoneyInputs} from './money-input.mjs?v=83';
 installMoneyInputs();
 import { openWeighingReceipt, showWeighingHistory } from './receipt-weighing.mjs?v=82';
 import {inventoryPanel,bindInventory} from "./inventory-ui.mjs?v=79";
-import {opsPages,opsPage,bindOps,clearOrderDraft,hasOrderDraft} from './operations-ui.mjs?v=71';
+import {opsPages,opsPage,bindOps,clearOrderDraft,hasOrderDraft} from './operations-ui.mjs?v=83';
 import {printReceipt} from './receipt-printer.mjs?v=64';
 import {storesPage,storeDialog} from './store-settings.mjs?v=64';
 import {receiptHeader,fillReceiptLogo} from './store-profile.mjs?v=64';
@@ -20,14 +22,14 @@ import {
   visibleSections,
   mayLeave,
   trackForms,
-} from "./navigation.mjs?v=71";
+} from "./navigation.mjs?v=83";
 import {
   prepareRetry,
   settleRetry,
   reconcileRetry,
   pendingRetry,
   setRetryScope,
-} from "./retry.mjs?v=82";
+} from "./retry.mjs?v=83";
 import { wastePage, bindWaste } from "./waste-ui.mjs?v=63";
 import {
   recipesPage,
@@ -92,7 +94,7 @@ let state = emptyState(),
 const app = document.querySelector("#app"),
   filter = { from: today(), to: today(), store: "", supplier: "" };
 const title = {
-  devices: "Printer & Scanner",
+  shifts: "Shift Kasir", devices: "Printer & Scanner",
   discounts: "Diskon & Persetujuan", dashboard: "Dashboard", orders: "Kasir / POS", kitchen: "Kitchen Display",
   products: "Master Barang", stock: "Stok & Penerimaan", losses: "Reject & Waste", waste: "Reject & Waste", batches: "Laporan Batch Supplier",
   recipes: "Master Resep", production: "Produksi & Persiapan",
@@ -101,6 +103,7 @@ const title = {
   cashier: "Kasir buah cepat",
 };
 const paths = {
+  shifts: "M4 4h16v16H4z M8 8h8 M8 12h3 M15 12v5 M12 15h6",
   documents: "M4 3h11l5 5v13H4z M15 3v6h5 M8 13h8 M8 17h5",
   devices: "M6 9V3h12v6 M6 17H3V9h18v8h-3 M6 14h12v7H6z M17 12h1",
   discounts: "M19 5L5 19 M7 7h.01 M17 17h.01 M9 7a2 2 0 1 1-4 0 2 2 0 0 1 4 0 M19 17a2 2 0 1 1-4 0 2 2 0 0 1 4 0",
@@ -144,7 +147,7 @@ function toast(text) {
   toast.timer = setTimeout(() => (t.style.display = "none"), 5000);
 }
 let stockDemoModule,demoSource=null;
-const demoEngine=()=>stockDemoModule ||= import('./stock-demo.mjs?v=82').catch(error=>{stockDemoModule=null;throw error;});
+const demoEngine=()=>stockDemoModule ||= import('./stock-demo.mjs?v=83').catch(error=>{stockDemoModule=null;throw error;});
 async function adminRpc(name,p){
   if(mode!=='stock-demo')return request('/rest/v1/rpc/'+name,p);
   const snapshot=state,engine=await demoEngine();
@@ -303,6 +306,8 @@ async function mutate(action, payload, {throwOnError = false} = {}) {
         ? await request("/rest/v1/rpc/pos_menu_category_save", {payload})
         : action === "product_variants_save"
         ? await request("/rest/v1/rpc/pos_product_variants_save", { payload })
+        : ["cashier_shift_open","cashier_shift_close"].includes(action)
+        ? await request("/rest/v1/rpc/pos_cashier_shift_mutate", {action,payload})
         : action === "receipt_batch"
         ? await request("/rest/v1/rpc/pos_receive_shipment", {payload})
         : await request("/rest/v1/rpc/pos_mutate_027", { action, payload });
@@ -458,6 +463,7 @@ function render() {
   app.innerHTML = shell(
     {
       ...Object.fromEntries(opsPages.map(key=>[key,()=>opsPage(key,state,store)])),
+      shifts:()=>shiftsPage(state,store),
       dashboard,
       recipes: () => recipesPage(state, store),
       production: () => productionPage(state, store),
@@ -472,6 +478,10 @@ function render() {
       suppliers: () => directoryPage("suppliers"),
     }[view](),
   );
+  if(view==='orders'||view==='cashier'){const banner=document.createElement("div");banner.dataset.shiftBanner="";banner.innerHTML=shiftBanner(state,store);document.querySelector("main").prepend(banner);}
+  const shiftContext={...storeContext(),getState:()=>state,refresh,showLegacyReceipt:receipt,readShifts:async filters=>{if(mode==='stock-demo')return readShiftsDemo(state,filters);const sessionId=activeSessionId,revision=stateRevision;const data=await request('/rest/v1/rpc/pos_cashier_shifts_read',{filters});if(mode!=='live'||sessionId!==activeSessionId)throw Error('Sesi berubah. Muat ulang halaman shift.');if(revision===stateRevision)state.cashierShifts=data.active;return data;}};
+  bindShiftBanner(shiftContext,store);if(view==='shifts')bindShiftsPage(shiftContext,store);
+  document.querySelector('#order-products')?.addEventListener('stock-refresh',()=>{const banner=document.querySelector('[data-shift-banner]');if(banner){banner.innerHTML=shiftBanner(state,store);bindShiftBanner(shiftContext,store,banner);}});
   syncThemeControls();
   bindInstall();
   sidebar.mount();
@@ -494,6 +504,7 @@ function render() {
   document.querySelector("#logout").onclick = () => {
     if (!mayLeave(busy)) return;
     if (cart.length && !confirm("Keluar dan kosongkan pesanan?")) return;
+    if(activeShift(state)&&!confirm("Shift kasir masih terbuka. Logout tidak menutup shift. Tetap keluar?"))return;
     resetWorkspace(true);
     login();
   };
@@ -779,6 +790,7 @@ function receipt(saleId) {
   d.className = "modal receipt-dialog";
   const lines = [
     "#" + short(s.id) + " · " + s.date,
+    "Kasir: " + cashierName(s),
     "--------------------------------",
     ...s.lines.flatMap((l) => [
       name("products", l.productId),
