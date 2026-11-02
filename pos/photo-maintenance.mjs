@@ -1,4 +1,4 @@
-import { compressPhoto } from './photo-compression.mjs?v=41';
+import { compressPhoto } from './photo-compression.mjs';
 export const PHOTO_KINDS = ['product', 'profile', 'ktp', 'evidence'];
 const slots = ['reject', 'processed', 'durpas500', 'durpas1000', 'coral'];
 

@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {randomUUID as id} from 'node:crypto';
 import {PGlite} from '@electric-sql/pglite';
-const dbPath='/tmp/maniac-071-testdb';fs.rmSync(dbPath,{recursive:true,force:true});
+fs.mkdirSync('test-results',{recursive:true});
+const dbPath='test-results/database-071';fs.rmSync(dbPath,{recursive:true,force:true});
 const db=new PGlite(dbPath);
 try{
  await db.exec("create role anon;create role authenticated;create role service_role;create schema auth;create table auth.users(id uuid primary key,email text);create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;");
@@ -51,6 +52,6 @@ try{
  await as(manager);await assert.rejects(mut('letterhead_save',{id:id(),storeId:store,version:1,header:{name:'X',address:'Y'}}),/owner/);await assert.rejects(mut('document_save',{id:id(),documentId:id(),storeId:other,kind:'PO',date,version:0,body:{}}),/Hak akses/);
  await as(cashier);await assert.rejects(get(inv),/Hak akses/);assert.equal((await read()).documents.length,0);
  await db.exec('set role anon');await assert.rejects(get(inv),/permission denied/);
- await db.exec('reset role');await as(owner);s=await read();fs.writeFileSync('/tmp/maniac-071-fixture.json',JSON.stringify(s));
+ await db.exec('reset role');await as(owner);s=await read();fs.writeFileSync('test-results/database-071-fixture.json',JSON.stringify(s));
  console.log('PASS migration repeat, document lifecycle, sequence, partial PO limit, atomic receipts, mixed transfers, invoice without duplicate sale, duplicate source prevention, letterhead snapshots, expenses, role/store isolation.');
 }catch(err){console.error(err.message,err.where||'',err.internalQuery||'',err.stack);process.exitCode=1;}finally{await db.close();}

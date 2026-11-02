@@ -1,8 +1,8 @@
-import {itemTypes} from './catalog.mjs?v=59';
-import {posMenuEntries} from './pos-menu.mjs?v=65';
-export {posProductCards} from './pos-menu.mjs?v=65';
-import {escape as e} from './core.mjs?v=9';
-import {categoryEligible,categoryName,categoryPayload,posCategories,inPosCategory,posCategoryName,hasPosPrice,savePosCategory} from './pos-categories.mjs?v=52';
+import {itemTypes} from './catalog.mjs';
+import {posMenuEntries} from './pos-menu.mjs';
+export {posProductCards} from './pos-menu.mjs';
+import {escape as e} from './core.mjs';
+import {categoryEligible,categoryName,categoryPayload,posCategories,inPosCategory,posCategoryName,hasPosPrice,savePosCategory} from './pos-categories.mjs';
 const field=(label,html)=>`<label class="field">${label}${html}</label>`;
 const sorted=products=>products.slice().sort((a,b)=>a.name.localeCompare(b.name,'id'));
 const searchMatch=(p,q)=>[p.name,p.sku,p.barcode,p.variant,p.variantGroupName].join(' ').toLowerCase().includes(q);

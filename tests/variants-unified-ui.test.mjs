@@ -17,7 +17,7 @@ assert(!markup.includes('<details class="inv-variant-group" open'));
 assert(!markup.includes('Belum memiliki varian'));assert(markup.includes('2 variant'));
 const cards=new Node();cards.innerHTML=markup;
 const plain=cards.querySelector('.no-variants summary'),grouped=cards.querySelector('.has-variants summary');
-assert.equal(plain.querySelector('.inv-kind').textContent,'Pruduct Olahan','No empty-variant label or trailing separator');
+assert.equal(plain.querySelector('.inv-kind').textContent,'Product Olahan','No empty-variant label or trailing separator');
 assert(!plain.querySelector('[data-variant-count]'));
 assert.equal(grouped.querySelector('[data-variant-count]').textContent,'2 variant');
 assert.equal(grouped.querySelector('[data-add-variant]').dataset.addVariant,groupId);

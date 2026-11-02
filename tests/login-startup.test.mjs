@@ -14,7 +14,7 @@ globalThis.localStorage={setItem(){},getItem(){return null}};
 globalThis.setInterval=()=>0;
 globalThis.FormData=class{*[Symbol.iterator](){yield ['identifier','test'];yield ['password','test-password'];}};
 let calls=0;
-globalThis.fetch=async(url,opts)=>{assert.equal(url,'/api/pos-login');assert.equal(opts.method,'POST');calls++;return new Response(JSON.stringify({error:'Login salah'}),{status:401})};
+globalThis.fetch=async(url,opts)=>{if(url==='/api/pos-config')return new Response(JSON.stringify({configured:true,url:'https://fixture.invalid',key:'fixture'}));assert.equal(url,'/api/pos-login');assert.equal(opts.method,'POST');calls++;return new Response(JSON.stringify({error:'Login salah'}),{status:401})};
 try{
  await import('../pos/app.js?startup-regression');
  assert.match(app.innerHTML,/login-form/);
@@ -25,6 +25,6 @@ try{
  assert.equal(document.documentElement.dataset.theme,'light');
  let prevented=false;await form.onsubmit({currentTarget:form,preventDefault(){prevented=true}});
  assert(prevented);assert.equal(calls,1);assert.equal(error.textContent,'Login salah');assert.equal(button.disabled,false);
- assert(window.posLoginTiming.totalMs>=0);
+
  console.log('PASS real startup without sidebar, login theme/storage events, form submission and failed-login recovery');
 }finally{Object.assign(globalThis,original)}

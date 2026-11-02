@@ -8,7 +8,9 @@ for(const install of ['fresh','upgrade']){
  try{
   await db.exec("create role anon;create role authenticated;create role service_role;create schema auth;create table auth.users(id uuid primary key,email text);create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;");
   const all=fs.readFileSync('database/pos.sql','utf8'),migration=fs.readFileSync('database/sections/operations/offline-pos.sql','utf8');
-  await db.exec(install==='fresh'?all:all.slice(0,all.indexOf('-- Bagian: sections/operations/offline-pos.sql')));
+  await db.exec(all);
+  for(const name of ['receipt-cost-breakdown','multi-product-receipt','batch-tracking'])await db.exec(fs.readFileSync(`database/sections/operations/${name}.sql`,'utf8'));
+  if(install==='fresh')await db.exec(migration);
   if(install==='upgrade')await db.exec(migration);
   await db.exec(migration);
   const owner=id(),store=id(),other=id(),supplier=id(),water=id(),lot=id();

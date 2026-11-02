@@ -1,4 +1,4 @@
-import {batchStockCosts} from './batch-metrics.mjs?v=87';
+import {batchStockCosts} from './batch-metrics.mjs';
 
 const known=v=>v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v));
 const amount=v=>known(v)&&Number(v)>=0?Number(v):null;

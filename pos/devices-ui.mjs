@@ -1,8 +1,8 @@
-import {escape as e} from './core.mjs?v=10';
-import {readDeviceSettings,saveDeviceSettings,defaultDeviceSettings,validateDeviceSettings,canConfigureDevices} from './device-settings.mjs?v=58';
-import {barcodeProduct,bindBarcodeInput} from './barcode-scanner.mjs?v=66';
-import {printReceipt} from './receipt-printer.mjs?v=64';
-import {receiptHeader,fillReceiptLogo} from './store-profile.mjs?v=64';
+import {escape as e} from './core.mjs';
+import {readDeviceSettings,saveDeviceSettings,defaultDeviceSettings,validateDeviceSettings,canConfigureDevices} from './device-settings.mjs';
+import {barcodeProduct,bindBarcodeInput} from './barcode-scanner.mjs';
+import {printReceipt} from './receipt-printer.mjs';
+import {receiptHeader,fillReceiptLogo} from './store-profile.mjs';
 const choice=(values,current)=>values.map(([value,label])=>`<option value="${value}" ${String(current)===String(value)?'selected':''}>${label}</option>`).join('');
 const deviceIcon=type=>`<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${type==='printer'?'M6 9V3h12v6 M6 17H3V9h18v8h-3 M6 14h12v7H6z M17 12h1':'M3 7V3h4 M17 3h4v4 M21 17v4h-4 M7 21H3v-4 M7 7v10 M10 7v10 M14 7v10 M17 7v10'}"/></svg>`;
 const field=(label,control)=>`<label class="field">${label}${control}</label>`;

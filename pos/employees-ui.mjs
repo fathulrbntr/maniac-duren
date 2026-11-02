@@ -1,5 +1,5 @@
-import { compressPhoto } from './photo-compression.mjs?v=41';
-import {escape as e,id,today} from './core.mjs?v=9';
+import { compressPhoto } from './photo-compression.mjs';
+import {escape as e,id,today} from './core.mjs';
 const roles={staff:'Staff',owner:'Owner',manager:'Manager',cashier:'Kasir',kitchen:'Kitchen',warehouse:'Gudang'};
 const perms={stock:'Stok',produce:'Produksi',waste:'Waste',sell:'Kasir',kitchen:'Kitchen',reports:'Laporan',finance:'Finance',trace:'Jejak stok',master:'Master data',attendance:'Absensi',cancel:'Pembatalan'};
 const field=(label,html)=>`<label class="field">${label}${html}</label>`;

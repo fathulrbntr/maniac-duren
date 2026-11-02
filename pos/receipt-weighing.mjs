@@ -1,7 +1,7 @@
-import { escape as e, id, today, num, money } from './core.mjs?v=77';
-import { isLegacyStock } from './catalog.mjs?v=77';
-import { weighingTotals, shipmentTotals, validateShipment } from './receipt-shipment.mjs?v=82';
-export { weighingTotals, shipmentTotals } from './receipt-shipment.mjs?v=82';
+import { escape as e, id, today, num, money } from './core.mjs';
+import { isLegacyStock } from './catalog.mjs';
+import { weighingTotals, shipmentTotals, validateShipment } from './receipt-shipment.mjs';
+export { weighingTotals, shipmentTotals } from './receipt-shipment.mjs';
 
 export function openWeighingReceipt(state, store, ctx) {
   const options = (kind, selected) => state[kind].map(p => `<option value="${e(p.id)}" ${p.id === selected ? 'selected' : ''}>${e(p.name)}</option>`).join('');

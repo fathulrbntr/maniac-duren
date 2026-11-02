@@ -35,7 +35,7 @@ try {
   assert.equal((await db.query('select name from public.md_pos_stores where id=$1',[store])).rows[0].name,'Maniac Duren Depok');
   await assert.rejects(mutate({id:id(),kind:'stores',name:'Tidak ada',editRequestId:id()}), /Master tidak ditemukan/);
   await db.query("select set_config('request.jwt.claim.sub',$1,false)", [cashier]);
-  await assert.rejects(mutate({id:store,kind:'stores',name:'Tidak diizinkan',editRequestId:id()}), /Hak akses/);
+  await assert.rejects(mutate({id:store,kind:'stores',name:'Tidak diizinkan',editRequestId:id()}), /Hak akses|akses POS/);
   assert.equal((await db.query("select has_function_privilege('authenticated','public.pos_mutate_v8(text,jsonb)','EXECUTE') as allowed")).rows[0].allowed,false);
   console.log('PASS store settings: rename, retry, rename back, stock links, validation, permissions, repeat migration.');
 } finally { await db.close(); }

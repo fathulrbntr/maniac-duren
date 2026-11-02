@@ -103,7 +103,7 @@ for(const install of (process.env.POS_TEST_SQL ? ['fresh'] : ['fresh','upgrade']
  }
  await as(''); await assert.rejects(mut('master',{id:id(),kind:'stores',name:'Unauthorized'}),/Login diperlukan/);
  await db.exec('set role anon');await assert.rejects(mut('master',{}),/permission denied/);await db.exec('reset role');
- await as(owner);fs.writeFileSync('/tmp/maniac-ops-fixture.json',JSON.stringify(await read()));
+ await as(owner);fs.mkdirSync(new URL('../test-results/',import.meta.url),{recursive:true});fs.writeFileSync(new URL('../test-results/maniac-ops-fixture.json',import.meta.url),JSON.stringify(await read()));
  if(install==='upgrade'&&process.env.OPS_DUMP_PATH)fs.writeFileSync(process.env.OPS_DUMP_PATH,Buffer.from(await (await db.dumpDataDir()).arrayBuffer()));
  console.log(install+': stock, costs, mixed orders, waste, rollback, idempotency, role/store isolation, attendance OK');
  }catch(e){console.error(e.message,e.internalQuery||'',e.where||'');process.exitCode=1;break;}finally{await db.close()}

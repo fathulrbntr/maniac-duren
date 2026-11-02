@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';import path from 'node:path';
 import {PGlite} from '@electric-sql/pglite';import {chromium} from 'playwright';
-const db=new PGlite('/tmp/maniac-071-testdb'),root=process.cwd(),output='/tmp/maniac071-qa';fs.mkdirSync(output,{recursive:true});
+const db=new PGlite('test-results/database-071'),root=process.cwd(),output='test-results/reports-admin';fs.mkdirSync(output,{recursive:true});
 const owner=(await db.query("select user_id from md_pos_employees where role='owner' limit 1")).rows[0].user_id;
 await db.query("select set_config('request.jwt.claim.sub',$1,false)",[owner]);await db.exec('set role authenticated');
 const args=process.env.CHROMIUM_ARGS?JSON.parse(process.env.CHROMIUM_ARGS):['--no-sandbox','--disable-dev-shm-usage'];

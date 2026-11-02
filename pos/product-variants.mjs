@@ -1,4 +1,4 @@
-import { normalizeProduct, saveProduct, productDefaults } from './catalog.mjs?v=77';
+import { normalizeProduct, saveProduct, productDefaults } from './catalog.mjs';
 export const MAX_VARIANTS = 60;
 const clean = value => String(value ?? '').trim().replace(/\s+/g, ' ');
 const key = value => clean(value).toLowerCase();

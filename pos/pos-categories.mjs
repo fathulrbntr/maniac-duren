@@ -1,4 +1,4 @@
-import {menuStatus} from './order-stock.mjs?v=12';
+import {menuStatus} from './order-stock.mjs';
 const defaults=[['b100b11f-4af2-ef03-19c8-9f8e8ae80233','Buah'],['5aa31598-4ca1-77b9-0ae7-412fd3c2d2ec','Durpas'],['f77d427f-63a9-e975-cfc2-8815e1ec1889','Coral'],['3277f318-03d0-caca-3422-1285f413fbc5','Makan'],['e13c2d41-d4da-7345-3206-9372e035a962','Minuman'],['87a7e78c-fe78-3a3e-6958-dde47bbda51b','Dessert']];
 export const defaultPosCategories=()=>defaults.map(([id,name],sortOrder)=>({id,name,sortOrder,version:1}));
 export const categoryEligible=p=>['direct','finished','recipe'].includes(p.itemType||'direct');

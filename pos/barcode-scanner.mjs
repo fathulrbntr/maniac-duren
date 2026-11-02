@@ -1,5 +1,5 @@
-import {posVisible} from './pos-categories.mjs?v=52';
-import {readDeviceSettings,validateDeviceSettings} from './device-settings.mjs?v=58';
+import {posVisible} from './pos-categories.mjs';
+import {readDeviceSettings,validateDeviceSettings} from './device-settings.mjs';
 
 export function normalizeBarcode(raw, settings = readDeviceSettings()) {
   const scanner = validateDeviceSettings(settings).scanner;

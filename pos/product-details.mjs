@@ -1,4 +1,4 @@
-import { compressPhoto } from './photo-compression.mjs?v=41';
+import { compressPhoto } from './photo-compression.mjs';
 export const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
 export function photoValue(value = "") {
   const photo = String(value || "");

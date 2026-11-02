@@ -1,5 +1,5 @@
-import { preparePhoto, photoValue } from "./product-details.mjs?v=9";
-import { escape as e } from "./core.mjs?v=9";
+import { preparePhoto, photoValue } from "./product-details.mjs";
+import { escape as e } from "./core.mjs";
 export const proofLabels = {
   reject: "Bukti Reject",
   processed: "Bukti Setelah Diolah",

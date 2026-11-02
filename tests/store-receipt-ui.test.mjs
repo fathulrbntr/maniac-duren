@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
 import {randomUUID as id} from 'node:crypto';
 import {emptyState} from '../pos/core.mjs';
-import {storeProfile,storeLogo,receiptHeader,loadStoreLogo} from '../pos/store-profile.mjs?v=64';
+import {storeProfile,storeLogo,receiptHeader,loadStoreLogo} from '../pos/store-profile.mjs';
 import {storesPage,storeDialog} from '../pos/store-settings.mjs';
 import {createStockDemo,applyStockDemoAction} from '../pos/stock-demo.mjs';
 import {showReceipt} from '../pos/cashier-ui.mjs';
-import {printReceipt,waitForReceiptImages} from '../pos/receipt-printer.mjs?v=64';
+import {printReceipt,waitForReceiptImages} from '../pos/receipt-printer.mjs';
 import {makeModal,Node} from './variant-dom.mjs';
 import {printDocument} from './receipt-print-dom.mjs';
 const logo='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jR1kAAAAASUVORK5CYII=';

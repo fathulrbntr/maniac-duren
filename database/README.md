@@ -1,70 +1,43 @@
-# Struktur SQL Maniac Duren
+# Struktur dan urutan SQL Maniac Duren
 
-`pos.sql` adalah satu-satunya file yang dijalankan untuk database Supabase baru.
-Isinya dibangun dari `sections/` sesuai kelompok fitur:
+**Audit 089 tidak menambah migrasi SQL dan tidak memerlukan reset database.** `pos.sql` adalah fondasi historis, bukan instalasi lengkap fitur POS terbaru. `npm run db:build` hanya membangun ulang fondasi dari bagian yang terdaftar dalam `scripts/build-database.mjs`; `npm run check` memastikan hasilnya tidak menyimpang.
 
-- `base.sql`: tabel inti POS dan keamanan dasar
-- `master-contact.sql`: store, supplier, dan akses staff
-- `product-catalog.sql`: produk, kategori, satuan, dan harga
-- `recipes-production.sql`: resep, bahan baku, dan produksi
-- `product-details.sql`: detail produk dan penyesuaian stok
-- `waste-processing.sql`: waste dan hasil olahan
-- `waste-evidence.sql`: bukti foto dan riwayat waste
-- `flow-audit.sql`: pembacaan riwayat dan audit alur
-- `waste-output-proof.sql`: bukti per hasil olahan serta nama pengolah
-- `operations/`: order-stock-kitchen, pay-first, kitchen, dan akun karyawan
+## Database aktif
 
-File di `sections/` adalah sumber build, bukan query yang ditempel satu per satu
-ke Supabase. Jalankan `npm run db:build` setelah mengubah bagian yang relevan.
+Periksa patch yang sudah terpasang sebelum mempertimbangkan perubahan schema. `check-feature-chain.sql` menyediakan pemeriksaan baca-saja atas penanda versi dan keberadaan RPC. Penanda versi saja tidak membuktikan bahwa definisi fungsi belum tertimpa; hasil `pos_read()` pada sesi sah juga perlu sesuai fitur frontend.
 
-Untuk database produksi yang sudah berjalan, jangan mengulang `pos.sql` tanpa backup.
-Perubahan aplikasi dikelola dari sumber `sections/operations/` lalu `pos.sql` dibangun ulang.
+Jangan menjalankan kembali `pos.sql`, `upgrade.sql`, `rollback-027-compat.sql`, `reset-pos.sql`, atau `clear-operations.sql` untuk memasang patch audit. `upgrade.sql` dan bagian di `sections/operations/` mencakup jalur historis. Reset/clear menghapus data operasional dan bukan alat perapian file.
 
-## Kontak darurat dan rekening karyawan (070)
+## Rantai fitur yang diuji lokal
 
-Untuk database aktif, jalankan seluruh `database/employee-details-070.sql` satu kali
-di Supabase SQL Editor, lalu perbarui halaman POS. Aman dijalankan ulang tanpa reset.
-Form Tambah/Edit karyawan dan Detail & rekap menampilkan nama serta nomor kontak
-darurat, nama bank, nama pemilik rekening, dan nomor rekening. Semua kolom opsional.
-Nomor rekening disimpan sebagai teks agar nol di depan tidak hilang.
-Untuk instalasi baru, jalankan patch ini setelah `pos.sql` dan patch fitur sebelumnya.
+Tabel ini menjelaskan dependensi, bukan perintah untuk mengulang semua SQL pada database aktif. Beberapa patch membungkus `pos_read`, `pos_mutate`, dan `pos_mutate_027` dengan mengganti nama implementasi sebelumnya. Mengulang patch lama setelah patch lebih baru dapat menimpa pintu masuk fitur terbaru meskipun tabelnya masih ada.
 
-## Laporan dan Admin Dokumen (071)
+| Urutan | Berkas / prasyarat | Tujuan |
+|---|---|---|
+| Dasar | `pos.sql` | Tabel dan operasi dasar; sudah memuat kompatibilitas 027 |
+| 041 | `compress-pos-photos.sql` | Foto terpisah dari pembacaan utama |
+| Master | Master durian dan turunannya, dengan harga yang valid | Prasyarat relasi reject |
+| 043 | `link-durian-reject.sql` | Hubungan produk durian dan hasil olahan |
+| 045 | `product-variants.sql` | Metadata/penyimpanan varian |
+| 052 | `pos-menu-categories.sql` | Kategori kasir |
+| 054 | `pos-cashier-controls.sql` | Diskon, persetujuan, dan pembatalan |
+| 060 | `product-single-variant.sql` | Produk dengan satu varian |
+| 063 | `reject-flow-063.sql` | Reject, olahan, waste, dan jurnal |
+| 064 | `store-receipt-064.sql` | Profil toko/header struk |
+| 070 | `employee-details-070.sql` | Rincian karyawan |
+| 071 | `reports-admin-071.sql` | Laporan dan dokumen admin |
+| 077 | `product-buy-piece-077.sql` | Harga beli per butir |
+| 082 | `receipt-shipment-082.sql` | Biaya/penerimaan satu kiriman |
+| 083 | `cashier-shifts-083.sql` | Shift dan rekonsiliasi kas |
+| 084 | `payment-methods-084.sql` | Pengaturan metode pembayaran |
+| 085 | `crm-loyalty-085.sql` | Member dan poin |
 
-Database aktif: jalankan seluruh `database/reports-admin-071.sql` melalui SQL Editor.
-Patch memerlukan profil toko 064 dan aman dijalankan ulang. Tidak menghapus data,
-tidak mengulang instalasi `pos.sql`, dan tidak mengubah penjualan/penerimaan lama.
-Patch 070 tetap disertakan untuk kontak darurat/rekening karyawan bila belum dipasang.
+`seeds/import-durian-dan-turunan.sql` adalah bahan seed historis, bukan installer siap jalan: baris buah memiliki harga `null`, sementara fondasi mensyaratkan harga positif. Harga nyata perlu ditentukan sebelum dipakai untuk instalasi baru. Pengujian mengisi harga contoh hanya dalam database fixture; audit tidak mengubah harga produk operasional.
 
-Satu menu Laporan menggantikan pintu masuk laporan terpisah. Sumber laporan adalah
-penjualan lunas, penerimaan, jurnal stok, biaya dan pengeluaran; dokumen admin
-bukan sumber omzet atau stok tambahan. Laporan batch lama tetap tersedia sebagai tab.
+## Sumber dan pengujian
 
-Admin Dokumen menyimpan draft, nomor otomatis saat terbit, salinan kop surat,
-baris transaksi, versi dan riwayat. Penomoran memakai `MD/JENIS/YYYYMM/000001`
-dengan penghitung database yang dikunci per transaksi. Nomor batal tidak dipakai ulang.
-PO dapat dipenuhi beberapa pembelian sampai jumlah pesanan habis. Pembelian baru
-menggunakan penerimaan yang sudah ada dalam satu transaksi atomik, dengan ongkir
-satu kiriman dibagi menurut nilai barang. Dokumen dari penerimaan lama tidak menambah
-stok lagi. Invoice dan DO penjualan memakai transaksi POS yang sudah lunas.
-DO transfer baru mendukung buah kg/butir dan stok satuan; dua sisi stok dijurnal.
-Transfer bahan diblokir saat ada antrean lunas di toko asal untuk menjaga cadangan.
-Dokumen pembelian dan transfer baru yang sudah diposting tidak dapat dibatalkan
-sebagai jalan pintas menghapus stok; koreksi fisik memakai alur stok yang tersedia.
+`sections/` adalah sumber SQL fondasi; `migrations/` menyimpan migrasi historis 017–019; berkas bernomor fitur di direktori ini adalah patch lanjutan. Jangan menyatukan fungsi hanya berdasarkan kesamaan nama karena urutan wrapper merupakan bagian dari kontraknya.
 
-Akses memakai permission yang sudah ada: `reports`, `trace`, `finance`, `stock`,
-dan pembatasan toko. PO/pembelian/invoice memerlukan finance; penerimaan pembelian
-juga memerlukan stock. DO memerlukan stock, dan DO penjualan memerlukan akses
-penjualan/reports. Kop surat hanya dapat diubah owner. DO tidak menyimpan harga.
+`npm run test:db` menjalankan pengujian PGlite terisolasi. `tests/crm-db.test.mjs` memasang rantai fitur lengkap lalu memeriksa bahwa profil toko, karyawan, dokumen, biaya produk, shift, pembayaran, dan CRM tetap terbaca bersama. Pengujiannya mencakup transaksi member, invoice tanpa penjualan ganda, poin, retry, diskon, refund, hak akses, serta grant RPC. Tes fitur lain memeriksa penerimaan, stok, resep, produksi, reject, laporan, dan kompatibilitas versi lama.
 
-Ekspor XLSX dibuat lokal tanpa CDN dan menyimpan masukan teks sebagai teks, bukan
-formula. PDF menggunakan cetakan A4 dengan tujuan Simpan sebagai PDF. Batch memakai
-filter tanggal penerimaan dan riwayat sepanjang umur batch; laporan lain memakai
-periode transaksi. Semua toko berarti semua toko yang diizinkan untuk akun tersebut.
-
-Validasi fitur: `node --test tests/reports.test.mjs tests/sidebar.test.mjs tests/retry.test.mjs`
-dan `node tests/reports-admin-sql.test.mjs`. Uji SQL memakai PGlite lokal, bukan database
-produksi. Jalankan uji SQL dahulu lalu `node tests/reports-admin-browser.mjs` dan
-`node tests/reports-app-smoke.mjs`; sesuaikan BROWSER_EXECUTABLE jika diperlukan.
-Tes login-startup lama mengharapkan posLoginTiming yang tidak ada pada baseline 070;
-tes itu sudah gagal pada baseline. Startup aktual diverifikasi oleh browser smoke test.
+Fixture autentikasi lokal tidak menggantikan pemeriksaan konfigurasi Supabase, JWT, hosting, dan data akun produksi.

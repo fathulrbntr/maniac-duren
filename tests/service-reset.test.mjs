@@ -5,6 +5,7 @@ const db=new PGlite();
 try {
  await db.exec(`create role anon;create role authenticated;create role service_role;create schema auth;create table auth.users(id uuid primary key,email text);create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;`);
  await db.exec(fs.readFileSync('database/pos.sql','utf8'));
+ for(const name of ['receipt-cost-breakdown','multi-product-receipt','batch-tracking','offline-pos','login-fast','login-bootstrap'])await db.exec(fs.readFileSync(`database/sections/operations/${name}.sql`,'utf8'));
  await db.exec(fs.readFileSync('database/upgrade.sql','utf8'));
  const user='00000000-0000-4000-8000-000000000001',branch='00000000-0000-4000-8000-000000000002';
  await db.query('insert into auth.users values ($1,$2)',[user,'owner@test.example']);

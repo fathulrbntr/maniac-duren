@@ -1,6 +1,6 @@
-import { itemTypes } from "./catalog.mjs?v=59";
-import { mayLeave } from "./navigation.mjs?v=84";
-import { escape as e, num, today, id } from "./core.mjs?v=9";
+import { itemTypes } from "./catalog.mjs";
+import { mayLeave } from "./navigation.mjs";
+import { escape as e, num, today, id } from "./core.mjs";
 import {
   scalar,
   inputTypes,
@@ -9,7 +9,7 @@ import {
   recipeValues,
   productionPreview,
   stockQty,
-} from "./production.mjs?v=59";
+} from "./production.mjs";
 const inputCost = () => '<input name="totalCost" type="number" min="0" step="any" required placeholder="Harga beli + ongkos masuk">';
 const field = (label, body) => `<label class="field">${label}${body}</label>`;
 const opts = (items, selected) =>

@@ -16,6 +16,7 @@ const water={id:id(),name:'Crystaline',sku:'WATER',itemType:'direct',stockUnit:'
 const prep={id:id(),name:'Cendol prepare',itemType:'prep',stockUnit:'g'},raw={id:id(),name:'Gula',itemType:'raw',stockUnit:'g'};
 const lot=(p,qty)=>({id:id(),productId:p.id,storeId:'A',qty,date:today()});
 let state={...emptyState(),products:[...bawor,...fruit,...recipes,...coral,...one,water,prep,raw],posCategories:cats,posCategoryMembershipVersion:2,stores:[{id:'A',name:'Outlet A'}],suppliers:[{id:'supplier',name:'Supplier A'}],orders:[],cashierVersion:54,discounts:[],opsVersion:19,orderStockVersion:11,orderRoutingVersion:13,access:{master:true,sell:true},unitLots:[lot(bawor[0],2),lot(bawor[1],1),lot(one[0],3),lot(water,5),lot(prep,30)],lots:[{id:id(),productId:fruit[0].id,storeId:'A',supplierId:'supplier',kg:10,pieces:4,quality:'ready',date:today()}],recipes:recipes.map((p,i)=>({id:id(),outputId:p.id,yieldQty:1,ingredients:[{productId:prep.id,qty:i?40:20}]}))};
+Object.assign(state,{me:{id:'cashier',name:'Kasir'},cashierShiftVersion:83,cashierShifts:[{id:'shift',cashierId:'cashier',storeId:'A',closedAt:null}]});
 assert.equal(posMenuEntries(state).length,6);assert.equal(posMenuEntries(state,cat('Durpas')).length,1);assert.equal(posMenuEntries(state,promo)[0].products.length,1);
 const renamed=structuredClone(state);renamed.products[0].variantGroupName='New label';assert(menuCatalogChanged(state,renamed));
 const newOptions=structuredClone(state);newOptions.products[0].variantOptions[0].value='New option';assert(menuCatalogChanged(state,newOptions));

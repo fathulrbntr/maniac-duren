@@ -1,5 +1,5 @@
-import { escape as e } from './core.mjs?v=9';
-import { variantAxes, buildVariantRows, variantPayload, variantSourceSnapshot } from './product-variants.mjs?v=77';
+import { escape as e } from './core.mjs';
+import { variantAxes, buildVariantRows, variantPayload, variantSourceSnapshot } from './product-variants.mjs';
 const field = (label,html) => `<label class="field">${label}${html}</label>`;
 export const variantEditorMarkup = () => `<section class="variant-editor" aria-label="Pilihan varian">
  <div class="variant-heading"><b>1. Tentukan pilihan varian</b><small>Satu pilihan per kolom. Pisahkan nilainya dengan koma.</small></div>

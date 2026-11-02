@@ -1,10 +1,10 @@
-import {productPhoto} from './product-photos.mjs?v=65';
-import {posCategories,inPosCategory,posCategoryName} from './pos-categories.mjs?v=52';
-import {posCategoryManager,posCategoryDialog} from './pos-categories-ui.mjs?v=65';
-import {showWeighingHistory} from './receipt-weighing.mjs?v=19';
-import {escape as e,money,num,today} from './core.mjs?v=9';
-import {productDefaults,itemTypes,isMaterial,isLegacyStock} from './catalog.mjs?v=77';
-import {availableStock,menuStatus} from './order-stock.mjs?v=12';
+import {productPhoto} from './product-photos.mjs';
+import {posCategories,inPosCategory,posCategoryName} from './pos-categories.mjs';
+import {posCategoryManager,posCategoryDialog} from './pos-categories-ui.mjs';
+import {showWeighingHistory} from './receipt-weighing.mjs';
+import {escape as e,money,num,today} from './core.mjs';
+import {productDefaults,itemTypes,isMaterial,isLegacyStock} from './catalog.mjs';
+import {availableStock,menuStatus} from './order-stock.mjs';
 const icons={search:'M21 21l-5-5 M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16',list:'M8 5h13 M8 12h13 M8 19h13 M3 5h.01 M3 12h.01 M3 19h.01',grid:'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z',box:'M3 7l9-4 9 4-9 4z M3 7v10l9 4 9-4V7 M12 11v10',plus:'M12 5v14 M5 12h14',reset:'M3 11a9 9 0 1 1 2 7 M3 4v7h7',arrow:'M5 12h14 M13 6l6 6-6 6'};
 const icon=k=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${icons[k]}"/></svg>`;
 const options=(values,selected)=>values.map(([key,label])=>`<option value="${e(key)}" ${key===selected?'selected':''}>${e(label)}</option>`).join('');

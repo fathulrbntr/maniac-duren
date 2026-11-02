@@ -1,6 +1,6 @@
-import {dummyProductPhoto} from './product-photos.mjs?v=65';
-import {posCategoryName, posCategories, categoryPayload} from './pos-categories.mjs?v=52';
-import { variantEditorMarkup, bindVariantEditor } from "./variant-editor.mjs?v=77";
+import {dummyProductPhoto} from './product-photos.mjs';
+import {posCategoryName, posCategories, categoryPayload} from './pos-categories.mjs';
+import { variantEditorMarkup, bindVariantEditor } from "./variant-editor.mjs";
 import {
   categories,
   itemTypes,
@@ -8,10 +8,10 @@ import {
   productDefaults,
   isLegacyStock,
   normalizeProduct,
-} from "./catalog.mjs?v=77";
-import { escape as e, id, num, money } from "./core.mjs?v=9";
-import { preparePhoto } from "./product-details.mjs?v=77";
-import { productStock, productUsed } from "./product-stock.mjs?v=60";
+} from "./catalog.mjs";
+import { escape as e, id, num, money } from "./core.mjs";
+import { preparePhoto } from "./product-details.mjs";
+import { productStock, productUsed } from "./product-stock.mjs";
 const options = (values, selected) =>
   Object.entries(values)
     .map(

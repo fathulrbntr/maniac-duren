@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {fruitSaleDialog,fruitSaleLots,parseFruitReceiptDate} from '../pos/fruit-sale-dialog.mjs?v=69';
+import {fruitSaleDialog,fruitSaleLots,parseFruitReceiptDate} from '../pos/fruit-sale-dialog.mjs';
 import {Node,makeModal} from './variant-dom.mjs';
 import {fixture,day} from './stock-demo-fixture.mjs';
 

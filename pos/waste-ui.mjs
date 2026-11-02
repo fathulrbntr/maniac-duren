@@ -1,7 +1,7 @@
-import {escape as e,num,money,today,id} from './core.mjs?v=9';
-import {bindEvidence} from './waste-evidence.mjs?v=63';
-import {wasteOutputProducts} from './waste-products.mjs?v=43';
-import {rejectLots,rejectCauses,lossCauses,rejectKinds,fleshProduct} from './reject-flow.mjs?v=63';
+import {escape as e,num,money,today,id} from './core.mjs';
+import {bindEvidence} from './waste-evidence.mjs';
+import {wasteOutputProducts} from './waste-products.mjs';
+import {rejectLots,rejectCauses,lossCauses,rejectKinds,fleshProduct} from './reject-flow.mjs';
 const field=(label,body)=>`<label class="field">${label}${body}</label>`;
 const input=(name,extra='')=>`<input name="${name}" type="number" min="0.000001" step="0.000001" required ${extra}>`;
 const proof=(key,label)=>field(label,`<input type="file" accept="image/jpeg,image/png,image/webp" data-proof-file="${key}"><small data-proof-status="${key}">Foto dikompresi sebelum disimpan</small>`);

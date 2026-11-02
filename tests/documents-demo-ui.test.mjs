@@ -14,7 +14,8 @@ globalThis.window={open:()=>({document:{write:html=>prints.push(html),close(){},
 const ctx={modal:m.modal,getState:()=>state,rpc:async(name,p)=>readStockDemo(state,name,p),mutate:async(action,p)=>{actions.push(action);state=applyStockDemoAction(state,action,p);return true;},render,refresh:async()=>{},toast:x=>messages.push(x)};
 function render(){root.innerHTML=documentsPage(state,f.store);bindDocuments(state,f.store,ctx);}
 try{
- render();assert(!root.querySelector('[data-new-document="PO"]').disabled);assert(!root.querySelector('#letterhead').disabled);
+ render();assert(root.querySelector('#documents-examples').disabled);
+ state=applyStockDemoAction(state,'cashier_shift_open',{id:crypto.randomUUID(),storeId:f.store,openingCash:0});render();assert(!root.querySelector('#documents-examples').disabled);assert(!root.querySelector('[data-new-document="PO"]').disabled);assert(!root.querySelector('#letterhead').disabled);
  await root.querySelector('#documents-examples').fire('click');assert.equal(state.documents.length,4);assert(root.querySelector('#documents-examples').disabled);
  for(const doc of state.documents){
   await root.querySelector(`[data-open-document="${doc.id}"]`).fire('click');assert.match(m.latest.textContent,/DEMO · BUKAN DOKUMEN RESMI/);await m.latest.querySelector('#doc-print').fire('click');m.latest.close();

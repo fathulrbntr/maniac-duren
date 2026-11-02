@@ -8,7 +8,9 @@ const image='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCA
 for(const install of ['fresh','upgrade']){
  const db=new PGlite();try{
  await db.exec("create role anon;create role authenticated;create role service_role;create schema auth;create table auth.users(id uuid primary key,email text);create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;");
- const sql=fs.readFileSync('database/pos.sql','utf8');await db.exec(install==='fresh'?sql:sql.slice(0,sql.indexOf('-- Bagian: sections/operations/batch-tracking.sql')));
+ await db.exec(fs.readFileSync('database/pos.sql','utf8'));
+ for(const name of ['receipt-cost-breakdown','multi-product-receipt'])await db.exec(fs.readFileSync(`database/sections/operations/${name}.sql`,'utf8'));
+ if(install==='fresh')await db.exec(fs.readFileSync('database/sections/operations/batch-tracking.sql','utf8'));
  await db.exec(fs.readFileSync('database/sections/operations/batch-tracking.sql','utf8'));
  await db.exec(fs.readFileSync('database/sections/operations/batch-tracking.sql','utf8'));
  const owner=id(),store=id(),other=id(),supplier=id(),fruit=id();
@@ -52,7 +54,7 @@ for(const install of ['fresh','upgrade']){
  const coralA=await makeWaste(daily,5,2,2,1,3),coralB=await makeWaste(rejectB,2,1,1,.5,1),mixed=id();
  s=await mut('coral_process',{id:id(),storeId:store,date,inputs:[{lotId:coralA,qty:1},{lotId:coralB,qty:.5}],seedKg:.5,spoiledKg:0,additionalCost:0,outputs:[{lotId:mixed,productId:meat,qty:1,durianKg:1}]});
  assert.equal(s.unitLots.find(l=>l.id===mixed).unitCost,175000);assert.deepEqual(new Set(rootContributions(s,mixed,1).map(x=>x.lotId)),new Set([root,rootB]));
- fs.writeFileSync('/tmp/batch-ui-fixture.json',JSON.stringify(s));
+ fs.mkdirSync(new URL('../test-results/',import.meta.url),{recursive:true});fs.writeFileSync(new URL('../test-results/batch-ui-fixture.json',import.meta.url),JSON.stringify(s));
  // Warehouse access cannot reconcile cost, produce, or read finance.
  const warehouse=id();await db.query('insert into auth.users values($1,$2)',[warehouse,'warehouse@test.local']);await db.query('insert into public.md_pos_staff values($1)',[warehouse]);await db.query("insert into public.md_pos_employees(id,user_id,name,email,role,store_ids) values($1,$1,'Stocker','warehouse@test.local','warehouse',array[$2]::uuid[])",[warehouse,store]);await as(warehouse);
  await assert.rejects(mut('receipt_reconcile',{...reconcile,id:id()}),/Hak akses/);await assert.rejects(mut('coral_process',{...process,id:id()}),/Hak akses/);

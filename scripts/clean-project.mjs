@@ -1,3 +1,38 @@
-import fs from 'node:fs';
-const obsolete=["CARA-PASANG.txt", "PATCH-027.md", "PATCH-028.md", "PETUNJUK.txt", "POS-SETUP.md", "ROLLBACK-034.md", "UPDATE-021.md", "UPDATE-029.md", "UPDATE-030.md", "UPDATE-031.md", "UPDATE-032.md", "UPDATE-033.md", "database/migrations/017-receipt-cost-breakdown.sql", "database/migrations/018-receipt-weighing-log.sql", "database/migrations/019-direct-stock-no-sorting.sql", "database/migrations/020-multi-product-receipt.sql", "database/migrations/021-batch-tracking.sql", "database/migrations/021-offline-pos.sql", "database/migrations/022-offline-batch-compat.sql", "database/migrations/023-login-fast.sql", "database/migrations/024-login-bootstrap.sql", "database/migrations/README.md", "database/reset-pos.sql", "docs/ALUR-PENGGUNA.md", "docs/HASIL-AUDIT.md", "pos/modern.css", "scripts/clean-legacy-docs.mjs"];
-for(const file of obsolete){if(fs.existsSync(file)){fs.rmSync(file);console.log('Removed '+file);}}
+// Archive historical instructions; never delete application, SQL or user data.
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+const root = fileURLToPath(new URL("../", import.meta.url));
+const names = JSON.parse(
+  fs.readFileSync(new URL("./archive-documents.json", import.meta.url), "utf8"),
+);
+const planned = names.filter((name) => fs.existsSync(path.join(root, name)));
+for (const name of planned) {
+  if (
+    path.basename(name) !== name ||
+    !fs.lstatSync(path.join(root, name)).isFile()
+  )
+    throw Error("Invalid archive entry: " + name);
+  const target = path.join(root, "docs/archive", name);
+  if (
+    fs.existsSync(target) &&
+    !fs.readFileSync(target).equals(fs.readFileSync(path.join(root, name)))
+  )
+    throw Error("Different archive exists; no files changed: " + name);
+}
+if (process.argv.includes("--check")) {
+  console.log(planned.length + " historical guides to archive.");
+  for (const name of planned) console.log(name);
+} else {
+  fs.mkdirSync(path.join(root, "docs/archive"), { recursive: true });
+  for (const name of planned) {
+    const source = path.join(root, name),
+      target = path.join(root, "docs/archive", name);
+    if (fs.existsSync(target)) fs.unlinkSync(source);
+    else fs.renameSync(source, target);
+  }
+  console.log(
+    planned.length +
+      " historical guides archived. Application, database and photos preserved.",
+  );
+}

@@ -1,6 +1,6 @@
 // Use a separate, local print document so the POS dialog/viewport cannot add
 // height to the roll. Measurement and printing use exactly the same CSS.
-import {readDeviceSettings,validateDeviceSettings} from './device-settings.mjs?v=58';
+import {readDeviceSettings,validateDeviceSettings} from './device-settings.mjs';
 let lastFrame = null;
 let preparing = false;
 

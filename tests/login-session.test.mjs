@@ -6,7 +6,7 @@ import {emptyState} from '../pos/core.mjs';
 import {createSessionManager} from '../pos/session.mjs';
 const scenario=process.argv[2];
 if(!scenario) {
-  for(const name of ['login-progress','restore','expired','network-retry','invalid','unauthorized-retry','cross-tab-logout']) {
+  for(const name of ['login-progress','restore','expired','network-retry','invalid','unauthorized-retry','cross-tab-logout','logout-during-read']) {
     const result=spawnSync(process.execPath,[fileURLToPath(import.meta.url),name],{encoding:'utf8',env:{...process.env,NODE_NO_WARNINGS:'1'}});
     assert.equal(result.status,0,result.stdout+result.stderr);
     process.stdout.write(result.stdout);
@@ -34,7 +34,7 @@ if(!scenario) {
   globalThis.FormData=class{*[Symbol.iterator](){yield ['identifier','test'];yield ['password','fixture-password'];}};
   const state={...emptyState(),me:{id:'test',name:'Test',role:'owner'},access:{master:true},stores:[{id:'A',name:'Outlet A'},{id:'B',name:'Outlet B'}],suppliers:[]};
   let loginCalls=0,readCalls=0,refreshCalls=0,networkFails=scenario==='network-retry';
-  let loginResolve,readResolve;
+  let loginResolve,readResolve,parseResolve;
   const reply=(value,status=200)=>new Response(JSON.stringify(value),{status});
   globalThis.fetch=async(target,options)=>{
     if(target==='/api/pos-config')return reply({configured:true,url,key:'fixture'});
@@ -45,6 +45,7 @@ if(!scenario) {
     }
     if(target===url+'/rest/v1/rpc/pos_read'){
       readCalls++;
+      if(scenario==='logout-during-read')return {ok:true,status:200,json:()=>new Promise(resolve=>parseResolve=resolve)};
       if(networkFails)throw Error('Jaringan terputus');
       if(scenario==='unauthorized-retry'&&options.headers.Authorization==='Bearer access-old')return reply({message:'expired'},401);
       if(scenario==='login-progress')return new Promise(resolve=>readResolve=()=>resolve(reply(state)));
@@ -52,8 +53,17 @@ if(!scenario) {
     }
     throw Error('Unexpected request '+target);
   };
-  await import('../pos/app.js?auth-fixture');
-  if(scenario==='login-progress') {
+  const loading=import('../pos/app.js?auth-fixture');
+  if(scenario==='logout-during-read'){
+    for(let i=0;i<100&&!parseResolve;i++)await new Promise(resolve=>setTimeout(resolve,5));
+    assert(parseResolve);storage.removeItem(manager.storageKey);
+    for(const fn of windowListeners.storage||[])fn({key:manager.storageKey,newValue:null});
+    parseResolve(state);
+  }
+  await loading;
+  if(scenario==='logout-during-read'){
+    assert.match(app.innerHTML,/login-form/);assert.equal(manager.read(),null);assert(!app.innerHTML.includes('Outlet B'));
+  } else if(scenario==='login-progress') {
     assert.match(app.innerHTML,/login-form/);
     const action=form.onsubmit({currentTarget:form,preventDefault(){}});
     assert(button.disabled);assert(!progress.hidden);assert.equal(progressText.textContent,'Memeriksa akun…');

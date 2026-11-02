@@ -1,7 +1,7 @@
-import {escape as e,today,num,money} from './core.mjs?v=10';
-import {availableStock,requirements,checkOrder} from './order-stock.mjs?v=12';
-import {sumProducts} from './decimal-totals.mjs?v=66';
-import {posVisible} from './pos-categories.mjs?v=52';
+import {escape as e,today,num,money} from './core.mjs';
+import {availableStock,requirements,checkOrder} from './order-stock.mjs';
+import {sumProducts} from './decimal-totals.mjs';
+import {posVisible} from './pos-categories.mjs';
 
 const dateLabel=value=>value.split('-').reverse().join('/');
 const field=(label,control)=>`<label class="field">${label}${control}</label>`;

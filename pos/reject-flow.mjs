@@ -1,7 +1,7 @@
-import {quantity} from './production.mjs?v=59';
-import {wastePlan,wasteAction} from './waste.mjs?v=43';
-import {photoValue} from './product-details.mjs?v=9';
-import {availableStock} from './order-stock.mjs?v=12';
+import {quantity} from './production.mjs';
+import {wastePlan,wasteAction} from './waste.mjs';
+import {photoValue} from './product-details.mjs';
+import {availableStock} from './order-stock.mjs';
 export const rejectActions=new Set(['reject_mark','reject_process','reject_coral','reject_loss','reject_void']);
 export const rejectCauses={arrival:'Reject saat datang',taste:'Rasa tidak sesuai',overripe:'Terlalu matang',damage:'Buah rusak / pecah',other:'Lainnya'};
 export const lossCauses={spoiled:'Basi / rusak',mistake:'Salah buat / tertumpah',shrinkage:'Penyusutan berat buah',discard:'Dibuang'};

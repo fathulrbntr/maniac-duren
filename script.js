@@ -170,12 +170,15 @@ const galleryElement = document.querySelector(SELECTORS.gallery);
 let gallerySwiper = null;
 let resizeTimer = null;
 
-if (galleryElement && typeof Swiper !== "undefined") {
+const galleryCount = galleryElement?.querySelectorAll(".swiper-slide").length || 0;
+galleryElement?.classList.toggle("gallery-single", galleryCount === 1);
+
+if (galleryCount > 1 && typeof Swiper !== "undefined") {
   gallerySwiper = new Swiper(galleryElement, {
     effect: "coverflow",
     centeredSlides: true,
     grabCursor: true,
-    loop: true,
+    loop: galleryCount >= 6,
     loopAdditionalSlides: 3,
     speed: 650,
     spaceBetween: 14,
@@ -186,7 +189,7 @@ if (galleryElement && typeof Swiper !== "undefined") {
     observeParents: true,
     resizeObserver: true,
     updateOnWindowResize: true,
-    initialSlide: 2,
+    initialSlide: Math.min(2, galleryCount - 1),
 
     coverflowEffect: {
       rotate: 28,

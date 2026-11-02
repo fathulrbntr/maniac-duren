@@ -1,8 +1,8 @@
-import {batchProfit,batchProfitTotals,profitState} from './batch-profit.mjs?v=88';
-import {batchMetrics,batchStockCosts,formatPercent} from './batch-metrics.mjs?v=87';
-import {escape as e,num,money} from './core.mjs?v=9';
-import {batchReports} from './batch-report.mjs?v=63';
-import {rejectKinds} from './reject-flow.mjs?v=63';
+import {batchProfit,batchProfitTotals,profitState} from './batch-profit.mjs';
+import {batchMetrics,batchStockCosts,formatPercent} from './batch-metrics.mjs';
+import {escape as e,num,money} from './core.mjs';
+import {batchReports} from './batch-report.mjs';
+import {rejectKinds} from './reject-flow.mjs';
 const name=(s,k,id)=>s[k]?.find(x=>x.id===id)?.name||'—';
 const cost=n=>n==null?'Belum diketahui':money(n);
 const states={active:'Masih ada stok',closed:'Selesai',review:'Perlu pemeriksaan',scope:'Perlu cek outlet tujuan'};

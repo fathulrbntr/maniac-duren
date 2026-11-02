@@ -5,7 +5,7 @@ import { navigation, sections, visibleSections } from '../pos/navigation.mjs';
 const pages = sections.flatMap(x => x.pages);
 assert.equal(new Set(pages).size, pages.length, 'Each menu must appear only once');
 assert.deepEqual(visibleSections({}).flatMap(x=>x.pages), ['guide']);
-assert.deepEqual(visibleSections({sell:true,attendance:true}).flatMap(x=>x.pages), ['orders','kitchen','attendance','devices','guide']);
+assert.deepEqual(visibleSections({sell:true,attendance:true}).flatMap(x=>x.pages), ['orders','shifts','kitchen','attendance','devices','guide']);
 assert(!visibleSections({master:true}).flatMap(x=>x.pages).includes('employees'));
 assert(!pages.includes('losses'),'One shared reject/waste menu');
 assert(pages.includes('waste')&&pages.includes('reports')&&pages.includes('documents'));

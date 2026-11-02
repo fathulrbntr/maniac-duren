@@ -6,10 +6,13 @@ import {fixture,order,qty} from './stock-demo-fixture.mjs';
 const line=(p,qty=1)=>({productId:p.id,qty,price:150000});
 const app=fs.readFileSync(new URL('../pos/app.js',import.meta.url),'utf8');
 // Exercise the actual application switch, request guard, refresh and mutation functions.
-const source=app.slice(app.indexOf('let stockDemoModule,demoSource=null;'),app.indexOf('\nfunction login(')).replace('let stockDemoModule,demoSource=null;','let stockDemoModule=Promise.resolve(env.engine),demoSource=null;');
-const pollSource=app.slice(app.indexOf('setInterval(async()=>{'));
+const declaration=/let stockDemoModule\s*,\s*demoSource\s*=\s*null;/;
+const begin=app.search(declaration),end=app.indexOf('\nfunction login('),pollBegin=app.search(/setInterval\(async\s*\(\)\s*=>\s*\{/);
+assert(begin>=0&&end>begin&&pollBegin>=0,'Application isolation hooks must be found');
+const source=app.slice(begin,end).replace(declaration,'let stockDemoModule=Promise.resolve(env.engine),demoSource=null;');
+const pollSource=app.slice(pollBegin);
 const build=new Function('env',`let {state,mode='live',busy=false,document,fetch,config,token='token',refreshToken='',expires=Infinity,store,toast,render,pendingRetry,prepareRetry,settleRetry,reconcileRetry,confirm,mayLeave,hasOrderDraft,clearOrderDraft}=env;
-let sessions=env.sessions,activeSessionId=sessions.read().sessionId;let stateRevision=0,cart=[],lastSale=null,seenKitchen=new Map(),polling=false,view='kitchen';const observeKitchen=()=>{};let poll;const setInterval=fn=>{poll=fn};
+let sessions=env.sessions,activeSessionId=sessions.read().sessionId;let reportRefreshPending=false,reportRefreshRevision=0;let stateRevision=0,cart=[],lastSale=null,seenKitchen=new Map(),polling=false,view='kitchen';const observeKitchen=()=>{};let poll;const setInterval=fn=>{poll=fn};
 ${source}\n${pollSource}\nreturn {switchStockDemo,request,refresh,mutate,adminRpc,poll,getState:()=>state,getMode:()=>mode,isBusy:()=>busy};`);
 const defer=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return {promise,resolve,reject};};
 const response=(value,status=200)=>({ok:status<400,status,json:async()=>structuredClone(value)});
@@ -45,6 +48,7 @@ const liveRefresh=harness({refreshToken:'refresh-token',expires:0});const update
 for(const method of ['refresh','poll']){
  const race=harness(),gate=defer();race.handle(()=>gate.promise);const reading=race[method]();await new Promise(resolve=>setImmediate(resolve));await race.switchStockDemo();const local=race.getState();gate.resolve(response(race.f.state));await reading;assert.equal(race.getMode(),'stock-demo');assert.equal(race.getState(),local,method+' must discard stale response');
 }
+const documentRace=harness(),documentGate=defer();documentRace.handle(()=>documentGate.promise);const documentReading=documentRace.adminRpc('pos_document_get',{document_id:'old-document'});await new Promise(resolve=>setImmediate(resolve));await documentRace.switchStockDemo();const rejectedDocument=assert.rejects(documentReading,/Sesi berubah/);documentGate.resolve(response({id:'old-document'}));await rejectedDocument;
 const rejectedPoll=harness(),pollGate=defer();rejectedPoll.handle(()=>pollGate.promise);const running=rejectedPoll.poll();await new Promise(resolve=>setImmediate(resolve));await rejectedPoll.switchStockDemo();pollGate.reject(Error('Offline'));await running;assert.equal(rejectedPoll.status.textContent,'Mode demo','Old real-poll error must not mark demo offline');
 const switching=harness();await switching.switchStockDemo();const load=defer();switching.handle(()=>load.promise);const exiting=switching.switchStockDemo();assert(switching.isBusy());await switching.switchStockDemo();assert.equal(await switching.mutate('order_create',order(switching.f.store,[line(switching.f.water)])),false);load.resolve(response(switching.f.state));await exiting;assert.equal(switching.requests.length,1);assert.equal(switching.getMode(),'live');
 assert(!/localStorage|fetch\(/.test(fs.readFileSync(new URL('../pos/stock-demo.mjs',import.meta.url),'utf8')),'Engine has no persistence/network');

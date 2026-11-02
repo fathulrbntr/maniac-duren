@@ -1,6 +1,6 @@
-import {id,today,money,escape as e} from './core.mjs?v=77';
-import {activeShift} from './cashier-shifts.mjs?v=84';
-import {showReceipt} from './cashier-ui.mjs?v=84';
+import {id,today,money,escape as e} from './core.mjs';
+import {activeShift} from './cashier-shifts.mjs';
+import {showReceipt} from './cashier-ui.mjs';
 const time=v=>v?new Date(v).toLocaleString('id-ID',{timeZone:'Asia/Jakarta',dateStyle:'medium',timeStyle:'short'})+' WIB':'—';
 const outlet=(s,key)=>s.stores.find(x=>x.id===key)?.name||'Outlet';
 const canClose=(s,sh)=>sh.cashierId===s.me?.id||s.me?.role==='owner'||s.access?.finance;

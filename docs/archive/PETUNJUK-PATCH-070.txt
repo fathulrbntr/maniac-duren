@@ -1,0 +1,41 @@
+PATCH 070 — DETAIL KARYAWAN MANIAC DUREN
+Basis: maniac-duren(6).zip yang Anda kirim.
+Isi ZIP hanya file yang ditambahkan/diubah.
+
+PENAMBAHAN
+- Nama kontak darurat dan nomor telepon darurat.
+- Nama bank, nama pemilik rekening, dan nomor rekening.
+- Tersedia pada Tambah/Edit karyawan dan Detail & rekap.
+- Semua isian opsional. Nomor rekening disimpan sebagai teks sehingga nol di depan tetap utuh.
+- Data bisa diubah atau dikosongkan kembali. Hak akses pengelolaan karyawan tetap mengikuti sistem.
+
+CARA PASANG
+1. Ekstrak seluruh isi ZIP ke folder proyek maniac-duren, sejajar package.json.
+   Timpa file yang namanya sama. Tidak perlu menghapus folder proyek.
+2. Buka Supabase > SQL Editor > New query.
+3. Buka database/employee-details-070.sql di VS Code, salin SELURUH isinya ke SQL Editor, lalu Run.
+   Hasil sukses: version 70, Kontak darurat dan rekening karyawan siap.
+   SQL ini aman dijalankan ulang dan tidak mereset data. Tidak perlu menjalankan pos.sql/reset-pos.sql.
+4. Jalankan perintah Git di bawah, tunggu deployment selesai, lalu muat ulang POS.
+5. Buka Karyawan > klik kartu karyawan atau Tambah karyawan. Isi kolom baru lalu Simpan.
+   Menu titik tiga > Detail & rekap juga menampilkan data tersebut.
+   Jika muncul pemberitahuan SQL belum aktif, pastikan langkah 3 berhasil lalu klik Perbarui.
+
+TERMINAL GIT (dari folder proyek)
+git status
+git add pos database tests
+git commit -m "Add employee emergency contact and bank details"
+git push
+
+VERIFIKASI LOKAL
+Lolos pengujian PostgreSQL/PGlite untuk simpan/baca/ubah/kosongkan, nol di depan,
+validasi, hak akses, pengiriman ulang, migrasi berulang, dan kompatibilitas profil toko.
+Lolos pengujian form Chromium untuk tambah/edit/detail, payload, validasi, isian kosong,
+kompatibilitas input Rupiah, penanganan SQL belum terpasang, serta layout desktop/mobile.
+Tes akun karyawan dan absensi yang sudah ada juga lolos.
+Belum diterapkan ke Supabase atau deployment online Anda.
+
+Menjalankan tes di proyek (setelah npm install):
+node tests/employee-details.test.mjs
+node tests/employee-details-browser.cjs
+Tes browser memerlukan Chromium Playwright yang terpasang.

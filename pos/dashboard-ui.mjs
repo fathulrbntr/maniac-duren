@@ -1,7 +1,7 @@
-import {escape as e,today,money,num} from './core.mjs?v=60';
-import {productPhoto} from './product-photos.mjs?v=65';
-import {sidebarIcon} from './sidebar.mjs?v=42';
-import {dashboardRange,validDashboardDates,dashboardTabs,dashboardSales,dashboardStock,dashboardRejects,dashboardCustomers} from './dashboard-data.mjs?v=75';
+import {escape as e,today,money,num} from './core.mjs';
+import {productPhoto} from './product-photos.mjs';
+import {sidebarIcon} from './sidebar.mjs';
+import {dashboardRange,validDashboardDates,dashboardTabs,dashboardSales,dashboardStock,dashboardRejects,dashboardCustomers} from './dashboard-data.mjs';
 
 let tab='transactions',period='day',allStores=false,custom={from:today(),to:today()};
 const periods={day:'Hari ini',yesterday:'Kemarin',week:'Minggu ini',month:'Bulan ini',custom:'Pilih tanggal'};

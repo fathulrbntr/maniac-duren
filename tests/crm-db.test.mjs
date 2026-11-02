@@ -6,7 +6,11 @@ import {PGlite} from '@electric-sql/pglite';
 const db=new PGlite();
 try{
  await db.exec("create role anon;create role authenticated;create role service_role;create schema auth;create table auth.users(id uuid primary key,email text);create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;");
- for(const f of ['pos.sql','rollback-027-compat.sql','compress-pos-photos.sql','pos-menu-categories.sql','pos-cashier-controls.sql','receipt-shipment-082.sql','cashier-shifts-083.sql','payment-methods-084.sql','crm-loyalty-085.sql','crm-loyalty-085.sql'])await db.exec(fs.readFileSync('database/'+f,'utf8'));
+ // Install the complete current feature chain, not just CRM's minimal prerequisites.
+ for(const f of ['pos.sql','rollback-027-compat.sql','compress-pos-photos.sql'])await db.exec(fs.readFileSync('database/'+f,'utf8'));
+ // Positive sample prices belong only to the isolated test fixture.
+ await db.exec(fs.readFileSync('database/seeds/import-durian-dan-turunan.sql','utf8').replace("null, null, null, null, '', ''","case when r.stock_unit='kg_butir' then 50000 end, case when r.stock_unit='kg_butir' then 100000 end, null, null, '', ''"));
+ for(const f of ['link-durian-reject.sql','product-variants.sql','pos-menu-categories.sql','pos-cashier-controls.sql','product-single-variant.sql','reject-flow-063.sql','store-receipt-064.sql','employee-details-070.sql','reports-admin-071.sql','product-buy-piece-077.sql','receipt-shipment-082.sql','cashier-shifts-083.sql','payment-methods-084.sql','crm-loyalty-085.sql','crm-loyalty-085.sql'])await db.exec(fs.readFileSync('database/'+f,'utf8'));
  const owner=id(),cashier=id(),other=id(),foreignCashier=id(),store=id(),foreign=id(),supplier=id(),product=id(),date=new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Jakarta'});
  await db.query("insert into public.md_pos_stores(id,name) values($1,'Depok'),($2,'Bogor')",[store,foreign]);
  for(const [user,role,st,name] of [[owner,'owner',store,'Owner'],[cashier,'cashier',store,'Siti <Kasir>'],[other,'cashier',store,'Budi'],[foreignCashier,'cashier',foreign,'Rina']]){
@@ -17,7 +21,10 @@ try{
  const mut=async(action,p,endpoint='pos_mutate_027')=>(await db.query('select public.'+endpoint+'($1,$2::jsonb) s',[action,JSON.stringify(p)])).rows[0].s;
  const shift=(action,p)=>mut('cashier_shift_'+action,p,'pos_cashier_shift_mutate');
  const monitor=async(f={})=>(await db.query('select public.pos_cashier_shifts_read($1::jsonb) s',[JSON.stringify(f)])).rows[0].s;
- await as(owner);await mut('master',{id:supplier,kind:'suppliers',name:'Supplier'});
+ await as(owner);
+ const installed=await read();
+ for(const [feature,version] of Object.entries({storeProfileVersion:64,employeeDetailsVersion:70,reportsAdminVersion:71,productCostVersion:77,cashierShiftVersion:83,paymentMethodsVersion:84,crmVersion:85}))assert.equal(installed[feature],version,feature+' survives the full wrapper chain');
+ await mut('master',{id:supplier,kind:'suppliers',name:'Supplier'});
  await mut('product_save',{id:product,name:'Air',sku:'AIR',itemType:'direct',stockUnit:'pcs',category:'Minuman',salePrice:10000});
  await mut('unit_receipt',{id:id(),storeId:store,date,productId:product,qty:100,totalCost:100000,supplierId:supplier,kind:'purchase'});
  const cart={storeId:store,date,lines:[{productId:product,qty:2,price:10000}],payment:'Tunai',paid:50000};
@@ -41,6 +48,14 @@ try{
  const sale={...cart,id:id(),memberId,lines:[{productId:product,qty:1,price:10000},{productId:product,qty:2,price:10000}],paid:30000};
  let s=await mut('order_create',sale);const o=s.orders.find(x=>x.id===sale.id);assert.equal(o.customer.id,memberId);assert.equal(o.pointsEarned,10);assert.equal((await lookup({memberId})).members[0].balance,10);
  await mut('order_create',sale);assert.equal((await lookup({memberId})).members[0].balance,10);
+ // Invoicing a paid member order must neither sell again nor award points twice.
+ const invoice=id();await as(owner);
+ await mut('document_save',{id:id(),documentId:invoice,storeId:store,kind:'INV',date,version:0,body:{sourceType:'order',sourceId:sale.id,party:'Nadia'}});
+ await mut('document_issue',{id:id(),documentId:invoice,storeId:store,version:1});
+ assert.equal((await lookup({memberId})).members[0].balance,10);
+ assert.equal((await read()).orders.length,1);
+ await as(cashier);
+
  await assert.rejects(mut('order_create',{...sale,memberId:otherMember}),/ID|pengiriman|berbeda|digunakan/);
  const guest={...cart,id:id()};s=await mut('order_create',guest);assert.equal(s.orders.find(x=>x.id===guest.id).customer,null);
  await assert.rejects(mut('order_create',{...cart,id:id(),memberId:id()}),/Member/);
@@ -73,5 +88,5 @@ try{
  for(const table of ['members','point_rules','point_ledger','member_consents','crm_receipts','crm_events'])await assert.rejects(db.query('select * from public.md_pos_'+table),/permission denied/);
  await assert.rejects(db.query("select public.pos_crm_record('order',$1,$2)",[sale.id,memberId]),/permission denied/);await assert.rejects(db.query('select public.pos_read_before_085()'),/permission denied/);
  await db.exec('reset role;set role anon');await assert.rejects(lookup(),/permission denied/);await db.exec('reset role');
- console.log('PASS CRM SQL: migrations, members, normalized duplicate phone, permissions, opt-in audit/export, rules, quantity aggregation, exact decimals, guest and invalid-member rollback, retries, settlement, legacy sale, discounts, immutable receipt, void reversal, RLS/RPC grants');
+ console.log('PASS current SQL chain + CRM: migrations, members, normalized duplicate phone, permissions, opt-in audit/export, rules, quantity aggregation, exact decimals, guest and invalid-member rollback, retries, settlement, legacy sale, discounts, immutable receipt, void reversal, RLS/RPC grants');
 }catch(error){console.error(error.message,error.code||'',error.where||'',error.stack);process.exitCode=1;}finally{await db.close();}

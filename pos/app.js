@@ -1,47 +1,94 @@
-import {crmPage,bindCrm,memberFields,bindMemberPicker} from './crm-ui.mjs?v=85';
-import {paymentsPage,bindPayments,paymentOptions} from './payment-methods-ui.mjs?v=84';
-import {requireEnabledPayment} from './payment-methods.mjs?v=84';
-import {validPayment} from './cashier.mjs?v=84';
-import {shiftBanner,bindShiftBanner,shiftsPage,bindShiftsPage} from './cashier-shifts-ui.mjs?v=84';
-import {activeShift,cashierName,readShiftsDemo} from './cashier-shifts.mjs?v=84';
-import {dashboardPage,bindDashboard,resetDashboard,followDashboardStore} from './dashboard-ui.mjs?v=75';
-import {createSessionManager} from './session.mjs?v=73';
-import {installButton,bindInstall} from './pwa.mjs?v=72';
-import {reportsPage,bindReports,selectReportTab} from './reports-ui.mjs?v=88';
-import {documentsPage,bindDocuments} from './documents-ui.mjs?v=74';
-import { variantGroupDialog, productVariantDialog } from "./variant-editor.mjs?v=77";
-import {createSidebarController,sidebarIcon} from './sidebar.mjs?v=42';
+import { crmPage, bindCrm, memberFields, bindMemberPicker } from "./crm-ui.mjs";
+import {
+  paymentsPage,
+  bindPayments,
+  paymentOptions,
+} from "./payment-methods-ui.mjs";
+import { requireEnabledPayment } from "./payment-methods.mjs";
+import { validPayment } from "./cashier.mjs";
+import {
+  shiftBanner,
+  bindShiftBanner,
+  shiftsPage,
+  bindShiftsPage,
+} from "./cashier-shifts-ui.mjs";
+import { activeShift, cashierName, readShiftsDemo } from "./cashier-shifts.mjs";
+import {
+  dashboardPage,
+  bindDashboard,
+  resetDashboard,
+  followDashboardStore,
+} from "./dashboard-ui.mjs";
+import { createSessionManager } from "./session.mjs";
+import { installButton, bindInstall } from "./pwa.mjs";
+import { reportsPage, bindReports, selectReportTab } from "./reports-ui.mjs";
+import { documentsPage, bindDocuments } from "./documents-ui.mjs";
+import { variantGroupDialog, productVariantDialog } from "./variant-editor.mjs";
+import { createSidebarController, sidebarIcon } from "./sidebar.mjs";
 const sidebar = createSidebarController();
-import {installMoneyInputs} from './money-input.mjs?v=83';
+import { installMoneyInputs } from "./money-input.mjs";
 installMoneyInputs();
-import { openWeighingReceipt, showWeighingHistory } from './receipt-weighing.mjs?v=82';
-import {inventoryPanel,bindInventory} from "./inventory-ui.mjs?v=79";
-import {opsPages,opsPage,bindOps,clearOrderDraft,hasOrderDraft} from './operations-ui.mjs?v=85';
-import {printReceipt} from './receipt-printer.mjs?v=64';
-import {storesPage,storeDialog} from './store-settings.mjs?v=64';
-import {receiptHeader,fillReceiptLogo} from './store-profile.mjs?v=64';
-const storeContext=()=>({modal,mutate,render,toast,crmRead:async payload=>{const session=activeSessionId,currentMode=mode,demoSession=state.stockDemo?.sessionId;const data=await adminRpc('pos_crm_read',{payload});if(session!==activeSessionId||currentMode!==mode||demoSession!==state.stockDemo?.sessionId)throw Error('Sesi berubah. Buka kembali CRM.');return data;},demo:mode==='stock-demo',loadStoreLogo:(storeId,version)=>request('/rest/v1/rpc/pos_store_logo',{store_id:storeId,expected_version:version||null})});
+import {
+  openWeighingReceipt,
+  showWeighingHistory,
+} from "./receipt-weighing.mjs";
+import { inventoryPanel, bindInventory } from "./inventory-ui.mjs";
+import {
+  opsPages,
+  opsPage,
+  bindOps,
+  clearOrderDraft,
+  hasOrderDraft,
+} from "./operations-ui.mjs";
+import { printReceipt } from "./receipt-printer.mjs";
+import { storesPage, storeDialog } from "./store-settings.mjs";
+import { receiptHeader, fillReceiptLogo } from "./store-profile.mjs";
+const storeContext = () => ({
+  modal,
+  mutate,
+  render,
+  toast,
+  crmRead: async (payload) => {
+    const session = activeSessionId,
+      currentMode = mode,
+      demoSession = state.stockDemo?.sessionId;
+    const data = await adminRpc("pos_crm_read", { payload });
+    if (
+      session !== activeSessionId ||
+      currentMode !== mode ||
+      demoSession !== state.stockDemo?.sessionId
+    )
+      throw Error("Sesi berubah. Buka kembali CRM.");
+    return data;
+  },
+  demo: mode === "stock-demo",
+  loadStoreLogo: (storeId, version) =>
+    request("/rest/v1/rpc/pos_store_logo", {
+      store_id: storeId,
+      expected_version: version || null,
+    }),
+});
 import {
   navigation,
   visibleSections,
   mayLeave,
   trackForms,
-} from "./navigation.mjs?v=85";
+} from "./navigation.mjs";
 import {
   prepareRetry,
   settleRetry,
   reconcileRetry,
   pendingRetry,
   setRetryScope,
-} from "./retry.mjs?v=85";
-import { wastePage, bindWaste } from "./waste-ui.mjs?v=63";
+} from "./retry.mjs";
+import { wastePage, bindWaste } from "./waste-ui.mjs";
 import {
   recipesPage,
   productionPage,
   unitStockPanel,
   receiptDialog,
   bindProduction,
-} from "./production-ui.mjs?v=63";
+} from "./production-ui.mjs";
 import {
   today,
   money,
@@ -51,42 +98,62 @@ import {
   emptyState,
   saleRows,
   summarize,
-} from "./core.mjs?v=60";
-import { isLegacyStock, itemTypes } from "./catalog.mjs?v=77";
-import { catalogPanel, productDialog } from "./catalog-ui.mjs?v=80";
+} from "./core.mjs";
+import { isLegacyStock, itemTypes } from "./catalog.mjs";
+import { catalogPanel, productDialog } from "./catalog-ui.mjs";
 const themeKey = "maniac-pos-theme";
 function themeButton(extraClass = "") {
   return `<button type="button" class="small theme-toggle ${extraClass}" data-theme-toggle aria-label="Ganti tema"><svg class="theme-light-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></svg><svg class="theme-dark-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M20 15.5A9 9 0 0 1 8.5 4 9 9 0 1 0 20 15.5Z"/></svg><span data-theme-label></span></button>`;
 }
 function syncThemeControls() {
   const dark = document.documentElement.dataset.theme === "dark";
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#202020' : '#f3f3f2');
-  document.querySelectorAll('[data-theme-toggle]').forEach(button => {
-    button.setAttribute('aria-label', dark ? 'Aktifkan mode light' : 'Aktifkan mode dark');
-    button.setAttribute('aria-pressed', String(dark));
-    button.querySelector('[data-theme-label]').textContent = dark ? 'Dark' : 'Light';
+  document
+    .querySelector('meta[name="theme-color"]')
+    ?.setAttribute("content", dark ? "#202020" : "#f3f3f2");
+  document.querySelectorAll("[data-theme-toggle]").forEach((button) => {
+    button.setAttribute(
+      "aria-label",
+      dark ? "Aktifkan mode light" : "Aktifkan mode dark",
+    );
+    button.setAttribute("aria-pressed", String(dark));
+    button.querySelector("[data-theme-label]").textContent = dark
+      ? "Dark"
+      : "Light";
   });
 }
-document.addEventListener('click', event => {
-  if (!event.target.closest('[data-theme-toggle]')) return;
-  const theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+document.addEventListener("click", (event) => {
+  if (!event.target.closest("[data-theme-toggle]")) return;
+  const theme =
+    document.documentElement.dataset.theme === "dark" ? "light" : "dark";
   document.documentElement.dataset.theme = theme;
-  try { localStorage.setItem(themeKey, theme); } catch { /* Theme still works when storage is unavailable. */ }
+  try {
+    localStorage.setItem(themeKey, theme);
+  } catch {
+    /* Theme still works when storage is unavailable. */
+  }
   syncThemeControls();
 });
-window.addEventListener('storage', event => {
+window.addEventListener("storage", (event) => {
   handleSessionStorage(event);
-  if (event.key === themeKey && ['light','dark'].includes(event.newValue)) {
+  if (event.key === themeKey && ["light", "dark"].includes(event.newValue)) {
     document.documentElement.dataset.theme = event.newValue;
     syncThemeControls();
   }
 });
-let sessions, activeSessionId = "", loginAttempt = 0, authBusy = false, startupBusy = false;
+let sessions,
+  activeSessionId = "",
+  loginAttempt = 0,
+  authBusy = false,
+  startupBusy = false;
 const stockFilter = {};
 const catalogFilter = { query: "", category: "", itemType: "" };
-let stateRevision=0, polling=false, soundEnabled=false, audioContext;
-let reportRefreshPending=false,reportRefreshRevision=0;
-const seenKitchen=new Map();
+let stateRevision = 0,
+  polling = false,
+  soundEnabled = false,
+  audioContext;
+let reportRefreshPending = false,
+  reportRefreshRevision = 0;
+const seenKitchen = new Map();
 let state = emptyState(),
   mode = "",
   config = {},
@@ -100,12 +167,30 @@ const app = document.querySelector("#app"),
   filter = { from: today(), to: today(), store: "", supplier: "" };
 const title = {
   crm: "Member & Poin",
-  payments: "Metode Pembayaran", shifts: "Shift Kasir", devices: "Printer & Scanner",
-  discounts: "Diskon & Persetujuan", dashboard: "Dashboard", orders: "Kasir / POS", kitchen: "Kitchen Display",
-  products: "Master Barang", stock: "Stok & Penerimaan", losses: "Reject & Waste", waste: "Reject & Waste", batches: "Laporan Batch Supplier",
-  recipes: "Master Resep", production: "Produksi & Persiapan",
-  finance: "Petty Cash & Keuangan", salesreport: "Laporan Penjualan", trace: "Jejak Stok & Produksi", reports: "Laporan", documents: "Admin Dokumen",
-  employees: "Karyawan & Akses", attendance: "Absensi", stores: "Outlet", suppliers: "Supplier", guide: "Panduan",
+  payments: "Metode Pembayaran",
+  shifts: "Shift Kasir",
+  devices: "Printer & Scanner",
+  discounts: "Diskon & Persetujuan",
+  dashboard: "Dashboard",
+  orders: "Kasir / POS",
+  kitchen: "Kitchen Display",
+  products: "Master Barang",
+  stock: "Stok & Penerimaan",
+  losses: "Reject & Waste",
+  waste: "Reject & Waste",
+  batches: "Laporan Batch Supplier",
+  recipes: "Master Resep",
+  production: "Produksi & Persiapan",
+  finance: "Petty Cash & Keuangan",
+  salesreport: "Laporan Penjualan",
+  trace: "Jejak Stok & Produksi",
+  reports: "Laporan",
+  documents: "Admin Dokumen",
+  employees: "Karyawan & Akses",
+  attendance: "Absensi",
+  stores: "Outlet",
+  suppliers: "Supplier",
+  guide: "Panduan",
   cashier: "Kasir buah cepat",
 };
 const paths = {
@@ -114,27 +199,34 @@ const paths = {
   shifts: "M4 4h16v16H4z M8 8h8 M8 12h3 M15 12v5 M12 15h6",
   documents: "M4 3h11l5 5v13H4z M15 3v6h5 M8 13h8 M8 17h5",
   devices: "M6 9V3h12v6 M6 17H3V9h18v8h-3 M6 14h12v7H6z M17 12h1",
-  discounts: "M19 5L5 19 M7 7h.01 M17 17h.01 M9 7a2 2 0 1 1-4 0 2 2 0 0 1 4 0 M19 17a2 2 0 1 1-4 0 2 2 0 0 1 4 0",
+  discounts:
+    "M19 5L5 19 M7 7h.01 M17 17h.01 M9 7a2 2 0 1 1-4 0 2 2 0 0 1 4 0 M19 17a2 2 0 1 1-4 0 2 2 0 0 1 4 0",
   dashboard: "M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z",
   orders: "M7 4H5v17l3-2 4 2 4-2 3 2V4h-2 M9 3h6v4H9z M8 11h8 M8 15h5",
   kitchen: "M4 4h16v17H4z M8 2v4 M16 2v4 M8 10h8 M8 14h8 M8 18h4",
   cashier: "M4 3h16v13H4z M8 20h8 M12 16v4 M7 7h10 M7 11h4",
   stock: "M3 7l9-4 9 4-9 4z M3 7v10l9 4 9-4V7 M12 11v10 M7 5l10 5",
-  production: "M5 10h14v5a6 6 0 0 1-6 6h-2a6 6 0 0 1-6-6z M2 11h3 M19 11h3 M8 3v3 M12 2v4 M16 3v3",
-  waste: "M8 4l3-2 3 5 M11 2L6 10 M20 11l1 4-6 1 M21 15l-5-8 M11 21l-4-1 2-5 M7 20h9",
+  production:
+    "M5 10h14v5a6 6 0 0 1-6 6h-2a6 6 0 0 1-6-6z M2 11h3 M19 11h3 M8 3v3 M12 2v4 M16 3v3",
+  waste:
+    "M8 4l3-2 3 5 M11 2L6 10 M20 11l1 4-6 1 M21 15l-5-8 M11 21l-4-1 2-5 M7 20h9",
   losses: "M3 5h18 M5 5l1 16h12l1-16 M9 5V2h6v3 M10 9v8 M14 9v8",
   salesreport: "M5 3h14v18l-3-2-4 2-4-2-3 2z M8 7h8 M8 11h8 M8 15h3",
   finance: "M3 6h18v14H3z M3 6l14-3v3 M15 11h6v5h-6z M17 13h1",
   trace: "M5 3h10v6H5z M5 15h10v6H5z M10 9v6 M15 6h4v12h-4",
   batches: "M3 7l9-4 9 4-9 4z M3 7v10l9 4 9-4V7 M12 11v10",
   reports: "M4 20V4 M4 20h17 M8 16v-5 M13 16V7 M18 16v-9",
-  employees: "M9 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8 M2 21v-3a6 6 0 0 1 12 0v3 M17 4a4 4 0 0 1 0 8 M18 15a5 5 0 0 1 4 5v1",
+  employees:
+    "M9 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8 M2 21v-3a6 6 0 0 1 12 0v3 M17 4a4 4 0 0 1 0 8 M18 15a5 5 0 0 1 4 5v1",
   attendance: "M5 4h14v17H5z M8 2v4 M16 2v4 M5 9h14 M8 15l3 3 5-6",
-  guide: "M12 5c-3-2-7-2-10-1v16c3-1 7-1 10 1 3-2 7-2 10-1V4c-3-1-7-1-10 1z M12 5v16",
+  guide:
+    "M12 5c-3-2-7-2-10-1v16c3-1 7-1 10 1 3-2 7-2 10-1V4c-3-1-7-1-10 1z M12 5v16",
   products: "M3 3h8l10 10-8 8L3 11z M7 7h.01",
   recipes: "M4 3h13v18H4z M7 3v18 M10 7h4 M10 11h4 M10 15h3 M17 6h3v12h-3",
-  stores: "M3 9l2-6h14l2 6 M3 9v3a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0V9z M5 15v6h14v-6 M10 21v-5h4v5",
-  suppliers: "M2 5h12v12H2z M14 9h4l4 5v3h-8 M5 17a2 2 0 1 0 4 0 2 2 0 0 0-4 0 M16 17a2 2 0 1 0 4 0 2 2 0 0 0-4 0",
+  stores:
+    "M3 9l2-6h14l2 6 M3 9v3a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0V9z M5 15v6h14v-6 M10 21v-5h4v5",
+  suppliers:
+    "M2 5h12v12H2z M14 9h4l4 5v3h-8 M5 17a2 2 0 1 0 4 0 2 2 0 0 0-4 0 M16 17a2 2 0 1 0 4 0 2 2 0 0 0-4 0",
   edit: "M14 4l6 6 M3 21l5-1L21 7l-5-5L3 15z",
   master: "M5 4h14v16H5z M8 8h8 M8 12h8 M8 16h5",
 };
@@ -154,129 +246,296 @@ function toast(text) {
   clearTimeout(toast.timer);
   toast.timer = setTimeout(() => (t.style.display = "none"), 5000);
 }
-let stockDemoModule,demoSource=null;
-const demoEngine=()=>stockDemoModule ||= import('./stock-demo.mjs?v=85').catch(error=>{stockDemoModule=null;throw error;});
-async function adminRpc(name,p){
-  if(mode!=='stock-demo')return request('/rest/v1/rpc/'+name,p);
-  const snapshot=state,engine=await demoEngine();
-  if(mode!=='stock-demo'||state!==snapshot)throw Error('Sesi demo berubah. Buka kembali dokumen.');
-  return engine.readStockDemo(snapshot,name,p);
+let stockDemoModule,
+  demoSource = null;
+const demoEngine = () =>
+  (stockDemoModule ||= import("./stock-demo.mjs").catch((error) => {
+    stockDemoModule = null;
+    throw error;
+  }));
+async function adminRpc(name, p) {
+  if (mode !== "stock-demo") {
+    const sessionId = activeSessionId,
+      currentMode = mode;
+    const data = await request("/rest/v1/rpc/" + name, p);
+    if (sessionId !== activeSessionId || currentMode !== mode)
+      throw Error("Sesi berubah. Buka kembali halaman.");
+    return data;
+  }
+  const snapshot = state,
+    engine = await demoEngine();
+  if (mode !== "stock-demo" || state !== snapshot)
+    throw Error("Sesi demo berubah. Buka kembali dokumen.");
+  return engine.readStockDemo(snapshot, name, p);
 }
-function assertDemoRequest(path,allowDemoRead){
-  if(mode==='stock-demo'&&!(allowDemoRead&&['/rest/v1/rpc/pos_read','/auth/v1/token?grant_type=refresh_token'].includes(path)))throw Error('Mode demo tidak mengirim perubahan ke database asli.');
+function assertDemoRequest(path, allowDemoRead) {
+  if (
+    mode === "stock-demo" &&
+    !(
+      allowDemoRead &&
+      [
+        "/rest/v1/rpc/pos_read",
+        "/auth/v1/token?grant_type=refresh_token",
+      ].includes(path)
+    )
+  )
+    throw Error("Mode demo tidak mengirim perubahan ke database asli.");
 }
-async function switchStockDemo(reset=false){
-  if(busy||!['live','stock-demo'].includes(mode))return;
-  if(reset&&mode!=='stock-demo')return;
-  if(document.querySelector('dialog[open]'))return toast('Tutup pop-up sebelum mengganti mode.');
-  if(pendingRetry())return toast('Periksa pengiriman yang belum terkonfirmasi sebelum mengganti mode.');
-  if(!mayLeave(false))return;
-  if((cart.length||hasOrderDraft())&&!confirm('Pergantian mode akan mengosongkan keranjang yang belum disimpan. Lanjutkan?'))return;
-  if(reset&&!confirm('Ulangi demo dengan harga Rp150.000 dan stok 100? Semua perubahan demo akan dibuang.'))return;
-  busy=true;stateRevision++;
-  const switchingControls=[...document.querySelectorAll('button,input,select,textarea')].map(node=>({node,disabled:node.disabled}));
-  switchingControls.forEach(({node})=>node.disabled=true);
-  try{
-    if(mode==='live'||reset){
-      const engine=await demoEngine();const source=reset?demoSource:state;
-      const next=engine.createStockDemo(source);if(!reset)demoSource=source;
-      state=next;mode='stock-demo';
-    }else{
+async function switchStockDemo(reset = false) {
+  if (busy || !["live", "stock-demo"].includes(mode)) return;
+  if (reset && mode !== "stock-demo") return;
+  if (document.querySelector("dialog[open]"))
+    return toast("Tutup pop-up sebelum mengganti mode.");
+  if (pendingRetry())
+    return toast(
+      "Periksa pengiriman yang belum terkonfirmasi sebelum mengganti mode.",
+    );
+  if (!mayLeave(false)) return;
+  if (
+    (cart.length || hasOrderDraft()) &&
+    !confirm(
+      "Pergantian mode akan mengosongkan keranjang yang belum disimpan. Lanjutkan?",
+    )
+  )
+    return;
+  if (
+    reset &&
+    !confirm(
+      "Ulangi demo dengan harga Rp150.000 dan stok 100? Semua perubahan demo akan dibuang.",
+    )
+  )
+    return;
+  busy = true;
+  stateRevision++;
+  const switchingControls = [
+    ...document.querySelectorAll("button,input,select,textarea"),
+  ].map((node) => ({ node, disabled: node.disabled }));
+  switchingControls.forEach(({ node }) => (node.disabled = true));
+  try {
+    if (mode === "live" || reset) {
+      const engine = await demoEngine();
+      const source = reset ? demoSource : state;
+      const next = engine.createStockDemo(source);
+      if (!reset) demoSource = source;
+      state = next;
+      mode = "stock-demo";
+    } else {
       // Keep demo active and write-protected until the real read succeeds.
-      const fresh=await request('/rest/v1/rpc/pos_read',{},true,true);
-      if(!Array.isArray(fresh?.products)||!Array.isArray(fresh?.stores)||fresh.stockDemo)throw Error('Respons data asli tidak lengkap. Mode demo tetap aktif.');
-      state=fresh;mode='live';demoSource=null;
+      const fresh = await request("/rest/v1/rpc/pos_read", {}, true, true);
+      if (
+        !Array.isArray(fresh?.products) ||
+        !Array.isArray(fresh?.stores) ||
+        fresh.stockDemo
+      )
+        throw Error("Respons data asli tidak lengkap. Mode demo tetap aktif.");
+      state = fresh;
+      mode = "live";
+      demoSource = null;
     }
-    if(!state.stores.some(x=>x.id===store))store=state.stores[0]?.id||'';
-    cart=[];clearOrderDraft();lastSale=null;seenKitchen.clear();render();
-    toast(mode==='stock-demo'?'Stok uji 100 sudah siap di setiap outlet yang dapat diakses.':'Mode demo dimatikan. Data asli sudah dimuat kembali.');
-  }catch(err){toast(err.message);}
-  finally{busy=false;switchingControls.forEach(({node,disabled})=>{if(node.isConnected)node.disabled=disabled;});}
+    if (!state.stores.some((x) => x.id === store))
+      store = state.stores[0]?.id || "";
+    cart = [];
+    clearOrderDraft();
+    lastSale = null;
+    seenKitchen.clear();
+    render();
+    toast(
+      mode === "stock-demo"
+        ? "Stok uji 100 sudah siap di setiap outlet yang dapat diakses."
+        : "Mode demo dimatikan. Data asli sudah dimuat kembali.",
+    );
+  } catch (err) {
+    toast(err.message);
+  } finally {
+    busy = false;
+    switchingControls.forEach(({ node, disabled }) => {
+      if (node.isConnected) node.disabled = disabled;
+    });
+  }
 }
 async function request(path, body, auth = true, allowDemoRead = false) {
-  assertDemoRequest(path,allowDemoRead);
-  const sessionId=activeSessionId;
+  assertDemoRequest(path, allowDemoRead);
+  const sessionId = activeSessionId;
   try {
-    let requestToken=auth?await sessions.accessToken(sessionId):'';
-    if(auth)token=requestToken;
-    assertDemoRequest(path,allowDemoRead);
-    const send=()=>fetch(config.url+path,{
-      method:body?'POST':'GET',headers:{apikey:config.key,'Content-Type':'application/json',...(auth?{Authorization:'Bearer '+requestToken}:{})},
-      ...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(30000),
-    });
-    let response=await send();
-    if(auth && response.status===401){
-      requestToken=await sessions.accessToken(sessionId,{force:true,rejectedToken:requestToken});
-      token=requestToken;
-      assertDemoRequest(path,allowDemoRead);
-      response=await send();
+    let requestToken = auth ? await sessions.accessToken(sessionId) : "";
+    if (auth) token = requestToken;
+    assertDemoRequest(path, allowDemoRead);
+    const send = () =>
+      fetch(config.url + path, {
+        method: body ? "POST" : "GET",
+        headers: {
+          apikey: config.key,
+          "Content-Type": "application/json",
+          ...(auth ? { Authorization: "Bearer " + requestToken } : {}),
+        },
+        ...(body ? { body: JSON.stringify(body) } : {}),
+        signal: AbortSignal.timeout(30000),
+      });
+    let response = await send();
+    if (auth && response.status === 401) {
+      requestToken = await sessions.accessToken(sessionId, {
+        force: true,
+        rejectedToken: requestToken,
+      });
+      token = requestToken;
+      assertDemoRequest(path, allowDemoRead);
+      response = await send();
     }
-    if(auth && (sessionId!==activeSessionId || sessions.read()?.sessionId!==sessionId))throw Object.assign(Error('Sesi berubah. Silakan masuk kembali.'),{sessionChanged:true});
-    const data=await response.json().catch(()=>{throw Error('Respons server tidak dapat dibaca. Coba lagi.');});
-    if(!response.ok){
-      const error=Object.assign(Error(data.message||data.error_description||data.msg||'Koneksi gagal'),{definitive:response.status<500,code:data.code,status:response.status});
-      if(auth && response.status===401){sessions.clear(sessionId);error.authExpired=true;error.message='Sesi sudah berakhir. Silakan masuk kembali.';}
+    if (
+      auth &&
+      (sessionId !== activeSessionId ||
+        sessions.read()?.sessionId !== sessionId)
+    )
+      throw Object.assign(Error("Sesi berubah. Silakan masuk kembali."), {
+        sessionChanged: true,
+      });
+    const data = await response.json().catch(() => {
+      throw Error("Respons server tidak dapat dibaca. Coba lagi.");
+    });
+    // Parsing a large response yields too. A logout during parsing must discard it.
+    if (
+      auth &&
+      (sessionId !== activeSessionId ||
+        sessions.read()?.sessionId !== sessionId)
+    )
+      throw Object.assign(Error("Sesi berubah. Silakan masuk kembali."), {
+        sessionChanged: true,
+      });
+    if (!response.ok) {
+      const error = Object.assign(
+        Error(
+          data.message || data.error_description || data.msg || "Koneksi gagal",
+        ),
+        {
+          definitive: response.status < 500,
+          code: data.code,
+          status: response.status,
+        },
+      );
+      if (auth && response.status === 401) {
+        sessions.clear(sessionId);
+        error.authExpired = true;
+        error.message = "Sesi sudah berakhir. Silakan masuk kembali.";
+      }
       throw error;
     }
     return data;
-  } catch(error) {
-    if(auth && (error.authExpired||error.sessionChanged) && activeSessionId===sessionId){resetWorkspace();login(error.message);}
+  } catch (error) {
+    if (
+      auth &&
+      (error.authExpired || error.sessionChanged) &&
+      activeSessionId === sessionId
+    ) {
+      resetWorkspace();
+      login(error.message);
+    }
     throw error;
   }
 }
-function resetWorkspace(forget=false) {
-  if(forget)sessions?.clear(activeSessionId || undefined);
+function resetWorkspace(forget = false) {
+  if (forget) sessions?.clear(activeSessionId || undefined);
   resetDashboard();
-  loginAttempt++;authBusy=false;activeSessionId='';token='';mode='';demoSource=null;lastSale=null;
-  stateRevision++;seenKitchen.clear();cart=[];state=emptyState();view='dashboard';store='';clearOrderDraft();
-  document.querySelectorAll('dialog[open]').forEach(dialog=>dialog.close());
+  loginAttempt++;
+  authBusy = false;
+  activeSessionId = "";
+  token = "";
+  mode = "";
+  demoSource = null;
+  lastSale = null;
+  stateRevision++;
+  seenKitchen.clear();
+  cart = [];
+  state = emptyState();
+  view = "dashboard";
+  store = "";
+  clearOrderDraft();
+  document.querySelectorAll("dialog[open]").forEach((dialog) => dialog.close());
 }
-function defaultView() { return state.access?.sell?'orders':state.access?.kitchen?'kitchen':state.access?.attendance?'attendance':'guide'; }
-function sessionProgress(text,hidden=false) {
-  return `<div class="auth-progress" data-auth-progress ${hidden?'hidden':''}><div class="auth-progress-track" role="progressbar" aria-label="Proses masuk"></div><p class="auth-progress-text" data-auth-progress-text role="status" aria-live="polite">${e(text)}</p></div>`;
+function defaultView() {
+  return state.access?.sell
+    ? "orders"
+    : state.access?.kitchen
+      ? "kitchen"
+      : state.access?.attendance
+        ? "attendance"
+        : "guide";
 }
-function setLoginProgress(form,text,working) {
-  form.setAttribute('aria-busy',String(working));
-  const progress=form.querySelector('[data-auth-progress]');if(progress)progress.hidden=!working;
-  const label=form.querySelector('[data-auth-progress-text]');if(label)label.textContent=text;
-  const button=form.querySelector('button[type="submit"]');if(button){button.disabled=working;button.textContent=working?'Sedang masuk…':'Masuk';}
-  form.querySelectorAll?.('input').forEach(input=>input.readOnly=working);
+function sessionProgress(text, hidden = false) {
+  return `<div class="auth-progress" data-auth-progress ${hidden ? "hidden" : ""}><div class="auth-progress-track" role="progressbar" aria-label="Proses masuk"></div><p class="auth-progress-text" data-auth-progress-text role="status" aria-live="polite">${e(text)}</p></div>`;
 }
-function loadingPage(text,error='',retry=restoreSession) {
+function setLoginProgress(form, text, working) {
+  form.setAttribute("aria-busy", String(working));
+  const progress = form.querySelector("[data-auth-progress]");
+  if (progress) progress.hidden = !working;
+  const label = form.querySelector("[data-auth-progress-text]");
+  if (label) label.textContent = text;
+  const button = form.querySelector('button[type="submit"]');
+  if (button) {
+    button.disabled = working;
+    button.textContent = working ? "Sedang masuk…" : "Masuk";
+  }
+  form
+    .querySelectorAll?.("input")
+    .forEach((input) => (input.readOnly = working));
+}
+function loadingPage(text, error = "", retry = restoreSession) {
   sidebar.reset();
-  app.innerHTML=`<div class="auth auth-workspace auth-startup">${themeButton('auth-theme')}<section class="auth-form"><div><img class="auth-logo" src="logo.png" alt="Maniac Duren"><h1>${error?'Koneksi belum siap':'Menyiapkan POS'}</h1><p class="muted auth-intro">${e(text)}</p>${sessionProgress(text,!!error)}<p class="auth-session-error" role="alert">${e(error)}</p><div class="auth-actions" ${error?'':'hidden'}><button type="button" id="auth-retry" class="primary">Coba lagi</button><button type="button" id="auth-switch">Gunakan akun lain</button></div></div></section></div>`;
+  app.innerHTML = `<div class="auth auth-workspace auth-startup">${themeButton("auth-theme")}<section class="auth-form"><div><img class="auth-logo" src="logo.png" alt="Maniac Duren"><h1>${error ? "Koneksi belum siap" : "Menyiapkan POS"}</h1><p class="muted auth-intro">${e(text)}</p>${sessionProgress(text, !!error)}<p class="auth-session-error" role="alert">${e(error)}</p><div class="auth-actions" ${error ? "" : "hidden"}><button type="button" id="auth-retry" class="primary">Coba lagi</button><button type="button" id="auth-switch">Gunakan akun lain</button></div></div></section></div>`;
   syncThemeControls();
-  const again=document.querySelector('#auth-retry');if(again)again.onclick=()=>retry();
-  const other=document.querySelector('#auth-switch');if(other)other.onclick=()=>{resetWorkspace(true);login();};
+  const again = document.querySelector("#auth-retry");
+  if (again) again.onclick = () => retry();
+  const other = document.querySelector("#auth-switch");
+  if (other)
+    other.onclick = () => {
+      resetWorkspace(true);
+      login();
+    };
 }
 async function restoreSession() {
-  if(startupBusy)return;
-  const saved=sessions?.read();if(!saved)return login();
-  startupBusy=true;
-  activeSessionId=saved.sessionId;store=saved.store;mode='live';
-  setRetryScope(config.url+':'+saved.userId);
-  loadingPage('Memulihkan sesi dan memuat data outlet…');
+  if (startupBusy) return;
+  const saved = sessions?.read();
+  if (!saved) return login();
+  startupBusy = true;
+  activeSessionId = saved.sessionId;
+  store = saved.store;
+  mode = "live";
+  setRetryScope(config.url + ":" + saved.userId);
+  loadingPage("Memulihkan sesi dan memuat data outlet…");
   try {
     await refresh();
-    if(activeSessionId!==saved.sessionId)return;
-    const allowed=visibleSections({...state.access,cashierOwner:state.me?.role==='owner',crmAdmin:['owner','manager'].includes(state.me?.role)}).flatMap(group=>group.pages);
-    view=allowed.includes(saved.view)?saved.view:defaultView();
+    if (activeSessionId !== saved.sessionId) return;
+    const allowed = visibleSections({
+      ...state.access,
+      cashierOwner: state.me?.role === "owner",
+      crmAdmin: ["owner", "manager"].includes(state.me?.role),
+    }).flatMap((group) => group.pages);
+    view = allowed.includes(saved.view) ? saved.view : defaultView();
     render();
-  } catch(error) {
-    if(activeSessionId!==saved.sessionId)return;
-    mode='';
-    if(error.authExpired||error.sessionChanged){resetWorkspace();login(error.message);}
-    else loadingPage('Sesi masih tersimpan. Coba sambungkan kembali.',error.name==='TimeoutError'?'Server belum merespons. Silakan coba lagi.':error.message);
-  } finally {startupBusy=false;}
+  } catch (error) {
+    if (activeSessionId !== saved.sessionId) return;
+    mode = "";
+    if (error.authExpired || error.sessionChanged) {
+      resetWorkspace();
+      login(error.message);
+    } else
+      loadingPage(
+        "Sesi masih tersimpan. Coba sambungkan kembali.",
+        error.name === "TimeoutError"
+          ? "Server belum merespons. Silakan coba lagi."
+          : error.message,
+      );
+  } finally {
+    startupBusy = false;
+  }
 }
 async function refresh() {
   if (busy) throw Error("Tunggu proses simpan selesai.");
   if (mode === "stock-demo") return;
   if (mode === "live") {
-    const revision=stateRevision;
-    const fresh=await request("/rest/v1/rpc/pos_read", {});
-    if(mode!=="live"||busy||revision!==stateRevision)return;
-    state=fresh;
+    const revision = stateRevision;
+    const fresh = await request("/rest/v1/rpc/pos_read", {});
+    if (mode !== "live" || busy || revision !== stateRevision) return;
+    state = fresh;
     if (!store || !state.stores.some((x) => x.id === store))
       store = state.stores[0]?.id || "";
   } else if (!store) store = state.stores[0]?.id || "";
@@ -287,14 +546,15 @@ async function refresh() {
     toast("Pengiriman sebelumnya sudah tersimpan.");
   }
 }
-async function mutate(action, payload, {throwOnError = false} = {}) {
+async function mutate(action, payload, { throwOnError = false } = {}) {
   if (busy) {
     if (throwOnError) throw Error("Tunggu proses simpan selesai.");
     return false;
   }
   try {
-    if(!["live","stock-demo"].includes(mode))throw Error("Masuk ke POS sebelum menyimpan.");
-    if(mode === "live") Object.assign(payload, prepareRetry(action, payload));
+    if (!["live", "stock-demo"].includes(mode))
+      throw Error("Masuk ke POS sebelum menyimpan.");
+    if (mode === "live") Object.assign(payload, prepareRetry(action, payload));
   } catch (error) {
     toast(error.message);
     if (throwOnError) throw error;
@@ -308,27 +568,45 @@ async function mutate(action, payload, {throwOnError = false} = {}) {
   controls.forEach(({ node }) => (node.disabled = true));
   try {
     if (mode === "stock-demo") {
-      const engine=await demoEngine();state=engine.applyStockDemoAction(state,action,payload);
+      const engine = await demoEngine();
+      state = engine.applyStockDemoAction(state, action, payload);
     } else
-      state = action === "pos_category_save"
-        ? await request("/rest/v1/rpc/pos_menu_category_save", {payload})
-        : action === "product_variants_save"
-        ? await request("/rest/v1/rpc/pos_product_variants_save", { payload })
-        : ["cashier_shift_open","cashier_shift_close"].includes(action)
-        ? await request("/rest/v1/rpc/pos_cashier_shift_mutate", {action,payload})
-        : action === "payment_settings_save"
-        ? await request("/rest/v1/rpc/pos_payment_settings_save", {payload})
-        : action === "receipt_batch"
-        ? await request("/rest/v1/rpc/pos_receive_shipment", {payload})
-        : await request("/rest/v1/rpc/pos_mutate_027", { action, payload });
-    if(mode === "live") settleRetry(action);
+      state =
+        action === "pos_category_save"
+          ? await request("/rest/v1/rpc/pos_menu_category_save", { payload })
+          : action === "product_variants_save"
+            ? await request("/rest/v1/rpc/pos_product_variants_save", {
+                payload,
+              })
+            : ["cashier_shift_open", "cashier_shift_close"].includes(action)
+              ? await request("/rest/v1/rpc/pos_cashier_shift_mutate", {
+                  action,
+                  payload,
+                })
+              : action === "payment_settings_save"
+                ? await request("/rest/v1/rpc/pos_payment_settings_save", {
+                    payload,
+                  })
+                : action === "receipt_batch"
+                  ? await request("/rest/v1/rpc/pos_receive_shipment", {
+                      payload,
+                    })
+                  : await request("/rest/v1/rpc/pos_mutate_027", {
+                      action,
+                      payload,
+                    });
+    if (mode === "live") settleRetry(action);
     return true;
   } catch (error) {
-    if(mode === "live") settleRetry(action, !error.definitive);
-    {const formError=document.querySelector('dialog[open] #form-error');if(formError)formError.textContent=error.message;}
-    error.message += mode === "live" && !error.definitive
-      ? " · Status simpan belum pasti. Periksa stok atau kirim ulang data yang sama."
-      : "";
+    if (mode === "live") settleRetry(action, !error.definitive);
+    {
+      const formError = document.querySelector("dialog[open] #form-error");
+      if (formError) formError.textContent = error.message;
+    }
+    error.message +=
+      mode === "live" && !error.definitive
+        ? " · Status simpan belum pasti. Periksa stok atau kirim ulang data yang sama."
+        : "";
     toast(error.message);
     if (throwOnError) throw error;
     return false;
@@ -341,39 +619,65 @@ async function mutate(action, payload, {throwOnError = false} = {}) {
 }
 function login(message = "") {
   sidebar.reset();
-  app.innerHTML = `<div class="auth auth-workspace">${themeButton("auth-theme")}<section class="auth-form"><div><img class="auth-logo" src="logo.png" alt="Maniac Duren"><h1>Selamat datang kembali</h1><p class="muted auth-intro">Masuk untuk mengelola outlet Maniac Duren.</p>${config.configured ? "" : `<div class="notice">Akses POS belum tersedia. Hubungi pengelola.</div>`}<form id="login-form">${field("Email, username, atau nomor telepon", '<input name="identifier" required autocomplete="username" placeholder="Masukkan akun Anda">')}${field("Password", '<input name="password" type="password" required autocomplete="current-password" placeholder="Masukkan password">')}<p class="error" id="login-error" role="alert">${e(message)}</p><button class="primary full" type="submit" ${config.configured ? "" : "disabled"}>Masuk</button>${sessionProgress('Memeriksa akun…',true)}</form>${installButton()}<a class="auth-back" href="/">Kembali ke website</a></div></section></div>`;
+  app.innerHTML = `<div class="auth auth-workspace">${themeButton("auth-theme")}<section class="auth-form"><div><img class="auth-logo" src="logo.png" alt="Maniac Duren"><h1>Selamat datang kembali</h1><p class="muted auth-intro">Masuk untuk mengelola outlet Maniac Duren.</p>${config.configured ? "" : `<div class="notice">Akses POS belum tersedia. Hubungi pengelola.</div>`}<form id="login-form">${field("Email, username, atau nomor telepon", '<input name="identifier" required autocomplete="username" placeholder="Masukkan akun Anda">')}${field("Password", '<input name="password" type="password" required autocomplete="current-password" placeholder="Masukkan password">')}<p class="error" id="login-error" role="alert">${e(message)}</p><button class="primary full" type="submit" ${config.configured ? "" : "disabled"}>Masuk</button>${sessionProgress("Memeriksa akun…", true)}</form>${installButton()}<a class="auth-back" href="/">Kembali ke website</a></div></section></div>`;
   syncThemeControls();
   bindInstall();
   document.querySelector("#login-form").onsubmit = async (ev) => {
     ev.preventDefault();
-    if(authBusy)return;
-    const form=ev.currentTarget,attempt=++loginAttempt;
-    const values=Object.fromEntries(new FormData(form));
-    authBusy=true;
-    document.querySelector('#login-error').textContent='';
-    setLoginProgress(form,'Memeriksa akun…',true);
+    if (authBusy) return;
+    const form = ev.currentTarget,
+      attempt = ++loginAttempt;
+    const values = Object.fromEntries(new FormData(form));
+    authBusy = true;
+    document.querySelector("#login-error").textContent = "";
+    setLoginProgress(form, "Memeriksa akun…", true);
     try {
-      const response=await fetch('/api/pos-login',{
-        method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(values),signal:AbortSignal.timeout(45000),
+      const response = await fetch("/api/pos-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(values),
+        signal: AbortSignal.timeout(45000),
       });
-      const data=await response.json();
-      if(attempt!==loginAttempt)return;
-      if(!response.ok)throw Error(data.error||'Login gagal. Coba lagi.');
-      const saved=sessions.save(data);
-      activeSessionId=saved.sessionId;token=saved.accessToken;mode='live';demoSource=null;
-      setRetryScope(config.url+':'+saved.userId);
-      setLoginProgress(form,'Memuat data outlet…',true);
+      const data = await response.json();
+      if (attempt !== loginAttempt) return;
+      if (!response.ok) throw Error(data.error || "Login gagal. Coba lagi.");
+      const saved = sessions.save(data);
+      activeSessionId = saved.sessionId;
+      token = saved.accessToken;
+      mode = "live";
+      demoSource = null;
+      setRetryScope(config.url + ":" + saved.userId);
+      setLoginProgress(form, "Memuat data outlet…", true);
       await refresh();
-      if(attempt!==loginAttempt)return;
-      view=defaultView();render();
-      if(!sessions.persistent)toast('Browser membatasi penyimpanan sesi. Login dapat diminta kembali setelah refresh.');
-    } catch(error) {
-      if(attempt!==loginAttempt)return;
-      const message=error.name==='TimeoutError'?'Server belum merespons. Silakan coba lagi.':error.message;
-      if(activeSessionId && sessions.read()?.sessionId===activeSessionId){mode='';loadingPage('Akun sudah terverifikasi. Data outlet belum selesai dimuat.',message);}
-      else {token='';mode='';document.querySelector('#login-error').textContent=message;}
+      if (attempt !== loginAttempt) return;
+      view = defaultView();
+      render();
+      if (!sessions.persistent)
+        toast(
+          "Browser membatasi penyimpanan sesi. Login dapat diminta kembali setelah refresh.",
+        );
+    } catch (error) {
+      if (attempt !== loginAttempt) return;
+      const message =
+        error.name === "TimeoutError"
+          ? "Server belum merespons. Silakan coba lagi."
+          : error.message;
+      if (activeSessionId && sessions.read()?.sessionId === activeSessionId) {
+        mode = "";
+        loadingPage(
+          "Akun sudah terverifikasi. Data outlet belum selesai dimuat.",
+          message,
+        );
+      } else {
+        token = "";
+        mode = "";
+        document.querySelector("#login-error").textContent = message;
+      }
     } finally {
-      if(attempt===loginAttempt){authBusy=false;setLoginProgress(form,'',false);}
+      if (attempt === loginAttempt) {
+        authBusy = false;
+        setLoginProgress(form, "", false);
+      }
     }
   };
 }
@@ -381,28 +685,47 @@ function stat(label, value, note) {
   return `<div class="stat"><small>${label}</small><strong>${value}</strong><span>${note}</span></div>`;
 }
 function accountProfile() {
-  const person = state.employees?.find(employee => employee.id === state.me?.id) || state.me || {};
+  const person =
+    state.employees?.find((employee) => employee.id === state.me?.id) ||
+    state.me ||
+    {};
   const accountName = person.name || "Akun login";
   const photo = person.profile_photo;
-  const role = {owner:"Owner · Akses penuh",manager:"Manager",cashier:"Kasir",kitchen:"Kitchen",warehouse:"Gudang",staff:"Staff"}[person.role] || "Staff";
-  const initials = accountName.trim().split(/\s+/).slice(0,2).map(word => word[0]).join("").toUpperCase();
+  const role =
+    {
+      owner: "Owner · Akses penuh",
+      manager: "Manager",
+      cashier: "Kasir",
+      kitchen: "Kitchen",
+      warehouse: "Gudang",
+      staff: "Staff",
+    }[person.role] || "Staff";
+  const initials = accountName
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((word) => word[0])
+    .join("")
+    .toUpperCase();
   return `<div class="account-profile" aria-label="Akun yang login">${photo ? `<img src="${e(photo)}" alt="Foto ${e(accountName)}">` : `<span class="account-avatar" aria-hidden="true">${e(initials)}</span>`}<div><strong>${e(accountName)}</strong><span>${e(role)}</span></div></div>`;
 }
 function shell(body) {
-  return `<div class="shell ${["products","stock"].includes(view)?"inventory-shell":""} ${view==="dashboard"?"dashboard-shell":""}" ${sidebar.attributes()}>
+  return `<div class="shell ${["products", "stock"].includes(view) ? "inventory-shell" : ""} ${view === "dashboard" ? "dashboard-shell" : ""}" ${sidebar.attributes()}>
     <aside class="sidebar" id="pos-sidebar" aria-label="Sidebar Maniac Duren">
       <div class="sidebar-header">
         <div class="sidebar-brand-row"><div class="brand"><img src="logo.png" alt=""><div><strong>Maniac Duren</strong><span>Operations / POS</span></div></div><button type="button" class="sidebar-toggle" data-sidebar-toggle aria-controls="pos-sidebar" aria-label="Tutup sidebar">${sidebarIcon}</button></div>
         <div class="sidebar-store"><label for="active-store">Outlet aktif</label><div class="store-select-wrap">${icon("stores")}<select id="active-store" aria-label="Outlet aktif" title="${e(name("stores", store))}">${options("stores", store)}</select></div></div>
       </div>
-      <nav class="nav" id="pos-navigation" aria-label="Navigasi POS">${navigation(title, view, icon, {...state.access,cashierOwner:state.me?.role==='owner',crmAdmin:['owner','manager'].includes(state.me?.role)}, sidebar.closedGroups)}</nav>
+      <nav class="nav" id="pos-navigation" aria-label="Navigasi POS">${navigation(title, view, icon, { ...state.access, cashierOwner: state.me?.role === "owner", crmAdmin: ["owner", "manager"].includes(state.me?.role) }, sidebar.closedGroups)}</nav>
       <div class="sidebar-account">${accountProfile()}<button id="logout" class="sidebar-logout" type="button" aria-label="Logout" title="Logout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 4H4v16h5M14 8l4 4-4 4M8 12h10"/></svg><span>Logout</span></button></div>
     </aside>
     <button type="button" class="sidebar-backdrop" data-sidebar-close tabindex="-1" aria-label="Tutup sidebar"></button>
-    <main id="pos-main"><header class="topbar"><div class="workspace-heading"><button id="sidebar-toggle" type="button" class="sidebar-toggle" data-sidebar-toggle aria-controls="pos-sidebar" aria-label="Buka sidebar">${sidebarIcon}</button><h1>${e(title[view] || "Maniac Duren")}</h1></div><div class="workspace-tools">${installButton()}<span class="workspace-outlet">${icon("stores")}<span>${e(name("stores", store))}</span></span><button type="button" id="stock-demo-toggle" class="stock-demo-toggle" role="switch" aria-checked="${mode==='stock-demo'}"><span class="stock-demo-track" aria-hidden="true"></span>Mode demo</button>${themeButton()}</div></header><div class="workspace-content">${mode==='stock-demo'?'<aside class="stock-demo-banner" role="status"><div><b>MODE DEMO · Stok awal 100</b><p>Data uji hanya di tab ini. Semua penyimpanan demo terpisah dari database asli. Harga jual demo Rp150.000 per satuan; resep mengikuti master.</p><small>Buah: 100 kg + 100 butir. Bahan / produk stok: 100 sesuai satuannya. ${e(itemTypes.recipe)} mengikuti bahan.</small></div><button type="button" id="stock-demo-reset">Reset demo</button></aside>':''}${body}<p class="page-foot">Maniac Duren · ${e(name("stores", store))}</p></div></main>
+    <main id="pos-main"><header class="topbar"><div class="workspace-heading"><button id="sidebar-toggle" type="button" class="sidebar-toggle" data-sidebar-toggle aria-controls="pos-sidebar" aria-label="Buka sidebar">${sidebarIcon}</button><h1>${e(title[view] || "Maniac Duren")}</h1></div><div class="workspace-tools">${installButton()}<span class="workspace-outlet">${icon("stores")}<span>${e(name("stores", store))}</span></span><button type="button" id="stock-demo-toggle" class="stock-demo-toggle" role="switch" aria-checked="${mode === "stock-demo"}"><span class="stock-demo-track" aria-hidden="true"></span>Mode demo</button>${themeButton()}</div></header><div class="workspace-content">${mode === "stock-demo" ? '<aside class="stock-demo-banner" role="status"><div><b>MODE DEMO · Stok awal 100</b><p>Data uji hanya di tab ini. Semua penyimpanan demo terpisah dari database asli. Harga jual demo Rp150.000 per satuan; resep mengikuti master.</p><small>Buah: 100 kg + 100 butir. Bahan / produk stok: 100 sesuai satuannya. ${e(itemTypes.recipe)} mengikuti bahan.</small></div><button type="button" id="stock-demo-reset">Reset demo</button></aside>' : ""}${body}<p class="page-foot">Maniac Duren · ${e(name("stores", store))}</p></div></main>
   </div>`;
 }
-function dashboard() {return dashboardPage(state,store);}
+function dashboard() {
+  return dashboardPage(state, store);
+}
 
 function inventoryTable(lots) {
   const grouped = state.products.filter(isLegacyStock).map((p) => ({
@@ -432,9 +755,14 @@ function cashier() {
       })
       .join("") ||
     '<div class="empty">Tambah produk dan barang masuk dahulu.</div>'
-  }</div></section><aside class="panel receipt"><div class="header-row"><h3>Pesanan</h3><span class="tag">${cart.length} item</span></div>${cart.map((l, i) => `<div class="cart-item"><div class="cart-line"><b>${e(name("products", l.productId))}</b><button data-remove="${i}" aria-label="Hapus ${e(name("products", l.productId))}">×</button></div><div class="muted">${num(l.kg)} kg · ${l.pieces} butir · per ${l.unit === "KG" ? "kg" : "butir"}</div><div class="muted">${e(name("suppliers", l.supplierId))} · ${short(l.lotId)}</div><div style="text-align:right;margin-top:9px"><b>${money(l.total)}</b></div></div>`).join("") || '<div class="empty">Pilih produk untuk mulai.</div>'}<div class="total"><span>Total</span><span>${money(total)}</span></div><form id="checkout">${memberFields(state)}${field("Tanggal penjualan", `<input type="date" name="date" value="${today()}" required>`)}${field("Metode pembayaran", `<select name="payment" required>${paymentOptions(state,store)}</select>`)}${field("Nominal diterima (Rp)", `<input name="paid" type="number" min="${total}" step="any" value="${total || ""}" required>`)}<p class="muted" id="change">Kembalian ${money(0)}</p><button type="submit" class="primary full" ${cart.length ? "" : "disabled"}>Simpan transaksi</button></form></aside></div>`;
+  }</div></section><aside class="panel receipt"><div class="header-row"><h3>Pesanan</h3><span class="tag">${cart.length} item</span></div>${cart.map((l, i) => `<div class="cart-item"><div class="cart-line"><b>${e(name("products", l.productId))}</b><button data-remove="${i}" aria-label="Hapus ${e(name("products", l.productId))}">×</button></div><div class="muted">${num(l.kg)} kg · ${l.pieces} butir · per ${l.unit === "KG" ? "kg" : "butir"}</div><div class="muted">${e(name("suppliers", l.supplierId))} · ${short(l.lotId)}</div><div style="text-align:right;margin-top:9px"><b>${money(l.total)}</b></div></div>`).join("") || '<div class="empty">Pilih produk untuk mulai.</div>'}<div class="total"><span>Total</span><span>${money(total)}</span></div><form id="checkout">${memberFields(state)}${field("Tanggal penjualan", `<input type="date" name="date" value="${today()}" required>`)}${field("Metode pembayaran", `<select name="payment" required>${paymentOptions(state, store)}</select>`)}${field("Nominal diterima (Rp)", `<input name="paid" type="number" min="${total}" step="any" value="${total || ""}" required>`)}<p class="muted" id="change">Kembalian ${money(0)}</p><button type="submit" class="primary full" ${cart.length ? "" : "disabled"}>Simpan transaksi</button></form></aside></div>`;
 }
-function stockPage() {return inventoryPanel(state,store,stockFilter,"stock")+`<details class="inventory-history"><summary>Rincian penerimaan, asal barang & riwayat pergerakan</summary>${stockHistoryPage()}</details>`;}
+function stockPage() {
+  return (
+    inventoryPanel(state, store, stockFilter, "stock") +
+    `<details class="inventory-history"><summary>Rincian penerimaan, asal barang & riwayat pergerakan</summary>${stockHistoryPage()}</details>`
+  );
+}
 function stockHistoryPage() {
   const lots = state.lots.filter((l) => l.storeId === store);
   return `${unitStockPanel(state, store)}<section class="panel">${inventoryTable(lots)}</section><section class="panel"><h3>Rincian asal barang</h3><div class="table-wrap"><table><thead><tr><th>ID / TANGGAL MASUK</th><th>PRODUK</th><th>SUPPLIER</th><th class="numeric">AWAL KG / BUTIR</th><th class="numeric">SISA KG / BUTIR</th><th>CATATAN</th></tr></thead><tbody>${lots.map((l) => `<tr><td><b>${short(l.id)}</b><small>${l.date}${l.sourceLotId ? " · transfer" : ""}</small></td><td>${e(name("products", l.productId))}</td><td>${e(name("suppliers", l.supplierId))}</td><td class="numeric">${num(l.receivedKg)} kg / ${l.receivedPieces}</td><td class="numeric"><b>${num(l.kg)} kg</b><small>${l.pieces} butir</small></td><td>${e(l.note || "—")}${l.weighings?.length ? `<br><button type="button" data-weigh-history="${e(l.id)}">Riwayat timbang</button>` : ""}</td></tr>`).join("") || '<tr><td colspan="6" class="empty">Belum ada barang masuk.</td></tr>'}</tbody></table></div></section><section class="panel"><h3>Riwayat waste, pemakaian dapur & transfer</h3><div class="table-wrap"><table><thead><tr><th>TANGGAL</th><th>JENIS</th><th>PRODUK / SUPPLIER</th><th class="numeric">KG / BUTIR</th><th>CATATAN</th></tr></thead><tbody>${
@@ -451,31 +779,56 @@ function stockHistoryPage() {
   }</tbody></table></div></section>`;
 }
 function productsPage() {
-  return catalogPanel(state.products,catalogFilter,state,store);
+  return catalogPanel(state.products, catalogFilter, state, store);
 }
 function directoryPage(kind) {
-  if(kind === "stores")return storesPage(state);
+  if (kind === "stores") return storesPage(state);
   const isStore = kind === "stores",
     label = isStore ? "Store" : "Supplier";
   return `<div class="intro"><div><h2>Master ${label}</h2><p class="muted">${isStore ? "Ubah nama toko dan lokasi melalui tombol Edit toko." : "Kelola supplier, nomor telepon, dan alamat."}</p></div><button class="primary" data-master="${kind}">Tambah ${label}</button></div><section class="panel"><div class="table-wrap"><table><thead><tr><th>NAMA</th>${isStore ? "<th>LOKASI</th>" : "<th>NOMOR TELEPON</th><th>ALAMAT</th>"}<th>ACTION</th></tr></thead><tbody>${state[kind].map((p) => `<tr><td><b>${e(p.name)}</b></td>${isStore ? `<td>${e(p.location || "—")}</td>` : `<td>${e(p.phone || "—")}</td><td>${e(p.address || "—")}</td>`}<td><button class="small" data-edit-kind="${kind}" data-edit-id="${e(p.id)}">${icon("edit")}${isStore ? "Edit toko" : "Edit"}</button></td></tr>`).join("") || `<tr><td colspan="${isStore ? 3 : 4}" class="empty">Belum ada ${label.toLowerCase()}.</td></tr>`}</tbody></table></div></section>`;
 }
 function changeStore(next) {
-  if(!state.stores.some(x=>x.id===next)||!mayLeave(busy))return false;
-  if(next===store){followDashboardStore();render();return true;}
-  if((cart.length||hasOrderDraft())&&!confirm('Ganti toko akan mengosongkan pesanan. Lanjutkan?'))return false;
-  store=next;cart=[];clearOrderDraft();followDashboardStore();render();return true;
+  if (!state.stores.some((x) => x.id === next) || !mayLeave(busy)) return false;
+  if (next === store) {
+    followDashboardStore();
+    render();
+    return true;
+  }
+  if (
+    (cart.length || hasOrderDraft()) &&
+    !confirm("Ganti toko akan mengosongkan pesanan. Lanjutkan?")
+  )
+    return false;
+  store = next;
+  cart = [];
+  clearOrderDraft();
+  followDashboardStore();
+  render();
+  return true;
 }
 
 function render() {
-  if(["salesreport","finance","batches","trace"].includes(view)){selectReportTab(({salesreport:"summary",finance:"expenses",batches:"batches",trace:"stock"})[view]);view="reports";}
-  sessions?.location(activeSessionId,store,view);
+  if (["salesreport", "finance", "batches", "trace"].includes(view)) {
+    selectReportTab(
+      {
+        salesreport: "summary",
+        finance: "expenses",
+        batches: "batches",
+        trace: "stock",
+      }[view],
+    );
+    view = "reports";
+  }
+  sessions?.location(activeSessionId, store, view);
   sidebar.capture();
   app.innerHTML = shell(
     {
-      ...Object.fromEntries(opsPages.map(key=>[key,()=>opsPage(key,state,store)])),
-      crm:()=>crmPage(state),
-      payments:()=>paymentsPage(state,store),
-      shifts:()=>shiftsPage(state,store),
+      ...Object.fromEntries(
+        opsPages.map((key) => [key, () => opsPage(key, state, store)]),
+      ),
+      crm: () => crmPage(state),
+      payments: () => paymentsPage(state, store),
+      shifts: () => shiftsPage(state, store),
       dashboard,
       recipes: () => recipesPage(state, store),
       production: () => productionPage(state, store),
@@ -484,23 +837,58 @@ function render() {
       waste: () => wastePage(state, store),
       losses: () => wastePage(state, store),
       reports: () => reportsPage(state),
-      documents: () => documentsPage(state,store),
+      documents: () => documentsPage(state, store),
       products: productsPage,
       stores: () => directoryPage("stores"),
       suppliers: () => directoryPage("suppliers"),
     }[view](),
   );
-  if(view==='orders'||view==='cashier'){const banner=document.createElement("div");banner.dataset.shiftBanner="";banner.innerHTML=shiftBanner(state,store);document.querySelector("main").prepend(banner);}
-  const shiftContext={...storeContext(),getState:()=>state,refresh,showLegacyReceipt:receipt,readShifts:async filters=>{if(mode==='stock-demo')return readShiftsDemo(state,filters);const sessionId=activeSessionId,revision=stateRevision;const data=await request('/rest/v1/rpc/pos_cashier_shifts_read',{filters});if(mode!=='live'||sessionId!==activeSessionId)throw Error('Sesi berubah. Muat ulang halaman shift.');if(revision===stateRevision)state.cashierShifts=data.active;return data;}};
-  if(view==='crm')bindCrm(shiftContext);
-  if(view==='payments')bindPayments(shiftContext,store);
-  bindShiftBanner(shiftContext,store);if(view==='shifts')bindShiftsPage(shiftContext,store);
-  document.querySelector('#order-products')?.addEventListener('stock-refresh',()=>{const banner=document.querySelector('[data-shift-banner]');if(banner){banner.innerHTML=shiftBanner(state,store);bindShiftBanner(shiftContext,store,banner);}});
+  if (view === "orders" || view === "cashier") {
+    const banner = document.createElement("div");
+    banner.dataset.shiftBanner = "";
+    banner.innerHTML = shiftBanner(state, store);
+    document.querySelector(".workspace-content").prepend(banner);
+  }
+  const shiftContext = {
+    ...storeContext(),
+    getState: () => state,
+    refresh,
+    showLegacyReceipt: receipt,
+    readShifts: async (filters) => {
+      if (mode === "stock-demo") return readShiftsDemo(state, filters);
+      const sessionId = activeSessionId,
+        revision = stateRevision;
+      const data = await request("/rest/v1/rpc/pos_cashier_shifts_read", {
+        filters,
+      });
+      if (mode !== "live" || sessionId !== activeSessionId)
+        throw Error("Sesi berubah. Muat ulang halaman shift.");
+      if (revision === stateRevision) state.cashierShifts = data.active;
+      return data;
+    },
+  };
+  if (view === "crm") bindCrm(shiftContext);
+  if (view === "payments") bindPayments(shiftContext, store);
+  bindShiftBanner(shiftContext, store);
+  if (view === "shifts") bindShiftsPage(shiftContext, store);
+  document
+    .querySelector("#order-products")
+    ?.addEventListener("stock-refresh", () => {
+      const banner = document.querySelector("[data-shift-banner]");
+      if (banner) {
+        banner.innerHTML = shiftBanner(state, store);
+        bindShiftBanner(shiftContext, store, banner);
+      }
+    });
   syncThemeControls();
   bindInstall();
   sidebar.mount();
-  document.querySelector("#stock-demo-toggle")?.addEventListener("click",()=>switchStockDemo());
-  document.querySelector("#stock-demo-reset")?.addEventListener("click",()=>switchStockDemo(true));
+  document
+    .querySelector("#stock-demo-toggle")
+    ?.addEventListener("click", () => switchStockDemo());
+  document
+    .querySelector("#stock-demo-reset")
+    ?.addEventListener("click", () => switchStockDemo(true));
   document.querySelectorAll("[data-view]").forEach(
     (b) =>
       (b.onclick = () => {
@@ -508,27 +896,44 @@ function render() {
         view = b.dataset.view;
         sidebar.navigate();
         render();
+        window.scrollTo?.({ top: 0, left: 0, behavior: "instant" });
       }),
   );
-  document.querySelector("#active-store").onchange = ev => {
-    if(!changeStore(ev.target.value))ev.target.value=store;
+  document.querySelector("#active-store").onchange = (ev) => {
+    if (!changeStore(ev.target.value)) ev.target.value = store;
   };
-  if(view==='dashboard')bindDashboard(state,store,{render,refresh,toast,changeStore,isBusy:()=>busy});
+  if (view === "dashboard")
+    bindDashboard(state, store, {
+      render,
+      refresh,
+      toast,
+      changeStore,
+      isBusy: () => busy,
+    });
 
   document.querySelector("#logout").onclick = () => {
     if (!mayLeave(busy)) return;
     if (cart.length && !confirm("Keluar dan kosongkan pesanan?")) return;
-    if(activeShift(state)&&!confirm("Shift kasir masih terbuka. Logout tidak menutup shift. Tetap keluar?"))return;
+    if (
+      activeShift(state) &&
+      !confirm(
+        "Shift kasir masih terbuka. Logout tidak menutup shift. Tetap keluar?",
+      )
+    )
+      return;
     resetWorkspace(true);
     login();
   };
   document
     .querySelectorAll("[data-receipt]")
     .forEach((b) => (b.onclick = () => receipt(b.dataset.receipt)));
-  document.querySelectorAll('[data-weigh-history]').forEach(b => b.onclick = () => {
-    const lot = state.lots.find(l => l.id === b.dataset.weighHistory);
-    if (lot) showWeighingHistory(lot, { modal });
-  });
+  document.querySelectorAll("[data-weigh-history]").forEach(
+    (b) =>
+      (b.onclick = () => {
+        const lot = state.lots.find((l) => l.id === b.dataset.weighHistory);
+        if (lot) showWeighingHistory(lot, { modal });
+      }),
+  );
   const pending = mode === "live" ? pendingRetry() : null;
   if (pending) {
     const box = document.createElement("div");
@@ -554,23 +959,65 @@ function render() {
       }
     };
   }
-  bindOps(view,state,store,{...storeContext(),refresh,getState:()=>state,employeeDocument:employeeId=>request("/rest/v1/rpc/pos_employee_document",{employee_id:employeeId}),createAccount:async(employeeId,password,action="create")=>{
-    if(mode!=="live")throw Error("Akun hanya dapat dibuat saat login database.");
-    await request("/rest/v1/rpc/pos_account_target",{employee_id:employeeId});
-    if(mode!=="live")throw Error("Akun hanya dapat dibuat saat login database.");
-    const res=await fetch("/api/pos-employee",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+token},body:JSON.stringify({employeeId,password,action})});
-    const data=await res.json();if(!res.ok)throw Error(data.error||"Gagal membuat akun");return data;
-  }});
+  bindOps(view, state, store, {
+    ...storeContext(),
+    refresh,
+    getState: () => state,
+    employeeDocument: (employeeId) =>
+      request("/rest/v1/rpc/pos_employee_document", {
+        employee_id: employeeId,
+      }),
+    createAccount: async (employeeId, password, action = "create") => {
+      if (mode !== "live")
+        throw Error("Akun hanya dapat dibuat saat login database.");
+      await request("/rest/v1/rpc/pos_account_target", {
+        employee_id: employeeId,
+      });
+      if (mode !== "live")
+        throw Error("Akun hanya dapat dibuat saat login database.");
+      const res = await fetch("/api/pos-employee", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + token,
+        },
+        body: JSON.stringify({ employeeId, password, action }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw Error(data.error || "Gagal membuat akun");
+      return data;
+    },
+  });
   bindKitchenSound();
   observeKitchen();
   trackForms();
   bindProduction(view, state, store, { modal, mutate, render, toast, refresh });
-  const adminContext={modal,mutate,render,toast,refresh,getState:()=>state,rpc:adminRpc,refreshBatchState:async()=>{reportRefreshPending=true;reportRefreshRevision++;try{await refresh();}finally{reportRefreshPending=false;}}};
-  if(view === "reports")bindReports(state,store,adminContext);
-  if(view === "documents")bindDocuments(state,store,adminContext);
+  const adminContext = {
+    modal,
+    mutate,
+    render,
+    toast,
+    refresh,
+    getState: () => state,
+    rpc: adminRpc,
+    refreshBatchState: async () => {
+      reportRefreshPending = true;
+      reportRefreshRevision++;
+      try {
+        await refresh();
+      } finally {
+        reportRefreshPending = false;
+      }
+    },
+  };
+  if (view === "reports") bindReports(state, store, adminContext);
+  if (view === "documents") bindDocuments(state, store, adminContext);
   bindWaste(view, state, store, {
-    getState:()=>state,
-    loadRejectEvidence: async recordId => mode === "stock-demo" ? state.rejectRecords.find(r=>r.id===recordId)?.evidence : request("/rest/v1/rpc/pos_reject_evidence",{record_id:recordId}),
+    getState: () => state,
+    loadRejectEvidence: async (recordId) =>
+      mode === "stock-demo"
+        ? state.rejectRecords.find((r) => r.id === recordId)?.evidence
+        : request("/rest/v1/rpc/pos_reject_evidence", { record_id: recordId }),
     modal,
     mutate,
     render,
@@ -602,14 +1049,20 @@ function render() {
       }
     };
     const form = document.querySelector("#checkout");
-    const memberPicker=bindMemberPicker(shiftContext,form,()=>cart);
+    const memberPicker = bindMemberPicker(shiftContext, form, () => cart);
     form.paid.oninput = () => {
       const change =
         Number(form.paid.value) - cart.reduce((a, l) => a + l.total, 0);
       document.querySelector("#change").textContent =
         change < 0 ? "Kurang " + money(-change) : "Kembalian " + money(change);
     };
-    form.payment.onchange=()=>{form.paid.readOnly=form.payment.value!=="Tunai";if(form.paid.readOnly)form.paid.value=cart.reduce((a,l)=>a+l.total,0);form.paid.oninput();};form.payment.onchange();
+    form.payment.onchange = () => {
+      form.paid.readOnly = form.payment.value !== "Tunai";
+      if (form.paid.readOnly)
+        form.paid.value = cart.reduce((a, l) => a + l.total, 0);
+      form.paid.oninput();
+    };
+    form.payment.onchange();
     form.onsubmit = async (ev) => {
       ev.preventDefault();
       const payload = {
@@ -618,9 +1071,18 @@ function render() {
         storeId: store,
         paid: Number(form.paid.value),
         lines: cart,
-        memberId:memberPicker.get()?.id||null,
+        memberId: memberPicker.get()?.id || null,
       };
-      try{requireEnabledPayment(state,store,payload.payment);validPayment(payload,cart.reduce((a,l)=>a+l.total,0));}catch(error){toast(error.message);return;}
+      try {
+        requireEnabledPayment(state, store, payload.payment);
+        validPayment(
+          payload,
+          cart.reduce((a, l) => a + l.total, 0),
+        );
+      } catch (error) {
+        toast(error.message);
+        return;
+      }
       if (await mutate("sale", payload)) {
         lastSale = payload.id;
         cart = [];
@@ -631,7 +1093,13 @@ function render() {
     };
   }
   if (view === "stock") {
-    bindInventory(state,store,stockFilter,"stock",{modal,mutate,render,toast,getState:()=>state});
+    bindInventory(state, store, stockFilter, "stock", {
+      modal,
+      mutate,
+      render,
+      toast,
+      getState: () => state,
+    });
     document.querySelector("#add-receipt").onclick = () => {
       const d = modal(
         "Barang masuk",
@@ -652,8 +1120,43 @@ function render() {
   if (["products", "stores", "suppliers"].includes(view)) {
     if (view === "products") {
       document.querySelector("#add-catalog-product").onclick = () =>
-        productDialog({ state, store, modal, mutate, render, toast, getState:()=>state });
-      bindInventory(state,store,catalogFilter,"products",{modal,mutate,render,toast,getState:()=>state,addProductVariant:productId=>productVariantDialog({productId,state,modal,mutate,render,toast}),addVariant:groupId=>variantGroupDialog({groupId,state,modal,mutate,render,toast}),edit:key=>productDialog({product:state.products.find(p=>p.id===key),state,store,modal,mutate,render,toast})});
+        productDialog({
+          state,
+          store,
+          modal,
+          mutate,
+          render,
+          toast,
+          getState: () => state,
+        });
+      bindInventory(state, store, catalogFilter, "products", {
+        modal,
+        mutate,
+        render,
+        toast,
+        getState: () => state,
+        addProductVariant: (productId) =>
+          productVariantDialog({
+            productId,
+            state,
+            modal,
+            mutate,
+            render,
+            toast,
+          }),
+        addVariant: (groupId) =>
+          variantGroupDialog({ groupId, state, modal, mutate, render, toast }),
+        edit: (key) =>
+          productDialog({
+            product: state.products.find((p) => p.id === key),
+            state,
+            store,
+            modal,
+            mutate,
+            render,
+            toast,
+          }),
+      });
     }
     document
       .querySelectorAll("[data-edit-kind]")
@@ -665,13 +1168,12 @@ function render() {
     document
       .querySelectorAll("[data-master]")
       .forEach((b) => (b.onclick = () => addMaster(b.dataset.master)));
-
   }
 }
 function modal(title, body, submitLabel = "Simpan") {
   const d = document.createElement("dialog");
   d.className = "modal";
-  d.innerHTML = `<div class="modal-head"><h2>${mode==="stock-demo"?"DEMO · ":""}${title}</h2><button type="button" class="close" aria-label="Tutup">×</button></div><form>${body}<p class="error" id="form-error"></p><div class="modal-actions"><button type="button" class="close">Batal</button><button class="primary" type="submit">${submitLabel}</button></div></form>`;
+  d.innerHTML = `<div class="modal-head"><h2>${mode === "stock-demo" ? "DEMO · " : ""}${title}</h2><button type="button" class="close" aria-label="Tutup">×</button></div><form>${body}<p class="error" id="form-error"></p><div class="modal-actions"><button type="button" class="close">Batal</button><button class="primary" type="submit">${submitLabel}</button></div></form>`;
   document.body.append(d);
   const canClose = () =>
     !busy &&
@@ -776,9 +1278,24 @@ function movement() {
   };
 }
 function addMaster(kind) {
-  if(kind === "stores")return storeDialog(state,{...storeContext(),render:()=>{store=store||state.stores[0]?.id||"";render();}});
+  if (kind === "stores")
+    return storeDialog(state, {
+      ...storeContext(),
+      render: () => {
+        store = store || state.stores[0]?.id || "";
+        render();
+      },
+    });
   if (kind === "products")
-    return productDialog({ state, store, modal, mutate, render, toast, getState:()=>state });
+    return productDialog({
+      state,
+      store,
+      modal,
+      mutate,
+      render,
+      toast,
+      getState: () => state,
+    });
   const masterId = id();
   const d = modal(
     "Tambah " +
@@ -809,7 +1326,13 @@ function receipt(saleId) {
   const lines = [
     "#" + short(s.id) + " · " + s.date,
     "Kasir: " + cashierName(s),
-    ...(s.customer?["Member: "+s.customer.name,(s.pointsReversed?"Poin dibatalkan: ":"Poin diperoleh: ")+(s.pointsEarned||0)]:[]),
+    ...(s.customer
+      ? [
+          "Member: " + s.customer.name,
+          (s.pointsReversed ? "Poin dibatalkan: " : "Poin diperoleh: ") +
+            (s.pointsEarned || 0),
+        ]
+      : []),
     "--------------------------------",
     ...s.lines.flatMap((l) => [
       name("products", l.productId),
@@ -823,18 +1346,30 @@ function receipt(saleId) {
     "KEMBALIAN   " + money(s.change),
     ...(s.voided ? ["DIBATALKAN: " + s.voidReason] : []),
   ];
-  d.innerHTML = `<div class="modal-head"><h2>Struk transaksi</h2><button id="close-receipt" aria-label="Tutup">×</button></div><div class="receipt-print">${receiptHeader(state.stores.find(x=>x.id===s.storeId))}<div class="receipt-plain">${e(lines.join("\n"))}</div></div><div class="modal-actions">${!s.voided ? '<button class="danger" id="void-sale">Batalkan transaksi</button>' : ""}<button class="primary" id="print">Cetak</button></div>`;
+  d.innerHTML = `<div class="modal-head"><h2>Struk transaksi</h2><button id="close-receipt" aria-label="Tutup">×</button></div><div class="receipt-print">${receiptHeader(state.stores.find((x) => x.id === s.storeId))}<div class="receipt-plain">${e(lines.join("\n"))}</div></div><div class="modal-actions">${!s.voided ? '<button class="danger" id="void-sale">Batalkan transaksi</button>' : ""}<button class="primary" id="print">Cetak</button></div>`;
   document.body.append(d);
   d.oncancel = (ev) => {
     if (busy) ev.preventDefault();
   };
   d.onclose = () => d.remove();
   d.querySelector("#close-receipt").onclick = () => d.close();
-  const outlet=state.stores.find(x=>x.id===s.storeId);
-  fillReceiptLogo(d,outlet,storeContext()).catch(error=>toast(error.message));
+  const outlet = state.stores.find((x) => x.id === s.storeId);
+  fillReceiptLogo(d, outlet, storeContext()).catch((error) =>
+    toast(error.message),
+  );
   d.querySelector("#print").onclick = async () => {
-    const button=d.querySelector("#print");if(button.disabled)return;button.disabled=true;
-    try{await fillReceiptLogo(d,outlet,storeContext());if(d.hasAttribute('open'))await printReceipt(d.querySelector('.receipt-print'));}catch(error){toast(error.message);}finally{button.disabled=false;}
+    const button = d.querySelector("#print");
+    if (button.disabled) return;
+    button.disabled = true;
+    try {
+      await fillReceiptLogo(d, outlet, storeContext());
+      if (d.hasAttribute("open"))
+        await printReceipt(d.querySelector(".receipt-print"));
+    } catch (error) {
+      toast(error.message);
+    } finally {
+      button.disabled = false;
+    }
   };
   d.querySelector("#void-sale")?.addEventListener("click", async () => {
     const reason = prompt("Alasan pembatalan (stok akan dikembalikan):");
@@ -849,21 +1384,37 @@ function receipt(saleId) {
 }
 
 async function bootstrap() {
-  loadingPage('Menghubungkan ke layanan POS…','',bootstrap);
+  loadingPage("Menghubungkan ke layanan POS…", "", bootstrap);
   try {
-    const response=await fetch('/api/pos-config',{signal:AbortSignal.timeout(15000),cache:'no-store'});
-    if(!response.ok)throw Error('Layanan POS belum dapat dihubungi. Coba lagi.');
-    config=await response.json();
-    if(!config.configured){login();return;}
-    sessions=createSessionManager({url:config.url,key:config.key});
-    if(sessions.read())await restoreSession();else login();
-  } catch(error) {
-    loadingPage('Periksa koneksi internet Anda.',error.name==='TimeoutError'?'Server belum merespons.':error.message,bootstrap);
+    const response = await fetch("/api/pos-config", {
+      signal: AbortSignal.timeout(15000),
+      cache: "no-store",
+    });
+    if (!response.ok)
+      throw Error("Layanan POS belum dapat dihubungi. Coba lagi.");
+    config = await response.json();
+    if (!config.configured) {
+      login();
+      return;
+    }
+    sessions = createSessionManager({ url: config.url, key: config.key });
+    if (sessions.read()) await restoreSession();
+    else login();
+  } catch (error) {
+    loadingPage(
+      "Periksa koneksi internet Anda.",
+      error.name === "TimeoutError" ? "Server belum merespons." : error.message,
+      bootstrap,
+    );
   }
 }
 function handleSessionStorage(event) {
-  if(!sessions || (event.key!==sessions.storageKey && event.key!==null))return;
-  if(activeSessionId && sessions.read()?.sessionId!==activeSessionId){resetWorkspace();login('Sesi keluar atau akun berganti di tab lain. Silakan masuk kembali.');}
+  if (!sessions || (event.key !== sessions.storageKey && event.key !== null))
+    return;
+  if (activeSessionId && sessions.read()?.sessionId !== activeSessionId) {
+    resetWorkspace();
+    login("Sesi keluar atau akun berganti di tab lain. Silakan masuk kembali.");
+  }
 }
 await bootstrap();
 
@@ -876,12 +1427,24 @@ function masterDetailFields(kind, p = {}) {
     : `${field("Nomor telepon (opsional)", `<input name="phone" type="tel" maxlength="40" value="${e(p.phone || "")}" placeholder="08… atau +62…">`)}${field("Alamat supplier (opsional)", `<input name="address" maxlength="300" value="${e(p.address || "")}" placeholder="Alamat lengkap">`)}`;
 }
 function editMasterDetails(kind, recordId) {
-  if(kind === "stores")return storeDialog(state,storeContext(),state.stores.find(s=>s.id===recordId));
+  if (kind === "stores")
+    return storeDialog(
+      state,
+      storeContext(),
+      state.stores.find((s) => s.id === recordId),
+    );
   const p = state[kind]?.find((x) => x.id === recordId);
   if (!p || !["stores", "suppliers"].includes(kind)) return;
   const editRequestId = id();
-  const d = modal(kind === "stores" ? "Edit toko" : "Edit " + e(p.name),
-    (kind === "stores" ? field("Nama toko", `<input name="name" required maxlength="100" value="${e(p.name)}" autocomplete="organization">`) : "") + masterDetailFields(kind, p));
+  const d = modal(
+    kind === "stores" ? "Edit toko" : "Edit " + e(p.name),
+    (kind === "stores"
+      ? field(
+          "Nama toko",
+          `<input name="name" required maxlength="100" value="${e(p.name)}" autocomplete="organization">`,
+        )
+      : "") + masterDetailFields(kind, p),
+  );
   d.querySelector("form").onsubmit = async (ev) => {
     ev.preventDefault();
     if (
@@ -901,39 +1464,122 @@ function editMasterDetails(kind, recordId) {
 
 // Poll only the signed-in POS session; keep order inputs intact while refreshing stock.
 
-function beepKitchen(){
- if(!soundEnabled||!audioContext)return;
- const oscillator=audioContext.createOscillator(),gain=audioContext.createGain();
- oscillator.connect(gain);gain.connect(audioContext.destination);oscillator.frequency.value=880;
- gain.gain.setValueAtTime(.12,audioContext.currentTime);gain.gain.exponentialRampToValueAtTime(.001,audioContext.currentTime+.5);
- oscillator.start();oscillator.stop(audioContext.currentTime+.5);
+function beepKitchen() {
+  if (!soundEnabled || !audioContext) return;
+  const oscillator = audioContext.createOscillator(),
+    gain = audioContext.createGain();
+  oscillator.connect(gain);
+  gain.connect(audioContext.destination);
+  oscillator.frequency.value = 880;
+  gain.gain.setValueAtTime(0.12, audioContext.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.5);
+  oscillator.start();
+  oscillator.stop(audioContext.currentTime + 0.5);
 }
-function bindKitchenSound(){
- const button=document.querySelector('#kitchen-sound');if(!button)return;
- button.textContent=soundEnabled?'Suara aktif':'Aktifkan suara';button.setAttribute('aria-pressed',String(soundEnabled));
- button.onclick=async()=>{try{if(!soundEnabled){audioContext ||= new (window.AudioContext||window.webkitAudioContext)();await audioContext.resume();}soundEnabled=!soundEnabled;bindKitchenSound();beepKitchen();}catch{toast('Suara tidak tersedia di browser ini. Notifikasi layar tetap aktif.');}};
+function bindKitchenSound() {
+  const button = document.querySelector("#kitchen-sound");
+  if (!button) return;
+  button.textContent = soundEnabled ? "Suara aktif" : "Aktifkan suara";
+  button.setAttribute("aria-pressed", String(soundEnabled));
+  button.onclick = async () => {
+    try {
+      if (!soundEnabled) {
+        audioContext ||= new (window.AudioContext ||
+          window.webkitAudioContext)();
+        await audioContext.resume();
+      }
+      soundEnabled = !soundEnabled;
+      bindKitchenSound();
+      beepKitchen();
+    } catch {
+      toast(
+        "Suara tidak tersedia di browser ini. Notifikasi layar tetap aktif.",
+      );
+    }
+  };
 }
-function observeKitchen(){
- if(view!=='kitchen')return;
- const orders=(state.orders||[]).filter(o=>o.store_id===store&&o.lines.some(l=>l.itemType==='recipe')&&(o.payment_status==='paid'||(!o.payment_status&&o.status==='paid')));
- const previous=seenKitchen.get(store);
- const incoming=previous?orders.filter(o=>o.status==='queued'&&!previous.has(o.id)):[];
- seenKitchen.set(store,new Set(orders.map(o=>o.id)));
- if(incoming.length){toast(`${incoming.length} pesanan baru masuk ke kitchen`);beepKitchen();}
+function observeKitchen() {
+  if (view !== "kitchen") return;
+  const orders = (state.orders || []).filter(
+    (o) =>
+      o.store_id === store &&
+      o.lines.some((l) => l.itemType === "recipe") &&
+      (o.payment_status === "paid" ||
+        (!o.payment_status && o.status === "paid")),
+  );
+  const previous = seenKitchen.get(store);
+  const incoming = previous
+    ? orders.filter((o) => o.status === "queued" && !previous.has(o.id))
+    : [];
+  seenKitchen.set(store, new Set(orders.map((o) => o.id)));
+  if (incoming.length) {
+    toast(`${incoming.length} pesanan baru masuk ke kitchen`);
+    beepKitchen();
+  }
 }
-setInterval(async()=>{
- const liveBatch=view==='reports'&&document.querySelector('#batch-results');
- if(mode!=='live'||busy||polling||(!['orders','kitchen','discounts'].includes(view)&&!liveBatch))return;
- if(liveBatch&&(document.hidden||reportRefreshPending))return;
- polling=true;const revision=stateRevision,sessionId=activeSessionId,reportRevision=reportRefreshRevision;
- try{
-  const fresh=await request('/rest/v1/rpc/pos_read',{});
-  if(mode!=='live'||busy||revision!==stateRevision||sessionId!==activeSessionId||reportRevision!==reportRefreshRevision)return;
-  state=fresh;observeKitchen();
-  if(view==='reports')document.querySelector('#report-result')?.dispatchEvent(new CustomEvent('report-sync',{detail:{state}}));
-  if(['kitchen','discounts'].includes(view)&&!document.querySelector('dialog[open]'))render();
-  else document.querySelector('#order-products')?.dispatchEvent(new CustomEvent('stock-refresh',{detail:state}));
-  const status=document.querySelector('#kitchen-sync');if(status)status.textContent='Terhubung · diperbarui '+new Date().toLocaleTimeString('id-ID');
- }catch(err){if(mode!=='live'||revision!==stateRevision||sessionId!==activeSessionId||reportRevision!==reportRefreshRevision)return;if(view==='reports')document.querySelector('#report-result')?.dispatchEvent(new CustomEvent('report-sync',{detail:{error:true}}));const status=document.querySelector('#kitchen-sync');if(status)status.textContent='Koneksi terputus. Mencoba lagi otomatis; tekan Perbarui untuk mencoba sekarang.';}
- finally{polling=false;}
-},5000);
+setInterval(async () => {
+  const liveBatch =
+    view === "reports" && document.querySelector("#batch-results");
+  if (
+    mode !== "live" ||
+    busy ||
+    polling ||
+    (!["orders", "kitchen", "discounts"].includes(view) && !liveBatch)
+  )
+    return;
+  if (liveBatch && (document.hidden || reportRefreshPending)) return;
+  polling = true;
+  const revision = stateRevision,
+    sessionId = activeSessionId,
+    reportRevision = reportRefreshRevision;
+  try {
+    const fresh = await request("/rest/v1/rpc/pos_read", {});
+    if (
+      mode !== "live" ||
+      busy ||
+      revision !== stateRevision ||
+      sessionId !== activeSessionId ||
+      reportRevision !== reportRefreshRevision
+    )
+      return;
+    state = fresh;
+    observeKitchen();
+    if (view === "reports")
+      document
+        .querySelector("#report-result")
+        ?.dispatchEvent(new CustomEvent("report-sync", { detail: { state } }));
+    if (
+      ["kitchen", "discounts"].includes(view) &&
+      !document.querySelector("dialog[open]")
+    )
+      render();
+    else
+      document
+        .querySelector("#order-products")
+        ?.dispatchEvent(new CustomEvent("stock-refresh", { detail: state }));
+    const status = document.querySelector("#kitchen-sync");
+    if (status)
+      status.textContent =
+        "Terhubung · diperbarui " + new Date().toLocaleTimeString("id-ID");
+  } catch (err) {
+    if (
+      mode !== "live" ||
+      revision !== stateRevision ||
+      sessionId !== activeSessionId ||
+      reportRevision !== reportRefreshRevision
+    )
+      return;
+    if (view === "reports")
+      document
+        .querySelector("#report-result")
+        ?.dispatchEvent(
+          new CustomEvent("report-sync", { detail: { error: true } }),
+        );
+    const status = document.querySelector("#kitchen-sync");
+    if (status)
+      status.textContent =
+        "Koneksi terputus. Mencoba lagi otomatis; tekan Perbarui untuk mencoba sekarang.";
+  } finally {
+    polling = false;
+  }
+}, 5000);

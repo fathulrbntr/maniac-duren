@@ -1,200 +1,823 @@
-import {cashierName} from './cashier-shifts.mjs?v=84';
-import {itemTypes} from './catalog.mjs?v=59';
-import {cashierFields,bindCheckout,discountsPage,bindDiscounts,voidDialog,showReceipt,payExistingOrder} from './cashier-ui.mjs?v=85';
-import {devicesPage,bindDevices} from './devices-ui.mjs?v=66';
-import {readDeviceSettings} from './device-settings.mjs?v=58';
-import {barcodeProduct,bindBarcodeInput} from './barcode-scanner.mjs?v=66';
-import {tableLabel} from './cashier.mjs?v=84';
-import {posMenuEntries,updatePosCards,posVariantDialog} from './pos-menu.mjs?v=68';
-import {posCategoryTabs,posProductCards,posCategoryDialog,posCategoryManager} from './pos-categories-ui.mjs?v=65';
-import {posVisible,menuCatalogChanged,posProductStatus} from './pos-categories.mjs?v=52';
-import {employeesPage,bindEmployees} from './employees-ui.mjs?v=70';
-import {checkOrder} from './order-stock.mjs?v=12';
-import {fruitSaleDialog} from './fruit-sale-dialog.mjs?v=69';
-import {orderMargins} from './finance.mjs?v=54';
-import {escape as e,id,today,num,money} from './core.mjs?v=9';
-export const opsPages=['devices','discounts','salesreport','orders','kitchen','trace','finance','employees','attendance','guide'];
-const needsKitchen=o=>o.lines.some(l=>l.itemType==='recipe');
-const isPaid=o=>o.payment_status==='paid'||(!o.payment_status&&o.status==='paid');
-const paymentLabel=o=>o.payment_status==='refunded'?'Dikembalikan':isPaid(o)?'Lunas':'Belum bayar';
-const orderLabel=o=>({queued:isPaid(o)?'Antre':'Menunggu bayar',preparing:'Dibuat',ready:'Siap',paid:'Selesai',cancelled:'Dibatalkan'})[o.status]||o.status;
-const quality={unsorted:'Belum disortir',ready:'Matang / siap jual',unripe:'Belum matang',reject:'Reject'};
-const actions={store_save:'Ubah data toko & header struk',receipt:'Terima buah',unit_receipt:'Terima bahan / produk',sort:'Sortir buah',recover:'Olah reject menjadi bahan',produce:'Produksi bahan',reject_mark:'Catat reject',reject_process:'Olah reject',reject_coral:'Olah Coral',reject_loss:'Waste',reject_void:'Batalkan reject / waste',waste_process:'Olah reject',inventory_loss:'Waste / penyusutan',sale:'Jual buah',order_create:'Buat pesanan',order_start:'Mulai buat pesanan',order_ready:'Pesanan siap',order_pay:'Bayar pesanan',order_complete:'Pesanan diserahkan',order_direct:'Selesaikan produk siap jual',order_cancel:'Batalkan pesanan',order_void:'Void pesanan',discount_save:'Atur diskon',cashier_approval_request:'Minta persetujuan',cashier_approval_decide:'Keputusan owner',movement:'Transfer',void:'Batalkan penjualan',production_void:'Batalkan produksi',waste_void:'Batalkan olahan',employee_save:'Ubah karyawan',attendance_in:'Absen masuk',attendance_out:'Absen pulang'};
-const field=(label,html)=>`<label class="field">${label}${html}</label>`;
-const input=(name,type='text',extra='')=>`<input name="${name}" type="${type}" ${extra}>`;
-const opts=(rows,value='')=>rows.map(x=>`<option value="${e(x.id)}" ${x.id===value?'selected':''}>${e(x.name)}</option>`).join('');
-const table=(heads,rows)=>`<div class="table-wrap"><table><thead><tr>${heads.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.join('')||`<tr><td colspan="${heads.length}" class="empty">Belum ada data.</td></tr>`}</tbody></table></div>`;
-const header=(name,description,buttons='')=>`<div class="intro"><div><h2>${name}</h2><p class="muted">${description}</p></div><div class="toolbar">${buttons}<button id="ops-refresh">Perbarui</button></div></div>`;
-const nm=(s,key,value)=>s[key]?.find(x=>x.id===value)?.name||(key==='employees'?s.people?.find(x=>x.id===value)?.name:null)||value?.slice(0,8)||'—';
-const button=(label,action,value,cls='')=>`<button class="small ${cls}" data-op="${action}" data-id="${e(value)}">${label}</button>`;
-const balance=(l)=>l.kg!==undefined?`${num(l.kg)} kg / ${l.pieces} butir`:`${num(l.qty)} ${e(l.unit)}`;
-const lots=(s,store)=>[...s.lots,...s.unitLots].filter(x=>x.storeId===store&&(x.kg??x.qty)>0);
-const cost=(n)=>n==null?'Belum diketahui':money(n);
-const allowed=(s,p)=>!s.access||s.access[p];
-let draft=[];
-export function opsPage(view,s,store){
- if(view==='devices')return devicesPage(s);
- if(['employees','attendance'].includes(view))return employeesPage(view,s,store);
- const note=!s.opsVersion?'<div class="notice">Fitur operasional baru memerlukan SQL versi 009 dan login. Demo lama hanya menampilkan struktur; tombol simpan baru tidak mengubah data demo.</div>':'';
- let html='';
- if(view==='guide')html=header('Urutan pendataan','Gunakan alur yang sama di setiap cabang.')+`<section class="panel"><ol class="flow-guide"><li><b>Data karyawan dan cabang</b><p>Tentukan siapa yang menerima, membuat, menjual, serta cabang yang boleh diakses.</p></li><li><b>Supplier, produk, bahan, dan resep</b><p>Buah: kg + butir. ${e(itemTypes.raw)}: g/ml/kg/pcs. ${e(itemTypes.prep)}: bahan hasil kitchen. ${e(itemTypes.recipe)}: menu dengan resep, satuan porsi. ${e(itemTypes.direct)}: produk supplier atau kemasan siap jual. ${e(itemTypes.finished)}: produk hasil olahan, termasuk Durpas dan Coral.</p></li><li><b>Barang datang</b><p>Catat supplier, jumlah, total modal dan kedaluwarsa. Akun penerima terekam otomatis. Penerimaan buah langsung siap jual setelah penurunan selesai.</p></li><li><b>Persiapan kitchen</b><p>Catat reject agar terpisah dari stok kasir. Olah reject menjadi Durpas/Coral, lalu gunakan Olah Coral untuk menimbang daging bersih. Produksi bahan dipakai untuk cendol, jelly, dan ketan. Modal mengikuti hasil.</p></li><li><b>Pesanan & kitchen</b><p>Kasir menerima pembayaran dan membuat satu pesanan buah/dessert/produk supplier. Buah dan produk siap jual langsung selesai serta dipotong stoknya saat bayar. Hanya ${e(itemTypes.recipe)} masuk kitchen; stok bahan resep dipotong saat Mulai buat. Bayar di kasir → Antre → Dibuat → Siap → Diserahkan. Pesanan antre mencadangkan bahan. Stok fisik dipotong saat kitchen mulai membuat; pembatalan antre melepaskan cadangan.</p></li><li><b>Waste, absensi, dan pemeriksaan</b><p>Catat bahan basi/salah buat dan penyusutan berat. Cocokkan stok fisik dengan Jejak stok. Periksa biaya yang belum diketahui sebelum membaca laba kotor.</p></li></ol></section>`;
- if(view==='discounts')html=discountsPage(s);
- if(view==='kitchen')html=kitchenPage(s,store);
- if(view==='orders'){
- const sellable=s.products.filter(posVisible);
- const draftTotal=draft.reduce((a,x)=>a+x.qty*x.price,0);
- const itemCount=draft.reduce((a,x)=>a+x.qty,0);
- const cartLines=draft.map((x,i)=>{const p=s.products.find(p=>p.id===x.productId);const fruit=p?.stockUnit==='kg_butir';const unit=fruit?(x.unit==='KG'?'kg':'butir'):(p?.stockUnit||'pcs');return `<article class="order-cart-line"><div class="order-cart-copy"><strong>${e(nm(s,'products',x.productId))}</strong><span>${num(x.qty)} ${e(unit)} × ${money(x.price)}</span>${fruit?`<small>${num(x.kg)} kg aktual · ${x.pieces} butir<br>${e(nm(s,'suppliers',x.supplierId))} · ${e((x.lotId||'').slice(0,8))}</small>`:''}</div><div class="order-cart-actions">${!fruit?`<button type="button" data-draft-qty="${i}" data-delta="-1" aria-label="Kurangi jumlah">−</button><button type="button" data-draft-qty="${i}" data-delta="1" aria-label="Tambah jumlah">+</button>`:''}<button type="button" class="order-remove" data-remove-line="${i}" aria-label="Hapus item">×</button><b>${money(x.qty*x.price)}</b></div></article>`;}).join('');
- html=header('Pesanan & kitchen','Pilih menu dan terima pembayaran. Buah dan produk siap jual langsung selesai. Hanya menu yang perlu dibuat masuk kitchen.')+(allowed(s,'sell')?`<div class="order-screen"><section class="panel order-catalog"><div class="order-catalog-head"><div><h3>Pilih menu</h3><p class="muted">${e(nm(s,'stores',store))} · buah / produk siap jual langsung diproses kasir.</p></div><label class="order-search"><span class="sr-only">Cari menu</span><input id="order-search" type="search" placeholder="Cari menu…" autocomplete="off"></label></div><div class="pos-scanbar"><label for="order-scan">Scan barcode / SKU</label><div class="pos-scan-controls"><input id="order-scan" type="text" maxlength="256" autocomplete="off" spellcheck="false" placeholder="Klik di sini, lalu scan produk" ${readDeviceSettings().scanner.enabled?'':'disabled'}><button type="button" id="order-scan-add" ${readDeviceSettings().scanner.enabled?'':'disabled'}>Tambah</button></div><p id="order-scan-status" role="status">${readDeviceSettings().scanner.enabled?'Scan label CAS: ketik tanggal → Enter → supplier ↑ ↓ → Enter → kg/butir ↑ ↓ → Enter.':'Scanner nonaktif. Aktifkan melalui Printer & Scanner.'}</p></div><div class="order-categories" role="group" aria-label="Kategori menu">${posCategoryTabs(s)}</div>${allowed(s,'master')?'<div class="order-category-actions"><button type="button" id="add-pos-category">+ Tambah kategori</button><button type="button" id="manage-pos-categories">Kelola kategori & produk</button></div>':''}<div id="order-products" class="order-product-grid">${posProductCards(s,store,draft)}</div><p id="order-no-results" class="empty" hidden>Menu tidak ditemukan.</p></section><aside class="panel order-summary"><div class="order-summary-head"><div><span class="order-product-category">PESANAN SAAT INI</span><h3>Rincian pesanan</h3></div><span class="order-count" id="order-item-count">${num(itemCount)} item</span></div><div id="order-draft" class="order-cart-items">${cartLines||'<div class="order-empty"><span>＋</span><b>Belum ada item</b><small>Pilih menu untuk mulai membuat pesanan.</small></div>'}</div><div class="order-total-row"><span>Total pesanan</span><strong id="order-total">${money(draftTotal)}</strong></div>${cashierFields(s)}<button class="primary full order-save" id="save-order" ${draft.length?'':'disabled'}>${s.stockDemo?'Uji pembayaran':'Bayar sekarang'} · ${money(draftTotal)}</button><p id="order-stock-message" class="order-payment-hint" aria-live="polite"></p><p class="order-payment-hint">Buah / produk siap jual: stok dipotong saat bayar. ${e(itemTypes.recipe)}: masuk kitchen setelah lunas.</p></aside></div>`:'')+`<section class="panel order-queue"><div class="header-row"><div><h3>Antrean pesanan</h3><p class="muted">Pesanan cabang ini · bayar → antre → dibuat → siap → diserahkan.</p></div></div>${table(['Pesanan / catatan','Item','Status / total','Aksi'],(s.orders||[]).filter(o=>o.store_id===store).map(o=>`<tr><td><b>${e(o.id.slice(0,8))}</b><small>${e(o.business_date)} · ${e(tableLabel(o.table_no))}</small>${e(o.note)}<small>Kasir: ${e(cashierName(o))}</small></td><td>${o.lines.map(l=>`${e(l.name)} × ${num(l.qty)} ${e(l.unit)}`).join('<br>')}</td><td><span class="pill">${e(orderLabel(o))}</span><small>${e(paymentLabel(o))} · ${money(o.total)}</small></td><td>${isPaid(o)&&!needsKitchen(o)&&['queued','preparing','ready'].includes(o.status)&&allowed(s,'sell')?button('Selesaikan di kasir','order_direct',o.id,'primary'):''}${!isPaid(o)&&o.status!=='cancelled'&&allowed(s,'sell')?button('Bayar sekarang','pay',o.id,'primary'):''}${isPaid(o)&&needsKitchen(o)&&o.status==='ready'&&allowed(s,'sell')?button('Sudah diserahkan','order_complete',o.id,'primary'):''}${o.status!=='cancelled'&&allowed(s,'sell')?button('Void','cashier_void',o.id,'danger'):''}${button('Detail / struk','order_receipt',o.id)}</td></tr>`))}</section>`;
- }
- if(view==='salesreport')html=header('Laporan seluruh penjualan','Penjualan pesanan dan riwayat transaksi buah lama. Pesanan belum dibayar tidak dihitung.')+`<section class="panel"><div class="form-grid">${field('Dari',input('reportFrom','date',`id="sales-from" value="${today().slice(0,8)}01"`))}${field('Sampai',input('reportTo','date',`id="sales-to" value="${today()}"`))}</div><div id="sales-result"></div></section>`;
- if(view==='trace')html=header('Jejak stok','Pilih penerimaan atau hasil untuk melihat pergerakan dan asal bahan lintas proses.')+`<section class="panel">${field('Telusuri lot / penerimaan',`<select id="trace-lot"><option value="">Semua pergerakan</option>${opts([...s.lots,...s.unitLots].filter(l=>l.storeId===store).map(l=>({id:l.id,name:`${nm(s,'products',l.productId)} · ${l.date} · ${l.id.slice(0,8)}`})))}</select>`)}<div id="trace-result"></div></section>`;
- if(view==='finance')html=header('Biaya & laba kotor','Biaya bahan aktual. Belum termasuk gaji, sewa, listrik, pajak dan biaya operasional lain.')+`<section class="panel"><div class="form-grid">${field('Dari',input('financeFrom','date',`id="finance-from" value="${today().slice(0,8)}01"`))}${field('Sampai',input('financeTo','date',`id="finance-to" value="${today()}"`))}${field('Supplier buah',`<select id="finance-supplier"><option value="">Semua supplier</option>${opts(s.suppliers)}</select>`)}</div><div id="finance-result"></div></section>`;
- return note+html;
+import { cashierName } from "./cashier-shifts.mjs";
+import { itemTypes } from "./catalog.mjs";
+import {
+  cashierFields,
+  bindCheckout,
+  discountsPage,
+  bindDiscounts,
+  voidDialog,
+  showReceipt,
+  payExistingOrder,
+} from "./cashier-ui.mjs";
+import { devicesPage, bindDevices } from "./devices-ui.mjs";
+import { readDeviceSettings } from "./device-settings.mjs";
+import { barcodeProduct, bindBarcodeInput } from "./barcode-scanner.mjs";
+import { tableLabel } from "./cashier.mjs";
+import {
+  posMenuEntries,
+  updatePosCards,
+  posVariantDialog,
+} from "./pos-menu.mjs";
+import {
+  posCategoryTabs,
+  posProductCards,
+  posCategoryDialog,
+  posCategoryManager,
+} from "./pos-categories-ui.mjs";
+import {
+  posVisible,
+  menuCatalogChanged,
+  posProductStatus,
+} from "./pos-categories.mjs";
+import { employeesPage, bindEmployees } from "./employees-ui.mjs";
+import { checkOrder } from "./order-stock.mjs";
+import { fruitSaleDialog } from "./fruit-sale-dialog.mjs";
+import { orderMargins } from "./finance.mjs";
+import { escape as e, id, today, num, money } from "./core.mjs";
+export const opsPages = [
+  "devices",
+  "discounts",
+  "salesreport",
+  "orders",
+  "kitchen",
+  "trace",
+  "finance",
+  "employees",
+  "attendance",
+  "guide",
+];
+const needsKitchen = (o) => o.lines.some((l) => l.itemType === "recipe");
+const isPaid = (o) =>
+  o.payment_status === "paid" || (!o.payment_status && o.status === "paid");
+const paymentLabel = (o) =>
+  o.payment_status === "refunded"
+    ? "Dikembalikan"
+    : isPaid(o)
+      ? "Lunas"
+      : "Belum bayar";
+const orderLabel = (o) =>
+  ({
+    queued: isPaid(o) ? "Antre" : "Menunggu bayar",
+    preparing: "Dibuat",
+    ready: "Siap",
+    paid: "Selesai",
+    cancelled: "Dibatalkan",
+  })[o.status] || o.status;
+const quality = {
+  unsorted: "Belum disortir",
+  ready: "Matang / siap jual",
+  unripe: "Belum matang",
+  reject: "Reject",
+};
+const actions = {
+  store_save: "Ubah data toko & header struk",
+  receipt: "Terima buah",
+  unit_receipt: "Terima bahan / produk",
+  sort: "Sortir buah",
+  recover: "Olah reject menjadi bahan",
+  produce: "Produksi bahan",
+  reject_mark: "Catat reject",
+  reject_process: "Olah reject",
+  reject_coral: "Olah Coral",
+  reject_loss: "Waste",
+  reject_void: "Batalkan reject / waste",
+  waste_process: "Olah reject",
+  inventory_loss: "Waste / penyusutan",
+  sale: "Jual buah",
+  order_create: "Buat pesanan",
+  order_start: "Mulai buat pesanan",
+  order_ready: "Pesanan siap",
+  order_pay: "Bayar pesanan",
+  order_complete: "Pesanan diserahkan",
+  order_direct: "Selesaikan produk siap jual",
+  order_cancel: "Batalkan pesanan",
+  order_void: "Void pesanan",
+  discount_save: "Atur diskon",
+  cashier_approval_request: "Minta persetujuan",
+  cashier_approval_decide: "Keputusan owner",
+  movement: "Transfer",
+  void: "Batalkan penjualan",
+  production_void: "Batalkan produksi",
+  waste_void: "Batalkan olahan",
+  employee_save: "Ubah karyawan",
+  attendance_in: "Absen masuk",
+  attendance_out: "Absen pulang",
+};
+const field = (label, html) => `<label class="field">${label}${html}</label>`;
+const input = (name, type = "text", extra = "") =>
+  `<input name="${name}" type="${type}" ${extra}>`;
+const opts = (rows, value = "") =>
+  rows
+    .map(
+      (x) =>
+        `<option value="${e(x.id)}" ${x.id === value ? "selected" : ""}>${e(x.name)}</option>`,
+    )
+    .join("");
+const table = (heads, rows) =>
+  `<div class="table-wrap"><table><thead><tr>${heads.map((h) => `<th>${h}</th>`).join("")}</tr></thead><tbody>${rows.join("") || `<tr><td colspan="${heads.length}" class="empty">Belum ada data.</td></tr>`}</tbody></table></div>`;
+const header = (name, description, buttons = "") =>
+  `<div class="intro"><div><h2>${name}</h2><p class="muted">${description}</p></div><div class="toolbar">${buttons}<button id="ops-refresh">Perbarui</button></div></div>`;
+const nm = (s, key, value) =>
+  s[key]?.find((x) => x.id === value)?.name ||
+  (key === "employees" ? s.people?.find((x) => x.id === value)?.name : null) ||
+  value?.slice(0, 8) ||
+  "—";
+const button = (label, action, value, cls = "") =>
+  `<button class="small ${cls}" data-op="${action}" data-id="${e(value)}">${label}</button>`;
+const balance = (l) =>
+  l.kg !== undefined
+    ? `${num(l.kg)} kg / ${l.pieces} butir`
+    : `${num(l.qty)} ${e(l.unit)}`;
+const lots = (s, store) =>
+  [...s.lots, ...s.unitLots].filter(
+    (x) => x.storeId === store && (x.kg ?? x.qty) > 0,
+  );
+const cost = (n) => (n == null ? "Belum diketahui" : money(n));
+const allowed = (s, p) => !s.access || s.access[p];
+let draft = [];
+export function opsPage(view, s, store) {
+  if (view === "devices") return devicesPage(s);
+  if (["employees", "attendance"].includes(view))
+    return employeesPage(view, s, store);
+  const note = !s.opsVersion
+    ? '<div class="notice">Fitur operasional baru memerlukan SQL versi 009 dan login. Demo lama hanya menampilkan struktur; tombol simpan baru tidak mengubah data demo.</div>'
+    : "";
+  let html = "";
+  if (view === "guide")
+    html =
+      header("Urutan pendataan", "Gunakan alur yang sama di setiap cabang.") +
+      `<section class="panel"><ol class="flow-guide"><li><b>Data karyawan dan cabang</b><p>Tentukan siapa yang menerima, membuat, menjual, serta cabang yang boleh diakses.</p></li><li><b>Supplier, produk, bahan, dan resep</b><p>Buah: kg + butir. ${e(itemTypes.raw)}: g/ml/kg/pcs. ${e(itemTypes.prep)}: bahan hasil kitchen. ${e(itemTypes.recipe)}: menu dengan resep, satuan porsi. ${e(itemTypes.direct)}: produk supplier atau kemasan siap jual. ${e(itemTypes.finished)}: produk hasil olahan, termasuk Durpas dan Coral.</p></li><li><b>Barang datang</b><p>Catat supplier, jumlah, total modal dan kedaluwarsa. Akun penerima terekam otomatis. Penerimaan buah langsung siap jual setelah penurunan selesai.</p></li><li><b>Persiapan kitchen</b><p>Catat reject agar terpisah dari stok kasir. Olah reject menjadi Durpas/Coral, lalu gunakan Olah Coral untuk menimbang daging bersih. Produksi bahan dipakai untuk cendol, jelly, dan ketan. Modal mengikuti hasil.</p></li><li><b>Pesanan & kitchen</b><p>Kasir menerima pembayaran dan membuat satu pesanan buah/dessert/produk supplier. Buah dan produk siap jual langsung selesai serta dipotong stoknya saat bayar. Hanya ${e(itemTypes.recipe)} masuk kitchen; stok bahan resep dipotong saat Mulai buat. Bayar di kasir → Antre → Dibuat → Siap → Diserahkan. Pesanan antre mencadangkan bahan. Stok fisik dipotong saat kitchen mulai membuat; pembatalan antre melepaskan cadangan.</p></li><li><b>Waste, absensi, dan pemeriksaan</b><p>Catat bahan basi/salah buat dan penyusutan berat. Cocokkan stok fisik dengan Jejak stok. Periksa biaya yang belum diketahui sebelum membaca laba kotor.</p></li></ol></section>`;
+  if (view === "discounts") html = discountsPage(s);
+  if (view === "kitchen") html = kitchenPage(s, store);
+  if (view === "orders") {
+    const sellable = s.products.filter(posVisible);
+    const draftTotal = draft.reduce((a, x) => a + x.qty * x.price, 0);
+    const itemCount = draft.reduce((a, x) => a + x.qty, 0);
+    const cartLines = draft
+      .map((x, i) => {
+        const p = s.products.find((p) => p.id === x.productId);
+        const fruit = p?.stockUnit === "kg_butir";
+        const unit = fruit
+          ? x.unit === "KG"
+            ? "kg"
+            : "butir"
+          : p?.stockUnit || "pcs";
+        return `<article class="order-cart-line"><div class="order-cart-copy"><strong>${e(nm(s, "products", x.productId))}</strong><span>${num(x.qty)} ${e(unit)} × ${money(x.price)}</span>${fruit ? `<small>${num(x.kg)} kg aktual · ${x.pieces} butir<br>${e(nm(s, "suppliers", x.supplierId))} · ${e((x.lotId || "").slice(0, 8))}</small>` : ""}</div><div class="order-cart-actions">${!fruit ? `<button type="button" data-draft-qty="${i}" data-delta="-1" aria-label="Kurangi jumlah">−</button><button type="button" data-draft-qty="${i}" data-delta="1" aria-label="Tambah jumlah">+</button>` : ""}<button type="button" class="order-remove" data-remove-line="${i}" aria-label="Hapus item">×</button><b>${money(x.qty * x.price)}</b></div></article>`;
+      })
+      .join("");
+    html =
+      header(
+        "Pesanan & kitchen",
+        "Pilih menu dan terima pembayaran. Buah dan produk siap jual langsung selesai. Hanya menu yang perlu dibuat masuk kitchen.",
+      ) +
+      (allowed(s, "sell")
+        ? `<div class="order-screen"><section class="panel order-catalog"><div class="order-catalog-head"><div><h3>Pilih menu</h3><p class="muted">${e(nm(s, "stores", store))} · buah / produk siap jual langsung diproses kasir.</p></div><label class="order-search"><span class="sr-only">Cari menu</span><input id="order-search" type="search" placeholder="Cari menu…" autocomplete="off"></label></div><div class="pos-scanbar"><label for="order-scan">Scan barcode / SKU</label><div class="pos-scan-controls"><input id="order-scan" type="text" maxlength="256" autocomplete="off" spellcheck="false" placeholder="Klik di sini, lalu scan produk" ${readDeviceSettings().scanner.enabled ? "" : "disabled"}><button type="button" id="order-scan-add" ${readDeviceSettings().scanner.enabled ? "" : "disabled"}>Tambah</button></div><p id="order-scan-status" role="status">${readDeviceSettings().scanner.enabled ? "Scan label CAS: ketik tanggal → Enter → supplier ↑ ↓ → Enter → kg/butir ↑ ↓ → Enter." : "Scanner nonaktif. Aktifkan melalui Printer & Scanner."}</p></div><div class="order-categories" role="group" aria-label="Kategori menu">${posCategoryTabs(s)}</div>${allowed(s, "master") ? '<div class="order-category-actions"><button type="button" id="add-pos-category">+ Tambah kategori</button><button type="button" id="manage-pos-categories">Kelola kategori & produk</button></div>' : ""}<div id="order-products" class="order-product-grid">${posProductCards(s, store, draft)}</div><p id="order-no-results" class="empty" hidden>Menu tidak ditemukan.</p></section><aside class="panel order-summary"><div class="order-summary-head"><div><span class="order-product-category">PESANAN SAAT INI</span><h3>Rincian pesanan</h3></div><span class="order-count" id="order-item-count">${num(itemCount)} item</span></div><div class="order-summary-scroll"><div id="order-draft" class="order-cart-items">${cartLines || '<div class="order-empty"><span>＋</span><b>Belum ada item</b><small>Pilih menu untuk mulai membuat pesanan.</small></div>'}</div><div class="order-total-row"><span>Total pesanan</span><strong id="order-total">${money(draftTotal)}</strong></div>${cashierFields(s)}</div><div class="order-checkout-footer"><button class="primary full order-save" id="save-order" ${draft.length ? "" : "disabled"}>${s.stockDemo ? "Uji pembayaran" : "Bayar sekarang"} · ${money(draftTotal)}</button><p id="order-stock-message" class="order-payment-hint" aria-live="polite"></p><p class="order-payment-hint">Buah / produk siap jual: stok dipotong saat bayar. ${e(itemTypes.recipe)}: masuk kitchen setelah lunas.</p></div></aside></div>`
+        : "") +
+      `<section class="panel order-queue"><div class="header-row"><div><h3>Antrean pesanan</h3><p class="muted">Pesanan cabang ini · bayar → antre → dibuat → siap → diserahkan.</p></div></div>${table(
+        ["Pesanan / catatan", "Item", "Status / total", "Aksi"],
+        (s.orders || [])
+          .filter((o) => o.store_id === store)
+          .map(
+            (o) =>
+              `<tr><td><b>${e(o.id.slice(0, 8))}</b><small>${e(o.business_date)} · ${e(tableLabel(o.table_no))}</small>${e(o.note)}<small>Kasir: ${e(cashierName(o))}</small></td><td>${o.lines.map((l) => `${e(l.name)} × ${num(l.qty)} ${e(l.unit)}`).join("<br>")}</td><td><span class="pill">${e(orderLabel(o))}</span><small>${e(paymentLabel(o))} · ${money(o.total)}</small></td><td>${isPaid(o) && !needsKitchen(o) && ["queued", "preparing", "ready"].includes(o.status) && allowed(s, "sell") ? button("Selesaikan di kasir", "order_direct", o.id, "primary") : ""}${!isPaid(o) && o.status !== "cancelled" && allowed(s, "sell") ? button("Bayar sekarang", "pay", o.id, "primary") : ""}${isPaid(o) && needsKitchen(o) && o.status === "ready" && allowed(s, "sell") ? button("Sudah diserahkan", "order_complete", o.id, "primary") : ""}${o.status !== "cancelled" && allowed(s, "sell") ? button("Void", "cashier_void", o.id, "danger") : ""}${button("Detail / struk", "order_receipt", o.id)}</td></tr>`,
+          ),
+      )}</section>`;
+  }
+  if (view === "salesreport")
+    html =
+      header(
+        "Laporan seluruh penjualan",
+        "Penjualan pesanan dan riwayat transaksi buah lama. Pesanan belum dibayar tidak dihitung.",
+      ) +
+      `<section class="panel"><div class="form-grid">${field("Dari", input("reportFrom", "date", `id="sales-from" value="${today().slice(0, 8)}01"`))}${field("Sampai", input("reportTo", "date", `id="sales-to" value="${today()}"`))}</div><div id="sales-result"></div></section>`;
+  if (view === "trace")
+    html =
+      header(
+        "Jejak stok",
+        "Pilih penerimaan atau hasil untuk melihat pergerakan dan asal bahan lintas proses.",
+      ) +
+      `<section class="panel">${field("Telusuri lot / penerimaan", `<select id="trace-lot"><option value="">Semua pergerakan</option>${opts([...s.lots, ...s.unitLots].filter((l) => l.storeId === store).map((l) => ({ id: l.id, name: `${nm(s, "products", l.productId)} · ${l.date} · ${l.id.slice(0, 8)}` })))}</select>`)}<div id="trace-result"></div></section>`;
+  if (view === "finance")
+    html =
+      header(
+        "Biaya & laba kotor",
+        "Biaya bahan aktual. Belum termasuk gaji, sewa, listrik, pajak dan biaya operasional lain.",
+      ) +
+      `<section class="panel"><div class="form-grid">${field("Dari", input("financeFrom", "date", `id="finance-from" value="${today().slice(0, 8)}01"`))}${field("Sampai", input("financeTo", "date", `id="finance-to" value="${today()}"`))}${field("Supplier buah", `<select id="finance-supplier"><option value="">Semua supplier</option>${opts(s.suppliers)}</select>`)}</div><div id="finance-result"></div></section>`;
+  return note + html;
 }
-export function bindOps(view,s,store,ctx){
- if(view==='devices')return bindDevices(s,store,ctx);
- if(['employees','attendance'].includes(view))return bindEmployees(view,s,store,ctx);
- if(!opsPages.includes(view))return;
- if(view==='discounts'){bindDiscounts(ctx);return;}
- document.querySelector('#ops-refresh')?.addEventListener('click',async()=>{try{await ctx.refresh();ctx.render()}catch(err){ctx.toast(err.message)}});
- const save=async(action,p)=>{if(!s.opsVersion){ctx.toast('Hubungkan database versi 009 untuk fitur ini.');return false;}return ctx.mutate(action,{id:id(),storeId:store,date:today(),...p});};
- const bindActions=root=>{
- root.querySelectorAll('[data-op]').forEach(b=>b.onclick=async()=>{
- const key=b.dataset.id,op=b.dataset.op;
- if(op==='pay'){payExistingOrder(ctx,store,key);
- }else if(op==='cancel'){voidDialog(ctx,store,key);
- }else if(op==='order_receipt'){showReceipt(ctx,key);
- }else if(op==='cashier_void'){voidDialog(ctx,store,key);
- }else if(['order_start','order_ready','order_complete','order_direct','attendance_in','attendance_out'].includes(op)){
- if(await save(op,key?{orderId:key}:{}))ctx.render();
- }
- });
- };
- bindActions(document);
- if(view==='orders'&&document.querySelector('#order-products')){
- const categoryContext=()=>({...ctx,state:s,render:updated=>{s=ctx.getState?.()||updated||s;refreshCatalog();showDraft();variantDialog?.refresh();}});
- document.querySelector('#add-pos-category')?.addEventListener('click',()=>posCategoryDialog(categoryContext()));
- document.querySelector('#manage-pos-categories')?.addEventListener('click',()=>posCategoryManager(categoryContext()));
- const container=document.querySelector('#order-draft');
- const totalNode=document.querySelector('#order-total');
- const countNode=document.querySelector('#order-item-count');
- const saveButton=document.querySelector('#save-order');
- let activeCategory='all',variantDialog=null,fruitDialog=null,updateCheckout=()=>{};
- const updateCards=()=>{const visible=updatePosCards(document,s,store,draft,activeCategory,document.querySelector('#order-search')?.value||'');document.querySelector('#order-no-results').hidden=visible>0;};
- const totalDraft=()=>draft.reduce((a,x)=>a+x.qty*x.price,0);
- const showDraft=()=>{
-  const total=totalDraft(),count=draft.reduce((a,x)=>a+x.qty,0);
-  container.innerHTML=draft.map((x,i)=>{
-   const p=s.products.find(p=>p.id===x.productId),fruit=p?.stockUnit==='kg_butir';
-   const unit=fruit?(x.unit==='KG'?'kg':'butir'):(p?.stockUnit||'pcs');
-   return `<article class="order-cart-line"><div class="order-cart-copy"><strong>${e(nm(s,'products',x.productId))}</strong><span>${num(x.qty)} ${e(unit)} × ${money(x.price)}</span>${fruit?`<small>${num(x.kg)} kg aktual · ${x.pieces} butir<br>${e(nm(s,'suppliers',x.supplierId))} · ${e((x.lotId||'').slice(0,8))}</small>`:''}</div><div class="order-cart-actions">${!fruit?`<button type="button" data-draft-qty="${i}" data-delta="-1" aria-label="Kurangi jumlah">−</button><button type="button" data-draft-qty="${i}" data-delta="1" aria-label="Tambah jumlah">+</button>`:''}<button type="button" class="order-remove" data-remove-line="${i}" aria-label="Hapus item">×</button><b>${money(x.qty*x.price)}</b></div></article>`;
-  }).join('')||'<div class="order-empty"><span>＋</span><b>Belum ada item</b><small>Pilih menu untuk mulai membuat pesanan.</small></div>';
-  totalNode.textContent=money(total);countNode.textContent=`${num(count)} item`;
-  const stock=checkOrder(s,store,draft,today());
-  saveButton.disabled=!draft.length||!stock.ok;document.querySelector('#order-stock-message').textContent=stock.ok?'Bahan tersedia untuk pesanan ini.':stock.reason;updateCards();saveButton.textContent=`${s.stockDemo?'Uji pembayaran':'Bayar sekarang'} · ${money(total)}`;updateCheckout();
- };
- const addDraftLine=x=>{
-  const stock=checkOrder(s,store,[...draft,x],today());if(!stock.ok){ctx.toast(stock.reason);return false;}
-  const p=s.products.find(p=>p.id===x.productId);
-  if(p?.stockUnit!=='kg_butir'){
-   const match=draft.find(line=>line.productId===x.productId&&line.price===x.price);
-   if(match)match.qty+=x.qty;else draft.push(x);
-  }else draft.push(x);
-  showDraft();return true;
- };
- showDraft();
- document.querySelector('#order-products').addEventListener('stock-refresh',ev=>{const changed=menuCatalogChanged(s,ev.detail);s=ev.detail;if(changed)refreshCatalog();showDraft();variantDialog?.refresh();fruitDialog?.refresh();const template=document.createElement('template');template.innerHTML=opsPage('orders',s,store);const queue=template.content.querySelector('.order-queue');if(queue){document.querySelector('.order-queue')?.replaceWith(queue);bindActions(queue);}});
- const scanInput=document.querySelector('#order-scan');
- const scanStatus=document.querySelector('#order-scan-status');
- const openFruit=(product,scale=null,verifyBarcode)=>{
-  if(fruitDialog?.dialog.hasAttribute('open'))throw Error('Selesaikan atau tutup pop-up buah terlebih dahulu.');
-  fruitDialog=fruitSaleDialog({productId:product.id,scale,getState:()=>ctx.getState?.()||s,getDraft:()=>draft,store,modal:ctx.modal,verifyBarcode,
-   onAdd:(line,lot)=>{s=ctx.getState?.()||s;if(!addDraftLine(line))return false;
-    scanStatus.textContent=`Ditambahkan: ${product.name} · ${num(line.kg)} kg · ${line.pieces} butir · ${line.unit==='KG'?'Per kg':'Per butir'} · ${lot.date} · ${nm(s,'suppliers',lot.supplierId)}.`;
-    if(scanInput){scanInput.value='';scanInput.focus();}return true;
-   },onClose:added=>{if(!added)scanStatus.textContent='Penjualan buah dibatalkan; belum ditambahkan ke pesanan.';if(scanInput&&!scanInput.disabled)scanInput.focus();}
-  });return true;
- };
- const selectProduct=p=>{
-  const status=posProductStatus(s,store,p,draft,today());if(!status.ok){ctx.toast(status.reason);return false;}
-  if(p.stockUnit==='kg_butir')return openFruit(p);
-  return addDraftLine({productId:p.id,qty:1,price:Number(p.salePrice)});
- };
- if(scanInput){
-  const scan=bindBarcodeInput(scanInput,{onScan:(raw,settings)=>{
-   if(document.querySelector('dialog[open]'))throw Error('Tutup pop-up sebelum scan produk berikutnya.');
-   s=ctx.getState?.()||s;const {product,scale}=barcodeProduct(s,raw,settings);
-   if(product.stockUnit==='kg_butir'){
-    openFruit(product,scale,scale?()=>{const current=barcodeProduct(ctx.getState?.()||s,raw,settings);if(current.product.id!==product.id||current.scale?.kg!==scale.kg)throw Error('Pemetaan barcode berubah. Tutup pop-up dan scan ulang.');}:undefined);
-    scanStatus.textContent=`Terbaca: ${product.name}${scale?' · '+num(scale.kg)+' kg · 1 butir':''}. Ketik tanggal masuk, lalu Enter untuk lanjut ke supplier dan cara jual.`;
-   }else{
-    if(!selectProduct(product)){scanStatus.textContent='Belum ditambahkan. Periksa ketersediaan stok dan harga produk.';return false;}
-    scanStatus.textContent=`Ditambahkan: ${product.name} × 1 ${product.stockUnit||'pcs'}.`;scanInput.focus();
-   }
-  },onError:message=>scanStatus.textContent=message});
-  document.querySelector('#order-scan-add').onclick=scan;
- }
- document.querySelector('#order-products')?.addEventListener('click',ev=>{
-  const card=ev.target.closest('[data-menu-key]');if(!card||card.disabled||card.hidden)return;
-  const entry=posMenuEntries(s,activeCategory).find(x=>x.key===card.dataset.menuKey);if(!entry)return;
-  if(entry.hasVariants)variantDialog=posVariantDialog({key:entry.key,category:activeCategory,getState:()=>s,getDraft:()=>draft,store,modal:ctx.modal,onConfirm:selectProduct});
-  else selectProduct(entry.products[0]);
- });
- const filterProducts=()=>updateCards();
- document.querySelector('#order-search')?.addEventListener('input',filterProducts);
- const selectCategory=key=>{
-  activeCategory=key;
-  document.querySelectorAll('[data-order-category]').forEach(item=>{const selected=item.dataset.orderCategory===key;item.classList.toggle('selected',selected);item.setAttribute('aria-pressed',String(selected));});
-  filterProducts();
- };
- document.querySelector('.order-categories')?.addEventListener('click',ev=>{const button=ev.target.closest('[data-order-category]');if(button)selectCategory(button.dataset.orderCategory);});
- function refreshCatalog(){
-  document.querySelector('.order-categories').innerHTML=posCategoryTabs(s);
-  document.querySelector('#order-products').innerHTML=posProductCards(s,store,draft);
-  if(![...document.querySelectorAll('[data-order-category]')].some(b=>b.dataset.orderCategory===activeCategory))activeCategory='all';
-  selectCategory(activeCategory);
+export function bindOps(view, s, store, ctx) {
+  if (view === "devices") return bindDevices(s, store, ctx);
+  if (["employees", "attendance"].includes(view))
+    return bindEmployees(view, s, store, ctx);
+  if (!opsPages.includes(view)) return;
+  if (view === "discounts") {
+    bindDiscounts(ctx);
+    return;
+  }
+  document
+    .querySelector("#ops-refresh")
+    ?.addEventListener("click", async () => {
+      try {
+        await ctx.refresh();
+        ctx.render();
+      } catch (err) {
+        ctx.toast(err.message);
+      }
+    });
+  const save = async (action, p) => {
+    if (!s.opsVersion) {
+      ctx.toast("Hubungkan database versi 009 untuk fitur ini.");
+      return false;
+    }
+    return ctx.mutate(action, {
+      id: id(),
+      storeId: store,
+      date: today(),
+      ...p,
+    });
+  };
+  const bindActions = (root) => {
+    root.querySelectorAll("[data-op]").forEach(
+      (b) =>
+        (b.onclick = async () => {
+          const key = b.dataset.id,
+            op = b.dataset.op;
+          if (op === "pay") {
+            payExistingOrder(ctx, store, key);
+          } else if (op === "cancel") {
+            voidDialog(ctx, store, key);
+          } else if (op === "order_receipt") {
+            showReceipt(ctx, key);
+          } else if (op === "cashier_void") {
+            voidDialog(ctx, store, key);
+          } else if (
+            [
+              "order_start",
+              "order_ready",
+              "order_complete",
+              "order_direct",
+              "attendance_in",
+              "attendance_out",
+            ].includes(op)
+          ) {
+            if (await save(op, key ? { orderId: key } : {})) ctx.render();
+          }
+        }),
+    );
+  };
+  bindActions(document);
+  if (view === "orders" && document.querySelector("#order-products")) {
+    const categoryContext = () => ({
+      ...ctx,
+      state: s,
+      render: (updated) => {
+        s = ctx.getState?.() || updated || s;
+        refreshCatalog();
+        showDraft();
+        variantDialog?.refresh();
+      },
+    });
+    document
+      .querySelector("#add-pos-category")
+      ?.addEventListener("click", () => posCategoryDialog(categoryContext()));
+    document
+      .querySelector("#manage-pos-categories")
+      ?.addEventListener("click", () => posCategoryManager(categoryContext()));
+    const container = document.querySelector("#order-draft");
+    const totalNode = document.querySelector("#order-total");
+    const countNode = document.querySelector("#order-item-count");
+    const saveButton = document.querySelector("#save-order");
+    let activeCategory = "all",
+      variantDialog = null,
+      fruitDialog = null,
+      updateCheckout = () => {};
+    const updateCards = () => {
+      const visible = updatePosCards(
+        document,
+        s,
+        store,
+        draft,
+        activeCategory,
+        document.querySelector("#order-search")?.value || "",
+      );
+      document.querySelector("#order-no-results").hidden = visible > 0;
+    };
+    const totalDraft = () => draft.reduce((a, x) => a + x.qty * x.price, 0);
+    const showDraft = () => {
+      const total = totalDraft(),
+        count = draft.reduce((a, x) => a + x.qty, 0);
+      container.innerHTML =
+        draft
+          .map((x, i) => {
+            const p = s.products.find((p) => p.id === x.productId),
+              fruit = p?.stockUnit === "kg_butir";
+            const unit = fruit
+              ? x.unit === "KG"
+                ? "kg"
+                : "butir"
+              : p?.stockUnit || "pcs";
+            return `<article class="order-cart-line"><div class="order-cart-copy"><strong>${e(nm(s, "products", x.productId))}</strong><span>${num(x.qty)} ${e(unit)} × ${money(x.price)}</span>${fruit ? `<small>${num(x.kg)} kg aktual · ${x.pieces} butir<br>${e(nm(s, "suppliers", x.supplierId))} · ${e((x.lotId || "").slice(0, 8))}</small>` : ""}</div><div class="order-cart-actions">${!fruit ? `<button type="button" data-draft-qty="${i}" data-delta="-1" aria-label="Kurangi jumlah">−</button><button type="button" data-draft-qty="${i}" data-delta="1" aria-label="Tambah jumlah">+</button>` : ""}<button type="button" class="order-remove" data-remove-line="${i}" aria-label="Hapus item">×</button><b>${money(x.qty * x.price)}</b></div></article>`;
+          })
+          .join("") ||
+        '<div class="order-empty"><span>＋</span><b>Belum ada item</b><small>Pilih menu untuk mulai membuat pesanan.</small></div>';
+      totalNode.textContent = money(total);
+      countNode.textContent = `${num(count)} item`;
+      const stock = checkOrder(s, store, draft, today());
+      saveButton.disabled = !draft.length || !stock.ok;
+      document.querySelector("#order-stock-message").textContent = stock.ok
+        ? "Bahan tersedia untuk pesanan ini."
+        : stock.reason;
+      updateCards();
+      saveButton.textContent = `${s.stockDemo ? "Uji pembayaran" : "Bayar sekarang"} · ${money(total)}`;
+      updateCheckout();
+    };
+    const addDraftLine = (x) => {
+      const stock = checkOrder(s, store, [...draft, x], today());
+      if (!stock.ok) {
+        ctx.toast(stock.reason);
+        return false;
+      }
+      const p = s.products.find((p) => p.id === x.productId);
+      if (p?.stockUnit !== "kg_butir") {
+        const match = draft.find(
+          (line) => line.productId === x.productId && line.price === x.price,
+        );
+        if (match) match.qty += x.qty;
+        else draft.push(x);
+      } else draft.push(x);
+      showDraft();
+      return true;
+    };
+    showDraft();
+    document
+      .querySelector("#order-products")
+      .addEventListener("stock-refresh", (ev) => {
+        const changed = menuCatalogChanged(s, ev.detail);
+        s = ev.detail;
+        if (changed) refreshCatalog();
+        showDraft();
+        variantDialog?.refresh();
+        fruitDialog?.refresh();
+        const template = document.createElement("template");
+        template.innerHTML = opsPage("orders", s, store);
+        const queue = template.content.querySelector(".order-queue");
+        if (queue) {
+          document.querySelector(".order-queue")?.replaceWith(queue);
+          bindActions(queue);
+        }
+      });
+    const scanInput = document.querySelector("#order-scan");
+    const scanStatus = document.querySelector("#order-scan-status");
+    const openFruit = (product, scale = null, verifyBarcode) => {
+      if (fruitDialog?.dialog.hasAttribute("open"))
+        throw Error("Selesaikan atau tutup pop-up buah terlebih dahulu.");
+      fruitDialog = fruitSaleDialog({
+        productId: product.id,
+        scale,
+        getState: () => ctx.getState?.() || s,
+        getDraft: () => draft,
+        store,
+        modal: ctx.modal,
+        verifyBarcode,
+        onAdd: (line, lot) => {
+          s = ctx.getState?.() || s;
+          if (!addDraftLine(line)) return false;
+          scanStatus.textContent = `Ditambahkan: ${product.name} · ${num(line.kg)} kg · ${line.pieces} butir · ${line.unit === "KG" ? "Per kg" : "Per butir"} · ${lot.date} · ${nm(s, "suppliers", lot.supplierId)}.`;
+          if (scanInput) {
+            scanInput.value = "";
+            scanInput.focus();
+          }
+          return true;
+        },
+        onClose: (added) => {
+          if (!added)
+            scanStatus.textContent =
+              "Penjualan buah dibatalkan; belum ditambahkan ke pesanan.";
+          if (scanInput && !scanInput.disabled) scanInput.focus();
+        },
+      });
+      return true;
+    };
+    const selectProduct = (p) => {
+      const status = posProductStatus(s, store, p, draft, today());
+      if (!status.ok) {
+        ctx.toast(status.reason);
+        return false;
+      }
+      if (p.stockUnit === "kg_butir") return openFruit(p);
+      return addDraftLine({
+        productId: p.id,
+        qty: 1,
+        price: Number(p.salePrice),
+      });
+    };
+    if (scanInput) {
+      const scan = bindBarcodeInput(scanInput, {
+        onScan: (raw, settings) => {
+          if (document.querySelector("dialog[open]"))
+            throw Error("Tutup pop-up sebelum scan produk berikutnya.");
+          s = ctx.getState?.() || s;
+          const { product, scale } = barcodeProduct(s, raw, settings);
+          if (product.stockUnit === "kg_butir") {
+            openFruit(
+              product,
+              scale,
+              scale
+                ? () => {
+                    const current = barcodeProduct(
+                      ctx.getState?.() || s,
+                      raw,
+                      settings,
+                    );
+                    if (
+                      current.product.id !== product.id ||
+                      current.scale?.kg !== scale.kg
+                    )
+                      throw Error(
+                        "Pemetaan barcode berubah. Tutup pop-up dan scan ulang.",
+                      );
+                  }
+                : undefined,
+            );
+            scanStatus.textContent = `Terbaca: ${product.name}${scale ? " · " + num(scale.kg) + " kg · 1 butir" : ""}. Ketik tanggal masuk, lalu Enter untuk lanjut ke supplier dan cara jual.`;
+          } else {
+            if (!selectProduct(product)) {
+              scanStatus.textContent =
+                "Belum ditambahkan. Periksa ketersediaan stok dan harga produk.";
+              return false;
+            }
+            scanStatus.textContent = `Ditambahkan: ${product.name} × 1 ${product.stockUnit || "pcs"}.`;
+            scanInput.focus();
+          }
+        },
+        onError: (message) => (scanStatus.textContent = message),
+      });
+      document.querySelector("#order-scan-add").onclick = scan;
+    }
+    document
+      .querySelector("#order-products")
+      ?.addEventListener("click", (ev) => {
+        const card = ev.target.closest("[data-menu-key]");
+        if (!card || card.disabled || card.hidden) return;
+        const entry = posMenuEntries(s, activeCategory).find(
+          (x) => x.key === card.dataset.menuKey,
+        );
+        if (!entry) return;
+        if (entry.hasVariants)
+          variantDialog = posVariantDialog({
+            key: entry.key,
+            category: activeCategory,
+            getState: () => s,
+            getDraft: () => draft,
+            store,
+            modal: ctx.modal,
+            onConfirm: selectProduct,
+          });
+        else selectProduct(entry.products[0]);
+      });
+    const filterProducts = () => updateCards();
+    document
+      .querySelector("#order-search")
+      ?.addEventListener("input", filterProducts);
+    const selectCategory = (key) => {
+      activeCategory = key;
+      document.querySelectorAll("[data-order-category]").forEach((item) => {
+        const selected = item.dataset.orderCategory === key;
+        item.classList.toggle("selected", selected);
+        item.setAttribute("aria-pressed", String(selected));
+      });
+      filterProducts();
+    };
+    document
+      .querySelector(".order-categories")
+      ?.addEventListener("click", (ev) => {
+        const button = ev.target.closest("[data-order-category]");
+        if (button) selectCategory(button.dataset.orderCategory);
+      });
+    function refreshCatalog() {
+      document.querySelector(".order-categories").innerHTML =
+        posCategoryTabs(s);
+      document.querySelector("#order-products").innerHTML = posProductCards(
+        s,
+        store,
+        draft,
+      );
+      if (
+        ![...document.querySelectorAll("[data-order-category]")].some(
+          (b) => b.dataset.orderCategory === activeCategory,
+        )
+      )
+        activeCategory = "all";
+      selectCategory(activeCategory);
+    }
+    container.addEventListener("click", (ev) => {
+      const remove = ev.target.closest("[data-remove-line]");
+      if (remove) {
+        draft.splice(Number(remove.dataset.removeLine), 1);
+        showDraft();
+        return;
+      }
+      const change = ev.target.closest("[data-draft-qty]");
+      if (change) {
+        const index = Number(change.dataset.draftQty);
+        const candidate = draft.map((x, i) =>
+          i === index
+            ? { ...x, qty: Math.max(1, x.qty + Number(change.dataset.delta)) }
+            : x,
+        );
+        const stock = checkOrder(s, store, candidate, today());
+        if (Number(change.dataset.delta) > 0 && !stock.ok) {
+          ctx.toast(stock.reason);
+          return;
+        }
+        draft = candidate;
+        showDraft();
+      }
+    });
+    updateCheckout = bindCheckout(
+      { ...ctx, getState: () => ctx.getState?.() || s },
+      store,
+      () => draft,
+      () => {
+        draft = [];
+      },
+    );
+    const checkout = saveButton.onclick;
+    saveButton.onclick = (ev) => {
+      if (fruitDialog?.dialog.hasAttribute("open")) {
+        ctx.toast("Selesaikan atau tutup pop-up buah sebelum pembayaran.");
+        return;
+      }
+      return checkout?.(ev);
+    };
+  }
+  if (view === "trace") {
+    const renderTrace = () => {
+      const key = document.querySelector("#trace-lot").value;
+      const ancestry = new Set(key ? [key] : []);
+      let changed = true;
+      while (changed) {
+        changed = false;
+        for (const row of s.journal || []) {
+          if (row.qty > 0 && ancestry.has(row.lot_id))
+            for (const parent of s.journal.filter(
+              (p) => p.event_id === row.event_id && p.qty < 0,
+            )) {
+              if (!ancestry.has(parent.lot_id)) {
+                ancestry.add(parent.lot_id);
+                changed = true;
+              }
+            }
+        }
+        for (const l of s.lots) {
+          if (
+            ancestry.has(l.id) &&
+            l.sourceLotId &&
+            !ancestry.has(l.sourceLotId)
+          ) {
+            ancestry.add(l.sourceLotId);
+            changed = true;
+          }
+        }
+      }
+      const rows = (s.journal || []).filter(
+        (x) => x.store_id === store && (!key || ancestry.has(x.lot_id)),
+      );
+      document.querySelector("#trace-result").innerHTML =
+        (key
+          ? `<p>Menampilkan lot terpilih beserta ${Math.max(0, ancestry.size - 1)} lot asalnya. Penerimaan sebelum upgrade mungkin belum mempunyai jurnal.</p>`
+          : "") +
+        table(
+          [
+            "Waktu / kegiatan",
+            "Produk / lot",
+            "Supplier",
+            "Perubahan stok",
+            "Pelaksana",
+          ],
+          rows.map((x) => {
+            const ev = s.events.find((v) => v.id === x.event_id);
+            return `<tr><td>${e(ev?.business_date)}<small>${e(actions[ev?.action] || ev?.action)}</small></td><td>${e(nm(s, "products", x.product_id))}<small>${e(x.lot_id.slice(0, 8))}</small></td><td>${e(nm(s, "suppliers", x.supplier_id))}</td><td>${x.qty > 0 ? "+" : ""}${num(x.qty)} ${e(x.unit)}${x.pieces ? ` / ${num(x.pieces)} butir` : ""}</td><td>${e(nm(s, "employees", ev?.employee_id))}</td></tr>`;
+          }),
+        );
+    };
+    document.querySelector("#trace-lot").onchange = renderTrace;
+    renderTrace();
+  }
+  if (view === "salesreport") {
+    const draw = () => {
+      const from = document.querySelector("#sales-from").value,
+        to = document.querySelector("#sales-to").value;
+      const rows = [
+        ...(s.orders || [])
+          .filter((o) => o.store_id === store && isPaid(o))
+          .map((o) => ({
+            id: o.id,
+            date: o.paid_date,
+            total: o.total,
+            payment: o.payment,
+            items: o.lines
+              .map((l) => l.name + " × " + num(l.qty) + " " + l.unit)
+              .join(", "),
+          })),
+        ...(s.sales || [])
+          .filter((o) => o.storeId === store && !o.voided)
+          .map((o) => ({
+            id: o.id,
+            date: o.date,
+            total: o.total,
+            payment: o.payment,
+            items: o.lines
+              .map(
+                (l) =>
+                  nm(s, "products", l.productId) +
+                  " · " +
+                  num(l.kg) +
+                  " kg / " +
+                  l.pieces +
+                  " butir",
+              )
+              .join(", "),
+          })),
+      ]
+        .filter((o) => o.date >= from && o.date <= to)
+        .sort((a, b) => b.date.localeCompare(a.date));
+      document.querySelector("#sales-result").innerHTML =
+        `<div class="stats"><div class="stat"><small>Omzet</small><strong>${money(rows.reduce((a, x) => a + x.total, 0))}</strong></div><div class="stat"><small>Transaksi lunas</small><strong>${rows.length}</strong></div></div>${table(
+          ["Tanggal / struk", "Item", "Pembayaran", "Total"],
+          rows.map(
+            (o) =>
+              `<tr><td>${e(o.date)}<small>${e(o.id.slice(0, 8))}</small></td><td>${e(o.items)}</td><td>${e(o.payment)}</td><td>${money(o.total)}</td></tr>`,
+          ),
+        )}`;
+    };
+    document.querySelector("#sales-from").onchange = draw;
+    document.querySelector("#sales-to").onchange = draw;
+    draw();
+  }
+  if (view === "finance") {
+    const renderFinance = () => {
+      const from = document.querySelector("#finance-from").value,
+        to = document.querySelector("#finance-to").value,
+        supplier = document.querySelector("#finance-supplier").value;
+      const rows = (s.money || []).filter((x) => {
+        const ev = s.events.find((e) => e.id === x.event_id);
+        return (
+          x.store_id === store &&
+          ev?.business_date >= from &&
+          ev?.business_date <= to
+        );
+      });
+      const unknown = rows.filter((x) => x.cost == null).length,
+        rev = rows.reduce((a, x) => a + +x.revenue, 0),
+        cogs = rows
+          .filter((x) => ["sale", "reversal"].includes(x.category))
+          .reduce((a, x) => a + +(x.cost || 0), 0),
+        loss = rows
+          .filter((x) => x.category === "loss")
+          .reduce((a, x) => a + +(x.cost || 0), 0);
+      const paidOrders = (s.orders || []).filter(
+        (o) =>
+          isPaid(o) &&
+          o.store_id === store &&
+          o.paid_date >= from &&
+          o.paid_date <= to,
+      );
+      const margins = orderMargins(s, paidOrders),
+        recovered = margins.filter((m) => m.recovered);
+      const allocated = new Map();
+      for (const m of margins) {
+        const known = m.cost != null && m.sources.every((x) => x.cost != null),
+          base = m.sources.reduce((a, x) => a + (x.cost || 0), 0);
+        if (!known || base <= 0) continue;
+        for (const src of m.sources) {
+          const row = allocated.get(src.supplierId) || { revenue: 0, cost: 0 };
+          row.revenue += (m.revenue * src.cost) / base;
+          row.cost += src.cost;
+          allocated.set(src.supplierId, row);
+        }
+      }
 
- }
- container.addEventListener('click',ev=>{
-  const remove=ev.target.closest('[data-remove-line]');
-  if(remove){draft.splice(Number(remove.dataset.removeLine),1);showDraft();return;}
-  const change=ev.target.closest('[data-draft-qty]');
-  if(change){const index=Number(change.dataset.draftQty);const candidate=draft.map((x,i)=>i===index?{...x,qty:Math.max(1,x.qty+Number(change.dataset.delta))}:x);const stock=checkOrder(s,store,candidate,today());if(Number(change.dataset.delta)>0&&!stock.ok){ctx.toast(stock.reason);return;}draft=candidate;showDraft();}
- });
- updateCheckout=bindCheckout({...ctx,getState:()=>ctx.getState?.()||s},store,()=>draft,()=>{draft=[];});
- const checkout=saveButton.onclick;
- saveButton.onclick=ev=>{if(fruitDialog?.dialog.hasAttribute('open')){ctx.toast('Selesaikan atau tutup pop-up buah sebelum pembayaran.');return;}return checkout?.(ev);};
-
-
- }
- if(view==='trace'){
- const renderTrace=()=>{const key=document.querySelector('#trace-lot').value;const ancestry=new Set(key?[key]:[]);let changed=true;while(changed){changed=false;for(const row of s.journal||[]){if(row.qty>0&&ancestry.has(row.lot_id))for(const parent of s.journal.filter(p=>p.event_id===row.event_id&&p.qty<0)){if(!ancestry.has(parent.lot_id)){ancestry.add(parent.lot_id);changed=true}}}for(const l of s.lots){if(ancestry.has(l.id)&&l.sourceLotId&&!ancestry.has(l.sourceLotId)){ancestry.add(l.sourceLotId);changed=true}}}
- const rows=(s.journal||[]).filter(x=>x.store_id===store&&(!key||ancestry.has(x.lot_id)));
- document.querySelector('#trace-result').innerHTML=(key?`<p>Menampilkan lot terpilih beserta ${Math.max(0,ancestry.size-1)} lot asalnya. Penerimaan sebelum upgrade mungkin belum mempunyai jurnal.</p>`:'')+table(['Waktu / kegiatan','Produk / lot','Supplier','Perubahan stok','Pelaksana'],rows.map(x=>{const ev=s.events.find(v=>v.id===x.event_id);return `<tr><td>${e(ev?.business_date)}<small>${e(actions[ev?.action]||ev?.action)}</small></td><td>${e(nm(s,'products',x.product_id))}<small>${e(x.lot_id.slice(0,8))}</small></td><td>${e(nm(s,'suppliers',x.supplier_id))}</td><td>${x.qty>0?'+':''}${num(x.qty)} ${e(x.unit)}${x.pieces?` / ${num(x.pieces)} butir`:''}</td><td>${e(nm(s,'employees',ev?.employee_id))}</td></tr>`}));};document.querySelector('#trace-lot').onchange=renderTrace;renderTrace();
- }
- if(view==='salesreport'){
- const draw=()=>{const from=document.querySelector('#sales-from').value,to=document.querySelector('#sales-to').value;
- const rows=[...(s.orders||[]).filter(o=>o.store_id===store&&isPaid(o)).map(o=>({id:o.id,date:o.paid_date,total:o.total,payment:o.payment,items:o.lines.map(l=>l.name+' × '+num(l.qty)+' '+l.unit).join(', ')})),...(s.sales||[]).filter(o=>o.storeId===store&&!o.voided).map(o=>({id:o.id,date:o.date,total:o.total,payment:o.payment,items:o.lines.map(l=>nm(s,'products',l.productId)+' · '+num(l.kg)+' kg / '+l.pieces+' butir').join(', ')}))].filter(o=>o.date>=from&&o.date<=to).sort((a,b)=>b.date.localeCompare(a.date));
- document.querySelector('#sales-result').innerHTML=`<div class="stats"><div class="stat"><small>Omzet</small><strong>${money(rows.reduce((a,x)=>a+x.total,0))}</strong></div><div class="stat"><small>Transaksi lunas</small><strong>${rows.length}</strong></div></div>${table(['Tanggal / struk','Item','Pembayaran','Total'],rows.map(o=>`<tr><td>${e(o.date)}<small>${e(o.id.slice(0,8))}</small></td><td>${e(o.items)}</td><td>${e(o.payment)}</td><td>${money(o.total)}</td></tr>`))}`;};document.querySelector('#sales-from').onchange=draw;document.querySelector('#sales-to').onchange=draw;draw();
- }
- if(view==='finance'){
- const renderFinance=()=>{const from=document.querySelector('#finance-from').value,to=document.querySelector('#finance-to').value,supplier=document.querySelector('#finance-supplier').value;
- const rows=(s.money||[]).filter(x=>{const ev=s.events.find(e=>e.id===x.event_id);return x.store_id===store&&ev?.business_date>=from&&ev?.business_date<=to});
- const unknown=rows.filter(x=>x.cost==null).length,rev=rows.reduce((a,x)=>a+ +x.revenue,0),cogs=rows.filter(x=>['sale','reversal'].includes(x.category)).reduce((a,x)=>a+ +(x.cost||0),0),loss=rows.filter(x=>x.category==='loss').reduce((a,x)=>a+ +(x.cost||0),0);
- const paidOrders=(s.orders||[]).filter(o=>isPaid(o)&&o.store_id===store&&o.paid_date>=from&&o.paid_date<=to);
- const margins=orderMargins(s,paidOrders),recovered=margins.filter(m=>m.recovered);
- const allocated=new Map();for(const m of margins){const known=m.cost!=null&&m.sources.every(x=>x.cost!=null),base=m.sources.reduce((a,x)=>a+(x.cost||0),0);if(!known||base<=0)continue;for(const src of m.sources){const row=allocated.get(src.supplierId)||{revenue:0,cost:0};row.revenue+=m.revenue*src.cost/base;row.cost+=src.cost;allocated.set(src.supplierId,row);}}
-
- const fruitRows=(s.sales||[]).filter(x=>!x.voided&&x.storeId===store&&x.date>=from&&x.date<=to).flatMap(x=>x.lines).concat((s.orders||[]).filter(o=>isPaid(o)&&o.store_id===store&&o.paid_date>=from&&o.paid_date<=to).flatMap(o=>o.lines.filter(l=>l.itemType==='fruit').map(l=>({...l,total:l.price*l.qty*(o.total/(o.subtotal||o.lines.reduce((n,x)=>n+x.qty*x.price,0)||1)),supplierId:s.lots.find(x=>x.id===l.lotId)?.supplierId}))));
- document.querySelector('#finance-result').innerHTML=`${unknown?`<div class="notice">${unknown} transaksi memiliki biaya belum diketahui. Laba belum dapat dinyatakan lengkap; biaya lama tidak diasumsikan nol.</div>`:''}<div class="stats"><div class="stat"><small>Omzet tercatat sejak upgrade</small><strong>${money(rev)}</strong></div><div class="stat"><small>Biaya barang terjual</small><strong>${money(cogs)}</strong></div><div class="stat"><small>Waste / penyusutan</small><strong>${money(loss)}</strong></div><div class="stat"><small>Laba kotor setelah waste</small><strong>${unknown?'Belum lengkap':money(rev-cogs-loss)}</strong></div></div><h3>Penjualan buah per supplier</h3>${table(['Supplier','Kg / butir','Omzet'],s.suppliers.filter(x=>!supplier||x.id===supplier).map(x=>{const r=fruitRows.filter(l=>l.supplierId===x.id);return `<tr><td>${e(x.name)}</td><td>${num(r.reduce((a,l)=>a+ +l.kg,0))} kg / ${r.reduce((a,l)=>a+ +l.pieces,0)} butir</td><td>${money(r.reduce((a,l)=>a+ +l.total,0))}</td></tr>`}))}<h3>Produk terjual yang memakai hasil olahan reject</h3><p class="muted">Termasuk pemakaian melalui resep bertingkat. Laba per item mencakup seluruh bahan item tersebut.</p>${table(['Produk / pesanan','Omzet','Biaya bahan','Laba kotor item'],recovered.map(o=>`<tr><td>${e(o.name)}<small>${e(o.orderId.slice(0,8))}</small></td><td>${money(o.revenue)}</td><td>${cost(o.cost)}</td><td>${cost(o.profit)}</td></tr>`))}<h3>Alokasi penjualan pesanan menurut supplier bahan</h3><p class="muted">Untuk produk campuran, omzet dialokasikan menurut proporsi modal bahan. Ini alokasi analitis, bukan penjualan langsung buah. Item tanpa modal lengkap atau modal nol tidak dialokasikan.</p>${table(['Supplier','Alokasi omzet','Modal bahan','Selisih'],[...allocated].filter(([key])=>!supplier||key===supplier).map(([key,x])=>`<tr><td>${e(nm(s,'suppliers',key))}</td><td>${money(x.revenue)}</td><td>${money(x.cost)}</td><td>${money(x.revenue-x.cost)}</td></tr>`))}<h3>Rincian biaya & pendapatan</h3>${table(['Kegiatan','Pendapatan','Biaya'],rows.map(x=>`<tr><td>${e(x.note)}</td><td>${money(x.revenue)}</td><td>${cost(x.cost)}</td></tr>`))}<p class="muted">Modal buah reject yang diolah dipindahkan ke hasil menurut berat hasil. Selisih kulit/biji belum dianggap kerugian rupiah tersendiri agar modal tidak dihitung dua kali.</p>`;};for(const k of ['finance-from','finance-to','finance-supplier'])document.getElementById(k).onchange=renderFinance;renderFinance();
- }
+      const fruitRows = (s.sales || [])
+        .filter(
+          (x) =>
+            !x.voided && x.storeId === store && x.date >= from && x.date <= to,
+        )
+        .flatMap((x) => x.lines)
+        .concat(
+          (s.orders || [])
+            .filter(
+              (o) =>
+                isPaid(o) &&
+                o.store_id === store &&
+                o.paid_date >= from &&
+                o.paid_date <= to,
+            )
+            .flatMap((o) =>
+              o.lines
+                .filter((l) => l.itemType === "fruit")
+                .map((l) => ({
+                  ...l,
+                  total:
+                    l.price *
+                    l.qty *
+                    (o.total /
+                      (o.subtotal ||
+                        o.lines.reduce((n, x) => n + x.qty * x.price, 0) ||
+                        1)),
+                  supplierId: s.lots.find((x) => x.id === l.lotId)?.supplierId,
+                })),
+            ),
+        );
+      document.querySelector("#finance-result").innerHTML =
+        `${unknown ? `<div class="notice">${unknown} transaksi memiliki biaya belum diketahui. Laba belum dapat dinyatakan lengkap; biaya lama tidak diasumsikan nol.</div>` : ""}<div class="stats"><div class="stat"><small>Omzet tercatat sejak upgrade</small><strong>${money(rev)}</strong></div><div class="stat"><small>Biaya barang terjual</small><strong>${money(cogs)}</strong></div><div class="stat"><small>Waste / penyusutan</small><strong>${money(loss)}</strong></div><div class="stat"><small>Laba kotor setelah waste</small><strong>${unknown ? "Belum lengkap" : money(rev - cogs - loss)}</strong></div></div><h3>Penjualan buah per supplier</h3>${table(
+          ["Supplier", "Kg / butir", "Omzet"],
+          s.suppliers
+            .filter((x) => !supplier || x.id === supplier)
+            .map((x) => {
+              const r = fruitRows.filter((l) => l.supplierId === x.id);
+              return `<tr><td>${e(x.name)}</td><td>${num(r.reduce((a, l) => a + +l.kg, 0))} kg / ${r.reduce((a, l) => a + +l.pieces, 0)} butir</td><td>${money(r.reduce((a, l) => a + +l.total, 0))}</td></tr>`;
+            }),
+        )}<h3>Produk terjual yang memakai hasil olahan reject</h3><p class="muted">Termasuk pemakaian melalui resep bertingkat. Laba per item mencakup seluruh bahan item tersebut.</p>${table(
+          ["Produk / pesanan", "Omzet", "Biaya bahan", "Laba kotor item"],
+          recovered.map(
+            (o) =>
+              `<tr><td>${e(o.name)}<small>${e(o.orderId.slice(0, 8))}</small></td><td>${money(o.revenue)}</td><td>${cost(o.cost)}</td><td>${cost(o.profit)}</td></tr>`,
+          ),
+        )}<h3>Alokasi penjualan pesanan menurut supplier bahan</h3><p class="muted">Untuk produk campuran, omzet dialokasikan menurut proporsi modal bahan. Ini alokasi analitis, bukan penjualan langsung buah. Item tanpa modal lengkap atau modal nol tidak dialokasikan.</p>${table(
+          ["Supplier", "Alokasi omzet", "Modal bahan", "Selisih"],
+          [...allocated]
+            .filter(([key]) => !supplier || key === supplier)
+            .map(
+              ([key, x]) =>
+                `<tr><td>${e(nm(s, "suppliers", key))}</td><td>${money(x.revenue)}</td><td>${money(x.cost)}</td><td>${money(x.revenue - x.cost)}</td></tr>`,
+            ),
+        )}<h3>Rincian biaya & pendapatan</h3>${table(
+          ["Kegiatan", "Pendapatan", "Biaya"],
+          rows.map(
+            (x) =>
+              `<tr><td>${e(x.note)}</td><td>${money(x.revenue)}</td><td>${cost(x.cost)}</td></tr>`,
+          ),
+        )}<p class="muted">Modal buah reject yang diolah dipindahkan ke hasil menurut berat hasil. Selisih kulit/biji belum dianggap kerugian rupiah tersendiri agar modal tidak dihitung dua kali.</p>`;
+    };
+    for (const k of ["finance-from", "finance-to", "finance-supplier"])
+      document.getElementById(k).onchange = renderFinance;
+    renderFinance();
+  }
 }
-export function clearOrderDraft(){draft=[];}
-export function hasOrderDraft(){return draft.length>0;}
+export function clearOrderDraft() {
+  draft = [];
+}
+export function hasOrderDraft() {
+  return draft.length > 0;
+}
 
-function kitchenPage(s,store) {
- const orders=(s.orders||[]).filter(o=>o.store_id===store&&isPaid(o)&&needsKitchen(o)&&['queued','preparing','ready'].includes(o.status)).sort((a,b)=>(a.created_at||a.business_date).localeCompare(b.created_at||b.business_date));
- return header('Antrean Kitchen',`Hanya ${itemTypes.recipe} yang sudah lunas masuk antrean. Tekan Mulai buat, lalu Selesai / siap saat pesanan selesai.`, '<button id="kitchen-sound" type="button">Aktifkan suara</button>')+
- `<div class="kitchen-status" id="kitchen-sync" role="status">${s.stockDemo?'Mode demo · hanya di tab ini':'Pembaruan otomatis setiap 5 detik'} · ${orders.filter(o=>o.status==='queued').length} pesanan menunggu</div><div class="kitchen-board">${[['queued','Pesanan baru'],['preparing','Sedang dibuat'],['ready','Selesai / siap']].map(([status,label])=>`<section class="kitchen-lane"><h3>${label}<span>${orders.filter(o=>o.status===status).length}</span></h3>${orders.filter(o=>o.status===status).map(o=>`<article class="kitchen-ticket"><div class="header-row"><b>#${e(o.id.slice(0,8))}</b><span class="muted">${e(o.business_date)}</span></div><span class="pill">Lunas</span><p><b>${e(tableLabel(o.table_no))}</b></p><p class="kitchen-note">${e(o.note||'Tanpa catatan')}</p><ul>${o.lines.filter(l=>l.itemType==='recipe').map(l=>`<li><strong>${num(l.qty)} ${e(l.unit)}</strong><span>${e(l.name)}</span>${l.kg?`<small>${num(l.kg)} kg aktual · ${l.pieces} butir</small>`:''}</li>`).join('')}</ul>${status==='queued'&&(allowed(s,'kitchen')||!o.lines.some(l=>l.itemType==='recipe'))?button('Mulai buat','order_start',o.id,'primary full'):''}${status==='preparing'&&(allowed(s,'kitchen')||!o.lines.some(l=>l.itemType==='recipe'))?button('Selesai / siap','order_ready',o.id,'primary full'):''}${status==='ready'?'<p class="muted">Siap disajikan / diserahkan</p>':''}</article>`).join('')||'<p class="empty">Belum ada pesanan</p>'}</section>`).join('')}</div>`;
+function kitchenPage(s, store) {
+  const orders = (s.orders || [])
+    .filter(
+      (o) =>
+        o.store_id === store &&
+        isPaid(o) &&
+        needsKitchen(o) &&
+        ["queued", "preparing", "ready"].includes(o.status),
+    )
+    .sort((a, b) =>
+      (a.created_at || a.business_date).localeCompare(
+        b.created_at || b.business_date,
+      ),
+    );
+  return (
+    header(
+      "Antrean Kitchen",
+      `Hanya ${itemTypes.recipe} yang sudah lunas masuk antrean. Tekan Mulai buat, lalu Selesai / siap saat pesanan selesai.`,
+      '<button id="kitchen-sound" type="button">Aktifkan suara</button>',
+    ) +
+    `<div class="kitchen-status" id="kitchen-sync" role="status">${s.stockDemo ? "Mode demo · hanya di tab ini" : "Pembaruan otomatis setiap 5 detik"} · ${orders.filter((o) => o.status === "queued").length} pesanan menunggu</div><div class="kitchen-board">${[
+      ["queued", "Pesanan baru"],
+      ["preparing", "Sedang dibuat"],
+      ["ready", "Selesai / siap"],
+    ]
+      .map(
+        ([status, label]) =>
+          `<section class="kitchen-lane"><h3>${label}<span>${orders.filter((o) => o.status === status).length}</span></h3>${
+            orders
+              .filter((o) => o.status === status)
+              .map(
+                (o) =>
+                  `<article class="kitchen-ticket"><div class="header-row"><b>#${e(o.id.slice(0, 8))}</b><span class="muted">${e(o.business_date)}</span></div><span class="pill">Lunas</span><p><b>${e(tableLabel(o.table_no))}</b></p><p class="kitchen-note">${e(o.note || "Tanpa catatan")}</p><ul>${o.lines
+                    .filter((l) => l.itemType === "recipe")
+                    .map(
+                      (l) =>
+                        `<li><strong>${num(l.qty)} ${e(l.unit)}</strong><span>${e(l.name)}</span>${l.kg ? `<small>${num(l.kg)} kg aktual · ${l.pieces} butir</small>` : ""}</li>`,
+                    )
+                    .join(
+                      "",
+                    )}</ul>${status === "queued" && (allowed(s, "kitchen") || !o.lines.some((l) => l.itemType === "recipe")) ? button("Mulai buat", "order_start", o.id, "primary full") : ""}${status === "preparing" && (allowed(s, "kitchen") || !o.lines.some((l) => l.itemType === "recipe")) ? button("Selesai / siap", "order_ready", o.id, "primary full") : ""}${status === "ready" ? '<p class="muted">Siap disajikan / diserahkan</p>' : ""}</article>`,
+              )
+              .join("") || '<p class="empty">Belum ada pesanan</p>'
+          }</section>`,
+      )
+      .join("")}</div>`
+  );
 }

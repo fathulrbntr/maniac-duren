@@ -1,8 +1,8 @@
-import {availablePayments} from './payment-methods.mjs?v=84';
+import {availablePayments} from './payment-methods.mjs';
 // Document training runs entirely inside the current stock-demo state.
-import {id,today} from './core.mjs?v=60';
-import {transactions} from './reports.mjs?v=84';
-import {sumProducts} from './decimal-totals.mjs?v=66';
+import {id,today} from './core.mjs';
+import {transactions} from './reports.mjs';
+import {sumProducts} from './decimal-totals.mjs';
 
 export const documentDemoActions=new Set(['document_save','document_issue','document_cancel','letterhead_save']);
 const sources={PO:[''],PUR:['','po','receipt','unit_receipt'],INV:['order','sale'],DO:['transfer','movement','order','sale']};

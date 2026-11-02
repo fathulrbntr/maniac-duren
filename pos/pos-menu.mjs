@@ -1,6 +1,6 @@
-import {productPhoto} from './product-photos.mjs?v=65';
-import {escape as e,money,today} from './core.mjs?v=9';
-import {posVisible,posCategoryIds,posCategories,hasPosPrice,posProductStatus} from './pos-categories.mjs?v=52';
+import {productPhoto} from './product-photos.mjs';
+import {escape as e,money,today} from './core.mjs';
+import {posVisible,posCategoryIds,posCategories,hasPosPrice,posProductStatus} from './pos-categories.mjs';
 
 export const menuKey=p=>p.variantGroupId?'group:'+p.variantGroupId:'product:'+p.id;
 export const variantLabel=p=>p.variantOptions?.length?p.variantOptions.map(o=>`${o.name}: ${o.value}`).join(' · '):p.variant||p.name;

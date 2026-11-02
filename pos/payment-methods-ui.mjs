@@ -1,5 +1,5 @@
-import {escape as e,id} from './core.mjs?v=77';
-import {paymentGroups,paymentMethods,paymentSettingsFor,availablePayments,normalizePaymentSettings} from './payment-methods.mjs?v=84';
+import {escape as e,id} from './core.mjs';
+import {paymentGroups,paymentMethods,paymentSettingsFor,availablePayments,normalizePaymentSettings} from './payment-methods.mjs';
 const field=(label,body)=>`<label class="field">${label}${body}</label>`;
 const details=m=>m.group!=='cash';
 const info=m=>[m.bank,m.accountName,m.accountNumber,m.note].filter(Boolean).join(' · ');

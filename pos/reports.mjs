@@ -1,8 +1,8 @@
-import {batchProfit} from './batch-profit.mjs?v=88';
-import {batchMetrics,batchStockCosts} from './batch-metrics.mjs?v=87';
+import {batchProfit} from './batch-profit.mjs';
+import {batchMetrics,batchStockCosts} from './batch-metrics.mjs';
 // One read-only reporting model shared by screen, Excel and PDF.
-import {batchReports} from './batch-report.mjs?v=63';
-import {sources,orderMargins} from './finance.mjs?v=54';
+import {batchReports} from './batch-report.mjs';
+import {sources,orderMargins} from './finance.mjs';
 export const label=(s,key,id)=>s[key]?.find(x=>x.id===id)?.name||'Belum terpetakan';
 export const isPaid=o=>o.status!=='cancelled'&&(o.payment_status==='paid'||(!o.payment_status&&o.status==='paid'));
 const n=v=>Number(v)||0;

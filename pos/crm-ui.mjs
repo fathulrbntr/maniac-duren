@@ -1,5 +1,5 @@
-import {escape as e,id,num,money} from './core.mjs?v=77';
-import {crmAdmin,consentText,normalizeMember,normalizeRule,pointsFor,contactsCsv} from './crm.mjs?v=85';
+import {escape as e,id,num,money} from './core.mjs';
+import {crmAdmin,consentText,normalizeMember,normalizeRule,pointsFor,contactsCsv} from './crm.mjs';
 const field=(label,body)=>`<label class="field">${label}${body}</label>`;
 const when=v=>v?new Date(v).toLocaleString('id-ID',{timeZone:'Asia/Jakarta'}):'—';
 const read=(ctx,p)=>ctx.crmRead(p);

@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
-import {barcodeProduct,parseScaleBarcode} from '../pos/barcode-scanner.mjs?v=66';
-import {defaultDeviceSettings} from '../pos/device-settings.mjs?v=58';
-import {cashierQuote,checkoutTotals,discountAmount,validPayment} from '../pos/cashier.mjs?v=66';
-import {sumProducts} from '../pos/decimal-totals.mjs?v=66';
+import {barcodeProduct,parseScaleBarcode} from '../pos/barcode-scanner.mjs';
+import {defaultDeviceSettings} from '../pos/device-settings.mjs';
+import {cashierQuote,checkoutTotals,discountAmount,validPayment} from '../pos/cashier.mjs';
+import {sumProducts} from '../pos/decimal-totals.mjs';
 
 const fruit={id:'monthong',name:'Monthong',barcode:'0001',sku:'MT',itemType:'direct',stockUnit:'kg_butir',priceKg:100000};
 const state={products:[fruit]},settings=defaultDeviceSettings();

@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
-import {defaultDeviceSettings,readDeviceSettings,saveDeviceSettings,validateDeviceSettings,deviceSettingsKey} from '../pos/device-settings.mjs?v=58';
-import {normalizeBarcode,barcodeProduct} from '../pos/barcode-scanner.mjs?v=58';
+import {defaultDeviceSettings,readDeviceSettings,saveDeviceSettings,validateDeviceSettings,deviceSettingsKey} from '../pos/device-settings.mjs';
+import {normalizeBarcode,barcodeProduct} from '../pos/barcode-scanner.mjs';
 import {opsPage,bindOps,clearOrderDraft,hasOrderDraft} from '../pos/operations-ui.mjs';
-import {devicesPage} from '../pos/devices-ui.mjs?v=58';
+import {devicesPage} from '../pos/devices-ui.mjs';
 import {visibleSections} from '../pos/navigation.mjs';
 import {Node,makeModal,FormDataAdapter} from './variant-dom.mjs';
 import {printDocument} from './receipt-print-dom.mjs';
@@ -20,7 +20,7 @@ globalThis.localStorage={getItem:key=>data.get(key)||null,setItem:(key,value)=>{
 globalThis.requestAnimationFrame=fn=>fn();globalThis.window={print(){throw Error('Use the isolated print document');}};
 globalThis.fetch=()=>{throw Error('Device settings must not access server');};globalThis.FormData=FormDataAdapter;
 const root=new Node(),modal=makeModal(),f=fixture();f.water.barcode='0012345';f.small.barcode='001500';f.fruit.barcode='FRUIT001';f.raw.barcode='RAW001';
-let state=createStockDemo(f.state),view='devices';const messages=[],actions=[];
+let state=createStockDemo(f.state),view='devices';state=applyStockDemoAction(state,'cashier_shift_open',{id:crypto.randomUUID(),storeId:f.store,openingCash:0});const messages=[],actions=[];
 const printing=printDocument({base:{querySelector:q=>root.querySelector(q)||(q==='dialog[open]'&&modal.latest?.hasAttribute('open')?modal.latest:null),querySelectorAll:q=>root.querySelectorAll(q),createElement:tag=>{const n=new Node(tag);if(tag==='template')n.content=n;return n;}},height:()=>480});
 globalThis.document=printing.document;
 const ctx={getState:()=>state,modal:modal.modal,toast:message=>messages.push(message),render,refresh(){throw Error('Devices must not refresh server data');},mutate:async(action,payload)=>{actions.push({action,payload});state=applyStockDemoAction(state,action,payload);return true;}};
@@ -94,7 +94,7 @@ try{
  const sold=state.lots.find(l=>l.id===fruitLot.id);assert(Math.abs(sold.kg-(initialKg-5.446))<1e-8);assert.equal(sold.pieces,initialPieces-2);assert.equal(state.orders.at(-1).total,483200);assert(!hasOrderDraft());modal.latest.close();render();
  // KG QRIS still uses exact decimal total after the new popup.
  await scan('2100010024145');await chooseFruit('KG');await root.querySelector('#save-order').fire('click');modal.latest.querySelector('[name="payment"]').value='QRIS';await modal.latest.querySelector('[name="payment"]').fire('change');
- assert.equal(modal.latest.querySelector('[name="paid"]').value,'241400');await modal.latest.querySelector('form').fire('submit');await modal.latest.querySelector('form').fire('submit');
+ modal.latest.querySelector('[name="paymentConfirmed"]').checked=true;assert.equal(modal.latest.querySelector('[name="paid"]').value,'241400');await modal.latest.querySelector('form').fire('submit');await modal.latest.querySelector('form').fire('submit');
  assert.equal(state.orders.at(-1).paid,241400);assert.equal(state.orders.at(-1).payment,'QRIS');modal.latest.close();render();
  const preserved=JSON.stringify(state);await scan('2100010030320');modal.latest.close();assert(!hasOrderDraft());assert.equal(JSON.stringify(state),preserved);assert.equal(actions.length,beforeActions+2);
  saveDeviceSettings({...readDeviceSettings(),scanner:{...defaultDeviceSettings().scanner,enabled:false}});render();assert(root.querySelector('#order-scan').disabled);assert(root.querySelector('#order-scan-add').disabled);

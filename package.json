@@ -2,9 +2,9 @@
   "name": "maniac-duren",
   "private": true,
   "scripts": {
-    "test": "node --test tests/product-details.test.mjs tests/production.test.mjs tests/waste.test.mjs tests/retry.test.mjs",
-    "test:db": "node tests/database.test.mjs && node tests/operations.test.mjs",
-    "test:browser": "node tests/browser.mjs",
+    "test": "node scripts/test.mjs",
+    "test:db": "node scripts/test.mjs db",
+    "test:browser": "node scripts/test-browser.mjs",
     "db:build": "node scripts/build-database.mjs",
     "test:operations": "node tests/operations.test.mjs",
     "test:kitchen": "node tests/order-stock.test.mjs && node tests/kitchen-orders.test.mjs && node tests/direct-orders.test.mjs",
@@ -14,10 +14,15 @@
     "test:weighing": "node tests/receipt-weighing.test.mjs && node tests/money-input.test.mjs",
     "test:rollback": "node tests/rollback-startup.test.mjs && node tests/cache-recovery.test.mjs && node tests/operations.test.mjs",
     "test:reject": "node tests/reject-flow-sql.test.mjs && node tests/reject-flow-ui.test.mjs && node tests/batch-report.test.mjs",
-    "test:stores": "node tests/store-receipt-sql.test.mjs && node tests/store-receipt-ui.test.mjs && node tests/receipt-print.test.mjs"
+    "test:stores": "node tests/store-receipt-sql.test.mjs && node tests/store-receipt-ui.test.mjs && node tests/receipt-print.test.mjs",
+    "test:unit": "node scripts/test.mjs unit",
+    "check": "node scripts/check-project.mjs",
+    "project:tidy": "node scripts/clean-project.mjs",
+    "project:tidy:check": "node scripts/clean-project.mjs --check"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.8",
+    "fake-indexeddb": "6.2.7",
     "playwright": "1.62.1"
   }
 }

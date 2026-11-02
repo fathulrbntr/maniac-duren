@@ -1,0 +1,79 @@
+PATCH 087 — RASIO BERAT BATCH & MODAL SATUAN HASIL OLAHAN
+Basis: proyek Maniac Duren setelah patch 086. Patch tambahan, bukan proyek lengkap.
+
+LOKASI
+Laporan > Batch supplier > Telusuri / Jejak batch.
+
+FITUR BARU
+1. Enam kartu persentase dengan dasar berat AKTUAL penerimaan batch:
+   - Buah utuh tersisa (semua kualitas, termasuk reject yang belum diolah).
+   - Buah terjual utuh, berdasarkan kg aktual.
+   - Buah masuk pengolahan.
+   - Hasil olahan tahap buah (input diolah dikurangi kulit/sisa).
+   - Kulit & sisa proses buah.
+   - Reject total ditandai, dari pencatatan aktif setelah pembatalan.
+2. Rendemen pengolahan: hasil dan kulit/sisa sebagai persentase INPUT DIOlAH.
+   Tahap Coral menjadi daging diberi dasar input Coral tersendiri.
+3. Kolom Modal / satuan produk pada tabel stok fisik yang masih terhubung.
+   Durpas menggunakan Rp/pcs; Coral/daging menggunakan Rp/kg; satuan produk lain
+   mengikuti satuan lot. Modal mengambil unit_cost produk yang sudah tersimpan.
+   Biaya tidak dihitung dari harga jual dan tidak mengubah modal database.
+4. Excel/PDF pada tab Batch supplier mendapatkan rincian Rasio batch dan Stok
+   turunan batch. Persentase dan modal tetap angka numerik untuk perhitungan Excel.
+5. Modal hanya ditampilkan/diekspor untuk akun yang memiliki akses keuangan.
+   Data biaya/berat yang belum diketahui tidak diubah menjadi nol.
+
+CONTOH GAMBAR: PENERIMAAN 500 KG
+Buah utuh tersisa         69,76 kg     13,95%
+Buah terjual utuh         30,24 kg      6,05%
+Buah masuk pengolahan   400,00 kg     80,00%
+Hasil olahan tahap buah 227,00 kg     45,40%
+Kulit & sisa proses     173,00 kg     34,60%
+Reject total ditandai   400,00 kg     80,00%
+
+Rendemen dari 400 kg yang diolah: 56,75% hasil dan 43,25% kulit/sisa.
+Kulit/sisa adalah selisih input-hasil, bukan penimbangan kulit murni terpisah.
+Persentase kartu saling beririsan: buah reject dapat masuk pengolahan, dan
+hasil/kulit merupakan rincian dari input diolah. Jangan jumlahkan seluruh kartu.
+
+Contoh modal sesuai angka batch pada gambar:
+- Durpas Monthong 1 kg:    Rp77.533,04 / pcs
+- Durpas Monthong 500 gr:  Rp38.766,52 / pcs
+- Coral Monthong:         Rp77.533,04 / kg
+- Buah utuh:              Rp44.000 / kg
+
+Angka contoh dihitung dari modal input olahan Rp17.600.000 dan hasil 227 kg;
+biaya kulit/susut sudah terserap ke hasil. Pembulatan dua desimal hanya tampilan.
+Untuk produk campuran, Modal / satuan produk mencakup seluruh bahan; Modal bagian
+batch hanya kontribusi batch yang sedang ditelusuri. Belum termasuk biaya
+operasional. Tabel stok menampilkan lot yang masih memiliki sisa fisik.
+
+PEMASANGAN WINDOWS
+1. Pastikan patch 086 sudah terpasang di repository. Simpan perubahan lokal Anda.
+2. Ekstrak ZIP ini ke root repository (folder yang memuat package.json).
+3. TIDAK ADA SQL BARU. Tidak perlu menghitung ulang/menghapus/mengoreksi stok.
+4. Dari Git Bash di root repo, periksa perubahan lalu:
+
+   git diff --stat
+   git add pos/app.js pos/index.html pos/batch-metrics.mjs pos/batch-report-ui.mjs pos/reject-flow.css pos/reports-ui.mjs pos/reports.mjs tests/batch-metrics-fixture.mjs tests/batch-metrics.test.mjs tests/batch-metrics-browser.mjs tests/reject-flow-sql.test.mjs PETUNJUK-PATCH-087.txt
+   git commit -m "Add batch weight ratios and processed product unit costs"
+   git push origin main
+
+5. Tunggu deployment Vercel, lalu Ctrl+F5 dan buka kembali popup Jejak batch.
+   Data lama langsung dapat ditampilkan dari riwayat yang sudah ada.
+
+PENGUJIAN
+- Lulus 22 pengujian model/regresi laporan, batch, reject, UI/demo, export.
+- Lulus PostgreSQL/PGlite: data proses langsung menghasilkan rasio dan unit cost
+  sesuai data server; pembatalan, reject ganda, stok dan hak akses tetap terjaga.
+- Lulus Chromium pada aplikasi: 6 rasio, dasar rendemen, modal pcs/kg, akun tanpa
+  finance tidak melihat biaya, Excel/PDF, desktop/mobile 360/390/1600 px,
+  tema gelap/terang, tanpa error browser atau RPC mutasi.
+- Baru diuji lokal; belum dipasang pada Supabase/hosting live pengguna.
+
+Jalankan ulang bila diperlukan:
+   npm ci
+   node --test tests/batch-metrics.test.mjs tests/batch-report.test.mjs tests/reports.test.mjs tests/reject-report.test.mjs tests/reject-flow-ui.test.mjs
+   node tests/reject-flow-sql.test.mjs
+   npx playwright install chromium
+   node tests/batch-metrics-browser.mjs

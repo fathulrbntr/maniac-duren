@@ -1,5 +1,5 @@
-import {escape as e,num,money,id,today} from './core.mjs?v=10';
-import {batchReport,rootContributions} from './batch-tracking.mjs?v=21';
+import {escape as e,num,money,id,today} from './core.mjs';
+import {batchReport,rootContributions} from './batch-tracking.mjs';
 const label=(s,key,value)=>s[key]?.find(x=>x.id===value)?.name||'—';
 const field=(name,title,type='number',value='',extra='')=>`<label class="field">${e(title)}<input name="${name}" type="${type}" value="${e(value)}" ${type==='number'?'min="0" '+(extra.includes('step=')?'':'step="any"'):''} ${extra}></label>`;
 const table=(heads,rows)=>`<div class="table-wrap"><table><thead><tr>${heads.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.join('')||`<tr><td colspan="${heads.length}">Belum ada data.</td></tr>`}</tbody></table></div>`;

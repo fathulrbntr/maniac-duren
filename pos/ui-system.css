@@ -1,5 +1,5 @@
-/* Shared screen components, loaded last. Layout, data and print rules live in
-   their existing modules. Compact inventory cards retain their measured grid. */
+/* Shared screen components. Later feature sheets may specialize these rules.
+   Layout, data and print rules remain in their respective modules. */
 body { font-family:var(--font-ui); font-size:var(--text-body); line-height:1.5; letter-spacing:0; }
 button,input,select,textarea { font-family:var(--font-ui); }
 h1,h2,h3,h4 { font-weight:var(--weight-bold); letter-spacing:0; font-style:normal; color:var(--ink); }
@@ -59,7 +59,7 @@ button.primary:hover:not(:disabled),.primary:hover:not(:disabled),.order-save:ho
 .field { font-size:var(--text-label); font-weight:var(--weight-semibold); color:var(--ink); }
 .field>input,.field>select,.field>textarea { margin-top:6px; }
 .field>button { margin-top:8px; }
-input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not([type=hidden]),select,textarea {
+input:where(:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not([type=hidden])),select,textarea {
  min-height:var(--control-height); color:var(--ink); background-color:var(--surface-soft);
  border-color:var(--line); border-radius:var(--radius-control); font-size:var(--text-control); font-weight:var(--weight-normal);
 }
@@ -84,7 +84,7 @@ td { border-color:var(--line); font-size:var(--text-sm); }
  display:flex; align-items:center; justify-content:center; color:var(--ink); background:transparent; font-size:24px; line-height:1; font-weight:var(--weight-normal);
 }
 .modal .field { font-size:var(--text-dialog-label); }
-.modal input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not([type=hidden]),.modal select {
+.modal input:where(:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not([type=hidden])),.modal select {
  min-height:var(--dialog-control-height); font-size:var(--text-control); font-weight:var(--weight-normal); background-color:var(--surface-soft); color:var(--ink);
 }
 .modal .form-grid { row-gap:16px; }

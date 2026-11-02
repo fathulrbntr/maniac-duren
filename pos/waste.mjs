@@ -1,8 +1,8 @@
-import { photoValue } from "./product-details.mjs?v=9";
-import { isLegacyStock } from "./catalog.mjs?v=9";
-import { quantity } from "./production.mjs?v=9";
-import { wasteOutputs, wasteOutputProducts } from "./waste-products.mjs?v=43";
-export { wasteOutputs } from "./waste-products.mjs?v=43";
+import { photoValue } from "./product-details.mjs";
+import { isLegacyStock } from "./catalog.mjs";
+import { quantity } from "./production.mjs";
+import { wasteOutputs, wasteOutputProducts } from "./waste-products.mjs";
+export { wasteOutputs } from "./waste-products.mjs";
 const round = (n) => Math.round(n * 1e6) / 1e6;
 const today = () =>
   new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Jakarta" });

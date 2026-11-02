@@ -1,11 +1,11 @@
-import { productDetails } from "./product-details.mjs?v=77";
+import { productDetails } from "./product-details.mjs";
 export const categories = ["Buah", "Dessert", "Minuman", "Olahan Duren"];
 export const itemTypes = {
   direct: "Product Jual Langsung",
   raw: "Bahan Baku",
   prep: "Bahan Produksi",
   recipe: "Product Menu",
-  finished: "Pruduct Olahan",
+  finished: "Product Olahan",
 };
 export const stockUnits = {
   kg_butir: "Kg + butir",

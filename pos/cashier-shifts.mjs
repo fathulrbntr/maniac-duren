@@ -1,5 +1,5 @@
-import {sumProducts} from './decimal-totals.mjs?v=66';
-import {id,today} from './core.mjs?v=77';
+import {sumProducts} from './decimal-totals.mjs';
+import {id,today} from './core.mjs';
 export const cashierName=o=>o?.cashierName||'Tidak tercatat';
 export const activeShift=(s,store)=> (s.cashierShifts||[]).find(x=>!x.closedAt&&x.cashierId===s.me?.id&&(!store||x.storeId===store));
 export function requireShift(s,store){

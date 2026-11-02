@@ -2,6 +2,10 @@ import {existsSync,readFileSync,lstatSync,mkdirSync,renameSync,rmdirSync} from '
 import {dirname,resolve,join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
+// Patch 072+ uses files that the historical rollback used to remove.
+if (readFileSync(join(root,'pos/index.html'),'utf8').includes('pwa.mjs')) {
+ throw Error('Rollback 027 tidak cocok dengan proyek aktif ini. Tidak ada file dipindahkan. Gunakan riwayat Git untuk rollback terencana.');
+}
 if (!readFileSync(join(root,'pos/app.js'),'utf8').includes('/rest/v1/rpc/pos_mutate_027')) {
  throw Error('Timpa seluruh isi ZIP rollback 027 terlebih dahulu.');
 }

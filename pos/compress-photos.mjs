@@ -1,4 +1,4 @@
-import { compressStoredPhotos } from './photo-maintenance.mjs?v=41';
+import { compressStoredPhotos } from './photo-maintenance.mjs';
 const $ = id => document.getElementById(id);
 let config, session, expires = 0, running = false, stop = false;
 const labels = { product: 'produk', profile: 'profil', ktp: 'KTP', evidence: 'bukti reject' };

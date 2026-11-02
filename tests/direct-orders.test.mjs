@@ -1,3 +1,4 @@
+// Compatibility test: historical SQL 018 sorting flow, before direct-stock 019.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {randomUUID as id} from 'node:crypto';
@@ -7,7 +8,7 @@ for(const install of ['fresh','upgrade']){
  const db=new PGlite();
  try{
  await db.exec("create role anon;create role authenticated;create role service_role;create schema auth;create table auth.users(id uuid primary key,email text);create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;");
- const sql=fs.readFileSync('database/pos.sql','utf8');
+ const sql=fs.readFileSync('database/pos.sql','utf8').split('-- Bagian: sections/operations/direct-stock-no-sorting.sql')[0];
  const owner=id();
  if(install==='upgrade'){
   await db.exec(sql.split('-- Upgrade setelah 008.')[0]);

@@ -1,6 +1,6 @@
-import {isPaymentLabel} from './payment-methods.mjs?v=84';
-import {today} from './core.mjs?v=10';
-import {sumProducts} from './decimal-totals.mjs?v=66';
+import {isPaymentLabel} from './payment-methods.mjs';
+import {today} from './core.mjs';
+import {sumProducts} from './decimal-totals.mjs';
 export const isOwner=s=>s.me?.role==='owner';
 export const tableLabel=value=>value?'Meja '+value:'Tanpa meja / takeaway';
 export const stable=value=>JSON.stringify(value,(_,v)=>v&&typeof v==='object'&&!Array.isArray(v)?Object.fromEntries(Object.entries(v).sort(([a],[b])=>a.localeCompare(b))):v);

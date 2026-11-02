@@ -1,0 +1,8 @@
+{
+  "remove": [
+    {
+      "path": "hier shifts, transaction log and cashier names on receipts\uf022",
+      "sha256": "7f8d1abd2967436f7ac61add76914713a38da3748ea71c810adb60efc1259564"
+    }
+  ]
+}

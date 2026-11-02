@@ -10,3 +10,13 @@ node_modules/
 package.json
 package-lock.json
 UPDATE.txt
+
+# Local backups, instructions and private project metadata
+.git/
+.env
+.env.*
+maniac-foto-*/
+**/*.txt
+**/*.log
+test-results/
+playwright-report/

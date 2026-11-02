@@ -1,4 +1,4 @@
-import {escape as e} from './core.mjs?v=60';
+import {escape as e} from './core.mjs';
 const logos = new Map();
 export function storeLogo(value='') {
   const data=String(value||'');if(!data)return '';

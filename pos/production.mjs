@@ -1,4 +1,4 @@
-import { itemTypes } from "./catalog.mjs?v=59";
+import { itemTypes } from "./catalog.mjs";
 const SCALE = 1000000;
 export const unitLabel = {
   kg: "kg",

@@ -1,5 +1,5 @@
-import {orderTotal} from './amounts.mjs?v=28';
-import {checkOrder, requirements} from './order-stock.mjs?v=28';
+import {orderTotal} from './amounts.mjs';
+import {checkOrder, requirements} from './order-stock.mjs';
 
 // One committed IndexedDB record contains both the last server snapshot and outbox.
 // Every writer uses the same Web Lock, including reads that replace the snapshot.

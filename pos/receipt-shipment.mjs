@@ -1,4 +1,4 @@
-import { isLegacyStock } from './catalog.mjs?v=77';
+import { isLegacyStock } from './catalog.mjs';
 
 export function weighingTotals(rows, purchase = 0, shipping = 0) {
   if (!Array.isArray(rows) || rows.length > 1000) throw Error('Maksimal 1.000 penimbangan');

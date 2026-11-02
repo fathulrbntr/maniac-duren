@@ -1,6 +1,6 @@
-import {escape as e,id} from './core.mjs?v=60';
-import {compressPhoto} from './photo-compression.mjs?v=41';
-import {storeProfile,receiptHeader,loadStoreLogo} from './store-profile.mjs?v=64';
+import {escape as e,id} from './core.mjs';
+import {compressPhoto} from './photo-compression.mjs';
+import {storeProfile,receiptHeader,loadStoreLogo} from './store-profile.mjs';
 export function storesPage(state) {
   return `<div class="intro"><div><h2>Data toko</h2><p class="muted">Nama, alamat, telepon, dan logo untuk header struk tiap outlet.</p></div>${state.me?.role==='owner'?'<button class="primary" data-master="stores">Tambah toko</button>':''}</div><section class="panel"><div class="table-wrap"><table><thead><tr><th>NAMA TOKO</th><th>ALAMAT</th><th>NOMOR TELEPON</th><th>LOGO STRUK</th><th>AKSI</th></tr></thead><tbody>${state.stores.map(s=>`<tr><td><b>${e(s.name)}</b></td><td class="store-address-cell">${e(s.address??s.location??'—')}</td><td>${e(s.phone||'—')}</td><td>${s.hasLogo||s.logo?'Tersimpan':'Belum diunggah'}</td><td><button class="small" data-edit-kind="stores" data-edit-id="${e(s.id)}">Edit toko</button></td></tr>`).join('')||'<tr><td colspan="5" class="empty">Belum ada toko.</td></tr>'}</tbody></table></div></section>`;
 }
