@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {emptyState,today} from '../pos/core.mjs';
 import {dashboardRange,validDashboardDates,dashboardSales,dashboardStock,dashboardRejects,dashboardCustomers,dashboardTabs} from '../pos/dashboard-data.mjs';
 import {dashboardPage,bindDashboard,resetDashboard,followDashboardStore} from '../pos/dashboard-ui.mjs';
+import {systemDock} from '../pos/system-dock.mjs';
 import {Node} from './variant-dom.mjs';
 const day=today(),range={from:day,to:day,store:'a'};
 function fixture(){
@@ -47,7 +48,7 @@ test('dashboard handlers switch period/store/tabs without requests, validate dat
  const s=fixture(),root=new Node(),globals={document:globalThis.document,fetch:globalThis.fetch};let active='a',reads=0,busy=false;const messages=[];
  globalThis.document={querySelector:q=>root.querySelector(q),querySelectorAll:q=>root.querySelectorAll(q)};globalThis.fetch=()=>{throw Error('No network during dashboard navigation');};
  const ctx={render,changeStore:next=>{active=next;followDashboardStore();render();return true;},isBusy:()=>busy,refresh:async()=>{reads++;throw Error('Jaringan terputus');},toast:m=>messages.push(m)};
- function render(){root.innerHTML=dashboardPage(s,active);bindDashboard(s,active,ctx);}
+ function render(){root.innerHTML=dashboardPage(s,active)+systemDock('dashboard',s.access);bindDashboard(s,active,ctx);}
  try{
   resetDashboard();render();assert(root.querySelector('.dash-profile'));assert.equal(root.querySelectorAll('[data-dash-tab]').length,5);assert(root.textContent.includes('670.000'));assert(!dashboardPage(s,active).includes('<test>'));
   const bar=root.querySelector('[data-dash-bar="2"]');bar.getAttribute=k=>bar.attrs[k];await bar.fire('click');assert.match(root.querySelector('#dash-chart-detail').textContent,/270.000/);

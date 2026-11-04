@@ -27,6 +27,13 @@ export function createSidebarController(root = document, viewport = window) {
   }
   const media = viewport.matchMedia?.("(max-width: 900px)");
   const mobile = () => !!media?.matches;
+  let opener = null;
+  function restoreFocus() {
+    const target = opener?.isConnected && !opener.closest("#pos-sidebar")
+      ? opener
+      : root.querySelector("#system-dock-menu") || root.querySelector("#sidebar-toggle");
+    target?.focus();
+  }
   const write = () => {
     try {
       storage?.setItem(
@@ -64,21 +71,23 @@ export function createSidebarController(root = document, viewport = window) {
       button.title = shown ? "Tutup sidebar" : "Buka sidebar";
     });
   }
-  function close(restoreFocus = true) {
+  function close(returnFocus = true) {
     if (mobile()) mobileOpen = false;
     else {
       collapsed = true;
       write();
     }
     sync();
-    if (restoreFocus) root.querySelector("#sidebar-toggle")?.focus();
+    if (returnFocus) restoreFocus();
   }
   root.addEventListener("click", (event) => {
     if (event.target.closest("[data-sidebar-close]")) {
       close();
       return;
     }
-    if (!event.target.closest("[data-sidebar-toggle]")) return;
+    const toggle = event.target.closest("[data-sidebar-toggle]");
+    if (!toggle) return;
+    if (!(mobile() ? mobileOpen : !collapsed)) opener = toggle;
     if (mobile()) mobileOpen = !mobileOpen;
     else {
       collapsed = !collapsed;
@@ -87,7 +96,7 @@ export function createSidebarController(root = document, viewport = window) {
     sync();
     if ((mobile() && mobileOpen) || (!mobile() && !collapsed))
       root.querySelector("#pos-sidebar [data-sidebar-toggle]")?.focus();
-    else root.querySelector("#sidebar-toggle")?.focus();
+    else restoreFocus();
   });
   root.addEventListener("keydown", (event) => {
     if (!mobile() || !mobileOpen || root.querySelector("dialog[open]")) return;
@@ -145,6 +154,7 @@ export function createSidebarController(root = document, viewport = window) {
       mobileOpen = false;
     },
     reset() {
+      opener = null;
       mobileOpen = false;
       scroll = 0;
       root.body?.classList.remove("sidebar-mobile-open");

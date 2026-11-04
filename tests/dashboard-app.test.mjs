@@ -20,7 +20,7 @@ globalThis.fetch=async endpoint=>{
  throw Error('Unexpected network request: '+endpoint);
 };
 await import('../pos/app.js?dashboard-integration');
-assert(root.querySelector('.dashboard-shell'));assert(root.querySelector('.dash-dock'));assert.equal(reads,1);assert(root.querySelector('.dash-metric').textContent.includes('5.000'));
+assert(root.querySelector('.dashboard-shell'));assert(root.querySelector('.system-dock'));assert.equal(reads,1);assert(root.querySelector('.dash-metric').textContent.includes('5.000'));
 const select=async(selector,value)=>{const el=root.querySelector(selector);el.value=value;await el.fire('change');};
 await select('#dash-store','b');assert.equal(root.querySelector('#active-store').value,'b');assert.equal(manager.read().store,'b');assert.equal(reads,1);
 await select('#dash-store','');assert(root.querySelector('.dash-metric').textContent.includes('5.000'));assert.equal(root.querySelector('#active-store').value,'b');

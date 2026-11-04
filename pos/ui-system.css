@@ -34,7 +34,6 @@ h1,h2,h3,h4 { font-weight:var(--weight-bold); letter-spacing:0; font-style:norma
 .dash-tabs button[aria-pressed=true] { background:var(--action-bg); color:var(--action-ink); border-color:var(--action-bg); box-shadow:none; }
 .dash-tabs button[aria-pressed=true]::after { background:currentColor; }
 .dash-store select,.dash-period select { border-radius:var(--radius-control); font-size:var(--text-control); font-weight:var(--weight-normal); color-scheme:inherit; background:var(--surface-soft); color:var(--ink); border-color:var(--line); }
-.dash-dock { background:var(--surface); }
 button,.button { border-radius:var(--radius-control); font-weight:var(--weight-semibold); }
 .toolbar button,.team-actions button,.intro-actions button,.report-actions button,.doc-toolbar button,
 .modal-actions button,.inventory-workspace .inv-add,.inventory-workspace .inv-transfer {
