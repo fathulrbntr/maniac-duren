@@ -1,11 +1,11 @@
 // Sidebar grouping only. Existing page IDs, permissions and transaction flow are unchanged.
 export const sections = [
   { id: 'utama', label: 'Ringkasan', pages: ['dashboard'] },
-  { id: 'pelayanan', label: 'Pelayanan & Kasir', pages: ['shifts', 'orders'] },
+  { id: 'inventory', label: '01 · Gudang & Penerimaan', pages: ['stock', 'products', 'suppliers'] },
+  { id: 'pelayanan', label: '02 · Pelayanan & Kasir', pages: ['shifts', 'orders'] },
+  { id: 'kitchen', label: '03 · Kitchen', pages: ['kitchen', 'production', 'recipes'] },
+  { id: 'laporan', label: '04 · Laporan & Administrasi', pages: ['reports', 'documents'] },
   { id: 'potong', label: 'Tukang Potong', pages: ['waste'] },
-  { id: 'kitchen', label: 'Kitchen', pages: ['kitchen', 'production', 'recipes'] },
-  { id: 'inventory', label: 'Gudang & Stok', pages: ['stock', 'products', 'suppliers'] },
-  { id: 'laporan', label: 'Administrasi', pages: ['reports', 'documents'] },
   { id: 'manajemen', label: 'Pengelolaan', pages: ['crm', 'discounts', 'employees', 'stores'] },
   { id: 'pengaturan', label: 'Pengaturan', pages: ['payments', 'devices'] },
   { id: 'bantuan', label: 'Karyawan & Panduan', pages: ['attendance', 'guide'] },

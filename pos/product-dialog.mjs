@@ -42,13 +42,13 @@ export function productDialog({
     savedProducts = null,
     pendingCategory = null;
   const d = modal(
-    editing ? "Edit Product" : "Add Product",
+    editing ? "Edit barang" : "Tambah barang",
     `
  <fieldset class="product-entry-fields">
  <div class="product-entry-top">
  ${field("Nama Barang", `<input name="name" value="${e(p.name || "")}" required maxlength="100" autocomplete="off" ${p.variantGroupId?'readonly':''}>`, 'product-name-field')}
  <div class="field product-category-field"><span id="product-category-label">Kategori</span>${editing?`<details class="product-category-info"><summary data-product-category-names>${e(posCategoryName(state,p))}</summary><p>Kategori mengikuti Master Barang, Stok, dan POS. Gunakan Kelola kategori untuk mengubah pilihan.</p></details>`:`<select name="posCategory" aria-labelledby="product-category-label"><option value="">Semua</option>${options(Object.fromEntries(posCategories(state).map(c=>[c.id,c.name])), '')}</select><span data-product-category-names hidden>Semua</span>`}</div>
- <div class="product-photo-editor"><div class="product-photo-frame"><img id="photo-preview" alt="Pratinjau foto produk" ${photo ? `src="${e(photo)}"` : "hidden"}></div><div class="product-photo-controls"><b>Foto Product</b><label class="product-upload"><span>Choose file</span><input id="photo-file" type="file" accept="image/jpeg,image/png,image/webp" aria-label="Pilih foto produk" aria-describedby="product-photo-help"></label><button type="button" id="remove-photo" ${photo?'':'hidden'}>Hapus foto</button></div><small id="photo-dummy-note" hidden></small><p id="photo-status" role="status" hidden></p></div>
+ <div class="product-photo-editor"><div class="product-photo-frame"><img id="photo-preview" alt="Pratinjau foto produk" ${photo ? `src="${e(photo)}"` : "hidden"}></div><div class="product-photo-controls"><b>Foto produk</b><label class="product-upload"><span>Pilih foto</span><input id="photo-file" type="file" accept="image/jpeg,image/png,image/webp" aria-label="Pilih foto produk" aria-describedby="product-photo-help"></label><button type="button" id="remove-photo" ${photo?'':'hidden'}>Hapus foto</button></div><small id="photo-dummy-note" hidden></small><p id="photo-status" role="status" hidden></p></div>
  ${field("Jenis Barang", `<select name="itemType" ${locked ? "disabled" : ""}>${options(itemTypes, p.itemType)}</select>`, 'product-type-field')}<input type="hidden" name="category" value="${e(p.category||'')}">
  ${field("Satuan stock", `<select name="stockUnit" ${locked ? "disabled" : ""}>${options(stockUnits, p.stockUnit)}</select>`, 'product-unit-field')}
  </div>
@@ -60,7 +60,7 @@ export function productDialog({
  ${field("Harga Beli /butir", `<input name="buyPricePiece" type="number" min="0" max="1000000000000" step="any" inputmode="decimal" value="${e(p.buyPricePiece ?? "")}">`, 'product-piece-buy-field')}
  ${field("Barcode", `<input name="barcode" value="${e(p.barcode || "")}" maxlength="80" autocomplete="off" title="Opsional. Ketik atau scan barcode.">`, 'product-barcode-field')}
  </div>${editing?field("Keterangan varian", `<input name="variant" value="${e(p.variant || "")}" maxlength="100" ${p.variantGroupId?'readonly':''}>`, 'product-variant-note'):''}</fieldset>
- ${editing?'':`<div class="product-variant-action"><input type="checkbox" name="hasVariants" hidden><button type="button" data-toggle-product-variants aria-expanded="false" aria-controls="variant-product-fields">+ Add Variant</button></div><fieldset id="variant-product-fields" hidden disabled>${variantEditorMarkup()}</fieldset>`}
+ ${editing?'':`<div class="product-variant-action"><input type="checkbox" name="hasVariants" hidden><button type="button" data-toggle-product-variants aria-expanded="false" aria-controls="variant-product-fields">+ Tambah varian</button></div><fieldset id="variant-product-fields" hidden disabled>${variantEditorMarkup()}</fieldset>`}
  <details class="product-extra"><summary>Stok & informasi tambahan</summary>
  <p class="muted">${locked ? "Jenis dan satuan mengikuti barang yang sudah terdaftar." : "Gunakan gram untuk berat bahan dan ml untuk cairan."}</p>
  <p id="product-photo-help" class="muted">Foto JPG, PNG, atau WebP otomatis diperkecil hingga maksimal 2 MB.</p>
@@ -101,7 +101,7 @@ export function productDialog({
     d.querySelector(".product-stock-editor").hidden = enabled;
     if(enabled){c("adjustStock").checked=false;toggleStock();}
     const button = d.querySelector('[data-toggle-product-variants]');
-    if(button){button.textContent=enabled?'− Tanpa Variant':'+ Add Variant';button.setAttribute('aria-expanded',String(enabled));}
+    if(button){button.textContent=enabled?'− Tanpa varian':'+ Tambah varian';button.setAttribute('aria-expanded',String(enabled));}
     d.classList.toggle('has-product-variants',enabled);
     d.querySelector('[type="submit"]').textContent=enabled?'Simpan semua varian':'Simpan';
   }

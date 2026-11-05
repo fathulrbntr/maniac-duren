@@ -1,3 +1,4 @@
+import { formSection } from "./workflow-ui.mjs";
 import { escape as e, id, today, num, money } from './core.mjs';
 import { isLegacyStock } from './catalog.mjs';
 import { weighingTotals, shipmentTotals, validateShipment } from './receipt-shipment.mjs';
@@ -7,7 +8,7 @@ export function openWeighingReceipt(state, store, ctx) {
   const options = (kind, selected) => state[kind].map(p => `<option value="${e(p.id)}" ${p.id === selected ? 'selected' : ''}>${e(p.name)}</option>`).join('');
   const products = state.products.filter(isLegacyStock);
   if (!products.length || !state.suppliers.length || !state.stores.length) return ctx.toast('Tambahkan produk, store dan supplier terlebih dahulu.');
-  const d = ctx.modal('Barang masuk', `<div class="form-grid receipt-header-fields"><label class="field">Tanggal masuk<input name="date" type="date" value="${today()}" max="${today()}" required></label><label class="field">Store<select name="storeId">${options('stores', store)}</select></label><label class="field">Supplier<select name="supplierId">${options('suppliers')}</select></label><label class="field">Nomor nota<input name="invoiceNo" placeholder="Contoh: NOTA-001" maxlength="100" required></label></div><div class="receipt-section-head"><h3>Produk dalam nota</h3><span data-product-count></span></div><div class="receipt-lines" data-receipt-lines></div><button type="button" class="receipt-add" data-add-product>+ Tambah produk</button><label class="field receipt-shipping">Ongkir bersama (Rp)<input name="shippingCost" type="number" min="0" step="any" value="0" required></label><p class="form-help">Ongkir dibagi otomatis menurut berat aktual setiap produk.</p><div data-weigh-summary class="weigh-summary receipt-total" aria-live="polite"></div><label class="field">Nomor surat jalan / catatan<input name="note" maxlength="300"></label><p class="form-help">Stok seluruh produk masuk sekaligus setelah penurunan barang dikonfirmasi selesai.</p>`, 'Penurunan selesai · masukkan ke stok');
+  const d = ctx.modal('Penerimaan barang', `${formSection(1, 'Identitas pengiriman', 'Isi supplier, nomor nota, tanggal, dan outlet penerima.')}<div class="form-grid receipt-header-fields"><label class="field">Tanggal masuk<input name="date" type="date" value="${today()}" max="${today()}" required></label><label class="field">Store<select name="storeId">${options('stores', store)}</select></label><label class="field">Supplier<select name="supplierId">${options('suppliers')}</select></label><label class="field">Nomor nota<input name="invoiceNo" placeholder="Contoh: NOTA-001" maxlength="100" required></label></div>${formSection(2, "Rincian nota & timbang aktual", "Tambahkan semua jenis durian dalam pengiriman. Catat hasil timbang untuk setiap produk.")}<div class="receipt-section-head"><h3>Produk dalam pengiriman</h3><span data-product-count></span></div><div class="receipt-lines" data-receipt-lines></div><button type="button" class="receipt-add" data-add-product>+ Tambah produk</button><label class="field receipt-shipping">Ongkir bersama (Rp)<input name="shippingCost" type="number" min="0" step="any" value="0" required></label><p class="form-help">Ongkir dibagi otomatis menurut berat aktual setiap produk.</p>${formSection(3, "Periksa modal & selesaikan", "Stok masuk setelah seluruh produk ditimbang dan penerimaan dikonfirmasi.")}<div data-weigh-summary class="weigh-summary receipt-total" aria-live="polite"></div><label class="field">Nomor surat jalan / catatan<input name="note" maxlength="300"></label><p class="form-help">Stok seluruh produk masuk sekaligus setelah penurunan barang dikonfirmasi selesai.</p>`, 'Selesaikan penerimaan');
   d.classList.add('receipt-shipment-dialog');
   const f = d.querySelector('form'), requestId = id(), error = d.querySelector('#form-error');
   const list = d.querySelector('[data-receipt-lines]'), submit = f.querySelector('[type=submit]');
@@ -37,6 +38,7 @@ export function openWeighingReceipt(state, store, ctx) {
       });
       d.querySelector('[data-weigh-summary]').innerHTML = `<b>${lines.length} produk · ${num(t.kg)} kg · ${num(t.pieces)} butir</b><dl><div><dt>Total harga nota</dt><dd>${money(t.purchase)}</dd></div><div><dt>Ongkir bersama</dt><dd>${money(t.shipping)}</dd></div><div class="receipt-grand-total"><dt>Total modal</dt><dd>${money(t.total)}</dd></div></dl>`;
       submit.disabled = saving || lines.some(line => !line.weighings.length);
+      d.querySelector('[data-product-count]').textContent = `${lines.filter(line => line.weighings.length).length} / ${lines.length} produk ditimbang`;
       error.textContent = '';
     } catch (err) { error.textContent = err.message; submit.disabled = true; }
   };
@@ -47,7 +49,7 @@ export function openWeighingReceipt(state, store, ctx) {
     const line = {id:id(),productId:product.id,purchaseCost:'',weighings:[]};
     lines.push(line);
     const card = document.createElement('section'); card.className = 'receipt-product';
-    card.innerHTML = `<div class="receipt-product-head"><h4 data-line-title></h4><button type="button" data-remove-product class="receipt-remove">Hapus</button></div><div class="form-grid"><label class="field">Produk<select data-product required></select></label><label class="field">Harga nota produk (Rp)<input name="purchaseCost" data-purchase type="number" min="0" step="any" required placeholder="0"></label></div><div class="receipt-product-actions"><button type="button" data-weigh-open>Catat penimbangan</button></div><div data-line-summary class="receipt-line-summary"></div>`;
+    card.innerHTML = `<div class="receipt-product-head"><h4 data-line-title></h4><button type="button" data-remove-product class="receipt-remove">Hapus</button></div><div class="form-grid"><label class="field">Produk<select data-product required></select></label><label class="field">Total harga produk di nota (Rp)<input name="purchaseCost" data-purchase type="number" min="0" step="any" required placeholder="0"></label></div><div class="receipt-product-actions"><button type="button" data-weigh-open>Catat timbang aktual</button></div><div data-line-summary class="receipt-line-summary"></div>`;
     list.append(card);
     card.querySelector('[data-product]').onchange = ev => {
       const next = ev.target.value;
@@ -74,9 +76,9 @@ export function openWeighingReceipt(state, store, ctx) {
       if (state.receiptShipmentVersion !== 82) throw Error('Jalankan database/receipt-shipment-082.sql lalu muat ulang POS.');
       const p = payload(), t = validateShipment(p, state);
       if (!confirm(`Penurunan barang sudah selesai?\nNota ${p.invoiceNo}\n${lines.length} produk · ${num(t.kg)} kg · ${num(t.pieces)} butir\nTotal modal ${money(t.total)}\nSeluruh produk akan dimasukkan ke stok sekaligus.`)) return;
-      saving = true;
+      saving = true; update();
       if (await ctx.mutate('receipt_batch', p)) { d.close(); ctx.render(); ctx.toast(`Nota ${p.invoiceNo} tersimpan · ${lines.length} produk · ${num(t.kg)} kg · ${num(t.pieces)} butir`); }
-    } catch (err) { error.textContent = err.message; } finally { saving = false; }
+    } catch (err) { error.textContent = err.message; } finally { saving = false; submit.disabled = lines.some(line => !line.weighings.length); }
   };
   addLine();
   return d;
@@ -86,7 +88,7 @@ function openLineWeighing(line, products, d, update) {
   let rows = line.weighings;
     const w = document.createElement('dialog');
     w.className = 'modal weighing-dialog';
-    w.innerHTML = `<div class="modal-head"><h2>Riwayat penimbangan</h2><button type="button" data-close aria-label="Tutup">×</button></div><p><b>${e(products.find(p => p.id === line.productId)?.name)}</b></p><p>Setiap baris mencatat berat dan butir dalam satu kali timbang.</p><form class="weigh-entry"><div class="form-grid"><label class="field">Berat (kg)<input name="kg" type="number" min="0.000000001" step="any" required autofocus></label><label class="field">Butir<input name="pieces" type="number" min="1" step="1" required></label></div><button class="primary" type="submit">Tambah timbang</button><button type="button" data-reset hidden>Batal edit</button><p class="error" data-error></p></form><div data-history class="table-wrap"></div><p data-total aria-live="polite"></p><div class="modal-actions"><button type="button" data-close class="primary">Selesai menghitung</button></div>`;
+    w.innerHTML = `<div class="modal-head"><h2>Catat timbang aktual</h2><button type="button" data-close aria-label="Tutup">×</button></div><p><b>${e(products.find(p => p.id === line.productId)?.name)}</b></p><p class="form-help">Masukkan berat dan jumlah butir untuk setiap penimbangan. Catatan terbaru tampil paling atas.</p><form class="weigh-entry"><div class="form-grid"><label class="field">Berat (kg)<input name="kg" type="number" min="0.000000001" step="any" required autofocus></label><label class="field">Butir<input name="pieces" type="number" min="1" step="1" required></label></div><button class="primary" type="submit">Tambah timbang</button><button type="button" data-reset hidden>Batal edit</button><p class="error" data-error></p></form><div data-history class="table-wrap"></div><p data-total aria-live="polite"></p><div class="modal-actions"><button type="button" data-close class="primary">Selesai menghitung</button></div>`;
     document.body.append(w);
     const wf = w.querySelector('form');
     let editing = null;
