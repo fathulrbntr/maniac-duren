@@ -905,6 +905,7 @@ function render() {
   };
   if (view === "dashboard")
     bindDashboard(state, store, {
+      readShifts: shiftContext.readShifts,
       render,
       refresh,
       toast,
