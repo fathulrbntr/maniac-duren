@@ -5,7 +5,7 @@ import { navigation, sections, visibleSections } from '../pos/navigation.mjs';
 const pages = sections.flatMap(x => x.pages);
 assert.equal(new Set(pages).size, pages.length, 'Each menu must appear only once');
 assert.deepEqual(visibleSections({}).flatMap(x=>x.pages), ['guide']);
-assert.deepEqual(visibleSections({sell:true,attendance:true}).flatMap(x=>x.pages), ['orders','shifts','kitchen','attendance','devices','guide']);
+assert.deepEqual(visibleSections({sell:true,attendance:true}).flatMap(x=>x.pages), ['shifts','orders','kitchen','devices','attendance','guide']);
 assert(!visibleSections({master:true}).flatMap(x=>x.pages).includes('employees'));
 assert(!pages.includes('losses'),'One shared reject/waste menu');
 assert(pages.includes('waste')&&pages.includes('reports')&&pages.includes('documents'));
@@ -13,8 +13,8 @@ assert(!pages.includes('batches')&&!pages.includes('finance')&&!pages.includes('
 assert(visibleSections({trace:true}).flatMap(x=>x.pages).includes('reports'));
 assert(visibleSections({waste:true}).flatMap(x=>x.pages).includes('reports'));
 const labels = Object.fromEntries(pages.map(x=>[x,x]));
-const markup = navigation(labels,'orders',()=>'<svg></svg>',null,{utama:true,inventory:true});
-assert.match(markup,/data-nav-group="utama" open/);
+const markup = navigation(labels,'orders',()=>'<svg></svg>',null,{pelayanan:true,inventory:true});
+assert.match(markup,/data-nav-group="pelayanan" open/);
 assert.match(markup,/data-nav-group="inventory" >/);
 assert.equal((markup.match(/aria-current="page"/g)||[]).length,1);
 

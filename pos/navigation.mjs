@@ -1,11 +1,14 @@
+// Sidebar grouping only. Existing page IDs, permissions and transaction flow are unchanged.
 export const sections = [
-  { id: 'utama', label: 'Utama', pages: ['dashboard', 'orders', 'shifts', 'kitchen'] },
-  { id: 'inventory', label: 'Inventory', pages: ['products', 'stock', 'waste'] },
-  { id: 'produksi', label: 'Produksi', pages: ['recipes', 'production'] },
-  { id: 'laporan', label: 'Laporan & Administrasi', pages: ['reports', 'documents'] },
-  { id: 'manajemen', label: 'Manajemen', pages: ['crm', 'discounts', 'employees', 'attendance', 'stores', 'suppliers'] },
+  { id: 'utama', label: 'Ringkasan', pages: ['dashboard'] },
+  { id: 'pelayanan', label: 'Pelayanan & Kasir', pages: ['shifts', 'orders'] },
+  { id: 'potong', label: 'Tukang Potong', pages: ['waste'] },
+  { id: 'kitchen', label: 'Kitchen', pages: ['kitchen', 'production', 'recipes'] },
+  { id: 'inventory', label: 'Gudang & Stok', pages: ['stock', 'products', 'suppliers'] },
+  { id: 'laporan', label: 'Administrasi', pages: ['reports', 'documents'] },
+  { id: 'manajemen', label: 'Pengelolaan', pages: ['crm', 'discounts', 'employees', 'stores'] },
   { id: 'pengaturan', label: 'Pengaturan', pages: ['payments', 'devices'] },
-  { id: 'bantuan', label: 'Bantuan', pages: ['guide'] },
+  { id: 'bantuan', label: 'Karyawan & Panduan', pages: ['attendance', 'guide'] },
 ];
 export function visibleSections(access) {
   const allowed = access ? {
