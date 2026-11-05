@@ -31,6 +31,9 @@ Tabel ini menjelaskan dependensi, bukan perintah untuk mengulang semua SQL pada 
 | 083 | `cashier-shifts-083.sql` | Shift dan rekonsiliasi kas |
 | 084 | `payment-methods-084.sql` | Pengaturan metode pembayaran |
 | 085 | `crm-loyalty-085.sql` | Member dan poin |
+| 092 | `cash-deposits-092.sql` | Setoran tunai kasir, bukti bank, dan saldo cash per outlet |
+
+Patch 092 dipasang setelah rantai fitur sampai 085. Dashboard 091 dan dock 090 tidak memiliki SQL tambahan. Jangan mengulang SQL lama sesudah 092. Panduan pemasangan dan definisi saldo ada di `docs/PASANG-PATCH-092.md`. `tests/cash-deposits-db.test.mjs` menguji rantai lengkap, tanggal/identitas dari server, batas saldo, hak akses, bukti, retry, pembatalan, dan pemasangan ulang 092.
 
 `seeds/import-durian-dan-turunan.sql` adalah bahan seed historis, bukan installer siap jalan: baris buah memiliki harga `null`, sementara fondasi mensyaratkan harga positif. Harga nyata perlu ditentukan sebelum dipakai untuk instalasi baru. Pengujian mengisi harga contoh hanya dalam database fixture; audit tidak mengubah harga produk operasional.
 

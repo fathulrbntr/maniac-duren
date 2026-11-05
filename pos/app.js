@@ -579,6 +579,8 @@ async function mutate(action, payload, { throwOnError = false } = {}) {
             ? await request("/rest/v1/rpc/pos_product_variants_save", {
                 payload,
               })
+            : ["cash_deposit_save", "cash_deposit_void"].includes(action)
+              ? await request("/rest/v1/rpc/pos_cash_deposit_mutate", { action, payload })
             : ["cashier_shift_open", "cashier_shift_close"].includes(action)
               ? await request("/rest/v1/rpc/pos_cashier_shift_mutate", {
                   action,
@@ -855,6 +857,8 @@ function render() {
     getState: () => state,
     refresh,
     showLegacyReceipt: receipt,
+    readCashDeposits: (filters) => adminRpc("pos_cash_deposits_read", { filters }),
+    readDepositProof: (depositId) => adminRpc("pos_cash_deposit_proof", { deposit_id: depositId }),
     readShifts: async (filters) => {
       if (mode === "stock-demo") return readShiftsDemo(state, filters);
       const sessionId = activeSessionId,
@@ -905,6 +909,7 @@ function render() {
   };
   if (view === "dashboard")
     bindDashboard(state, store, {
+      ...shiftContext,
       readShifts: shiftContext.readShifts,
       render,
       refresh,

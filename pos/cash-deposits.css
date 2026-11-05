@@ -1,0 +1,14 @@
+.cash-deposit-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.shift-banner-actions{display:flex;gap:8px;justify-content:flex-end;align-items:center;flex-wrap:wrap}
+.cash-deposit-panel{margin:0 0 30px}.cash-deposit-panel .dash-section-head{flex-wrap:wrap;margin-bottom:14px}.cash-deposit-panel .dash-metrics{margin-bottom:10px}
+.cash-deposit-warning{color:var(--danger);font-size:var(--text-xs);margin-top:12px!important}
+.cash-deposit-dialog{width:min(620px,calc(100vw - 24px))}.cash-deposit-history{width:min(980px,calc(100vw - 24px))}
+.deposit-balance{padding:14px 16px;background:var(--surface-soft);border:1px solid var(--line);border-radius:var(--radius-control);margin:16px 0;display:flex;gap:12px;justify-content:space-between;flex-wrap:wrap}
+.cash-deposit-dialog .field{margin:14px 0}.cash-deposit-dialog input[readonly]{background:var(--surface-soft);color:var(--muted);cursor:default}
+.cash-deposit-dialog input[type=file]{max-width:100%;font-size:var(--text-sm)}
+.deposit-proof-preview{display:block;max-width:100%;max-height:340px;object-fit:contain;margin:16px auto;border:1px solid var(--line);border-radius:var(--radius-control)}
+.deposit-proof-preview[hidden]{display:none}.deposit-proof-full{display:block;max-width:100%;height:auto;margin:auto}
+.deposit-history-filters{display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:end}.deposit-history-filters .field{margin:0}
+.cash-deposit-history .table-wrap{max-width:100%;overflow-x:auto}.cash-deposit-history table{min-width:620px}.cash-deposit-history td small{display:block;color:var(--muted);margin:4px 0}
+.cash-deposit-history td button{font-size:var(--text-xs);margin:6px 4px 0 0;padding:6px 9px}.cash-deposit-dialog textarea{width:100%}
+@media(max-width:700px){.shift-banner{align-items:flex-start;flex-direction:column}.shift-banner-actions{justify-content:flex-start}.deposit-history-filters{grid-template-columns:1fr 1fr}.deposit-history-filters button{grid-column:1/-1}.cash-deposit-panel .dash-section-head{display:block}.cash-deposit-panel .cash-deposit-actions{margin-top:12px}}

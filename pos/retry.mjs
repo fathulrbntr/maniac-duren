@@ -10,6 +10,7 @@ export function setRetryScope(scope) {
   }
 }
 const tracked = new Set([
+  "cash_deposit_save", "cash_deposit_void",
   "crm_member_save", "crm_rule_save",
   "payment_settings_save", "cashier_shift_open", "cashier_shift_close",
   "document_save", "document_issue", "document_cancel", "letterhead_save", "expense_save", "expense_void",
@@ -67,6 +68,7 @@ export function reconcileRetry(state) {
   }
   const rows =
     {
+      cash_deposit_save: state.cashDepositEvents, cash_deposit_void: state.cashDepositEvents,
       document_save: state.adminEvents, document_issue: state.adminEvents, document_cancel: state.adminEvents, letterhead_save: state.adminEvents, expense_save: state.adminEvents, expense_void: state.adminEvents,
       crm_member_save: state.crmEvents, crm_rule_save: state.crmEvents,
       payment_settings_save: state.paymentSettingEvents || state.events,

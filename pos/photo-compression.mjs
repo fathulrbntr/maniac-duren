@@ -1,5 +1,6 @@
 // Shared by normal uploads and the owner-only maintenance page. No dependency.
 export const PHOTO_LIMITS = Object.freeze({
+  bankReceipt: { edge: 2000, minEdge: 1600, bytes: 700 * 1024, quality: [.94, .9, .86] },
   product: { edge: 960, minEdge: 640, bytes: 160 * 1024, quality: [.86, .8, .74] },
   profile: { edge: 480, minEdge: 320, bytes: 70 * 1024, quality: [.86, .8, .74] },
   ktp: { edge: 1600, minEdge: 1200, bytes: 450 * 1024, quality: [.92, .88, .84] },

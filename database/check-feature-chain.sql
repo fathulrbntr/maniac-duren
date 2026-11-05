@@ -11,5 +11,8 @@ from (values
  ('public.pos_cashier_shift_mutate(text,jsonb)'),
  ('public.pos_cashier_shifts_read(jsonb)'),
  ('public.pos_payment_settings_save(jsonb)'),
- ('public.pos_crm_read(jsonb)')
+ ('public.pos_crm_read(jsonb)'),
+ ('public.pos_cash_deposits_read(jsonb)'),
+ ('public.pos_cash_deposit_proof(uuid)'),
+ ('public.pos_cash_deposit_mutate(text,jsonb)')
 ) as expected(signature);

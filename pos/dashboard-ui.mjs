@@ -1,3 +1,4 @@
+import {depositPanel,bindDeposits} from './cash-deposits-ui.mjs';
 import {escape as e,today,money,num} from './core.mjs';
 import {productPhoto} from './product-photos.mjs';
 import {dashboardRange,validDashboardDates,dashboardTabs,dashboardSales,dashboardStock,dashboardRejects,dashboardCustomers} from './dashboard-data.mjs';
@@ -39,7 +40,7 @@ function financialPanel(s,f){
  return `<div class="dash-metrics dash-financial" aria-label="Profit, kerugian, dan aset">${metric('Profit / rugi bersih',financeValue(m.result),[['Laba kotor',financeValue(m.gross)],['Operasional',financeValue(m.operating)]],'Penjualan − HPP − waste − operasional tercatat')}${metric('Kerugian stok / waste',financeValue(m.loss),[],'Kehilangan modal tercatat; angka negatif adalah koreksi waste')}${metric('Estimasi nilai aset',financeValue(m.assets.total),m.assets.unknown?[['Nilai terhitung',money(m.assets.known)]]:[],'Modal sisa stok saat ini · termasuk bahan & reject; bukan nilai jual')}</div>${m.result===null||m.assets.unknown?'<p class="dash-note dash-finance-warning">Ada modal atau biaya yang belum lengkap. Periksa rincian pada Cetak laporan A4.</p>':''}`;
 }
 function transactionPanel(a,s,f){
- return `<div class="dash-metrics">${metric('Omzet',money(a.total),a.payments.map(p=>[p.name,money(p.total)]),'Penjualan lunas setelah diskon')}${metric('Transaksi',num(a.tx.length),a.payments.map(p=>[p.name,num(p.count)]),'Transaksi batal tidak dihitung')}</div>${financialPanel(s,f)}<div class="dash-sales-grid">${chart(a)}${topProducts(a)}</div>`;
+ return `<div class="dash-metrics">${metric('Omzet',money(a.total),a.payments.map(p=>[p.name,money(p.total)]),'Penjualan lunas setelah diskon')}${metric('Transaksi',num(a.tx.length),a.payments.map(p=>[p.name,num(p.count)]),'Transaksi batal tidak dihitung')}</div>${financialPanel(s,f)}${depositPanel(s,f.store)}<div class="dash-sales-grid">${chart(a)}${topProducts(a)}</div>`;
 }
 function stockPanel(s,f){
  const a=dashboardStock(s,f.store),assets=financeAccess(s)?inventoryAssets(s,f.store):null,action=allowed(s,'stock','produce')?link('Buka stok','stock'):link('Laporan','reports');
@@ -67,6 +68,7 @@ export function dashboardPage(s,activeStore){
 }
 export function bindDashboard(s,activeStore,ctx){
  const $=q=>document.querySelector(q);if(!$('#dash-period'))return;
+ bindDeposits(ctx,document.querySelector('.dash-workspace'));
  const canChange=()=>!ctx.isBusy?.();
  document.querySelectorAll('[data-dash-tab]').forEach(b=>b.onclick=()=>{if(!canChange())return;tab=b.dataset.dashTab;ctx.render();});
  $('#dash-period').onchange=ev=>{if(!canChange()){ev.target.value=period;return;}custom=dashboardRange(period,custom);period=ev.target.value;ctx.render();};
