@@ -2,14 +2,16 @@ import {depositPanel,bindDeposits} from './cash-deposits-ui.mjs';
 import {escape as e,today,money,num} from './core.mjs';
 import {productPhoto} from './product-photos.mjs';
 import {dashboardRange,validDashboardDates,dashboardTabs,dashboardSales,dashboardStock,dashboardRejects,dashboardCustomers} from './dashboard-data.mjs';
+import {stockCategoryButtons,stockSortOptions,filterDashboardStock} from './dashboard-data.mjs';
 
 import {dashboardReport,financeAccess,reportAccess,inventoryAssets,loadReportCash} from './dashboard-report.mjs';
 import {dashboardPrintHTML} from './dashboard-print.mjs';
 import {printWindow} from './report-export.mjs';
 
 let tab='transactions',period='day',allStores=false,custom={from:today(),to:today()};
+let stockCategory='all',stockSort='ready';
 const periods={day:'Hari ini',yesterday:'Kemarin',week:'Minggu ini',month:'Bulan ini',custom:'Pilih tanggal'};
-export function resetDashboard(){tab='transactions';period='day';allStores=false;custom={from:today(),to:today()};}
+export function resetDashboard(){tab='transactions';period='day';allStores=false;custom={from:today(),to:today()};stockCategory='all';stockSort='ready';}
 export function followDashboardStore(){allStores=false;}
 const allowed=(s,...keys)=>!s.access||keys.some(k=>s.access[k]);
 const filter=(s,activeStore)=>({...dashboardRange(period,custom),store:allStores?'':s.stores.find(x=>x.id===activeStore)?.id||s.stores[0]?.id||''});
@@ -44,7 +46,9 @@ function transactionPanel(a,s,f){
 }
 function stockPanel(s,f){
  const a=dashboardStock(s,f.store),assets=financeAccess(s)?inventoryAssets(s,f.store):null,action=allowed(s,'stock','produce')?link('Buka stok','stock'):link('Laporan','reports');
- return `<div class="dash-metrics">${metric('Produk tersedia',num(a.available),[],'Produk fisik dengan sisa stok lebih dari nol')}${metric('Stok kosong',num(a.empty),[],'Produk fisik yang perlu diperiksa')}${assets?metric('Estimasi nilai aset',financeValue(assets.total),[],'Modal sisa stok saat ini · termasuk bahan & reject'):''}</div><section class="dash-panel">${heading('Ringkasan stok','Posisi stok saat ini · setiap satuan ditampilkan terpisah',action)}<div class="dash-unit-chips">${[...a.units].map(([unit,qty])=>`<span>${num(qty)} <small>${e(unit)}</small></span>`).join('')}</div>${a.rows.length?`<ul class="dash-records">${a.rows.slice(0,12).map(r=>`<li><div><h3>${e(r.name)}</h3><p>${r.qty>0?(r.reject?num(r.reject)+' kg termasuk reject':'Stok fisik tersedia'):'Stok kosong'}${r.pieces?' · '+num(r.pieces)+' butir':''}</p></div><strong>${num(r.qty)} <small>${e(r.unit)}</small></strong></li>`).join('')}</ul><p class="dash-note">Menampilkan ${Math.min(12,a.rows.length)} dari ${a.rows.length} produk. Produk kosong ditampilkan lebih dulu.</p>`:empty('Belum ada produk stok','Tambahkan master produk dan catat penerimaan barang.')}</section>`;
+ const visible=filterDashboardStock(s,a,{category:stockCategory,sort:stockSort}),categoryLabel=stockCategoryButtons.find(([key])=>key===visible.category)[1];
+ const controls=`<div class="dash-stock-controls"><div class="dash-stock-categories" role="group" aria-label="Kategori ringkasan stok">${stockCategoryButtons.map(([key,label])=>`<button type="button" data-dash-stock-category="${key}" aria-pressed="${key===visible.category}">${label}</button>`).join('')}</div><label class="dash-stock-sort" for="dash-stock-sort"><span>Urutkan</span><select id="dash-stock-sort" aria-label="Urutkan ringkasan stok">${Object.entries(stockSortOptions).map(([key,label])=>`<option value="${key}" ${key===visible.sort?'selected':''}>${label}</option>`).join('')}</select></label></div>`;
+ return `<div class="dash-metrics">${metric('Produk tersedia',num(a.available),[],'Semua kategori · produk fisik dengan sisa stok lebih dari nol')}${metric('Stok kosong',num(a.empty),[],'Semua kategori · produk fisik yang perlu diperiksa')}${assets?metric('Estimasi nilai aset',financeValue(assets.total),[],'Semua kategori · modal sisa stok, termasuk bahan & reject'):''}</div><section class="dash-panel dash-stock-panel">${heading('Ringkasan stok','Posisi stok saat ini · setiap satuan ditampilkan terpisah',action)}${controls}<div class="dash-stock-results" aria-live="polite"><p class="dash-stock-caption">${visible.category==='all'?'Semua kategori':categoryLabel} · ${num(visible.rows.length)} produk${visible.sort.startsWith('qty-')?' · Jumlah diurutkan per satuan':''}</p><div class="dash-unit-chips">${[...visible.units].map(([unit,qty])=>`<span>${num(qty)} <small>${e(unit)}</small></span>`).join('')}</div>${visible.rows.length?`<ul class="dash-records">${visible.rows.slice(0,12).map(r=>`<li data-dash-stock-product="${e(r.id)}"><div><h3>${e(r.name)}</h3><p>${r.qty>0?(r.reject?num(r.reject)+' kg termasuk reject':'Stok fisik tersedia'):'Stok kosong'}${r.pieces?' · '+num(r.pieces)+' butir':''}</p></div><strong>${num(r.qty)} <small>${e(r.unit)}</small></strong></li>`).join('')}</ul><p class="dash-note">Menampilkan ${Math.min(12,visible.rows.length)} dari ${visible.rows.length} produk · ${e(stockSortOptions[visible.sort])}. Lihat daftar lengkap melalui Buka stok.</p>`:empty(visible.category==='all'?'Belum ada produk stok':'Belum ada produk '+categoryLabel,visible.category==='all'?'Tambahkan master produk dan catat penerimaan barang.':'Atur anggota kategori di Master Barang atau Stok → Kelola Kategori.')}</div></section>`;
 }
 function supplierPanel(a){
  const known=a.supplierRows.filter(r=>r.id),unknown=a.supplierRows.filter(r=>!r.id).reduce((n,r)=>n+r.revenue,0);
@@ -70,6 +74,14 @@ export function bindDashboard(s,activeStore,ctx){
  const $=q=>document.querySelector(q);if(!$('#dash-period'))return;
  bindDeposits(ctx,document.querySelector('.dash-workspace'));
  const canChange=()=>!ctx.isBusy?.();
+ document.querySelectorAll('[data-dash-stock-category]').forEach(b=>b.onclick=()=>{
+  if(!canChange()||!stockCategoryButtons.some(([key])=>key===b.dataset.dashStockCategory))return;
+  stockCategory=b.dataset.dashStockCategory;ctx.render();$(`[data-dash-stock-category="${stockCategory}"]`)?.focus();
+ });
+ $('#dash-stock-sort')?.addEventListener('change',ev=>{
+  if(!canChange()||!Object.hasOwn(stockSortOptions,ev.target.value)){ev.target.value=stockSort;return;}
+  stockSort=ev.target.value;ctx.render();$('#dash-stock-sort')?.focus();
+ });
  document.querySelectorAll('[data-dash-tab]').forEach(b=>b.onclick=()=>{if(!canChange())return;tab=b.dataset.dashTab;ctx.render();});
  $('#dash-period').onchange=ev=>{if(!canChange()){ev.target.value=period;return;}custom=dashboardRange(period,custom);period=ev.target.value;ctx.render();};
  $('#dash-store').onchange=ev=>{

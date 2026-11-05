@@ -1,6 +1,7 @@
 // Read-only dashboard summaries use the same paid transactions as Laporan.
 import {today} from './core.mjs';
 import {salesReport,periodRange} from './reports.mjs';
+import {posCategories,inPosCategory} from './pos-categories.mjs';
 const number=v=>Number(v)||0;
 const dayMs=86400000;
 const shift=(day,days)=>new Date(Date.parse(day+'T00:00:00Z')+days*dayMs).toISOString().slice(0,10);
@@ -54,6 +55,21 @@ export function dashboardSales(s,f){
  const suppliers=new Map();
  for(const r of report.suppliers){const key=r.supplierId||'',row=suppliers.get(key)||{id:key,name:r.name,revenue:0,methods:new Set()};row.revenue+=r.revenue;row.methods.add(r.method);suppliers.set(key,row);}
  return {...report,payments:[...paymentMap.values()],topProducts:[...products.values()].sort((a,b)=>b.revenue-a.revenue||a.name.localeCompare(b.name)).slice(0,5),supplierRows:[...suppliers.values()].sort((a,b)=>b.revenue-a.revenue),timeline:timeline(report.tx,f)};
+}
+export const stockCategoryButtons=[['all','Semua'],['buah','Buah'],['durpas','Durpas'],['coral','Coral'],['makanan','Makanan'],['minuman','Minuman'],['dessert','Dessert']];
+export const stockSortOptions={ready:'Tersedia dulu',az:'Nama A–Z',za:'Nama Z–A','qty-desc':'Stok terbanyak','qty-asc':'Stok tersedikit'};
+const stockCategoryKey=name=>{const key=String(name||'').trim().toLocaleLowerCase('id-ID');return key==='makan'?'makanan':key;};
+export function filterDashboardStock(s,summary,{category='all',sort='ready'}={}){
+ if(!stockCategoryButtons.some(([key])=>key===category))category='all';
+ if(!Object.hasOwn(stockSortOptions,sort))sort='ready';
+ const ids=posCategories(s).filter(c=>stockCategoryKey(c.name)===category).map(c=>c.id);
+ const rows=summary.rows.filter(r=>category==='all'||ids.some(id=>inPosCategory(s,r.product,id)));
+ const byName=(a,b)=>a.name.localeCompare(b.name,'id',{numeric:true,sensitivity:'base'})||String(a.id).localeCompare(String(b.id));
+ const unitOrder=['kg','g','ml','pcs','porsi'];
+ const byUnit=(a,b)=>{const rank=u=>unitOrder.includes(u)?unitOrder.indexOf(u):unitOrder.length;return rank(a.unit)-rank(b.unit)||a.unit.localeCompare(b.unit,'id');};
+ rows.sort((a,b)=>sort==='az'?byName(a,b):sort==='za'?-byName(a,b):sort==='ready'?Number(b.qty>0)-Number(a.qty>0)||byName(a,b):byUnit(a,b)||(sort==='qty-desc'?b.qty-a.qty:a.qty-b.qty)||byName(a,b));
+ const units=new Map();for(const row of rows)units.set(row.unit,(units.get(row.unit)||0)+row.qty);
+ return {rows,units,category,sort};
 }
 export function dashboardStock(s,store){
  const allowed=new Set(s.stores.map(x=>x.id)),rows=new Map(s.products.filter(p=>p.itemType!=='recipe').map(p=>[p.id,{id:p.id,name:p.name,product:p,qty:0,pieces:0,reject:0,unit:p.stockUnit==='kg_butir'?'kg':p.stockUnit||'pcs'}]));
