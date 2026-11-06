@@ -164,15 +164,7 @@ tbody tr:hover { background:color-mix(in srgb,var(--surface-soft) 65%,transparen
 .numeric,.total,.order-total-row { font-variant-numeric:tabular-nums; }
 .empty,.inv-empty { padding:32px 20px; line-height:1.6; }
 .page-foot { margin-top:24px; font-size:12px; }
-.workflow-nav { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin:0 0 24px; }
-.workflow-stage { display:flex; align-items:center; gap:10px; min-height:72px; padding:12px; text-align:left; background:var(--surface); border:1px solid var(--line); border-radius:12px; color:var(--muted); }
-.workflow-stage[aria-current=page] { border-color:var(--action-bg); color:var(--ink); background:var(--surface-soft); }
 .workflow-number,.step-label { display:inline-flex; align-items:center; justify-content:center; flex:none; width:28px; height:28px; border-radius:8px; background:var(--surface-raised); color:var(--ink); font-size:13px; font-weight:700; }
-.workflow-stage[aria-current=page] .workflow-number { background:var(--action-bg); color:var(--action-ink); }
-.workflow-copy { min-width:0; flex:1; }
-.workflow-copy strong { display:block; font-size:13px; font-weight:600; }
-.workflow-copy small { display:block; color:var(--muted); font-size:12px; font-weight:400; margin-top:2px; line-height:1.4; }
-.workflow-stage svg { width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:1.8; }
 .form-section-heading { display:flex; align-items:center; gap:12px; margin:24px 0 16px; }
 .form-section-heading h3 { font-size:16px; margin:0; }
 .form-section-heading p { font-size:13px; color:var(--muted); margin:4px 0 0; line-height:1.5; }
@@ -240,11 +232,6 @@ tbody tr:hover { background:color-mix(in srgb,var(--surface-soft) 65%,transparen
 .dash-period select,.dash-store select { min-height:44px; }
 .report-tabs,.doc-tabs,.tabs-mini { gap:8px; flex-wrap:wrap; }
 .report-tabs button,.doc-tabs button,.tabs-mini button { min-height:44px; font-size:13px; border-radius:10px; }
-.system-dock button { min-height:52px; padding:6px 12px; }
-.system-dock svg { width:22px; height:22px; }
-.system-dock { padding:6px 10px; width:min(300px,calc(100vw - 32px)); border-radius:16px; box-shadow:0 8px 28px #0003; }
-.system-dock button { border-radius:10px; }
-.system-dock button[aria-current=page] { color:var(--action-bg); }
 @media(min-width:1101px) {
  .shell .order-summary { max-height:calc(100dvh - var(--dock-clearance) - 32px); }
 }
@@ -252,8 +239,6 @@ tbody tr:hover { background:color-mix(in srgb,var(--surface-soft) 65%,transparen
  .order-screen { grid-template-columns:minmax(0,1fr); }
  .order-summary { position:static; max-height:none; overflow:visible; }
  .order-summary-scroll { max-height:none; overflow:visible; }
- .workflow-copy small { display:none; }
- .workflow-stage { min-height:60px; }
 }
 @media(max-width:700px) {
  .shell .topbar { padding:12px 16px; min-height:72px; }
@@ -263,10 +248,6 @@ tbody tr:hover { background:color-mix(in srgb,var(--surface-soft) 65%,transparen
  .intro,.inv-toolbar,.team-heading { align-items:flex-start; flex-wrap:wrap; gap:16px; margin-bottom:20px; }
  .intro p,.intro .muted { font-size:13px; }
  .panel,.team-panel,.device-card,.order-summary,.dash-panel,.dash-metric { padding:16px; }
- .workflow-nav { grid-template-columns:repeat(2,minmax(0,1fr)); margin-bottom:20px; }
- .workflow-stage { gap:8px; padding:10px; min-height:56px; }
- .workflow-copy strong { font-size:12px; }
- .workflow-stage svg { display:none; }
  .order-catalog-head { align-items:stretch; flex-direction:column; }
  .order-search { flex:auto; width:100%; }
  .order-product-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }

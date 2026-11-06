@@ -112,7 +112,6 @@ export function bindDashboard(s,activeStore,ctx){
   if(!canChange())return;custom=next;ctx.render();
  });
  $('#dash-refresh').onclick=async ev=>{if(!canChange())return;const b=ev.currentTarget;b.disabled=true;b.setAttribute('aria-busy','true');try{await ctx.refresh();ctx.render();}catch(error){ctx.toast(error.message);}finally{b.disabled=false;b.removeAttribute('aria-busy');}};
- $('[data-dash-home]')?.addEventListener('click',()=>{if(!canChange())return;tab='transactions';ctx.render();});
  $('#dash-print')?.addEventListener('click',async ev=>{
   if(!canChange()||!reportAccess(s))return;
   const f=filter(s,activeStore);

@@ -1,30 +1,43 @@
-/* Shared navigation for every authenticated POS module. */
-:root { --dock-clearance:calc(110px + env(safe-area-inset-bottom, 0px)); }
+/* Operational navigation lives here; the former top workflow strip is removed. */
+:root { --dock-clearance:calc(104px + env(safe-area-inset-bottom, 0px)); }
+.shell:not(:has(.system-dock)) { --dock-clearance:28px; }
 .shell #pos-main .workspace-content { padding-bottom:var(--dock-clearance); }
 html:has(.system-dock) { scroll-padding-bottom:var(--dock-clearance); }
 .system-dock {
   position:fixed; z-index:20; left:50%; transform:translateX(-50%);
   bottom:calc(16px + env(safe-area-inset-bottom, 0px));
-  display:grid; grid-template-columns:repeat(var(--dock-columns, 3), minmax(0, 1fr));
-  width:min(350px, calc(100vw - 32px)); padding:8px 16px;
-  border:1px solid var(--line); border-radius:100px;
-  background:var(--surface); box-shadow:0 8px 32px #0002;
+  display:grid; grid-template-columns:repeat(var(--dock-columns), minmax(0, 1fr));
+  gap:4px; width:min(var(--dock-width), calc(100vw - 32px)); padding:7px;
+  border:1px solid var(--line); border-radius:16px;
+  background:var(--surface); box-shadow:0 8px 28px #0003;
 }
 .system-dock button {
-  display:flex; flex-direction:column; align-items:center; justify-content:center;
-  gap:3px; min-width:0; min-height:56px; margin:0; padding:5px 8px;
-  border:0; border-radius:100px; background:transparent; color:var(--muted);
+  display:flex; align-items:center; justify-content:center;
+  gap:9px; min-width:0; min-height:52px; margin:0; padding:8px;
+  border:1px solid transparent; border-radius:10px; background:transparent; color:var(--muted);
   line-height:1.4; transition:background-color .16s, color .16s;
 }
 .system-dock button:hover { background:var(--surface-soft); color:var(--ink); }
-.system-dock button[aria-current=page] { background:var(--surface-raised); color:var(--ink); font-weight:var(--weight-semibold); }
-.system-dock button[aria-expanded=true] { color:var(--ink); }
+.system-dock button[aria-current=page] { background:var(--surface-raised); color:var(--action-bg); border-color:var(--action-bg); }
 .system-dock button:focus-visible { outline:2px solid var(--focus); outline-offset:2px; }
-.system-dock svg { width:25px; height:25px; flex:none; }
-.system-dock span { font-size:var(--text-xs); white-space:nowrap; }
+.system-dock .system-dock-number {
+  display:grid; place-items:center; flex:0 0 26px; width:26px; height:26px;
+  border-radius:7px; background:var(--surface-soft); color:var(--ink); font-size:12px; font-weight:700;
+}
+.system-dock button[aria-current=page] .system-dock-number { background:var(--action-bg); color:var(--action-ink); }
+.system-dock-label { font-size:12px; font-weight:600; white-space:nowrap; }
 body:has(.system-dock) #toast { bottom:var(--dock-clearance); }
 @media (min-width:901px) {
   .shell:not([data-sidebar-collapsed=true]) .system-dock { left:calc(50% + var(--sidebar-width)/2); }
+}
+@media (max-width:600px) {
+  .system-dock { gap:2px; padding:6px; bottom:calc(12px + env(safe-area-inset-bottom, 0px)); }
+  .system-dock button { flex-direction:column; gap:4px; min-height:58px; padding:6px 2px; }
+  .system-dock-label { font-size:11px; }
+  .system-dock .system-dock-number { width:24px; height:24px; flex-basis:24px; font-size:11px; }
+}
+@media (max-width:360px) {
+  .system-dock:has(> button:nth-child(4)) { grid-template-columns:minmax(0,1.35fr) repeat(3,minmax(0,1fr)); }
 }
 @media (min-width:1101px) {
   .shell .order-summary { max-height:calc(100dvh - var(--dock-clearance) - 36px); }

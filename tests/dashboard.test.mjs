@@ -56,7 +56,7 @@ test('dashboard handlers switch period/store/tabs without requests, validate dat
   root.querySelector('#dash-store').value='b';await root.querySelector('#dash-store').fire('change');assert.equal(active,'b');assert(root.textContent.includes('500.000'));
   root.querySelector('#dash-period').value='custom';await root.querySelector('#dash-period').fire('change');root.querySelector('#dash-from').value='2999-01-01';await root.querySelector('#dash-from').fire('change');assert.match(root.querySelector('#dash-date-error').textContent,/tanggal/);
   for(const t of ['stock','suppliers','reject','customers']){await root.querySelector(`[data-dash-tab="${t}"]`).fire('click');assert(root.querySelector('.dash-panel'));}
-  await root.querySelector('[data-dash-home]').fire('click');assert(root.querySelector('.dash-chart'));
+  await root.querySelector('[data-dash-tab="transactions"]').fire('click');assert(root.querySelector('.dash-chart'));
   busy=true;root.querySelector('#dash-store').value='a';await root.querySelector('#dash-store').fire('change');assert.equal(active,'b');busy=false;
   const reload=root.querySelector('#dash-refresh');await reload.fire('click');assert.equal(reads,1);assert(!reload.disabled);assert.equal(messages[0],'Jaringan terputus');
   resetDashboard();assert.equal((dashboardPage(s,'a').match(/data-dash-tab="transactions" aria-pressed="true"/)||[]).length,1);

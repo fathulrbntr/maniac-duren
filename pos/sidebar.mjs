@@ -34,7 +34,7 @@ export function createSidebarController(root = document, viewport = window) {
   function restoreFocus() {
     const target = opener?.isConnected && !opener.closest("#pos-sidebar")
       ? opener
-      : root.querySelector("#system-dock-menu") || root.querySelector("#sidebar-toggle");
+      : root.querySelector("#sidebar-toggle");
     target?.focus();
   }
   const write = () => {
