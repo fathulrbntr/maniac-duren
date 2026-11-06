@@ -10,31 +10,33 @@
  --text-page:24px; --text-dialog:22px; --text-section:18px;
  --text-control:14px; --text-label:13px; --text-dialog-label:13px;
  --weight-normal:400; --weight-medium:600; --weight-semibold:600; --weight-bold:700;
- --radius-control:10px; --radius-card:16px; --radius-modal:20px; --radius-pill:999px;
- --control-height:44px; --dialog-control-height:44px; --sidebar-width:248px;
- --bg:#f5f6f4; --surface:#ffffff; --surface-soft:#f1f4f0; --surface-raised:#e6eee3;
+ --radius-control:10px; --radius-card:12px; --radius-modal:16px; --radius-pill:999px;
+ --control-height:44px; --dialog-control-height:44px; --sidebar-width:236px;
+ --bg:#f4f5f4; --surface:#ffffff; --surface-soft:#f0f2f0; --surface-raised:#e5f3e9;
  --ink:#202a23; --muted:#626e65; --line:#dce3dc;
  --sidebar:var(--surface); --sidebar-ink:var(--ink); --hover:#e8e9e8;
- --action-bg:#27613d; --action-ink:#ffffff; --action-large-ink:#ffffff;
+ --action-bg:#23834b; --action-ink:#ffffff; --action-large-ink:#ffffff;
  --success:#42752f; --success-bg:#eaf2e5; --danger:#b63c45; --danger-bg:#f9e9eb;
  --warning:#845d19; --warning-bg:#f7efdd; --info:#41677c; --info-bg:#e8eff3;
  --stock-ready:#528b2d; --stock-empty:#af635b;
- --focus:#34764d; --backdrop:#0009; --shadow:0 8px 32px #0000000d;
+ --focus:#23834b; --backdrop:#0009; --shadow:0 8px 32px #0000000d;
  --ui-chevron:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 16'%3E%3Cpath fill='%23252625' d='M2 1h20a1 1 0 0 1 .7 1.7l-10 11a1 1 0 0 1-1.4 0l-10-11A1 1 0 0 1 2 1Z'/%3E%3C/svg%3E");
  /* Existing modules use these aliases for buttons, surfaces and copy. */
  --green:var(--action-bg); --lime:var(--action-bg); --dark:var(--ink); --on-primary:var(--action-ink);
  --text:var(--ink); --border:var(--line); --accent:var(--ink);
  --accent-soft:var(--surface-raised); --surface-2:var(--surface-soft);
+ --chart-1:#23834b; --chart-2:#5b9875; --chart-3:#627a6a; --chart-4:#919b95; --chart-5:#b4bcb7;
 }
 :root[data-theme=dark] {
  color-scheme:dark;
- --bg:#191e1b; --surface:#232b25; --surface-soft:#1c241e; --surface-raised:#304234;
- --ink:#edf2ed; --muted:#abb9ad; --line:#3b493e;
- --hover:#304234; --action-bg:#a8d896; --action-ink:#182c1c; --action-large-ink:#182c1c;
+ --bg:#101211; --surface:#181b19; --surface-soft:#222623; --surface-raised:#213a2b;
+ --ink:#f1f4f2; --muted:#a2aaa5; --line:#2c322e;
+ --hover:#252c27; --action-bg:#4cce83; --action-ink:#092414; --action-large-ink:#092414;
  --success:#88c85a; --success-bg:#293624; --danger:#ed9a9f; --danger-bg:#402b2e;
  --warning:#dfbe7c; --warning-bg:#3b3324; --info:#a0bfd4; --info-bg:#2a353d;
  --stock-ready:#75c043; --stock-empty:#c38179;
- --focus:#c7c8c8; --shadow:0 12px 40px #0003;
+ --focus:#4cce83; --shadow:0 18px 60px #0005;
+ --chart-1:#4cce83; --chart-2:#a0d8b4; --chart-3:#668c74; --chart-4:#b4bdb7; --chart-5:#657269;
  --ui-chevron:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 16'%3E%3Cpath fill='%23fff' d='M2 1h20a1 1 0 0 1 .7 1.7l-10 11a1 1 0 0 1-1.4 0l-10-11A1 1 0 0 1 2 1Z'/%3E%3C/svg%3E");
 }
 @media(max-width:600px) {

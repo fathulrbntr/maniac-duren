@@ -5,13 +5,13 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
     <meta name="robots" content="noindex,nofollow" />
     <title>Maniac Duren · POS</title>
-    <meta name="theme-color" content="#202020" />
+    <meta name="theme-color" content="#101211" />
     <script>
       (() => {
         let theme;
         try { theme = localStorage.getItem('maniac-pos-theme'); } catch {}
-        document.documentElement.dataset.theme = ['light','dark'].includes(theme) ? theme : (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-        document.querySelector('meta[name="theme-color"]').setAttribute('content', document.documentElement.dataset.theme === 'dark' ? '#202020' : '#f3f3f2');
+        document.documentElement.dataset.theme = ['light','dark'].includes(theme) ? theme : 'dark';
+        document.querySelector('meta[name="theme-color"]').setAttribute('content', document.documentElement.dataset.theme === 'dark' ? '#101211' : '#f4f5f4');
       })();
     </script>
     <link rel="icon" href="logo.png" />
@@ -22,7 +22,7 @@
       startPWA();
     </script>
     <link rel="stylesheet" href="pos.css?v=81" />
-    <link rel="stylesheet" href="ui-tokens.css?v=95" />
+    <link rel="stylesheet" href="ui-tokens.css?v=96" />
     <link rel="stylesheet" href="catalog-table.css?v=81" />
     <link rel="stylesheet" href="employees.css?v=81" />
     <link rel="stylesheet" href="workspace-ui.css?v=81" />
@@ -38,7 +38,6 @@
     <link rel="stylesheet" href="pwa.css?v=81" />
     <link rel="stylesheet" href="auth.css?v=81" />
     <link rel="stylesheet" href="reports-admin.css?v=81" />
-    <link rel="stylesheet" href="dashboard.css?v=93" />
     <link rel="stylesheet" href="cash-deposits.css?v=92" />
     <link rel="stylesheet" href="inventory.css?v=95" />
     <link rel="stylesheet" href="product-dialog.css?v=95" />
@@ -47,7 +46,8 @@
     <link rel="stylesheet" href="payment-methods.css?v=84" />
     <link rel="stylesheet" href="crm.css?v=85" />
     <link rel="stylesheet" href="system-dock.css?v=90" />
-    <link rel="stylesheet" href="ui-system.css?v=95" media="screen" />
+    <link rel="stylesheet" href="ui-system.css?v=96" media="screen" />
+    <link rel="stylesheet" href="dashboard.css?v=96" media="screen" />
   </head>
   <body>
     <div id="app"><div class="auth auth-workspace auth-startup"><section class="auth-form"><div><img class="auth-logo" src="logo.png" alt="Maniac Duren"><h1>Menyiapkan POS</h1><div class="auth-progress"><div class="auth-progress-track" role="progressbar" aria-label="Memuat POS"></div><p class="auth-progress-text" role="status">Memuat aplikasi…</p></div></div></section></div></div>
