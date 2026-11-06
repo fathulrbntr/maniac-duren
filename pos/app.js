@@ -905,21 +905,18 @@ function render() {
       }),
   );
   document.querySelector("[data-dock-scan]")?.addEventListener("click", () => {
-    if (busy || (state.access && !state.access.master)) return;
+    if (busy || (state.access && !state.access.stock)) return;
     if (document.querySelector("dialog[open]")) {
       toast("Tutup pop-up sebelum scan barcode.");
       return;
     }
     if (!mayLeave(busy)) return;
-    if (view !== "products") {
-      view = "products";
+    if (view !== "stock") {
+      view = "stock";
       sidebar.navigate();
       render();
     }
-    const dialog = addMaster("products");
-    const input = dialog.querySelector('[name="barcode"]');
-    input?.scrollIntoView?.({ block: "center", behavior: "instant" });
-    input?.focus({ preventScroll: true });
+    addReceipt();
   });
   document.querySelector("#active-store").onchange = (ev) => {
     if (!changeStore(ev.target.value)) ev.target.value = store;

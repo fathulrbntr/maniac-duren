@@ -19,13 +19,13 @@ try{
   },mutate:async(action,payload)=>{window.saved.push({action,payload});return true;},render(){},toast(){}});window.openReceipt();
  });
  const card=i=>page.locator('.receipt-product').nth(i);
- const weigh=async(i,kg,pieces)=>{await card(i).locator('[data-weigh-open]').click();await page.locator('.weighing-dialog [name=kg]').fill(String(kg));await page.locator('.weighing-dialog [name=pieces]').fill(String(pieces));await page.locator('.weighing-dialog [type=submit]').click();await page.locator('.weighing-dialog [data-close]').last().click();};
+ const weigh=async(i,kg,pieces)=>{await card(i).locator('[data-weigh-open]').click();await page.locator('.weigh-manual summary').click();await page.locator('.weighing-dialog [name=kg]').fill(String(kg));await page.locator('.weighing-dialog [name=pieces]').fill(String(pieces));await page.locator('.weighing-dialog .weigh-entry [type=submit]').click();await page.locator('.weighing-dialog [data-close]').last().click();};
  await page.locator('[name=invoiceNo]').fill('NOTA-082');await card(0).locator('[data-purchase]').fill('1000000');await weigh(0,20,5);
  await page.locator('[data-add-product]').click();assert.equal(await page.locator('.receipt-product').count(),2);assert.equal(await card(1).locator('option[value="0"]').evaluate(el=>el.disabled),true);
  await card(1).locator('[data-purchase]').fill('600000');await weigh(1,10,5);await page.locator('[name=shippingCost]').fill('300000');
  assert.match(await card(0).innerText(),/200.000/);assert.match(await card(1).innerText(),/100.000/);assert.match(await page.locator('[data-weigh-summary]').innerText(),/1.900.000/);
  // Editing one product keeps the other product's measurements intact.
- await card(0).locator('[data-weigh-open]').click();await page.locator('.weighing-dialog [data-edit]').click();await page.locator('.weighing-dialog [name=kg]').fill('25');await page.locator('.weighing-dialog [type=submit]').click();await page.locator('.weighing-dialog [data-close]').last().click();assert.match(await card(0).innerText(),/25 kg/);assert.match(await card(1).innerText(),/10 kg/);
+ await card(0).locator('[data-weigh-open]').click();await page.locator('.weighing-dialog [data-edit]').click();await page.locator('.weighing-dialog [name=kg]').fill('25');await page.locator('.weighing-dialog .weigh-entry [type=submit]').click();await page.locator('.weighing-dialog [data-close]').last().click();assert.match(await card(0).innerText(),/25 kg/);assert.match(await card(1).innerText(),/10 kg/);
  await page.locator('[data-add-product]').click();assert.equal(await page.locator('[data-add-product]').isDisabled(),true);await card(2).locator('[data-remove-product]').click();assert.equal(await page.locator('[data-add-product]').isDisabled(),false);assert.match(await card(0).innerText(),/25 kg/);
  for(const width of [360,390,1440]){
   await page.setViewportSize({width,height:1000});assert(await page.evaluate(()=>{const d=document.querySelector('.receipt-shipment-dialog');return d.scrollWidth<=d.clientWidth+1&&document.documentElement.scrollWidth<=innerWidth;}),`no horizontal overflow at ${width}`);

@@ -28,6 +28,15 @@ for(const install of ['019','021']){
   assert.deepEqual(lots.find(l=>l.id===p.lines[0].id).weighings,p.lines[0].weighings);
   s=await receive(p);assert.equal(s.lots.filter(l=>l.shipmentId===p.id).length,2);
   await assert.rejects(receive({...p,invoiceNo:'CHANGED'}),/isi berbeda/);
+  const scanned={...p,id:id(),invoiceNo:'SCAN-100',shippingCost:0,lines:[{id:id(),productId:product,purchaseCost:500000,weighings:[
+   {id:id(),kg:3.032,pieces:1,barcode:'2100010030320',createdAt:new Date().toISOString()},
+   {id:id(),kg:2.414,pieces:1,barcode:'2100010024145',createdAt:new Date().toISOString()},
+  ]}]};
+  s=await receive(scanned);
+  const scannedLot=s.lots.find(l=>l.id===scanned.lines[0].id);
+  assert.equal(scannedLot.receivedKg,5.446);assert.equal(scannedLot.receivedPieces,2);
+  assert.deepEqual(scannedLot.weighings,scanned.lines[0].weighings,'barcode evidence persists through SQL');
+  s=await receive(scanned);assert.equal(s.lots.filter(l=>l.shipmentId===scanned.id).length,1,'receipt retry cannot double scanned stock');
   const fresh=()=>({...p,id:id(),lines:[line(product,5,100),line(product2,5,100)]});
   await assert.rejects(receive({...fresh(),invoiceNo:' '}),/Nomor nota/);
   await assert.rejects(receive({...fresh(),lines:[line(product,5,100),line(product,5,100)]}),/terduplikasi/);

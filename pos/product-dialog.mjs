@@ -12,8 +12,6 @@ import {
 import { escape as e, id, num, money } from "./core.mjs";
 import { preparePhoto } from "./product-details.mjs";
 import { productStock, productUsed } from "./product-stock.mjs";
-import { normalizeBarcode, parseScaleBarcode } from './barcode-scanner.mjs';
-import { readDeviceSettings } from './device-settings.mjs';
 const options = (values, selected) =>
   Object.entries(values)
     .map(
@@ -60,7 +58,7 @@ export function productDialog({
  <div id="catalog-prices"></div>
  ${field("SKU", `<input name="sku" value="${e(p.sku || "")}" required maxlength="40" autocomplete="off">`, 'product-sku-field')}
  ${field("Harga Beli /butir", `<input name="buyPricePiece" type="number" min="0" max="1000000000000" step="any" inputmode="decimal" value="${e(p.buyPricePiece ?? "")}">`, 'product-piece-buy-field')}
- ${field("Barcode", `<input name="barcode" value="${e(p.barcode || "")}" maxlength="80" autocomplete="off" spellcheck="false" placeholder="Scan atau ketik barcode" title="Opsional. Ketik atau scan barcode."><small data-product-scan-status role="status">Scan barcode, lalu lengkapi data barang.</small>`, 'product-barcode-field')}
+ ${field("Barcode", `<input name="barcode" value="${e(p.barcode || "")}" maxlength="80" autocomplete="off" title="Opsional. Ketik atau scan barcode.">`, 'product-barcode-field')}
  </div>${editing?field("Keterangan varian", `<input name="variant" value="${e(p.variant || "")}" maxlength="100" ${p.variantGroupId?'readonly':''}>`, 'product-variant-note'):''}</fieldset>
  ${editing?'':`<div class="product-variant-action"><input type="checkbox" name="hasVariants" hidden><button type="button" data-toggle-product-variants aria-expanded="false" aria-controls="variant-product-fields">+ Tambah varian</button></div><fieldset id="variant-product-fields" hidden disabled>${variantEditorMarkup()}</fieldset>`}
  <details class="product-extra"><summary>Stok & informasi tambahan</summary>
@@ -92,29 +90,6 @@ export function productDialog({
       d.querySelector("#form-error").textContent = message;
     };
   const groupId = id(), operationId = id();
-  c('barcode').addEventListener('keydown', (event) => {
-    if (event.isComposing || event.ctrlKey || event.altKey || event.metaKey) return;
-    const settings = readDeviceSettings();
-    if (!['Enter', settings.scanner.terminator].includes(event.key)) return;
-    // A scanner terminator fills the form; it must never submit a product.
-    event.preventDefault();
-    if (event.repeat || !c('barcode').value.trim()) return;
-    try {
-      const code = normalizeBarcode(c('barcode').value, settings);
-      const scale = c('stockUnit').value === 'kg_butir' ? parseScaleBarcode(code) : null;
-      c('barcode').value = scale?.itemCode || code;
-      d.dataset.dirty = 'true';
-      error('');
-      d.querySelector('[data-product-scan-status]').textContent = scale
-        ? `Kode barang timbangan: ${scale.itemCode}. Lengkapi data, lalu Simpan.`
-        : 'Barcode terisi. Lengkapi data, lalu Simpan.';
-      c('name').focus();
-    } catch (err) {
-      error(err.message);
-      c('barcode').focus();
-      c('barcode').select?.();
-    }
-  });
   const getCommon = () => ({name:c("name").value,itemType:c("itemType").value,category:c("category").value,stockUnit:c("stockUnit").value});
   const editor = !editing ? bindVariantEditor(d.querySelector("#variant-product-fields"),{getCommon,state,groupId,operationId,error}) : null;
   function toggleVariants() {
@@ -386,5 +361,4 @@ export function productDialog({
       saving = false;
     }
   };
-  return d;
 }
