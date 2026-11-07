@@ -1,3 +1,4 @@
+import {parseTrackingBarcode} from './scale-label.mjs';
 import {posVisible} from './pos-categories.mjs';
 import {readDeviceSettings,validateDeviceSettings} from './device-settings.mjs';
 
@@ -45,6 +46,8 @@ export function barcodeProduct(state, raw, settings = readDeviceSettings()) {
 // Confirmed CAS CL5200-30B format: 21 + IIII + WWWWWW + C.
 // Six weight digits are grams; the final digit is the EAN-13 checksum.
 export function parseScaleBarcode(code) {
+  const tracking=parseTrackingBarcode(code);
+  if(tracking)return tracking;
   if (!/^21\d{11}$/.test(code)) return null;
   const sum = [...code.slice(0, 12)].reduce((n, digit, i) => n + Number(digit) * (i % 2 ? 3 : 1), 0);
   if ((10 - sum % 10) % 10 !== Number(code[12])) throw Error('Barcode timbangan tidak valid (digit pemeriksa). Scan ulang label lengkap 13 digit.');

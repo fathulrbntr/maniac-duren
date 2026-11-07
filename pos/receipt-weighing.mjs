@@ -1,3 +1,4 @@
+import {parseTrackingBarcode,checkReceiptLabels} from './scale-label.mjs';
 import { formSection } from "./workflow-ui.mjs";
 import { escape as e, id, today, num, money } from './core.mjs';
 import { isLegacyStock } from './catalog.mjs';
@@ -67,7 +68,7 @@ export function openWeighingReceipt(state, store, ctx) {
       if ((line.weighings.length || line.purchaseCost !== '') && !confirm('Hapus produk beserta harga dan catatan timbangnya dari nota ini?')) return;
       lines.splice(lines.indexOf(line), 1); card.remove(); d.dataset.dirty = 'true';syncOptions();update();
     };
-    card.querySelector('[data-weigh-open]').onclick = () => openLineWeighing(line, state.products, d, update);
+    card.querySelector('[data-weigh-open]').onclick = () => openLineWeighing(line, state, lines, d, update);
     syncOptions(); update();
     return card;
   };
@@ -87,7 +88,8 @@ export function openWeighingReceipt(state, store, ctx) {
   return d;
 }
 
-function openLineWeighing(line, products, d, update) {
+function openLineWeighing(line, state, lines, d, update) {
+  const products=state.products;
   let rows = line.weighings, editing = null;
   const scannerEnabled = readDeviceSettings().scanner.enabled;
   const w = document.createElement('dialog');
@@ -110,6 +112,7 @@ function openLineWeighing(line, products, d, update) {
     w.querySelector('[data-total]').textContent = `Total ${rows.length} kali timbang: ${num(t.kg)} kg · ${num(t.pieces)} butir`;
     w.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => {
       const row = rows.find(r => r.id === b.dataset.edit);
+      if(parseTrackingBarcode(row.barcode||'')){scanStatus.dataset.error='true';scanStatus.textContent='Berat mengikuti label. Hapus catatan yang salah, lalu scan label buah yang benar.';return;}
       editing = row.id; wf.elements.kg.value = row.kg; wf.elements.pieces.value = row.pieces;
       wf.querySelector('[type=submit]').textContent = 'Simpan koreksi';
       w.querySelector('[data-reset]').hidden = false;
@@ -128,9 +131,10 @@ function openLineWeighing(line, products, d, update) {
       if (editing || wf.elements.kg.value || wf.elements.pieces.value)
         throw Error('Selesaikan atau batalkan isian manual/koreksi sebelum scan berikutnya.');
       const result = receiptBarcode(raw, products, line.productId, settings);
-      // The label encodes product and weight, not a unique serial number.
-      // Two different fruits can legitimately have an identical barcode.
-      if (rows.some(row => row.barcode === result.barcode) && !confirm('Barcode dengan produk dan berat ini sudah dicatat. Lanjut hanya jika ini durian lain dengan berat yang sama. Catat sebagai 1 butir tambahan?')) return false;
+      const tracking=parseTrackingBarcode(result.barcode);
+      if(tracking)checkReceiptLabels(state,lines.map(x=>x===line?{...x,weighings:[...rows,result]}:x));
+      // Legacy EAN-13 labels identify product/weight; tracking labels identify a fruit.
+      if (!tracking && rows.some(row => row.barcode === result.barcode) && !confirm('Barcode dengan produk dan berat ini sudah dicatat. Lanjut hanya jika ini durian lain dengan berat yang sama. Catat sebagai 1 butir tambahan?')) return false;
       const next = [...rows, {id:id(), ...result, createdAt:new Date().toISOString()}];
       weighingTotals(next);
       rows = next; line.weighings = rows; d.dataset.dirty = 'true';

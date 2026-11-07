@@ -1,3 +1,4 @@
+import {checkReceiptLabels} from './scale-label.mjs';
 import { isLegacyStock } from './catalog.mjs';
 
 export function weighingTotals(rows, purchase = 0, shipping = 0) {
@@ -50,6 +51,7 @@ export function validateShipment(payload, state) {
     if (line.purchaseCost === '' || line.purchaseCost == null) throw Error('Isi harga nota setiap produk');
     if (!line.weighings.length) throw Error('Catat penimbangan setiap produk');
   });
+  checkReceiptLabels(state,payload.lines);
   return totals;
 }
 

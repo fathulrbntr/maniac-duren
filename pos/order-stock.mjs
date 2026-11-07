@@ -1,3 +1,4 @@
+import {checkTrackedLines} from './scale-label.mjs';
 // A recipe uses prepared ingredients as stock; it never manufactures missing prep automatically.
 export function requirements(state, lines) {
   const needs = new Map();
@@ -39,6 +40,7 @@ export function availableStock(state, store, date) {
 export function checkOrder(state,store,lines,date) {
   if(!state.orderStockVersion) return {ok:false,reason:'Pembaruan database 011 diperlukan'};
   try {
+    checkTrackedLines(state,store,lines);
     const available=availableStock(state,store,date);
     for(const [key,need] of requirements(state,lines)) {
       const left=available.get(key)||{qty:0,pieces:0};

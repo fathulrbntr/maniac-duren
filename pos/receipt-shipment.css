@@ -53,3 +53,12 @@
  .weigh-scan-controls { flex-direction:column; }
  .weigh-scan-controls button { width:100%; }
 }
+
+.fruit-scan-selection{padding:14px;border:1px solid var(--border);border-radius:12px;margin:12px 0;background:var(--surface-soft)}
+.fruit-scan-selection[hidden]{display:none}
+.fruit-scan-selection input{width:100%;font-variant-numeric:tabular-nums}
+.fruit-scan-selection [data-fruit-scan-status]{font-size:12px;color:var(--muted);margin:10px 0}
+.fruit-scan-selection [data-fruit-scan-list]{max-height:180px;overflow:auto}
+.fruit-scan-selection [data-fruit-scan-list] p{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px}
+.fruit-scan-selection code{overflow-wrap:anywhere}
+.fruit-scan-selection [data-remove-fruit]{margin-left:auto;min-width:32px}

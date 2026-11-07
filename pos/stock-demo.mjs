@@ -1,3 +1,4 @@
+import {validateFruitDemo,recordFruitDemo,fruitHistoryDemo} from './fruit-tracking-demo.mjs';
 import {depositActions,mutateDepositDemo,refreshDepositDemo,readDepositsDemo,depositProofDemo} from './cash-deposits.mjs';
 import {mutateCrmDemo,recordCrmDemo,readCrmDemo} from './crm.mjs';
 import {savePaymentSettingsDemo,requireEnabledPayment,isPaymentLabel} from './payment-methods.mjs';
@@ -15,7 +16,7 @@ import {checkOrder,requirements} from './order-stock.mjs';
 import {savePosCategory} from './pos-categories.mjs';
 import {saveVariantProducts} from './product-variants.mjs';
 const localMaster=new Set(['master','master_details','product_save','product_update','product_delete','recipe_save']);
-const transactionKeys=['cashDeposits','cashDepositEvents','cashDepositSummary','cashDepositProofs','members','pointLedger','crmEvents','cashierShifts','cashierShiftEvents','cashierShiftEntries','documents','expenses','adminEvents','lots','unitLots','sales','movements','orders','events','journal','money','moneyJournal','origins','productions','wasteRuns','stockAdjustments','batchProcesses','receiptShipments','rejectRecords','batchOpenOrders','attendance','cashierApprovals'];
+const transactionKeys=['fruitUnits','fruitEvents','cashDeposits','cashDepositEvents','cashDepositSummary','cashDepositProofs','members','pointLedger','crmEvents','cashierShifts','cashierShiftEvents','cashierShiftEntries','documents','expenses','adminEvents','lots','unitLots','sales','movements','orders','events','journal','money','moneyJournal','origins','productions','wasteRuns','stockAdjustments','batchProcesses','receiptShipments','rejectRecords','batchOpenOrders','attendance','cashierApprovals'];
 const clone=x=>structuredClone(x);
 const positive=(value,label)=>{const n=Number(value);if(!Number.isFinite(n)||n<=0)throw Error(label+' harus lebih dari 0');return n;};
 const unitQty=(value,unit)=>{const n=positive(value,'Jumlah');if(['pcs','porsi'].includes(unit)&&!Number.isInteger(n))throw Error('Jumlah harus bilangan bulat');return n;};
@@ -27,7 +28,7 @@ function setDemoPrices(s){
   else p.salePrice=150000;
  }
 }
-export const readStockDemo=(s,name,p)=>name==='pos_cash_deposits_read'?readDepositsDemo(s,p.filters):name==='pos_cash_deposit_proof'?depositProofDemo(s,p.deposit_id):name==='pos_crm_read'?readCrmDemo(s,p):readDemoDocument(s,name,p);
+export const readStockDemo=(s,name,p)=>name==='pos_fruit_history'?fruitHistoryDemo(s,p.code):name==='pos_cash_deposits_read'?readDepositsDemo(s,p.filters):name==='pos_cash_deposit_proof'?depositProofDemo(s,p.deposit_id):name==='pos_crm_read'?readCrmDemo(s,p):readDemoDocument(s,name,p);
 function seedMissingStock(s){
  const supplierId=s.stockDemo.supplierId,date=s.stockDemo.date;
  const existing=new Set([...s.lots,...s.unitLots].map(l=>l.storeId+':'+l.productId));
@@ -50,7 +51,7 @@ export function createStockDemo(source){
  s.stockDemo={sessionId:id(),supplierId:id(),date:today(),initialQty:100};
  s.suppliers.push({id:s.stockDemo.supplierId,name:'Supplier demo',phone:'',address:''});
  s.opsVersion=Math.max(s.opsVersion||0,19);s.orderStockVersion=Math.max(s.orderStockVersion||0,11);s.orderRoutingVersion=Math.max(s.orderRoutingVersion||0,13);
- s.crmVersion=85;s.pointRules||=[];s.paymentMethodsVersion=84;s.cashierShiftVersion=83;s.receiptShipmentVersion=82;s.storeProfileVersion=64;s.rejectFlowVersion=63;s.cashierVersion=54;s.reportsAdminVersion=74;s.discounts||=[];seedMissingStock(s);refreshDepositDemo(s);return s;
+ s.fruitTrackingVersion=101;s.crmVersion=85;s.pointRules||=[];s.paymentMethodsVersion=84;s.cashierShiftVersion=83;s.receiptShipmentVersion=82;s.storeProfileVersion=64;s.rejectFlowVersion=63;s.cashierVersion=54;s.reportsAdminVersion=74;s.discounts||=[];seedMissingStock(s);refreshDepositDemo(s);return s;
 }
 function requireAccess(s,permission){if(s.access&&!s.access[permission])throw Error('Hak akses '+permission+' diperlukan.');}
 function event(s,action,p,storeId=p.storeId){s.events.push({id:localMaster.has(action)?id():p.id,action,store_id:storeId||null,business_date:p.date||today(),employee_id:s.me?.id||null,payload:clone(p),demo:true});}
@@ -91,7 +92,7 @@ function createOrder(s,p){
    const lot=s.lots.find(x=>x.id===l.lotId&&x.productId===product.id&&x.storeId===p.storeId&&x.quality==='ready');if(!lot)throw Error('Pilih stok buah matang');
    if(!['KG','BUTIR'].includes(l.unit))throw Error('Cara jual buah tidak valid');
    const kg=positive(l.kg,'Berat'),pieces=unitQty(l.pieces,'pcs');
-   return {lineId:id(),productId:product.id,name:product.name,itemType:'fruit',unit:l.unit,qty:l.unit==='KG'?kg:pieces,kg,pieces,price,lotId:lot.id,supplierId:lot.supplierId};
+   return {lineId:id(),productId:product.id,name:product.name,itemType:'fruit',unit:l.unit,qty:l.unit==='KG'?kg:pieces,kg,pieces,price,lotId:lot.id,supplierId:lot.supplierId,...(l.barcode?{barcode:l.barcode}:{})};
   }
   if(!(Number(product.salePrice)>0)||price!==Number(product.salePrice))throw Error('Harga produk berubah atau belum diisi. Pilih kembali produk.');
   const recipe=s.recipes.find(r=>r.outputId===product.id);
@@ -134,10 +135,12 @@ export function applyStockDemoAction(source,action,payload){
  const prior=!localMaster.has(action)&&source.events.find(x=>x.id===p.id);
  if(prior){if(prior.action!==action||JSON.stringify(prior.payload)!==JSON.stringify(p))throw Error('ID pengiriman sudah digunakan untuk data lain');return source;}
  let s=clone(source);
+ validateFruitDemo(s,action,p);
  if(depositActions.has(action))mutateDepositDemo(s,action,p);
  else if(action==='crm_member_save'||action==='crm_rule_save')mutateCrmDemo(s,action,p);
  else if(action==='payment_settings_save')savePaymentSettingsDemo(s,p);
  else if(['cashier_shift_open','cashier_shift_close'].includes(action))mutateShiftDemo(s,action,p);
+ else if(action==='movement'){requireAccess(s,'stock');if(p.kind!=='Transfer')throw Error('Gunakan Reject & Waste');s=applyAction(s,action,p);const lot=source.lots.find(l=>l.id===p.lotId);for(const [storeId,lotId,sign] of [[lot.storeId,lot.id,-1],[p.toStoreId,p.id,1]])s.journal.push({id:id(),event_id:p.id,store_id:storeId,lot_id:lotId,product_id:lot.productId,supplier_id:lot.supplierId,qty:sign*Number(p.kg),pieces:sign*Number(p.pieces),unit:'kg'});}
  else if(action==='receipt_batch')receiveShipmentDemo(s,p);
  else if(documentDemoActions.has(action))applyDocumentDemo(s,action,p);
  else if(action==='document_examples')createDocumentExamples(s,p.storeId,payload=>{const before=clone(s);cashierDemo(s,'order_create',payload,createOrder);recordShiftDemo(s,before,'order_create',payload);event(s,'order_create',payload);});
@@ -149,5 +152,5 @@ export function applyStockDemoAction(source,action,payload){
  else if(action==='product_variants_save'){requireAccess(s,'master');saveVariantProducts(s,p);setDemoPrices(s);seedMissingStock(s);return s;}
  else if(localMaster.has(action)){requireAccess(s,'master');s=applyAction(s,action,p);setDemoPrices(s);seedMissingStock(s);}
  else throw Error('Mode demo mendukung uji kasir, kitchen, dokumen, serta pengaturan produk, kategori dan resep. Aksi ini belum tersedia dalam demo.');
- recordShiftDemo(s,source,action,p);recordCrmDemo(s,action,p);event(s,action,p);refreshDepositDemo(s);return s;
+ recordFruitDemo(s,source,action,p);recordShiftDemo(s,source,action,p);recordCrmDemo(s,action,p);event(s,action,p);refreshDepositDemo(s);return s;
 }

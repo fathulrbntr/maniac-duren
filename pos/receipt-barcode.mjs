@@ -5,7 +5,7 @@ import { isLegacyStock } from './catalog.mjs';
 export function receiptBarcode(raw, products, productId, settings) {
   const code = normalizeBarcode(raw, settings);
   const scale = parseScaleBarcode(code);
-  if (!scale) throw Error('Scan label timbangan CAS POS KG lengkap (13 digit, awalan 21). Barcode produk biasa tidak memuat berat.');
+  if (!scale) throw Error('Scan label timbangan CAS tracking 26 digit (awalan 92) atau label lama POS KG 13 digit (awalan 21). Barcode produk biasa tidak memuat berat.');
   const matches = products.filter(p => String(p.barcode || '').trim() === scale.itemCode);
   if (!matches.length) throw Error(`Kode barang ${scale.itemCode} belum terdaftar. Cocokkan kolom Barcode durian di Master Barang dengan kode pada timbangan.`);
   if (matches.length > 1) throw Error(`Kode barang ${scale.itemCode} dipakai lebih dari satu produk. Perbaiki pemetaan Barcode di Master Barang.`);

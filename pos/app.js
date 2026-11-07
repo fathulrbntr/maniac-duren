@@ -1,3 +1,4 @@
+import {attachFruitScanSelection} from './fruit-scan-selection.mjs';
 import { crmPage, bindCrm, memberFields, bindMemberPicker } from "./crm-ui.mjs";
 import {
   paymentsPage,
@@ -1282,14 +1283,24 @@ function movement() {
   if (!lots.length) return toast("Tidak ada stok tersedia");
   const d = modal(
     "Transfer / pemakaian",
-    `${field("Asal barang", `<select name="lotId">${lots.map((l) => `<option value="${e(l.id)}">${e(name("products", l.productId))} · ${e(name("suppliers", l.supplierId))} · ${short(l.id)}</option>`).join("")}</select>`)}<div class="form-grid">${field("Tanggal", `<input name="date" type="date" value="${today()}" required>`)}${field("Jenis", '<select name="kind"><option>Pemakaian dapur</option><option>Transfer</option></select>')}${field("Berat keluar (kg)", '<input name="kg" type="number" min="0.000001" step="any" required>')}${field("Butir keluar", '<input name="pieces" type="number" min="1" step="1" required>')}</div><div id="destination" hidden>${field("Store tujuan", `<select name="toStoreId">${options("stores")}</select>`)}</div>${field("Catatan / alasan", '<input name="note" required maxlength="300">')}<p class="form-help">Pemakaian dapur hanya mengurangi stok. Untuk mencatat hasil olahan durian, gunakan menu Waste & Olahan.</p>`,
+    `${field("Asal barang", `<select name="lotId">${lots.map((l) => `<option value="${e(l.id)}">${e(name("products", l.productId))} · ${e(name("suppliers", l.supplierId))} · ${short(l.id)}</option>`).join("")}</select>`)}<div class="form-grid">${field("Tanggal", `<input name="date" type="date" value="${today()}" required>`)}${field("Jenis", '<select name="kind"><option>Pemakaian dapur</option><option>Transfer</option></select>')}${field("Berat keluar (kg)", '<input name="kg" type="number" min="0.000001" step="any" required>')}${field("Butir keluar", '<input name="pieces" type="number" min="1" step="1" required>')}</div><div id="destination" hidden>${field("Store tujuan", `<select name="toStoreId">${options("stores")}</select>`)}</div>${field("Catatan / alasan", '<input name="note" required maxlength="300">')}<p class="form-help">Scan setiap buah yang dipindahkan. Asal batch, berat, dan jumlah mengikuti label tracking.</p>`,
   );
   const f = d.querySelector("form");
   f.kind.onchange = () =>
     (d.querySelector("#destination").hidden = f.kind.value !== "Transfer");
+  const selection=attachFruitScanSelection(d,{state,store,sourceName:"lotId"});
+  const syncTracking=()=>{
+    const tracked=state.fruitUnits?.some(u=>u.lotId===f.lotId.value);
+    const usage=[...f.kind.options].find(o=>o.value==="Pemakaian dapur");
+    if(usage)usage.disabled=!!tracked;
+    if(tracked)f.kind.value="Transfer";
+    f.kind.onchange();
+  };
+  f.lotId.addEventListener("change",syncTracking);syncTracking();
+  const requestId=id();
   f.onsubmit = async (ev) => {
     ev.preventDefault();
-    const p = { ...Object.fromEntries(new FormData(f)), id: id() };
+    const p = { ...Object.fromEntries(new FormData(f)), id: requestId, storeId: store, ...selection.payload() };
     if (p.kind !== "Transfer") delete p.toStoreId;
     if (await mutate("movement", p)) {
       d.close();

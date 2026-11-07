@@ -1,3 +1,4 @@
+import {trackedFruit} from './scale-label.mjs';
 import {escape as e,today,num,money} from './core.mjs';
 import {availableStock,requirements,checkOrder} from './order-stock.mjs';
 import {sumProducts} from './decimal-totals.mjs';
@@ -25,9 +26,13 @@ export function fruitSaleLots(s,store,productId,draft,date=today()) {
 
 export function fruitSaleDialog({productId,scale=null,getState,getDraft,store,modal,onAdd,onClose,verifyBarcode}) {
   const initial=getState(),product=initial.products.find(p=>p.id===productId);
+  const tracked=scale?.tracking?trackedFruit(initial,scale.barcode,store):null;
+  const trackedLot=tracked?initial.lots.find(l=>l.id===tracked.lotId):null;
+  if(tracked&&(!trackedLot||tracked.productId!==productId))throw Error('Asal buah tidak cocok. Muat ulang stok.');
+  if(tracked&&getDraft().some(l=>l.barcode===scale.barcode))throw Error('Barcode buah ini sudah ada dalam pesanan.');
   if(!product||!posVisible(product)||product.stockUnit!=='kg_butir')throw Error('Produk buah tidak tersedia.');
   if(!fruitSaleLots(initial,store,productId,getDraft()).length)throw Error('Stok buah siap jual habis pada outlet ini.');
-  const d=modal('Penjualan buah',`<div class="fruit-sale-heading"><h3>${e(product.name)}</h3><p class="muted">Ketik tanggal → Enter · pilih supplier ↑ ↓ → Enter · pilih kg/butir ↑ ↓ → Enter${scale?' masuk keranjang.':' lalu isi berat dan jumlah buah.'}</p></div>
+  const d=modal('Penjualan buah',`<div class="fruit-sale-heading"><h3>${e(product.name)}</h3><p class="muted">${tracked?'Batch dan supplier mengikuti barcode. Pilih kg/butir → Enter':'Ketik tanggal → Enter · pilih supplier ↑ ↓ → Enter · pilih kg/butir ↑ ↓ → Enter'}${scale?' masuk keranjang.':' lalu isi berat dan jumlah buah.'}</p></div>
     ${scale?`<div class="fruit-sale-measures"><div><span>Berat label</span><strong>${num(scale.kg)} kg</strong></div><div><span>Jumlah buah</span><strong>1 butir</strong></div></div>`:''}
     ${field('1. Tanggal barang masuk','<input name="receiptDate" type="text" inputmode="numeric" maxlength="10" autocomplete="off" placeholder="DDMMYYYY · contoh 09102026" aria-describedby="fruit-date-help" required>')}
     <p id="fruit-date-help" class="fruit-sale-hint">Ketik 8 angka, lalu Enter. Contoh: 09102026 = 09/10/2026.</p>
@@ -49,7 +54,7 @@ export function fruitSaleDialog({productId,scale=null,getState,getDraft,store,mo
   const priceFor=p=>Number(control('unit').value==='KG'?p?.priceKg:p?.pricePiece);
   const dateLots=()=>{
     const date=parseFruitReceiptDate(control('receiptDate').value);
-    return date?fruitSaleLots(getState(),store,productId,getDraft()).filter(l=>l.date===date&&l.supplierId):[];
+    return date?fruitSaleLots(getState(),store,productId,getDraft()).filter(l=>l.date===date&&l.supplierId&&(!tracked||l.id===tracked.lotId)):[];
   };
   function preview() {
     const p=currentProduct(),price=priceFor(p),{kg,pieces}=quantities(),qty=control('unit').value==='KG'?kg:pieces;
@@ -61,13 +66,13 @@ export function fruitSaleDialog({productId,scale=null,getState,getDraft,store,mo
   function refresh() {
     if(!active())return;
     const s=getState(),date=parseFruitReceiptDate(control('receiptDate').value),lots=dateLots(),select=control('lotId');
-    const oldLot=date===lastDate?select.value:'';lastDate=date;
+    const oldLot=tracked?tracked.lotId:date===lastDate?select.value:'';lastDate=date;
     const counts=new Map();for(const lot of lots)counts.set(lot.supplierId,(counts.get(lot.supplierId)||0)+1);
     const rows=lots.map(l=>({id:l.id,name:supplierName(s,l.supplierId)+(counts.get(l.supplierId)>1?` · ${num(l.kg)} kg / ${l.pieces} butir · ${l.id.slice(0,8)}${l.note?' · '+l.note:''}`:'')})).sort((a,b)=>a.name.localeCompare(b.name)||a.id.localeCompare(b.id));
     const html='<option value="">Pilih supplier</option>'+rows.map(r=>`<option value="${e(r.id)}">${e(r.name)}</option>`).join('');
     // Avoid replacing a native select's options during polling when nothing changed.
     if(select.innerHTML!==html)select.innerHTML=html;
-    select.value=rows.some(r=>r.id===oldLot)?oldLot:'';select.disabled=!rows.length;
+    select.value=rows.some(r=>r.id===oldLot)?oldLot:'';select.disabled=!!tracked||!rows.length;
     const chosen=lots.find(l=>l.id===select.value);
     d.querySelector('[data-fruit-stock]').textContent=chosen?`Tersedia: ${num(chosen.kg)} kg / ${chosen.pieces} butir.`:date&&!lots.length?'Tidak ada stok siap jual untuk tanggal ini.':[...counts.values()].some(count=>count>1)?'Supplier dengan beberapa penerimaan ditampilkan per penerimaan. Pilih asal buah yang sesuai.':date?'Pilih supplier dengan tombol ↑ ↓, lalu Enter.':'Ketik tanggal masuk untuk melihat supplier yang tersedia.';
     submit.disabled=!validProduct(currentProduct())||!fruitSaleLots(s,store,productId,getDraft()).length;
@@ -98,13 +103,14 @@ export function fruitSaleDialog({productId,scale=null,getState,getDraft,store,mo
       const s=getState(),p=currentProduct();
       if(!validProduct(p))throw Error('Produk buah sudah berubah atau tidak tersedia.');
       verifyBarcode?.();
+      if(tracked){const current=trackedFruit(s,scale.barcode,store);if(current.lotId!==tracked.lotId)throw Error('Lokasi buah berubah. Scan ulang.');}
       const lot=checkSource(),{kg,pieces}=quantities(),unit=control('unit').value,price=priceFor(p);
       if(!['KG','BUTIR'].includes(unit))reject('unit','Pilih cara jual buah.');
       if(!Number.isFinite(kg)||kg<=0)reject(scale?'unit':'kg','Isi berat buah positif.');
       if(!Number.isInteger(pieces)||pieces<=0)reject(scale?'unit':'pieces','Isi jumlah butir bulat minimal 1.');
       if(!Number.isFinite(price)||price<=0)reject('unit','Harga jual untuk cara jual ini belum diisi di Master Barang.');
       if(price!==displayedPrice){preview();reject('unit','Harga jual berubah. Periksa harga terbaru lalu tambah kembali.');}
-      const line={productId,lotId:lot.id,supplierId:lot.supplierId,unit,kg,pieces,qty:unit==='KG'?kg:pieces,price};
+      const line={productId,lotId:lot.id,supplierId:lot.supplierId,unit,kg,pieces,qty:unit==='KG'?kg:pieces,price,...(tracked?{barcode:scale.barcode}:{})};
       const stock=checkOrder(s,store,[...getDraft(),line],today());if(!stock.ok)throw Error(stock.reason);
       if(onAdd(line,lot)===false)throw Error('Buah belum ditambahkan. Periksa stok dan ulangi.');
       finished=true;submit.disabled=true;d.close();
@@ -136,5 +142,6 @@ export function fruitSaleDialog({productId,scale=null,getState,getDraft,store,mo
   });
   form.onsubmit=ev=>{ev.preventDefault();addToCart();};
   d.addEventListener('close',()=>onClose?.(finished));
-  refresh();focus('receiptDate');return {dialog:d,refresh};
+  if(tracked){control('receiptDate').value=dateLabel(trackedLot.date);control('receiptDate').readOnly=true;d.querySelector('#fruit-date-help').textContent='Tanggal penerimaan dan supplier terisi dari riwayat stok buah.';}
+  refresh();focus(tracked?'unit':'receiptDate');return {dialog:d,refresh};
 }
