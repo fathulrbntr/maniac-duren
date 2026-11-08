@@ -1,0 +1,14 @@
+PASS real checkout handlers: QR cancellation, async close ordering, exactly-once save, paid only after success, uncertain network, logout and stale-dialog isolation.
+✔ tests/customer-display-payment-flow.test.mjs (142.846705ms)
+PASS wireless SQL: scoped host, explicit approval, hashed capabilities, read-only viewer, privacy, sequence, expiry, heartbeat, revoke, retry limits and rerunnable permissions.
+✔ tests/customer-display-wireless-sql.test.mjs (1722.637813ms)
+PASS wireless transport: coalescing, cancellation races, viewer token lifecycle, late response rejection, clock skew, API input/origin/rate-limit and secret isolation.
+✔ tests/customer-display-wireless.test.mjs (82.44855ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1736.132722

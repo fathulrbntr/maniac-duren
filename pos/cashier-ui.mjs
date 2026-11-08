@@ -1,4 +1,5 @@
-import {customerSnapshot,publishCustomer,publishCustomerCart,openCustomerDisplay,getDisplayEpoch} from './customer-display-channel.mjs';
+import {showWirelessDisplay} from './customer-display-wireless-host.mjs';
+import {customerSnapshot,publishCustomer,publishCustomerCart,getDisplayEpoch} from './customer-display-channel.mjs';
 import {paymentQRFields,bindPaymentQR} from './payment-qr-ui.mjs';
 import {memberFields,bindMemberPicker,memberReceipt} from './crm-ui.mjs';
 import {requireEnabledPayment,availablePayments} from './payment-methods.mjs';
@@ -48,7 +49,7 @@ export function bindCheckout(ctx,store,getDraft,clearDraft){
  const table=document.querySelector('#order-table'),note=document.querySelector('#order-note'),select=document.querySelector('#order-discount'),requestButton=document.querySelector('#request-discount'),status=document.querySelector('#discount-status'),save=document.querySelector('#save-order');
  if(!table||!select)return ()=>{};
  const memberPicker=bindMemberPicker(ctx,document,getDraft);
- document.querySelector('#customer-display-open')?.addEventListener('click',()=>{try{openCustomerDisplay();}catch(error){ctx.toast(error.message);}});
+ document.querySelector('#customer-display-open')?.addEventListener('click',()=>{try{showWirelessDisplay(ctx,store);}catch(error){ctx.toast(error.message);}});
  const checkout=()=>({storeId:store,date:today(),lines:structuredClone(getDraft()),tableNo:table.value?Number(table.value):null,note:note.value,memberId:memberPicker.get()?.id||null,memberName:memberPicker.get()?.name||null});
  const approval=()=>{const s=ctx.getState(),p=checkout();if(!select.value)return {s,p,a:null};const quote=cashierQuote(s,p);return {s,p,a:findDiscountApproval(s,quote,select.value)};};
  let requesting=false,lastError='';
@@ -98,7 +99,7 @@ function paymentDialog(ctx,p,t,onSaved){
  const f=d.querySelector('form'),method=f.elements.namedItem('payment'),amount=f.elements.namedItem('paid');
  let advanced=false,cancelled=false;const displayEpoch=getDisplayEpoch();
  const display=(phase='payment',qr=null)=>{if(displayEpoch===getDisplayEpoch()&&!(advanced&&phase==='payment'))publishCustomer(customerSnapshot(ctx.getState(),{...p,payment:method.value},t,phase,qr));};
- const qrUI=bindPaymentQR(d,{total:t.total,transactionId:p.id,demo:!!s.stockDemo,onQR:qr=>{if(qr){const fresh=p.orderId?ctx.getState().orders.find(o=>o.id===p.orderId):checkoutTotals(ctx.getState(),p);if(fresh?.total!==t.total)throw Error('Total berubah. Tutup pembayaran dan periksa pesanan.');}display('payment',qr);},onError:error=>err(d,error)});
+ const qrUI=bindPaymentQR(d,{total:t.total,transactionId:p.id,demo:!!s.stockDemo,onOpenDisplay:()=>showWirelessDisplay(ctx,p.storeId),onQR:qr=>{if(qr){const fresh=p.orderId?ctx.getState().orders.find(o=>o.id===p.orderId):checkoutTotals(ctx.getState(),p);if(fresh?.total!==t.total)throw Error('Total berubah. Tutup pembayaran dan periksa pesanan.');}display('payment',qr);},onError:error=>err(d,error)});
  const update=()=>{amount.readOnly=method.value!=='Tunai';if(amount.readOnly)amount.value=t.total;d.querySelector('#payment-change').textContent='Kembalian: '+money(Math.max(0,Number(amount.value)-t.total));};const received=f.elements.namedItem('paymentConfirmed');const methodChanged=()=>{qrUI.setMethod(method.value);received.checked=false;received.required=method.value!=='Tunai';d.querySelector('[data-receive-label]').hidden=!received.required;d.querySelector('[data-payment-info]').textContent=paymentInfo(ctx.getState(),p.storeId,method.value);update();};method.onchange=methodChanged;amount.oninput=update;methodChanged();
  const cancel=()=>{if(advanced||cancelled)return;cancelled=true;resultPopup(ctx,{success:false,title:'Pembayaran dibatalkan',message:'Pesanan belum disimpan. Keranjang tetap tersedia.'});};
  d.addEventListener('close',()=>{qrUI.dispose();if(!advanced)display('cart');cancel();});

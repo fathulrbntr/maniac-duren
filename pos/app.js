@@ -47,6 +47,10 @@ import { printReceipt } from "./receipt-printer.mjs";
 import { storesPage, storeDialog } from "./store-settings.mjs";
 import { receiptHeader, fillReceiptLogo } from "./store-profile.mjs";
 const storeContext = () => ({
+  displayHost: (payload) => {
+    if (mode !== "live") throw Error("Sambungan tablet tersedia pada mode operasional.");
+    return request("/rest/v1/rpc/pos_customer_display_host", payload);
+  },
   modal,
   mutate,
   render,

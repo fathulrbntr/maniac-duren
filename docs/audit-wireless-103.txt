@@ -1,0 +1,51 @@
+AUDIT WIRELESS DISPLAY 103 — 8 November 2026
+
+Implementasi
+- Host kasir menggunakan RPC authenticated, memeriksa auth.uid(), izin sell,
+  toko, dan kepemilikan sesi. Viewer tidak dapat menggunakan RPC host.
+- Tablet menggunakan endpoint POST /api/pos-display pada domain yang sama.
+- API menolak permintaan lintas origin dan mengizinkan hanya pair/poll/leave.
+- Service-role key hanya digunakan server; tablet memperoleh capability acak
+  untuk membaca satu sesi yang sudah disetujui kasir, maksimal 12 jam.
+- Kode pasangan acak 40 bit, kedaluwarsa 5 menit, satu klaim; persetujuan kasir
+  memerlukan kode verifikasi yang cocok dengan tablet.
+- Pembatasan 8 percobaan pairing per menit per hash alamat IP; kegagalan tetap
+  menghitung kuota. Pembuatan sesi dibatasi 20 per jam per akun kasir.
+- Database menyimpan hash kode/token; token tablet berada di sessionStorage,
+  tidak dimasukkan URL, dan tidak memberi akses ke akun, stok, atau transaksi.
+- Server menyaring snapshot menjadi daftar barang, jumlah, harga, total,
+  meja, status dan QR. Tidak ada supplier, modal, member, nomor telepon,
+  catatan internal atau kredensial pada snapshot.
+- Tabel relay mengaktifkan RLS dan tidak memberi akses langsung anon/authenticated.
+  Kebijakan deny-by-default disengaja; akses melalui RPC terbatas.
+- Viewer RPC SECURITY INVOKER hanya dapat dijalankan service_role.
+  Helper status pegawai SECURITY DEFINER hanya dapat dijalankan service_role;
+  role relay tidak diberi SELECT seluruh tabel pegawai.
+- Semua fungsi memakai search_path kosong, dengan objek skema terqualifikasi.
+- Snapshot berurutan, heartbeat kasir 5 detik, polling tablet 1,5 detik.
+  Permintaan publish digabung saat masih berlangsung, tidak menumpuk tanpa batas.
+- Respons lama setelah disconnect/logout atau perubahan sesi diabaikan.
+- Snapshot kedaluwarsa setelah 15 detik tanpa heartbeat kasir; kegagalan
+  jaringan tablet menyembunyikan QR, kemudian mencoba sambung kembali.
+- QR divalidasi kembali pada tablet; masa tampil tidak diperpanjang oleh polling.
+- QR EDC tetap memerlukan pemindahan QR dan verifikasi pembayaran manual.
+
+Verifikasi
+- Full suite: 160 lulus, 0 gagal.
+- Setelah koreksi binding timer browser: tes wireless SQL, transport/API dan
+  checkout/payment flow lulus; npm run check lulus.
+- Browser: create code → pair → pending tanpa data → approve → cart → QR.
+- Browser: portrait/landscape, network failure menyembunyikan QR, reconnect
+  mengambil keranjang terbaru tanpa QR lama, disconnect kembali ke pairing.
+- Supabase asli: migration berhasil; fungsi/hak akses diverifikasi, lalu
+  create/pair/approve/publish/stop diuji dalam transaksi yang di-rollback.
+- Advisor tambahan hanya menandai tabel RLS tanpa policy (sengaja menutup akses
+  tabel) serta host RPC authenticated SECURITY DEFINER yang memiliki guard.
+  Temuan lama di bagian aplikasi lain tidak diubah oleh patch ini.
+- Tidak ada data pelanggan/pegawai atau pembayaran nyata dalam uji browser.
+
+Batas verifikasi
+- Browser menggunakan relay simulasi untuk UI, bukan menjalankan fungsi Vercel.
+- Jalur API diuji dengan mock Supabase; SQL diuji PGlite serta project asli.
+- Belum diuji sebagai satu alur jaringan dari tablet fisik ke deployment Vercel.
+- Menggunakan koneksi internet; tidak menyediakan relay lokal tanpa internet.

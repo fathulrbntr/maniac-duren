@@ -1,3 +1,4 @@
+import {WirelessDisplayViewer,wirelessState} from './customer-display-wireless-viewer.mjs';
 import {DISPLAY_PROTOCOL, receiverState, visibleSnapshot} from './customer-display-channel.mjs';
 import {validatePaymentQR} from './payment-qr.mjs';
 import {qrcode} from './vendor/qrcode.mjs';
@@ -5,11 +6,21 @@ const e = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;'
 const money = n => new Intl.NumberFormat('id-ID', {style:'currency', currency:'IDR', maximumFractionDigits:2}).format(Number(n) || 0);
 const number = n => new Intl.NumberFormat('id-ID', {maximumFractionDigits:3}).format(Number(n) || 0);
 const root = document.querySelector('#display'), connection = document.querySelector('#connection');
-const token = location.hash.slice(1); let current = null, lastRender = '', channel;
+const token = location.hash.slice(1); let current = null, lastRender = '', channel, wireless=null, wirelessStatus=null;
+function renderPairing() {
+  const state=wirelessStatus||{status:'idle'}, pending=state.status==='pending', busy=state.status==='pairing';
+  const signature=JSON.stringify(state);if(signature===lastRender)return;lastRender=signature;
+  connection.textContent=pending?'Menunggu persetujuan':busy?'Menghubungkan…':'Belum terhubung';connection.classList.remove('live');
+  document.querySelector('#outlet').textContent='Layar pelanggan wireless';
+  document.querySelector('#disconnect').hidden=!pending;
+  root.innerHTML=`<section class="pairing"><div class="pair-intro"><p class="eyebrow">LAYAR PELANGGAN</p><h1>Pesanan Anda.<br>Langsung di sini.</h1><p>Hubungkan tablet ini dengan kasir Maniac Duren untuk melihat pesanan dan QR pembayaran.</p><div class="pair-note">Tanpa kabel · Terhubung melalui internet</div></div><div class="pair-form"><p class="eyebrow">${pending?'KONFIRMASI TABLET':'HUBUNGKAN TABLET'}</p><h2>${pending?'Cocokkan kode verifikasi':'Masukkan kode dari kasir'}</h2>${pending?`<output class="verify-code">${e(state.verificationCode)}</output><p>Tunjukkan kode ini kepada kasir. Pesanan akan tampil setelah kasir menyetujui sambungan.</p>`:`<p>Di komputer kasir, pilih <b>Layar pelanggan → Buat kode pasangan</b>.</p><form id="pair-form"><label for="pair-code">Kode pasangan</label><input id="pair-code" name="code" maxlength="11" placeholder="ABCDE-12345" autocomplete="off" autocapitalize="characters" spellcheck="false" required ${busy?'disabled':''}><button type="submit" ${busy?'disabled':''}>${busy?'Menghubungkan…':'Hubungkan tablet'}</button></form>`}<p class="pair-error" role="alert">${e(state.error||'')}</p></div></section>`;
+  document.querySelector('#pair-form')?.addEventListener('submit',ev=>{ev.preventDefault();const value=document.querySelector('#pair-code').value;void wireless.pair(value);});
+}
 function render() {
+  if(wirelessStatus && ['idle','pairing','pending'].includes(wirelessStatus.status)){renderPairing();return;}
   const s = visibleSnapshot(current), signature = JSON.stringify(s);
   const live = !!current && Date.now() - current.seenAt < 15000;
-  connection.textContent = live ? 'Terhubung ke kasir' : 'Menunggu kasir'; connection.classList.toggle('live', live);
+  connection.textContent = live ? 'Terhubung ke kasir' : wirelessStatus?.status==='offline' ? 'Menyambungkan kembali…' : 'Menunggu kasir'; connection.classList.toggle('live', live);
   if (signature === lastRender) {
     const timer = document.querySelector('[data-timer]');
     if (timer && s?.qr) timer.textContent = 'Tampilan QR berakhir dalam ' + Math.max(0, Math.ceil((s.qr.expiresAt - Date.now()) / 1000)) + ' detik';
@@ -50,4 +61,16 @@ if (/^[0-9a-f-]{36}$/i.test(token) && typeof BroadcastChannel !== 'undefined') {
   channel.postMessage({protocol:DISPLAY_PROTOCOL, type:'hello'});
   setInterval(() => { channel.postMessage({protocol:DISPLAY_PROTOCOL, type:'hello'}); render(); }, 1000);
   window.addEventListener('pagehide', () => channel.close());
-} else { connection.textContent = 'Belum terhubung'; }
+} else {
+  let storage;try{storage=window.sessionStorage;}catch{/* Memory-only session. */}
+  wireless=new WirelessDisplayViewer({storage,onChange:data=>{
+    wirelessStatus=data;current=wirelessState(data);
+    document.querySelector('#disconnect').hidden=['idle','pairing'].includes(data.status);
+    render();
+  }});
+  document.querySelector('#disconnect').onclick=()=>wireless.leave();
+  wireless.resume();setInterval(render,1000);
+  window.addEventListener('pagehide',()=>wireless.pause());
+  window.addEventListener('pageshow',ev=>{if(ev.persisted)wireless.resume();});
+}
+render();

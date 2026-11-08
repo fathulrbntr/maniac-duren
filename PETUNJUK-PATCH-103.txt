@@ -1,0 +1,108 @@
+MANIAC DUREN — PATCH 103
+Layar pelanggan wireless untuk tablet
+Basis: maniac-duren(10).zip + perubahan barcode/display 102.
+
+STATUS
+- Patch ini sudah mencakup kode patch 102. Cukup pasang patch 103 ini.
+- Schema wireless sudah dipasang pada Supabase maniac-duren-pos.
+- Website Vercel belum di-deploy dari sesi ini. Pasang file dan push proyek Anda.
+- Harga, stok, transaksi, serta firmware timbangan tidak diubah oleh pembaruan wireless.
+
+CARA MEMASANG
+1. Cadangkan proyek lokal. Ekstrak isi ZIP ke folder proyek yang berisi package.json.
+   Gabungkan folder dan timpa file yang sama; jangan mengganti seluruh folder proyek.
+2. Buka terminal pada folder proyek. Jalankan:
+
+   npm ci
+   npm test
+   npm run check
+   git add --pathspec-from-file=PATCH-103-FILES.txt
+   git diff --cached --stat
+   git commit -m "Add wireless tablet customer display"
+   git push origin main
+
+   Lanjutkan commit/push setelah pengujian lulus. Periksa daftar file yang akan di-commit.
+   Jika deployment memakai cabang lain, gunakan cabang tersebut.
+3. Tunggu deployment Vercel selesai. Muat ulang POS pada komputer kasir.
+4. API memakai variabel server Vercel yang sama dengan login POS:
+   POS_SUPABASE_URL dan POS_SUPABASE_SERVICE_ROLE_KEY.
+   Simpan service-role key hanya di server, jangan pada HTML atau konfigurasi tablet.
+   Jika login POS saat ini memakai konfigurasi tersebut, tidak perlu membuat key baru.
+5. Tidak perlu menjalankan SQL lagi pada project Supabase yang sudah ditangani di atas.
+   Untuk lingkungan lain, jalankan migration
+   supabase/migrations/20261108022503_wireless_customer_display.sql
+   setelah database POS dasarnya terpasang. Jangan mengganti database dengan database baru.
+
+CARA MENGHUBUNGKAN TABLET
+1. Komputer kasir dan tablet terhubung ke internet. Wi-Fi boleh berbeda.
+2. Pada halaman Pesanan kasir, klik Layar pelanggan → Buat kode pasangan.
+3. Buka alamat yang ditampilkan kasir pada browser tablet.
+   Halamannya adalah /pos/customer-display.html pada domain POS yang sama.
+4. Masukkan kode pasangan 10 karakter dari komputer kasir (contoh format: ABCDE-12345).
+5. Tablet menampilkan kode verifikasi. Cocokkan dengan kode pada komputer kasir.
+6. Kasir klik Kode sesuai · Izinkan tablet. Klik Selesai untuk menutup pengaturan.
+7. Tablet menampilkan produk, berat/jumlah, harga, diskon, total, dan tahap pembayaran.
+8. Gunakan Layar penuh. Tampilan menyesuaikan portrait/landscape.
+   Atur tablet agar layar tidak otomatis mati selama pelayanan.
+
+KODE DAN SAMBUNGAN
+- Kode pasangan berlaku 5 menit dan hanya bisa diklaim satu tablet.
+- Setiap tab kasir mempunyai pasangan sendiri; satu tablet tidak menampilkan beberapa kasir.
+- Tablet tidak memerlukan akun atau password kasir dan tidak dapat menyimpan transaksi.
+- Sesi maksimal 12 jam. Buat kode baru jika sesi berakhir.
+- Refresh halaman tablet yang sama dapat melanjutkan sesi yang masih aktif.
+- Logout, ganti toko, atau memuat ulang komputer kasir memerlukan pasangan baru.
+- Putuskan tablet dapat dipilih pada kasir; tombol Putuskan juga tersedia pada tablet.
+- Pembaruan biasanya terlihat dalam sekitar 1–2 detik, bergantung koneksi.
+- Saat permintaan tablet gagal, QR langsung disembunyikan. Jika komputer kasir berhenti
+  mengirim pembaruan, snapshot kedaluwarsa setelah 15 detik; pembacaan berikutnya
+  menyembunyikan pesanan/QR. Tidak ada pembayaran offline.
+- Saat koneksi pulih, tablet mengambil kondisi terbaru dari kasir.
+- Jika tablet tertulis belum terhubung, buka ulang pengaturan kasir dan buat kode baru.
+- Mode demo tetap memakai opsi Layar di komputer ini, tanpa sambungan database wireless.
+
+QRIS EDC BCA
+Alur pembayaran tetap sesuai EDC Anda yang diinput nominalnya secara manual:
+1. Kasir menyelesaikan keranjang, lalu memilih pembayaran QRIS.
+2. Masukkan total yang sama di EDC BCA dan keluarkan QR dinamis resmi EDC.
+3. Scan QR memakai scanner 2D atau pilih foto QR pada komputer kasir.
+4. Periksa nama merchant dan nominal, lalu klik Tampilkan QR.
+5. QR yang sama tampil pada tablet. Pelanggan scan menggunakan aplikasi pembayaran.
+6. Kasir tetap memeriksa keberhasilan pembayaran pada EDC, lalu mengonfirmasi di POS.
+
+Wireless hanya memindahkan tampilan pesanan/QR ke tablet. Sistem belum dapat
+memerintahkan EDC membuat QR atau mendeteksi pembayaran berhasil secara otomatis.
+Otomatisasi penuh membutuhkan integrasi API/ECR resmi dari penyedia pembayaran.
+QR disembunyikan saat nominal/metode berubah, dibatalkan, masuk konfirmasi, atau
+masa tampilan berakhir. Batas tampilan 3 menit; masa berlaku bank bisa lebih pendek.
+Foto QR diproses lokal; yang disinkronkan ke tablet hanya teks QR yang sudah divalidasi.
+
+BARCODE BUAH YANG TETAP DICAKUP DARI PATCH 102
+PLU 1  MONTHONG                  0001
+PLU 2  BAWOR                     0002
+PLU 3  MUSANG KING FRESH         0003
+PLU 4  PETRUK                    0004
+PLU 5  MUSANG KING NITROGEN      0005
+PLU 6  MATAHARI                  0006
+PLU 8  BLACK THORN FRESH         0008
+PLU 9  BLACK THORN NITROGEN      0009
+PLU 10 CUMASI                    0010
+PLU 12 LOKAL SUPER               0012
+PLU 14 MIMANG                    0014
+PLU 15 SUPER TEMBAGA             0015
+
+Samakan ItemCode timbangan dengan kode master, bukan hanya nomor PLU.
+Barcode buah: 92 + mesin(2) + DDMMYY(6) + urutan(6) + ItemCode(4) + gram(6).
+Label harus sudah diterima/tercatat dalam stok sebelum dijual. Harga mengikuti master.
+Barang seperti Crystaline memakai barcode pabrik lengkap di Master Barang, satuan pcs;
+scan pada input yang sama, tanpa format dinamis atau popup batch durian.
+SQL mapping 102 hanya disertakan sebagai referensi; sudah diterapkan sebelumnya.
+
+PENGUJIAN
+160 pengujian otomatis lulus. Pengujian ulang wireless dan checkout setelah perbaikan
+browser juga lulus; pemeriksaan sintaks/import/aset/database build lulus.
+Uji browser memakai tablet simulasi 768×1024 dan 1024×768, keranjang dan QR sintetis.
+Uji database project asli mencakup pairing, privasi sebelum persetujuan, publish,
+pemutusan, dan hak akses; seluruh data uji di-rollback. Tidak ada pembayaran nyata.
+Belum diuji langsung pada perangkat tablet Anda atau deployment Vercel yang baru.
+Setelah deploy, lakukan pasangan tablet dan uji satu keranjang sebelum operasional.

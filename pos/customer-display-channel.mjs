@@ -25,6 +25,8 @@ export function visibleSnapshot(current, now = Date.now()) {
   if (snapshot?.qr && snapshot.qr.expiresAt <= now) return {...snapshot, qr: null, phase: 'expired'};
   return snapshot;
 }
+const observers = new Set();
+export function observeCustomerDisplay(fn) { observers.add(fn);fn(last);return () => observers.delete(fn); }
 let displayEpoch = 0;
 export function getDisplayEpoch() { return displayEpoch; }
 let cartSignature = '';
@@ -35,7 +37,7 @@ export function publishCustomerCart(snapshot) {
 }
 let channel = null, token = '', seq = 0, last = null, timer = null, win = null;
 const emit = () => channel?.postMessage({protocol: DISPLAY_PROTOCOL, type: 'snapshot', seq: ++seq, snapshot: last});
-export function publishCustomer(snapshot) { last = snapshot; emit(); }
+export function publishCustomer(snapshot) { last = snapshot; emit(); for(const fn of observers)fn(snapshot); }
 export function resetCustomerDisplay() { displayEpoch++; cartSignature=''; publishCustomer(null); }
 export function openCustomerDisplay() {
   if (typeof window === 'undefined' || typeof window.open !== 'function' || typeof BroadcastChannel === 'undefined') throw Error('Layar pelanggan membutuhkan Chrome / Edge terbaru pada komputer kasir.');
