@@ -16,14 +16,19 @@ for(const [source,label] of [[fruit,'Musang King Fresh'],[nitrogen,'Musang King 
 const originalState={...emptyState(),stores:[{id:store,name:'Depok'}],suppliers:[{id:supplier,name:'Supplier A'}],products,me:{id:id(),name:'Owner',role:'owner'},access:{sell:true,waste:true,produce:true,trace:true,finance:true,cancel:true},recipes:[]},before=structuredClone(originalState);
 let state=createStockDemo(originalState),page='waste';const root=new Node(),m=makeModal(),posted=[],toasts=[];
 const globalBefore={document:globalThis.document,FormData:globalThis.FormData,fetch:globalThis.fetch,createImageBitmap:globalThis.createImageBitmap,FileReader:globalThis.FileReader,confirm:globalThis.confirm};
-globalThis.document={createElement:tag=>new Node(tag),querySelector:q=>root.querySelector(q),querySelectorAll:q=>root.querySelectorAll(q)};globalThis.FormData=FormDataAdapter;globalThis.fetch=()=>{throw Error('No network in demo/menu filtering');};globalThis.createImageBitmap=async()=>({width:1,height:1,close(){}});globalThis.confirm=()=>true;
+globalThis.document={body:new Node('body'),createElement:tag=>new Node(tag),querySelector:q=>root.querySelector(q),querySelectorAll:q=>root.querySelectorAll(q)};globalThis.FormData=FormDataAdapter;globalThis.fetch=()=>{throw Error('No network in demo/menu filtering');};globalThis.createImageBitmap=async()=>({width:1,height:1,close(){}});globalThis.confirm=()=>true;
 globalThis.FileReader=class{readAsDataURL(blob){blob.arrayBuffer().then(b=>{this.result='data:'+blob.type+';base64,'+Buffer.from(b).toString('base64');this.onload();});}};
 const file=new Blob([Buffer.from('89504e470d0a1a0a','hex')],{type:'image/png'});
 const upload=async(d,key)=>{const n=d.querySelector(`[data-proof-file="${key}"]`);n.files=[file];await n.onchange({target:n});};
 const ctx={modal:m.modal,getState:()=>state,toast:msg=>toasts.push(msg),refresh:async()=>{},render(){root.innerHTML=page==='waste'?wastePage(state,store):batchReportPage(state);if(page==='waste')bindWaste('waste',state,store,ctx);else bindBatchReport(state,store,ctx);},async mutate(action,p){posted.push({action,p:structuredClone(p)});state=applyStockDemoAction(state,action,p);return true;},loadRejectEvidence:async rid=>state.rejectRecords.find(r=>r.id===rid).evidence};
 let sequence=1000;
 for(const lot of state.lots){for(let n=0;n<100;n++)state.fruitUnits.push({barcode:'9201071126'+String(sequence++).padStart(6,'0')+'0001001000',grams:1000,lotId:lot.id,receiptLotId:lot.id,storeId:lot.storeId,productId:lot.productId,status:'available',lastEvent:lot.id});}
-async function scanBatch(d){const lot=d.querySelector('[name="sourceLotId"]').value;for(const unit of state.fruitUnits.filter(u=>u.lotId===lot&&['available','reject'].includes(u.status))){d.querySelector('[data-fruit-scan]').value=unit.barcode;await d.querySelector('[data-fruit-scan-add]').fire('click');}}
+async function scanBatch(d){
+ const lot=d.querySelector('[name="sourceLotId"]').value;
+ await d.querySelector('[data-fruit-scan-open]').fire('click');const scanDialog=document.body.children.at(-1);
+ for(const unit of state.fruitUnits.filter(u=>u.lotId===lot&&['available','reject'].includes(u.status))){scanDialog.querySelector('[data-fruit-scan]').value=unit.barcode;await scanDialog.querySelector('form').fire('submit');}
+ await scanDialog.querySelector('[data-fruit-scan-close]').fire('click');
+}
 const c=(d,name)=>d.querySelector(`[name="${name}"]`),submit=d=>d.querySelector('form').fire('submit');
 try{
  ctx.render();assert.match(root.textContent,/Reject & Waste/);assert.equal(root.querySelectorAll('[data-reject-op]').length,4);

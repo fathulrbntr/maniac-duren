@@ -54,27 +54,28 @@
  .weigh-scan-controls button { width:100%; }
 }
 
-.fruit-scan-selection{padding:14px;border:1px solid var(--border);border-radius:12px;margin:12px 0;background:var(--surface-soft)}
+/* Barcode logs share the receipt weighing dialog and draft/finish flow. */
+.fruit-scan-selection{margin:16px 0;padding:16px;border:1px solid var(--line);border-radius:12px;background:var(--surface-soft)}
 .fruit-scan-selection[hidden]{display:none}
-.fruit-scan-selection input{width:100%;font-variant-numeric:tabular-nums}
-.fruit-scan-selection [data-fruit-scan-status]{font-size:12px;color:var(--muted);margin:10px 0}
-.fruit-scan-selection [data-fruit-scan-list]{max-height:180px;overflow:auto}
-.fruit-scan-selection [data-fruit-scan-list] p{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px}
-.fruit-scan-selection code{overflow-wrap:anywhere}
-.fruit-scan-selection [data-remove-fruit]{margin-left:auto;min-width:32px}
-
-/* Barcode stock operations: shared by transfer, reject and waste. */
-.fruit-scan-entry{display:flex;gap:8px;align-items:center;margin-top:8px}
-.fruit-scan-entry input{min-width:0;flex:1}
-.fruit-scan-entry button{flex-shrink:0}
-.fruit-scan-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px}
-.fruit-scan-row>div{flex:1;min-width:0}
-.fruit-scan-row small{display:block;color:var(--muted);font-size:11px;margin-top:3px}
-.fruit-scan-row strong{white-space:nowrap}
-.fruit-scan-selection [data-fruit-scan-summary]{font-size:12px;line-height:1.6;margin:12px 0 0}
-.fruit-scan-selection [data-fruit-scan-status][data-error="true"]{color:var(--danger,#ba2828)}
-.fruit-scan-selection [data-fruit-link]{padding:12px;border:1px solid var(--border);border-radius:8px;background:var(--surface);font-size:13px;line-height:1.6}
-.fruit-scan-selection [data-fruit-link][hidden]{display:none}
-.fruit-scan-selection [data-fruit-link] button{margin:4px 4px 0 0}
+.fruit-scan-overview{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.fruit-scan-overview strong{font-size:14px}
+.fruit-scan-overview p{margin:6px 0 0;font-size:13px;font-variant-numeric:tabular-nums}
+.fruit-scan-overview button{flex-shrink:0}
+.fruit-scan-selection .form-help{margin:10px 0 0}
+.fruit-stock-scan-dialog [data-fruit-scan-list]{max-height:36vh;overflow:auto}
+.fruit-stock-scan-dialog .table-wrap table{width:100%;min-width:0;table-layout:fixed;font-variant-numeric:tabular-nums}
+.fruit-stock-scan-dialog td:first-child{min-width:0}
+.fruit-stock-scan-dialog td code,.fruit-stock-scan-dialog td small{display:block;margin-top:4px}
+.fruit-stock-scan-dialog code{font-size:12px;overflow-wrap:anywhere;word-break:break-all}
+.fruit-stock-scan-dialog th,.fruit-stock-scan-dialog td{padding:10px 8px}
+.fruit-stock-scan-dialog [data-fruit-scan-status]{font-size:13px;line-height:1.5}
+.fruit-stock-scan-dialog [data-fruit-scan-status][data-error="true"]{color:var(--danger,#ba2828)}
+.fruit-scan-batch{font-size:13px;line-height:1.6;overflow-wrap:anywhere}
+.fruit-scan-total{font-weight:700;font-variant-numeric:tabular-nums}
 .fruit-transfer-modal input[readonly],.reject-modal input[readonly]{background:var(--surface-soft);font-variant-numeric:tabular-nums}
-@media(max-width:520px){.fruit-scan-row{gap:6px}.fruit-scan-row code{font-size:11px}}
+@media(max-width:520px){.fruit-scan-overview{align-items:stretch;flex-direction:column}.fruit-stock-scan-dialog th,.fruit-stock-scan-dialog td{padding:8px 4px;font-size:12px}.fruit-stock-scan-dialog td:first-child{width:40%}.fruit-stock-scan-dialog code{font-size:11px}}
+
+.fruit-stock-scan-dialog th:first-child{width:46%}
+.fruit-stock-scan-dialog th:last-child{width:25%}
+.fruit-stock-scan-dialog td{white-space:normal}
+.fruit-stock-scan-dialog td button{margin:0;padding:6px 8px}

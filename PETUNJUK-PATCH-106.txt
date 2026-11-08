@@ -1,0 +1,57 @@
+PATCH 106 — BARCODE WAJIB MILIK BATCH ASAL
+Untuk proyek yang sudah menggunakan patch 105.
+
+PERUBAHAN
+- Transfer, reject, olah reject, dan waste buah hanya menerima barcode yang sudah terdaftar pada batch pilihan.
+- Barcode tidak dikenal, milik batch lain, beda outlet, status tidak sesuai, dan scan ganda ditolak.
+- Tidak ada lagi penautan label otomatis, konfirmasi "Gunakan batch ini", atau perpindahan batch otomatis.
+- Alur transfer mengikuti Barang masuk: identitas transfer, batch asal, Catat barcode buah, daftar hasil scan, lalu Selesaikan transfer.
+- Catatan terbaru di atas, kg/butir otomatis, baris dapat dihapus sebelum final.
+- Selesai mencatat hanya menutup daftar sementara; stok baru berubah saat formulir utama diselesaikan.
+- Ganti batch setelah mencatat harus mengonfirmasi pengosongan daftar sementara.
+- Reject dan waste buah memakai pencatatan barcode yang sama. Bukti foto, hasil olahan, dan pembatalan tetap mengikuti alur yang sudah ada.
+- Jejak label terdaftar tetap mengikuti batch penerimaan, supplier, modal, transfer, reject dan waste.
+- Tidak ada penerimaan, penghapusan, atau koreksi stok lama dalam patch ini.
+
+DATABASE
+Migrasi fruit_batch_strict_scan_106 sudah dipasang dan diverifikasi pada proyek Supabase maniac-duren-pos (zxnaufihgnrunktxfcbj), 8 November 2026.
+Tidak perlu menjalankan SQL lagi untuk proyek tersebut.
+Untuk database lain yang sudah memakai 101 dan 105, jalankan database/fruit-batch-strict-scan-106.sql SATU kali.
+Salinan supabase/migrations/20261108140738_fruit_batch_strict_scan.sql berisi SQL yang sama untuk riwayat CLI. Jangan menjalankan kedua salinan.
+Jangan memasang ulang 105 setelah 106 karena akan mengembalikan perilaku penautan lama.
+Validasi juga menolak linkBarcodes berisi dari klien lama. Retry transaksi lama yang sudah berhasil tetap aman.
+API manual lama untuk batch yang sama sekali belum memakai barcode tetap kompatibel; API tersebut tidak dapat membuat atau memindahkan kepemilikan label.
+
+PASANG TAMPILAN
+1. Ekstrak isi ZIP ke folder proyek Maniac Duren; timpa file dengan jalur yang sama. Ini patch, bukan proyek lengkap.
+2. Buka terminal pada folder proyek (tempat package.json berada).
+3. Jalankan perintah berikut. Lanjutkan commit/push hanya jika semua pengujian lulus:
+
+npm test
+npm run check
+git add --pathspec-from-file=PATCH-106-FILES.txt
+git commit -m "Enforce barcode batch ownership for stock movements"
+git push origin main
+
+4. Tunggu deployment Vercel selesai, lalu muat ulang POS dengan Ctrl+Shift+R. Tutup dan buka kembali dialog transfer yang sebelumnya sudah terbuka.
+
+CARA PAKAI
+Stok & Penerimaan > Transfer
+- Isi tanggal, outlet tujuan, catatan.
+- Pilih batch asal yang benar.
+- Klik Catat barcode buah; scan setiap label lalu Enter / Catat barcode.
+- Periksa daftar dan total; klik Selesai mencatat.
+- Periksa ringkasan, klik Selesaikan transfer, konfirmasi.
+Reject & Waste menggunakan tombol Catat barcode buah pada batch yang dipilih, lalu Selesaikan pencatatan.
+
+Jika barcode belum ditemukan, periksa daftar label pada penerimaan asal.
+Jangan membuat penerimaan kedua untuk stok yang sama. Batch tanpa label terdaftar tidak dapat dipakai pada formulir scan ini.
+Waktu scan tampil di daftar sementara; jejak barcode yang disimpan mengikuti waktu transaksi final pada audit stok.
+
+VALIDASI
+- 161 pengujian otomatis lulus, termasuk SQL PostgreSQL lokal dan handler UI.
+- Pemeriksaan sintaks, impor/aset, dan konsistensi database lulus.
+- Uji browser menggunakan data contoh: salah batch/label tidak dikenal ditolak, scan valid dicatat, total benar, stok baru berkurang setelah konfirmasi final.
+- Layout 390px, 768px, dan desktop diperiksa; tabel scan tidak melebar keluar dialog.
+- Fungsi internal database tetap tertutup untuk anon/authenticated; tidak ada label baru dibuat oleh transfer/reject.
+- Pengujian transaksi tidak menggunakan stok produksi.

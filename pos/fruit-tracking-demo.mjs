@@ -1,35 +1,17 @@
 import {stockScanCandidate,checkFruitStockSelection} from './fruit-stock.mjs';
-import {id} from './core.mjs';
-import {parseTrackingBarcode,trackedFruit,checkTrackedLines} from './scale-label.mjs';
+import {parseTrackingBarcode,checkTrackedLines} from './scale-label.mjs';
 const clone=x=>structuredClone(x);
-export function linkFruitStockDemo(s,action,p){
- if(!['movement','reject_mark','reject_process','reject_loss'].includes(action)||(p.fruitStockMode!=='barcode'&&!p.linkBarcodes))return;
- const lotId=p.sourceLotId||p.lotId,lot=s.lots.find(l=>l.id===lotId);
- if(!lot||lot.storeId!==p.storeId)throw Error('Outlet asal tidak cocok dengan batch');
- if(!Array.isArray(p.barcodes)||!p.barcodes.length)throw Error('Scan barcode setiap buah pada batch ini.');
- const links=p.linkBarcodes||[];
- if(!Array.isArray(links)||new Set(links).size!==links.length||links.some(x=>!p.barcodes.includes(x)))throw Error('Daftar tautan barcode tidak cocok atau terduplikasi');
- const allowed=action==='reject_mark'?['available']:action==='reject_process'?['reject']:['available','reject'];
- const units=p.barcodes.map(code=>stockScanCandidate(s,code,p.storeId,lotId,allowed));
- if(units.some(u=>u.pendingLink&&!links.includes(u.barcode)))throw Error('Konfirmasi batch untuk label yang belum tertaut');
- checkFruitStockSelection(s,lotId,units);
- const linkId=id();let root=lot,seen=new Set();
- while(root.sourceLotId){if(seen.has(root.id))throw Error('Jejak batch membentuk siklus');seen.add(root.id);root=s.lots.find(l=>l.id===root.sourceLotId);if(!root)throw Error('Batch asal tidak ditemukan');}
- s.fruitUnits||=[];s.fruitEvents||=[];
- for(const item of units.filter(u=>u.pendingLink)){
-  const {pendingLink,...unit}=item;Object.assign(unit,{receiptLotId:root.id,lastEvent:linkId});s.fruitUnits.push(unit);
-  s.fruitEvents.push({eventId:linkId,barcode:unit.barcode,action:'label_link',actor:s.me?.name||'Demo',at:new Date().toISOString(),before:null,after:clone(unit)});
- }
-}
 export function validateFruitDemo(s,action,p){
  if(['order_create','sale'].includes(action))checkTrackedLines(s,p.storeId,p.lines);
  if(['movement','reject_mark','reject_process','reject_loss'].includes(action)){
   const lot=p.sourceLotId||p.lotId;
-  if(!s.fruitUnits?.some(u=>u.lotId===lot)&&!p.barcodes)return;
+  if(p.linkBarcodes!==undefined&&(!Array.isArray(p.linkBarcodes)||p.linkBarcodes.length))throw Error('Barcode tidak dapat ditautkan lewat transfer atau reject. Gunakan label yang sudah tercatat pada batch penerimaan.');
+  if(!s.fruitUnits?.some(u=>u.lotId===lot)&&!p.barcodes&&p.fruitStockMode!=='barcode')return;
   if(action==='movement'&&p.kind!=='Transfer')throw Error('Gunakan Reject & Waste untuk buah tracking.');
   if(!Array.isArray(p.barcodes)||!p.barcodes.length)throw Error('Scan barcode setiap buah pada batch ini.');
   if(new Set(p.barcodes).size!==p.barcodes.length)throw Error('Barcode buah terduplikasi.');
-  const units=p.barcodes.map(code=>trackedFruit(s,code,p.storeId,action==='reject_mark'?['available']:action==='reject_process'?['reject']:['available','reject']));
+  const units=p.barcodes.map(code=>stockScanCandidate(s,code,p.storeId,lot,action==='reject_mark'?['available']:action==='reject_process'?['reject']:['available','reject']));
+  checkFruitStockSelection(s,lot,units);
   if(units.some(u=>u.lotId!==lot)||units.reduce((n,u)=>n+u.grams,0)/1000!==Number(p.kg??p.qty)||units.length!==Number(p.pieces))throw Error('Batch, berat dan butir harus sesuai barcode yang dipilih.');
  }
  if(action==='reject_void')for(const event of s.fruitEvents||[])if(event.eventId===p.recordId&&s.fruitUnits.find(u=>u.barcode===event.barcode)?.lastEvent!==p.recordId)throw Error('Batalkan proses berikutnya terlebih dahulu.');

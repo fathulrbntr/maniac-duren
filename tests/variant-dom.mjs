@@ -17,11 +17,14 @@ export class Node {
  querySelector(s){return this.querySelectorAll(s)[0]||null}
  set innerHTML(html){this.children=[];this._text='';const stack=[this];const voids=['INPUT','IMG','BR','HR'];for(const token of html.matchAll(/<!--[\s\S]*?-->|<[^>]+>|[^<]+/g)){const raw=token[0];if(raw.startsWith('<!--'))continue;if(raw.startsWith('</')){stack.pop();continue;}if(raw[0]==='<'){const match=raw.match(/^<([\w-]+)([\s\S]*?)\/?\s*>$/);if(!match)continue;const attrs={};for(const m of match[2].matchAll(/([\w-]+)(?:="([^"]*)"|'([^']*)'|=([^\s>]+))?/g))attrs[m[1]]=decode(m[2]??m[3]??m[4]??'');const n=new Node(match[1],attrs);n.parent=stack.at(-1);n.parent.children.push(n);if(!voids.includes(n.tagName)&&!raw.endsWith('/>'))stack.push(n);}else stack.at(-1)._text+=decode(raw);}}
  insertBefore(node,reference){if(node===reference)return node;if(reference&&reference.parent!==this)throw Error('Reference is not a child');if(node.parent){const index=node.parent.children.indexOf(node);if(index>=0)node.parent.children.splice(index,1);}const index=reference?this.children.indexOf(reference):this.children.length;node.parent=this;this.children.splice(index,0,node);return node;}
+ append(...nodes){for(const node of nodes)this.insertBefore(node,null);}
+ remove(){if(this.parent){this.parent.children=this.parent.children.filter(n=>n!==this);this.parent=null;}}
+ showModal(){this.closed=false;this.setAttribute('open','');}
  addEventListener(type,fn){(this.listeners[type]||=[]).push(fn)}
  focus(){Node.activeElement=this;}
  select(){this.textSelected=true;}
  async fire(type){const event={target:this,currentTarget:this,preventDefault(){}};await this['on'+type]?.(event);for(const fn of this.listeners[type]||[])await fn(event);}
- checkValidity(){return !this.required||!!this.value}reportValidity(){return this.checkValidity()}close(){this.closed=true;this.removeAttribute('open');}
+ checkValidity(){return !this.required||!!this.value}reportValidity(){return this.checkValidity()}close(){this.closed=true;this.removeAttribute('open');this.dispatchEvent(new Event('close'));}
 }
 export class FormDataAdapter {
  constructor(form){this.form=form}

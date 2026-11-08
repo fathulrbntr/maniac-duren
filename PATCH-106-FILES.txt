@@ -1,0 +1,15 @@
+pos/fruit-scan-selection.mjs
+pos/fruit-stock.mjs
+pos/fruit-tracking-demo.mjs
+pos/fruit-transfer-ui.mjs
+pos/receipt-shipment.css
+pos/stock-demo.mjs
+pos/waste-ui.mjs
+tests/fruit-stock-ui.test.mjs
+tests/fruit-tracking-db.test.mjs
+tests/reject-flow-ui.test.mjs
+tests/variant-dom.mjs
+database/fruit-batch-strict-scan-106.sql
+supabase/migrations/20261108140738_fruit_batch_strict_scan.sql
+PETUNJUK-PATCH-106.txt
+PATCH-106-FILES.txt
