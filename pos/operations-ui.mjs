@@ -1,3 +1,5 @@
+import { productPhoto } from "./product-photos.mjs";
+import { uiIcon } from "./ui-icons.mjs";
 import { cashierName } from "./cashier-shifts.mjs";
 import { itemTypes } from "./catalog.mjs";
 import {
@@ -135,6 +137,16 @@ const lots = (s, store) =>
 const cost = (n) => (n == null ? "Belum diketahui" : money(n));
 const allowed = (s, p) => !s.access || s.access[p];
 let draft = [];
+const emptyCart = `<div class="order-empty">${uiIcon("bag")}<b>Pesanan masih kosong</b><small>Scan barcode atau pilih produk<br>untuk mulai melayani pelanggan.</small></div>`;
+function cartLines(s) {
+  return draft.map((x, i) => {
+    const p = s.products.find(p => p.id === x.productId);
+    const fruit = p?.stockUnit === "kg_butir";
+    const unit = fruit ? (x.unit === "KG" ? "kg" : "butir") : p?.stockUnit || "pcs";
+    const name = nm(s, "products", x.productId), photo = productPhoto(p);
+    return `<article class="order-cart-line"><div class="order-cart-photo">${photo ? `<img src="${e(photo)}" alt="" loading="lazy" decoding="async">` : uiIcon("bag")}</div><div class="order-cart-copy"><strong>${e(name)}</strong><span>${num(x.qty)} ${e(unit)} × ${money(x.price)}</span><div class="order-cart-actions"><b>${money(x.qty * x.price)}</b>${!fruit ? `<div class="order-qty"><button type="button" data-draft-qty="${i}" data-delta="-1" aria-label="Kurangi jumlah ${e(name)}">−</button><span aria-label="Jumlah ${e(name)}">${num(x.qty)}</span><button type="button" data-draft-qty="${i}" data-delta="1" aria-label="Tambah jumlah ${e(name)}">+</button></div>` : ""}<button type="button" class="order-remove" data-remove-line="${i}" aria-label="Hapus ${e(name)}" title="Hapus item">${uiIcon("remove")}</button></div>${fruit ? `<details class="order-item-trace"><summary>Detail label buah</summary><small>${num(x.kg)} kg aktual · ${x.pieces} butir<br>${e(nm(s, "suppliers", x.supplierId))} · ${e((x.lotId || "").slice(0, 8))}${x.barcode ? `<br>${e(x.barcode)}` : ""}</small></details>` : ""}</div></article>`;
+  }).join("") || emptyCart;
+}
 export function opsPage(view, s, store) {
   if (view === "devices") return devicesPage(s);
   if (["employees", "attendance"].includes(view))
@@ -153,25 +165,9 @@ export function opsPage(view, s, store) {
     const sellable = s.products.filter(posVisible);
     const draftTotal = draft.reduce((a, x) => a + x.qty * x.price, 0);
     const itemCount = draft.reduce((a, x) => a + x.qty, 0);
-    const cartLines = draft
-      .map((x, i) => {
-        const p = s.products.find((p) => p.id === x.productId);
-        const fruit = p?.stockUnit === "kg_butir";
-        const unit = fruit
-          ? x.unit === "KG"
-            ? "kg"
-            : "butir"
-          : p?.stockUnit || "pcs";
-        return `<article class="order-cart-line"><div class="order-cart-copy"><strong>${e(nm(s, "products", x.productId))}</strong><span>${num(x.qty)} ${e(unit)} × ${money(x.price)}</span>${fruit ? `<small>${num(x.kg)} kg aktual · ${x.pieces} butir<br>${e(nm(s, "suppliers", x.supplierId))} · ${e((x.lotId || "").slice(0, 8))}${x.barcode ? `<br>${e(x.barcode)}` : ""}</small>` : ""}</div><div class="order-cart-actions">${!fruit ? `<button type="button" data-draft-qty="${i}" data-delta="-1" aria-label="Kurangi jumlah">−</button><button type="button" data-draft-qty="${i}" data-delta="1" aria-label="Tambah jumlah">+</button>` : ""}<button type="button" class="order-remove" data-remove-line="${i}" aria-label="Hapus item">×</button><b>${money(x.qty * x.price)}</b></div></article>`;
-      })
-      .join("");
     html =
-      header(
-        "Kasir / POS",
-        "Scan durian, tambahkan pesanan lain, lalu selesaikan pembayaran sebelum pesanan disajikan.",
-      ) +
       (allowed(s, "sell")
-        ? `<div class="order-screen"><section class="panel order-catalog"><div class="order-catalog-head"><div><h3>Pesanan customer</h3><p class="muted">${e(nm(s, "stores", store))} · satu transaksi untuk seluruh pesanan.</p></div><label class="order-search"><span class="sr-only">Cari menu</span><input id="order-search" type="search" placeholder="Cari menu…" autocomplete="off"></label></div><div class="pos-scanbar"><label for="order-scan"><span class="step-label">1</span> Scan barcode durian</label><div class="pos-scan-controls"><input id="order-scan" type="text" maxlength="256" autocomplete="off" spellcheck="false" placeholder="Klik di sini, lalu scan produk" ${readDeviceSettings().scanner.enabled ? "" : "disabled"}><button type="button" id="order-scan-add" ${readDeviceSettings().scanner.enabled ? "" : "disabled"}>Tambah</button></div><p id="order-scan-status" role="status">${readDeviceSettings().scanner.enabled ? "Scan label buah yang sudah diterima. Batch dan supplier terisi otomatis untuk label tracking." : "Scanner nonaktif. Aktifkan melalui Printer & Scanner."}</p></div><div class="order-menu-heading"><h3><span class="step-label">2</span> Tambahkan menu lain</h3><p class="muted">Makanan, dessert, minuman, dan produk lainnya.</p></div><div class="order-categories" role="group" aria-label="Kategori menu">${posCategoryTabs(s)}</div>${allowed(s, "master") ? '<div class="order-category-actions"><button type="button" id="add-pos-category">+ Tambah kategori</button><button type="button" id="manage-pos-categories">Kelola kategori & produk</button></div>' : ""}<div id="order-products" class="order-product-grid">${posProductCards(s, store, draft)}</div><p id="order-no-results" class="empty" hidden>Menu tidak ditemukan.</p></section><aside class="panel order-summary"><div class="order-summary-head"><div><span class="order-product-category">PESANAN SAAT INI</span><h3><span class="step-label">3</span> Periksa & bayar</h3></div><span class="order-count" id="order-item-count">${num(itemCount)} item</span></div><button id="customer-display-open" type="button" class="small">Layar pelanggan ↗</button><div class="order-summary-scroll"><div id="order-draft" class="order-cart-items">${cartLines || '<div class="order-empty"><span>＋</span><b>Belum ada item</b><small>Pilih menu untuk mulai membuat pesanan.</small></div>'}</div><div class="order-total-row"><span>Total pesanan</span><strong id="order-total">${money(draftTotal)}</strong></div>${cashierFields(s)}</div><div class="order-checkout-footer"><button class="primary full order-save" id="save-order" ${draft.length ? "" : "disabled"}>${s.stockDemo ? "Uji pembayaran" : "Bayar sekarang"} · ${money(draftTotal)}</button><p id="order-stock-message" class="order-payment-hint" aria-live="polite"></p><p class="order-payment-hint">Buah / produk siap jual: stok dipotong saat bayar. ${e(itemTypes.recipe)}: masuk kitchen setelah lunas.</p></div></aside></div>`
+        ? `<div class="order-screen"><section class="panel order-catalog"><div class="order-catalog-head"><div><h3>Temukan pilihan favorit</h3><p class="muted">Buah segar dan menu pilihan untuk pelanggan.</p></div><label class="order-search">${uiIcon("search")}<span class="sr-only">Cari menu</span><input id="order-search" type="search" placeholder="Cari nama produk…" autocomplete="off"></label></div><div class="pos-scanbar"><label for="order-scan">${uiIcon("scan")}<span>Scan barcode</span></label><div class="pos-scan-controls"><input id="order-scan" type="text" maxlength="256" autocomplete="off" spellcheck="false" placeholder="Scan label buah atau produk kemasan" ${readDeviceSettings().scanner.enabled ? "" : "disabled"}><button type="button" id="order-scan-add" ${readDeviceSettings().scanner.enabled ? "" : "disabled"}>Tambah</button></div><p id="order-scan-status" role="status">${readDeviceSettings().scanner.enabled ? "Label tracking mengisi batch dan supplier secara otomatis." : "Scanner nonaktif. Aktifkan melalui Printer & Scanner."}</p></div><div class="order-menu-toolbar"><div class="order-categories" role="group" aria-label="Kategori menu">${posCategoryTabs(s)}</div>${allowed(s, "master") ? `<details class="order-menu-settings"><summary aria-label="Pengaturan kategori" title="Pengaturan kategori">${uiIcon("settings")}</summary><div class="order-category-actions"><button type="button" id="add-pos-category">Tambah kategori</button><button type="button" id="manage-pos-categories">Kelola kategori & produk</button></div></details>` : ""}</div><div id="order-products" class="order-product-grid">${posProductCards(s, store, draft)}</div><p id="order-no-results" class="empty" hidden>Menu tidak ditemukan. Coba kata kunci lain.</p></section><aside class="panel order-summary"><div class="order-summary-head"><div><h3>Pesanan saat ini</h3><span class="order-count" id="order-item-count">${num(itemCount)} item</span></div><button id="customer-display-open" type="button" class="order-display-button" title="Layar pelanggan wireless" aria-label="Buka layar pelanggan wireless">${uiIcon("display")}</button></div><div class="order-summary-scroll"><div id="order-draft" class="order-cart-items">${cartLines(s)}</div><details class="order-options"><summary>Meja, member & diskon ${uiIcon("settings")}</summary><div>${cashierFields(s)}</div></details></div><div class="order-checkout-footer"><div class="order-bill"><div><span>Subtotal</span><b id="order-subtotal">${money(draftTotal)}</b></div><div><span>Diskon</span><b id="order-discount-amount">${money(0)}</b></div><div class="order-total-row"><span>Total pembayaran</span><strong id="order-total">${money(draftTotal)}</strong></div></div><button class="primary full order-save" id="save-order" ${draft.length ? "" : "disabled"}>${s.stockDemo ? "Uji pembayaran" : "Bayar sekarang"} · ${money(draftTotal)}</button><p id="order-stock-message" class="order-payment-hint" aria-live="polite"></p><p id="checkout-block-reason" class="order-payment-hint" role="status" hidden></p></div></aside></div>`
         : "") +
       `<section class="panel order-queue"><div class="header-row"><div><h3>Transaksi & penyerahan</h3><p class="muted">Pantau pesanan kitchen yang sudah dibayar. Konfirmasi penyerahan ketika pesanan siap.</p></div></div>${table(
         ["Pesanan / catatan", "Item", "Status / total", "Aksi"],
@@ -307,26 +303,13 @@ export function bindOps(view, s, store, ctx) {
     const showDraft = () => {
       const total = totalDraft(),
         count = draft.reduce((a, x) => a + x.qty, 0);
-      container.innerHTML =
-        draft
-          .map((x, i) => {
-            const p = s.products.find((p) => p.id === x.productId),
-              fruit = p?.stockUnit === "kg_butir";
-            const unit = fruit
-              ? x.unit === "KG"
-                ? "kg"
-                : "butir"
-              : p?.stockUnit || "pcs";
-            return `<article class="order-cart-line"><div class="order-cart-copy"><strong>${e(nm(s, "products", x.productId))}</strong><span>${num(x.qty)} ${e(unit)} × ${money(x.price)}</span>${fruit ? `<small>${num(x.kg)} kg aktual · ${x.pieces} butir<br>${e(nm(s, "suppliers", x.supplierId))} · ${e((x.lotId || "").slice(0, 8))}${x.barcode ? `<br>${e(x.barcode)}` : ""}</small>` : ""}</div><div class="order-cart-actions">${!fruit ? `<button type="button" data-draft-qty="${i}" data-delta="-1" aria-label="Kurangi jumlah">−</button><button type="button" data-draft-qty="${i}" data-delta="1" aria-label="Tambah jumlah">+</button>` : ""}<button type="button" class="order-remove" data-remove-line="${i}" aria-label="Hapus item">×</button><b>${money(x.qty * x.price)}</b></div></article>`;
-          })
-          .join("") ||
-        '<div class="order-empty"><span>＋</span><b>Belum ada item</b><small>Pilih menu untuk mulai membuat pesanan.</small></div>';
+      container.innerHTML = cartLines(s);
       totalNode.textContent = money(total);
       countNode.textContent = `${num(count)} item`;
       const stock = checkOrder(s, store, draft, today());
       saveButton.disabled = !draft.length || !stock.ok;
       document.querySelector("#order-stock-message").textContent = stock.ok
-        ? "Bahan tersedia untuk pesanan ini."
+        ? ""
         : stock.reason;
       updateCards();
       saveButton.textContent = `${s.stockDemo ? "Uji pembayaran" : "Bayar sekarang"} · ${money(total)}`;

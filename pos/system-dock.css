@@ -1,5 +1,7 @@
 /* Icon-only operational dock, shared by every authenticated module. */
-:root { --dock-clearance:calc(96px + env(safe-area-inset-bottom, 0px)); }
+:root { --dock-clearance:28px; }
+@media(min-width:901px) { .shell .system-dock { display:none; } }
+@media(max-width:900px) { :root { --dock-clearance:calc(96px + env(safe-area-inset-bottom, 0px)); } }
 .shell:not(:has(.system-dock)) { --dock-clearance:28px; }
 .shell #pos-main .workspace-content { padding-bottom:var(--dock-clearance); }
 html:has(.system-dock) { scroll-padding-bottom:var(--dock-clearance); }
@@ -9,7 +11,7 @@ html:has(.system-dock) { scroll-padding-bottom:var(--dock-clearance); }
   display:grid; grid-template-columns:repeat(var(--dock-columns), minmax(0, 1fr));
   gap:4px; width:min(var(--dock-width), calc(100vw - 32px)); padding:7px;
   border:1px solid var(--line); border-radius:16px;
-  background:var(--surface); box-shadow:0 8px 28px #0003;
+  background:var(--surface); box-shadow:var(--shadow);
 }
 .system-dock button {
   display:flex; align-items:center; justify-content:center;
@@ -28,9 +30,7 @@ body:has(.system-dock) #toast { bottom:var(--dock-clearance); }
 @media (max-width:600px) {
   .system-dock { bottom:calc(12px + env(safe-area-inset-bottom, 0px)); }
 }
-@media (min-width:1101px) {
-  .shell .order-summary { max-height:calc(100dvh - var(--dock-clearance) - 36px); }
-}
+
 @media (prefers-reduced-motion:reduce) { .system-dock button { transition:none; } }
 @media print {
   .system-dock { display:none!important; }

@@ -14,14 +14,32 @@ input::placeholder,textarea::placeholder { color:var(--muted); }
 h1,h2,h3,h4 { font-weight:var(--weight-semibold); letter-spacing:0; }
 [hidden] { display:none!important; }
 .shell { display:grid; grid-template-columns:var(--sidebar-width) minmax(0,1fr); min-height:100vh; min-height:100dvh; transition:grid-template-columns .2s ease; overflow-x:clip; }
-.shell[data-sidebar-collapsed=true] { grid-template-columns:0 minmax(0,1fr); }
+.shell[data-sidebar-collapsed=true] { grid-template-columns:var(--sidebar-rail-width) minmax(0,1fr); }
 .shell .sidebar,.inventory-shell .sidebar {
   grid-column:1; grid-row:1; position:sticky; top:0; width:var(--sidebar-width); min-width:0;
   height:100vh; height:100dvh; padding:16px 10px 10px; border:0; background:var(--sidebar);
   display:grid; grid-template-rows:auto minmax(0,1fr) auto; gap:12px; overflow:hidden; z-index:30;
   transform:translateX(0); transition:transform .2s ease,visibility .2s; visibility:visible;
 }
-.shell[data-sidebar-collapsed=true] .sidebar { transform:translateX(-100%); visibility:hidden; }
+@media(min-width:901px) {
+ .shell[data-sidebar-collapsed=true] .sidebar { width:var(--sidebar-rail-width); padding:16px 8px 12px; }
+ .shell[data-sidebar-collapsed=true] .sidebar-header { padding:4px 0 12px; }
+ .shell[data-sidebar-collapsed=true] .sidebar-brand-row { justify-content:center; }
+ .shell[data-sidebar-collapsed=true] .brand img { width:44px; height:44px; }
+ .shell[data-sidebar-collapsed=true] .brand>div,
+ .shell[data-sidebar-collapsed=true] .sidebar-brand-row>.sidebar-toggle,
+ .shell[data-sidebar-collapsed=true] .sidebar-store,
+ .shell[data-sidebar-collapsed=true] .nav-heading,
+ .shell[data-sidebar-collapsed=true] .nav-item>span,
+ .shell[data-sidebar-collapsed=true] .account-profile>div { display:none; }
+ .shell[data-sidebar-collapsed=true] .sidebar>.nav { padding:0 0 8px; scrollbar-gutter:auto; }
+ .shell[data-sidebar-collapsed=true] .sidebar .nav-section { margin:0 0 8px; }
+ .shell[data-sidebar-collapsed=true] .sidebar .nav-item { justify-content:center; height:44px; min-height:44px; padding:12px; position:relative; }
+ .shell[data-sidebar-collapsed=true] .sidebar .nav-item.active { box-shadow:none; }
+ .shell[data-sidebar-collapsed=true] .nav-item.active:after { content:""; width:3px; height:22px; border-radius:3px; background:var(--action-bg); position:absolute; right:0; top:11px; }
+ .shell[data-sidebar-collapsed=true] .sidebar-account { flex-direction:column; gap:12px; padding:12px 0 0; }
+ .shell[data-sidebar-collapsed=true] .account-profile { flex:none; }
+}
 .sidebar-header { display:grid; gap:20px; padding:0 6px 4px; }
 .sidebar-brand-row { display:flex; align-items:center; justify-content:space-between; gap:4px; }
 .sidebar .brand { display:flex; align-items:center; gap:10px; min-width:0; width:auto; padding:0; background:none; border:0; border-radius:0; }

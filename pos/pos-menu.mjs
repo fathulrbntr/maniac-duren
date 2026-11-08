@@ -1,3 +1,4 @@
+import {uiIcon} from "./ui-icons.mjs";
 import {productPhoto} from './product-photos.mjs';
 import {escape as e,money,today} from './core.mjs';
 import {posVisible,posCategoryIds,posCategories,hasPosPrice,posProductStatus} from './pos-categories.mjs';
@@ -39,7 +40,7 @@ const entryCategoryName=(s,entry)=>{const ids=entryCategories(s,entry);return po
 const saleEntries=(state,store,draft,category='all',query='')=>posMenuEntries(state,category,query)
  .map(entry=>({entry,status:posEntryStatus(state,store,entry,draft)}))
  .sort((a,b)=>Number(b.status.ok)-Number(a.status.ok)||a.entry.name.localeCompare(b.entry.name,'id',{numeric:true})||a.entry.key.localeCompare(b.entry.key));
-const cardIcon=hasVariants=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${hasVariants?'M9 5l7 7-7 7':'M12 5v14M5 12h14'}"/></svg>`;
+const cardIcon=()=>uiIcon('bag');
 export function posProductCards(s,store,draft=[]){
  return saleEntries(s,store,draft).map(({entry,status})=>{
   const photo=productPhoto(entry.products[0]),ids=entryCategories(s,entry),p=entry.products[0];

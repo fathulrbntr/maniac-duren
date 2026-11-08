@@ -1,0 +1,59 @@
+MANIAC DUREN — PATCH 104
+UI POS seragam mengikuti referensi putih, abu-abu muda, dan oranye
+Basis: maniac-duren(10).zip + barcode 102 + wireless tablet 103.
+
+ISI PAKET
+Patch ini sudah mencakup perubahan kode 102 dan 103. Cukup pasang paket 104.
+- Sidebar ikon pada desktop; tombol kiri atas membuka nama menu dan pilihan outlet.
+- Katalog kasir 3 kolom pada ruang lebar, 2 kolom pada ruang sempit.
+- Foto produk, judul, harga, status stok dan tombol tambah memakai ukuran konsisten.
+- Pesanan di kanan: thumbnail, jumlah, hapus item, subtotal, diskon, dan total.
+- Meja, member, catatan dan diskon ada di bagian “Meja, member & diskon”.
+- Tombol ikon monitor di kanan judul “Pesanan saat ini” membuka layar pelanggan.
+- Pengaturan kategori ada di tombol ikon pengaturan di samping deretan kategori.
+- Gaya bersama berlaku pada dashboard, stok, master, laporan, pengelolaan, formulir,
+  popup pembayaran, login, dan layar pelanggan wireless.
+- Tema awal baru adalah terang. Pilihan tema yang sudah tersimpan tetap dipakai.
+  Jika sebelumnya memakai mode gelap, klik ikon tema kanan atas untuk mode terang.
+- Pada ponsel, menu memakai drawer dan dock bawah; katalog serta keranjang bertumpuk.
+- Barcode, transaksi, aturan stok, dan validasi pembayaran tetap memakai fungsi sebelumnya.
+
+CARA MEMASANG
+1. Cadangkan proyek lokal Anda. Ekstrak isi ZIP ke folder proyek berisi package.json.
+   Gabungkan folder dan timpa file bernama sama. Jangan mengganti seluruh folder proyek.
+2. Buka terminal di folder proyek. Jalankan perintah berikut:
+
+   npm ci
+   npm test
+   npm run check
+   git add --pathspec-from-file=PATCH-104-FILES.txt
+   git diff --cached --stat
+   git commit -m "Unify POS UI with orange and light theme"
+   git push origin main
+
+   Lanjutkan commit/push setelah pengujian lulus dan daftar perubahan sesuai.
+   Gunakan cabang deployment Anda jika bukan main.
+3. Setelah Vercel selesai deploy, muat ulang POS dan tablet. Jika gaya lama masih
+   terlihat, gunakan Ctrl+Shift+R di browser desktop atau muat ulang halaman tablet.
+4. Patch UI 104 tidak memerlukan SQL tambahan. Jangan menjalankan ulang SQL mapping
+   barcode hanya untuk mengganti tampilan.
+5. Lakukan uji satu keranjang: scan barcode, tambah/kurangi item, buka detail meja,
+   periksa total, lalu periksa layar pelanggan sebelum dipakai untuk operasional.
+
+WIRELESS DAN QR PEMBAYARAN
+Panduan pairing dan pembayaran tetap tersedia di docs/PANDUAN-LAYAR-PELANGGAN.txt.
+Migration wireless dan SQL mapping lama disertakan untuk kelengkapan paket, bukan
+instruksi untuk mereset database. Pada project Supabase yang ditangani sebelumnya,
+schema wireless dan mapping barcode sudah dipasang pada tahap 102/103.
+Server Vercel tetap memerlukan POS_SUPABASE_URL dan POS_SUPABASE_SERVICE_ROLE_KEY.
+Service role hanya untuk server. Jangan masukkan key tersebut pada HTML/tablet.
+QRIS EDC tetap dibuat pada EDC dan ditampilkan ke tablet setelah divalidasi POS.
+Keberhasilan pembayaran tetap diperiksa oleh kasir; paket ini tidak menambahkan
+API bank atau konfirmasi pembayaran otomatis.
+
+STATUS DAN VALIDASI
+Kode sudah diubah dan diuji secara lokal. Website aktif belum di-deploy dari sesi ini.
+160 pengujian otomatis lulus; pemeriksaan sintaks/import/aset dan database build lulus.
+Sidebar diuji ulang setelah perubahan, termasuk menu ringkas, keyboard, drawer mobile.
+UI diperiksa di browser memakai data contoh lokal, bukan data transaksi pelanggan.
+Rincian pemeriksaan ada di docs/AUDIT-UI-104.txt.

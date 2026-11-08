@@ -67,6 +67,10 @@ export function bindCheckout(ctx,store,getDraft,clearDraft){
   if(!(s.cashierShiftVersion>=83)||!activeShift(s,store)){save.disabled=true;status.textContent=s.cashierShiftVersion>=83?'Buka kasir sebelum menerima pembayaran.':'Pasang SQL cashier-shifts-083 terlebih dahulu.';}
   const subtotal=getDraft().reduce((n,l)=>n+l.qty*l.price,0);
   publishCustomerCart(customerSnapshot(s,checkout(),{subtotal,total,discountAmount:Math.max(0,subtotal-total)}));
+  const subtotalNode=document.querySelector('#order-subtotal'),discountNode=document.querySelector('#order-discount-amount'),blockReason=document.querySelector('#checkout-block-reason');
+  if(subtotalNode)subtotalNode.textContent=money(subtotal);
+  if(discountNode)discountNode.textContent=total<subtotal?'−'+money(subtotal-total):money(0);
+  if(blockReason){blockReason.hidden=!save.disabled||!getDraft().length;blockReason.textContent=!stock.ok?stock.reason:status.textContent;}
   document.querySelector('#order-total').textContent=money(total);save.textContent=`${s.stockDemo?'Uji pembayaran':'Bayar sekarang'} · ${money(total)}`;
  };
  for(const node of [table,note,select]){node.addEventListener('change',()=>{lastError='';update();});node.addEventListener('input',()=>{lastError='';update();});}

@@ -24,7 +24,7 @@ export function visibleSections(access) {
 export function navigation(title, view, icon, access, closedGroups = {}) {
   return visibleSections(access).map(section => {
     const open = section.pages.includes(view) || !closedGroups[section.id];
-    return `<details class="nav-section" data-nav-group="${section.id}" ${open ? 'open' : ''}><summary class="nav-heading"><span>${section.label}</span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m7 5 5 5-5 5"/></svg></summary><div class="nav-items">${section.pages.map(key => `<button type="button" data-view="${key}" class="nav-item ${view === key ? 'active' : ''}" ${view === key ? 'aria-current="page"' : ''}>${icon(key)}<span>${title[key]}</span></button>`).join('')}</div></details>`;
+    return `<details class="nav-section" data-nav-group="${section.id}" ${open ? 'open' : ''}><summary class="nav-heading"><span>${section.label}</span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m7 5 5 5-5 5"/></svg></summary><div class="nav-items">${section.pages.map(key => `<button type="button" data-view="${key}" title="${title[key]}" aria-label="${title[key]}" class="nav-item ${view === key ? 'active' : ''}" ${view === key ? 'aria-current="page"' : ''}>${icon(key)}<span>${title[key]}</span></button>`).join('')}</div></details>`;
   }).join('');
 }
 export function mayLeave(busy) {

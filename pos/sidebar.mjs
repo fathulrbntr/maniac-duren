@@ -10,7 +10,7 @@ export function createSidebarController(root = document, viewport = window) {
   try {
     saved = JSON.parse(storage?.getItem(key) || "{}") || {};
   } catch {}
-  let collapsed = saved.collapsed === true,
+  let collapsed = saved.collapsed !== false,
     mobileOpen = false,
     scroll = 0;
   const closedGroups = {};
@@ -57,8 +57,12 @@ export function createSidebarController(root = document, viewport = window) {
       shell.dataset.mobileOpen = String(mobileOpen);
     }
     if (panel) {
-      panel.inert = !shown;
-      panel.setAttribute("aria-hidden", String(!shown));
+      panel.inert = mobile() && !shown;
+      panel.setAttribute("aria-hidden", String(mobile() && !shown));
+      panel.querySelectorAll("[data-nav-group]").forEach((group) => {
+        const active = !!group.querySelector("[aria-current=page]");
+        group.open = (!mobile() && collapsed) || active || !closedGroups[group.dataset.navGroup];
+      });
     }
     if (main) main.inert = mobile() && mobileOpen;
     root.body?.classList.toggle(
@@ -147,7 +151,7 @@ export function createSidebarController(root = document, viewport = window) {
       if (nav) nav.scrollTop = scroll;
       root.querySelectorAll("[data-nav-group]").forEach((group) =>
         group.addEventListener("toggle", () => {
-          if (!group.isConnected) return;
+          if (!group.isConnected || (!mobile() && collapsed)) return;
           closedGroups[group.dataset.navGroup] = !group.open;
           write();
         }),

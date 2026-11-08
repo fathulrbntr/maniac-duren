@@ -2,10 +2,10 @@
    Print layouts remain owned by their feature styles. */
 body { font-family:var(--font-ui); font-size:var(--text-body); line-height:1.5; letter-spacing:0; }
 button,input,select,textarea { font-family:var(--font-ui); }
-h1,h2,h3,h4 { font-weight:var(--weight-bold); letter-spacing:0; font-style:normal; color:var(--ink); }
-.intro h2,.team-workspace h2,.inv-heading h2,.auth-workspace h1 { font-size:var(--text-page); line-height:1.25; font-weight:var(--weight-bold); }
+h1,h2,h3,h4 { font-weight:var(--weight-semibold); letter-spacing:0; font-style:normal; color:var(--ink); }
+.intro h2,.team-workspace h2,.inv-heading h2,.auth-workspace h1 { font-size:var(--text-page); line-height:1.25; font-weight:var(--weight-semibold); }
 .panel h3,.team-panel h3,.order-catalog-head h3,.order-summary h3,.device-heading h3,
-.dash-section-head h2,.dash-metric h2,.kitchen-lane>h3 { font-size:var(--text-section); line-height:1.35; font-weight:var(--weight-bold); }
+.dash-section-head h2,.dash-metric h2,.kitchen-lane>h3 { font-size:var(--text-section); line-height:1.35; font-weight:var(--weight-semibold); }
 .shell .topbar h1 { font-size:20px; line-height:1.35; font-weight:var(--weight-semibold); }
 .workspace-title { min-width:0; }
 .workspace-breadcrumb { display:block; margin-bottom:3px; font-size:11px; color:var(--muted); }
@@ -21,7 +21,7 @@ h1,h2,h3,h4 { font-weight:var(--weight-bold); letter-spacing:0; font-style:norma
 }
 .stat:first-child,.stat:first-child strong { background:var(--surface); color:var(--ink); }
 .stat:first-child small { color:var(--muted); }
-.stat strong,.team-stats strong,.attendance-times strong,#report-result .stat strong { font-size:var(--text-3xl); font-weight:var(--weight-bold); line-height:1.25; font-variant-numeric:tabular-nums; }
+.stat strong,.team-stats strong,.attendance-times strong,#report-result .stat strong { font-size:var(--text-3xl); font-weight:var(--weight-semibold); line-height:1.25; font-variant-numeric:tabular-nums; }
 .kitchen-ticket,.variant-row,.variant-bulk { border-color:var(--line); border-radius:var(--radius-control); }
 .kitchen-lane { background:var(--surface-soft); }
 .kitchen-ticket { background:var(--surface); }
@@ -29,9 +29,9 @@ h1,h2,h3,h4 { font-weight:var(--weight-bold); letter-spacing:0; font-style:norma
 .employee-card-v22 .employee-username,.employee-card-v22 .employee-role { font-size:var(--text-body); font-style:normal; line-height:1.4; }
 .employee-card-v22 .employee-role { color:var(--muted); }
 .employee-card-v22:hover,.employee-card-v22:focus-visible { box-shadow:none; border-color:var(--focus); }
-.dash-profile h2 { font-size:var(--text-2xl); font-weight:var(--weight-bold); text-transform:none; }
+.dash-profile h2 { font-size:var(--text-2xl); font-weight:var(--weight-semibold); text-transform:none; }
 .dash-profile p { font-size:var(--text-body); font-style:normal; text-transform:none; }
-.dash-metric-value { font-style:normal; font-weight:var(--weight-bold); letter-spacing:0; }
+.dash-metric-value { font-style:normal; font-weight:var(--weight-semibold); letter-spacing:0; }
 .dash-tabs button { white-space:normal; overflow-wrap:anywhere; font-size:var(--text-xs); font-style:normal; text-transform:none; }
 .dash-tabs button[aria-pressed=true] { background:var(--action-bg); color:var(--action-ink); border-color:var(--action-bg); box-shadow:none; }
 .dash-tabs button[aria-pressed=true]::after { background:currentColor; }
@@ -43,20 +43,20 @@ button,.button { border-radius:var(--radius-control); font-weight:var(--weight-s
 }
 button.primary,.primary,.lime,.order-save,.team-workspace button.primary,.inventory-workspace .inv-add,
 .modal .modal-actions button.primary,.product-entry-modal .modal-actions [type=submit] {
- background:var(--action-bg); color:var(--action-ink); border-color:var(--action-bg); font-weight:var(--weight-bold);
+ background:var(--action-bg); color:var(--action-ink); border-color:var(--action-bg); font-weight:var(--weight-semibold);
 }
 button.primary:hover:not(:disabled),.primary:hover:not(:disabled),.order-save:hover:not(:disabled),
 .team-workspace button.primary:hover:not(:disabled),.inventory-workspace .inv-add:hover:not(:disabled) {
- background:var(--action-bg); color:var(--action-ink); border-color:var(--action-bg); filter:brightness(1.06); opacity:1;
+ background:var(--action-bg); color:var(--action-ink); border-color:var(--action-bg); filter:brightness(.94); opacity:1;
 }
 .order-category.selected,.tabs-mini button.selected,.report-tabs button.selected {
- background:var(--surface-raised); color:var(--ink); border-color:var(--focus); font-weight:var(--weight-bold);
+ background:var(--action-bg); color:var(--action-ink); border-color:var(--action-bg); font-weight:var(--weight-semibold);
 }
 .order-product-add { background:var(--action-bg); color:var(--action-ink); }
 .order-product:hover .order-product-add { background:var(--action-bg); color:var(--action-ink); }
 .order-product-photo,.pos-sale-variant-photo { background:var(--surface-soft); border-radius:var(--radius-control); }
-.order-product-info strong { font-size:var(--text-body); font-weight:var(--weight-bold); }
-.order-total-row strong,.total { color:var(--ink); font-weight:var(--weight-bold); }
+.order-product-info strong { font-size:var(--text-body); font-weight:var(--weight-semibold); }
+.order-total-row strong,.total { color:var(--ink); font-weight:var(--weight-semibold); }
 .field { font-size:var(--text-label); font-weight:var(--weight-semibold); color:var(--ink); }
 .field>input,.field>select,.field>textarea { margin-top:6px; }
 .field>button { margin-top:8px; }
@@ -79,7 +79,7 @@ td { border-color:var(--line); font-size:var(--text-sm); }
 .modal { max-height:calc(100dvh - 32px); overflow:auto; border:1px solid var(--line); border-radius:var(--radius-modal); background:var(--surface); color:var(--ink); box-shadow:var(--shadow); scrollbar-width:thin; scrollbar-color:var(--line) transparent; }
 .modal::backdrop { background:var(--backdrop); }
 .modal .modal-head { align-items:flex-start; gap:16px; margin-bottom:24px; }
-.modal .modal-head h2,.employee-password-dialog .modal-head h2,.product-entry-modal .modal-head h2 { font-size:var(--text-dialog); font-weight:var(--weight-bold); line-height:1.2; margin:0; letter-spacing:0; }
+.modal .modal-head h2,.employee-password-dialog .modal-head h2,.product-entry-modal .modal-head h2 { font-size:var(--text-dialog); font-weight:var(--weight-semibold); line-height:1.2; margin:0; letter-spacing:0; }
 .modal:not(.product-entry-modal) .modal-head .close {
  flex:0 0 44px; width:44px; height:44px; min-height:44px; margin:0; padding:0; border:1px solid var(--line); border-radius:var(--radius-control);
  display:flex; align-items:center; justify-content:center; color:var(--ink); background:transparent; font-size:24px; line-height:1; font-weight:var(--weight-normal);
@@ -104,7 +104,7 @@ td { border-color:var(--line); font-size:var(--text-sm); }
 .document-dialog .doc-line button { height:var(--dialog-control-height); }
 .variant-editor .field { font-size:var(--text-sm); }
 .auth-workspace input { background:var(--surface-soft); border-radius:var(--radius-control); }
-.auth-workspace .primary { font-size:var(--text-body); }
+.auth-workspace .primary { font-size:var(--text-body); border-radius:var(--radius-control); }
 .auth-workspace .auth-theme { background:var(--surface); }
 .error,.auth-session-error,.danger,.sidebar-logout,.order-cart-actions .order-remove { color:var(--danger); }
 .modal .modal-actions .danger { color:var(--danger); background:var(--danger-bg); border-color:var(--danger); }
@@ -128,8 +128,8 @@ input[type=checkbox],input[type=radio] { accent-color:var(--action-bg); }
 .sidebar .nav .nav-section { margin-bottom:8px; }
 .sidebar .nav .nav-item { min-height:40px; padding:9px 10px; border-radius:8px; }
 .sidebar .nav .nav-item.active { box-shadow:inset 3px 0 0 var(--action-bg); }
-.shell .topbar { min-height:84px; padding:18px 28px; border-bottom:0; background:var(--bg); }
-.shell #pos-main .workspace-content { padding:12px 28px var(--dock-clearance); min-width:0; }
+.shell .topbar { min-height:88px; padding:18px 28px; border-bottom:0; background:var(--bg); }
+.shell #pos-main .workspace-content { padding:8px 28px var(--dock-clearance); min-width:0; }
 .shell .sidebar-toggle,.shell .sidebar-logout { min-height:40px; height:40px; width:40px; flex-basis:40px; padding:9px; }
 .shell .topbar .theme-toggle,.shell .topbar .stock-demo-toggle { min-height:40px; height:40px; border-radius:10px; }
 .shell .workspace-tools { gap:10px; }
@@ -169,46 +169,6 @@ tbody tr:hover { background:color-mix(in srgb,var(--surface-soft) 65%,transparen
 .form-section-heading h3 { font-size:16px; margin:0; }
 .form-section-heading p { font-size:13px; color:var(--muted); margin:4px 0 0; line-height:1.5; }
 .form-section-heading:first-child { margin-top:0; }
-.order-screen { grid-template-columns:minmax(0,1fr) 360px; align-items:start; gap:20px; }
-.order-catalog-head { align-items:center; gap:16px; margin-bottom:20px; }
-.order-catalog-head p { font-size:13px; margin:6px 0 0; }
-.order-search { flex:0 1 240px; min-width:150px; }
-.order-search input { width:100%; min-height:44px; padding:10px 12px; }
-.order-summary { position:sticky; top:16px; padding:20px; }
-.order-summary-head { align-items:center; gap:12px; margin-bottom:16px; }
-.order-summary h3 { display:flex; align-items:center; gap:8px; font-size:16px; margin:6px 0 0; }
-.order-summary .field { margin-top:16px; }
-.order-summary .order-count { white-space:nowrap; font-size:12px; }
-.pos-scanbar { border:1px solid var(--line); border-radius:12px; background:var(--surface-soft); padding:16px; margin:0 0 20px; }
-.pos-scanbar>label { display:flex; align-items:center; gap:8px; margin-bottom:12px; font-size:14px; font-weight:600; }
-.pos-scan-controls { display:flex; gap:8px; align-items:stretch; }
-.pos-scan-controls input { flex:1; min-width:0; margin:0; background:var(--surface); }
-.pos-scan-controls button { flex:none; min-height:44px; margin:0; }
-.pos-scanbar>p { margin:8px 0 0; color:var(--muted); font-size:12px; line-height:1.5; }
-.order-menu-heading h3 { display:flex; align-items:center; gap:8px; font-size:14px; margin:0; }
-.order-menu-heading p { font-size:13px; margin:8px 0 16px; }
-.order-categories { gap:8px; margin-bottom:16px; }
-.order-category { min-height:40px; padding:9px 14px; font-size:13px; border-radius:10px; }
-.order-category-actions { margin:0 0 16px; display:flex; flex-wrap:wrap; gap:8px; }
-.order-category-actions button { min-height:36px; padding:7px 10px; font-size:12px; }
-.order-product-grid { grid-template-columns:repeat(auto-fill,minmax(154px,1fr)); gap:12px; }
-.order-product { border:1px solid var(--line); border-radius:12px; min-width:0; padding:12px; text-align:left; }
-.order-product-info strong { line-height:1.5; }
-.order-product-info small,.order-product-category { font-size:12px; line-height:1.5; }
-.order-product-price { font-size:16px; font-weight:700; }
-.order-product-add { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:8px; font-size:20px; }
-.order-cart-line { padding:14px 0; border-bottom:1px solid var(--line); }
-.order-cart-copy strong { font-size:14px; }
-.order-cart-copy span,.order-cart-copy small { font-size:12px; line-height:1.5; }
-.order-cart-actions { gap:6px; }
-.order-cart-actions button { display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; min-height:36px; padding:0; font-size:18px; border-radius:8px; }
-.order-cart-actions b { font-size:14px; }
-.order-total-row { padding:16px 0; }
-.order-total-row strong { font-size:22px; }
-.order-checkout-footer .order-save { min-height:48px; font-size:14px; border-radius:10px; }
-.order-payment-hint { font-size:12px; line-height:1.5; margin:10px 0 0; }
-.order-queue { margin-top:24px; }
-.order-queue .table-wrap { margin-top:16px; }
 .kitchen-board { gap:16px; align-items:start; }
 .kitchen-lane { padding:16px; min-width:0; border:1px solid var(--line); }
 .kitchen-lane>h3 { display:flex; align-items:center; gap:8px; font-size:16px; margin:0 0 16px; }
@@ -232,14 +192,6 @@ tbody tr:hover { background:color-mix(in srgb,var(--surface-soft) 65%,transparen
 .dash-period select,.dash-store select { min-height:44px; }
 .report-tabs,.doc-tabs,.tabs-mini { gap:8px; flex-wrap:wrap; }
 .report-tabs button,.doc-tabs button,.tabs-mini button { min-height:44px; font-size:13px; border-radius:10px; }
-@media(min-width:1101px) {
- .shell .order-summary { max-height:calc(100dvh - var(--dock-clearance) - 32px); }
-}
-@media(max-width:1200px) {
- .order-screen { grid-template-columns:minmax(0,1fr); }
- .order-summary { position:static; max-height:none; overflow:visible; }
- .order-summary-scroll { max-height:none; overflow:visible; }
-}
 @media(max-width:700px) {
  .shell .topbar { padding:12px 16px; min-height:72px; }
  .shell .topbar h1 { font-size:18px; }
@@ -289,4 +241,33 @@ tbody tr:hover { background:color-mix(in srgb,var(--surface-soft) 65%,transparen
  .product-entry-modal .product-photo-editor { grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
  .product-entry-modal .product-photo-frame { width:100%; }
  .report-actions button { padding:10px 8px; font-size:var(--text-xs); white-space:normal; }
+}
+
+/* Common visual language for every screen; feature-specific layouts stay intact. */
+button,.button { box-shadow:none; }
+button:not(.primary):not(.danger):not(:disabled):hover { border-color:color-mix(in srgb,var(--action-bg) 30%,var(--line)); }
+.panel,.team-panel,.device-card,.dash-panel,.dash-metric,.inv-card { border:1px solid var(--line); }
+.inv-filters,.inventory-workspace .inv-filters { border-radius:var(--radius-card); background:var(--surface); }
+.inv-card,.employee-card-v22,.recipe-card,.production-card { border-radius:var(--radius-card); }
+.inv-card .inv-photo,.employee-photo-wrap { border-radius:var(--radius-control); }
+.inv-filters input,.inv-filters select,.product-entry-modal input,.product-entry-modal select { border-radius:var(--radius-control); }
+.inv-view button,.tabs-mini button,.doc-tabs button,.report-tabs button,.dash-tabs button { border-radius:var(--radius-control); }
+.dash-tabs button[aria-pressed=true],.doc-tabs button.selected { background:var(--action-bg); color:var(--action-ink); border-color:var(--action-bg); }
+.dash-tabs button[aria-pressed=true]::after { display:none; }
+.auth-workspace .auth-form { padding:32px; max-width:430px; border:1px solid var(--line); border-radius:var(--radius-modal); background:var(--surface); }
+.auth-workspace .auth-logo { margin-bottom:24px; }
+.auth-workspace .auth-form input { min-height:48px; }
+.stock-demo-banner { border-color:var(--line); border-radius:var(--radius-card); }
+@media(max-width:600px) { .auth-workspace .auth-form { padding:24px; }.auth.auth-workspace { padding:72px 16px 24px; } }
+
+select:not([multiple]):not([size]),.product-entry-modal .product-category-info>summary {
+ appearance:none; padding-right:36px; background-image:var(--ui-chevron); background-repeat:no-repeat; background-size:16px 16px; background-position:right 12px center;
+}
+.shell:not([data-page=orders]) .workspace-content>.intro h2,
+.inventory-workspace .inv-heading h2 { display:none; }
+.inventory-workspace .inv-heading p,.workspace-content>.intro p { margin-top:0; }
+@media(max-width:600px) {
+ .shell .topbar h1 { white-space:normal; font-size:16px; line-height:1.35; }
+ .shell .topbar .stock-demo-toggle { font-size:0; width:46px; padding:10px; gap:0; }
+ .shell .topbar .stock-demo-toggle .stock-demo-track { flex:none; }
 }

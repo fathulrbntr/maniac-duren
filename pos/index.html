@@ -5,13 +5,13 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
     <meta name="robots" content="noindex,nofollow" />
     <title>Maniac Duren · POS</title>
-    <meta name="theme-color" content="#101211" />
+    <meta name="theme-color" content="#f6f6f7" />
     <script>
       (() => {
         let theme;
         try { theme = localStorage.getItem('maniac-pos-theme'); } catch {}
-        document.documentElement.dataset.theme = ['light','dark'].includes(theme) ? theme : 'dark';
-        document.querySelector('meta[name="theme-color"]').setAttribute('content', document.documentElement.dataset.theme === 'dark' ? '#101211' : '#f4f5f4');
+        document.documentElement.dataset.theme = ['light','dark'].includes(theme) ? theme : 'light';
+        document.querySelector('meta[name="theme-color"]').setAttribute('content', document.documentElement.dataset.theme === 'dark' ? '#171719' : '#f6f6f7');
       })();
     </script>
     <link rel="icon" href="logo.png" />
@@ -22,15 +22,13 @@
       startPWA();
     </script>
     <link rel="stylesheet" href="pos.css?v=81" />
-    <link rel="stylesheet" href="ui-tokens.css?v=96" />
+    <link rel="stylesheet" href="ui-tokens.css?v=104" />
     <link rel="stylesheet" href="catalog-table.css?v=81" />
     <link rel="stylesheet" href="employees.css?v=81" />
-    <link rel="stylesheet" href="workspace-ui.css?v=81" />
+    <link rel="stylesheet" href="workspace-ui.css?v=104" />
     <link rel="stylesheet" href="variants.css?v=81" />
     <link rel="stylesheet" href="pos-categories.css?v=81" />
-    <link rel="stylesheet" href="pos-menu.css?v=95" />
     <link rel="stylesheet" href="stock-demo.css?v=81" />
-    <link rel="stylesheet" href="cashier.css?v=95" />
     <link rel="stylesheet" href="devices.css?v=81" />
     <link rel="stylesheet" href="fruit-sale.css?v=81" />
     <link rel="stylesheet" href="reject-flow.css?v=88" />
@@ -45,9 +43,11 @@
     <link rel="stylesheet" href="cashier-shifts.css?v=83" />
     <link rel="stylesheet" href="payment-methods.css?v=84" />
     <link rel="stylesheet" href="crm.css?v=85" />
-    <link rel="stylesheet" href="system-dock.css?v=98" />
-    <link rel="stylesheet" href="ui-system.css?v=97" media="screen" />
+    <link rel="stylesheet" href="system-dock.css?v=104" />
     <link rel="stylesheet" href="dashboard.css?v=96" media="screen" />
+    <link rel="stylesheet" href="ui-system.css?v=104" media="screen" />
+    <link rel="stylesheet" href="pos-menu.css?v=104" media="screen" />
+    <link rel="stylesheet" href="cashier.css?v=104" />
   </head>
   <body>
     <div id="app"><div class="auth auth-workspace auth-startup"><section class="auth-form"><div><img class="auth-logo" src="logo.png" alt="Maniac Duren"><h1>Menyiapkan POS</h1><div class="auth-progress"><div class="auth-progress-track" role="progressbar" aria-label="Memuat POS"></div><p class="auth-progress-text" role="status">Memuat aplikasi…</p></div></div></section></div></div>

@@ -1,3 +1,4 @@
+import {categoryIcon} from "./ui-icons.mjs";
 import {itemTypes} from './catalog.mjs';
 import {posMenuEntries} from './pos-menu.mjs';
 export {posProductCards} from './pos-menu.mjs';
@@ -18,7 +19,7 @@ function syncCategoryGroups(root,state,products,selection){
 }
 export function posCategoryTabs(s){
  const items=[{id:'all',name:'Semua',count:posMenuEntries(s).length},...posCategories(s).map(c=>({...c,count:posMenuEntries(s,c.id).length}))];
- return items.map(c=>`<button type="button" class="order-category ${c.id==='all'?'selected':''}" data-order-category="${e(c.id)}" aria-pressed="${c.id==='all'}">${e(c.name)} <small>${c.count}</small></button>`).join('');
+ return items.map(c=>`<button type="button" class="order-category ${c.id==='all'?'selected':''}" data-order-category="${e(c.id)}" aria-pressed="${c.id==='all'}">${categoryIcon(c.name)}<span>${e(c.name)}</span><small>${c.count}</small></button>`).join('');
 }
 const categoryError=err=>{
  const message=err.message||'Penyimpanan kategori gagal.',schemaMissing=err.code==='PGRST202'||['42883','42P01'].includes(err.code);

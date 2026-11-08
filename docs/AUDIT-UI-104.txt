@@ -1,0 +1,42 @@
+AUDIT UI MANIAC DUREN — 104
+
+Perubahan desain:
+- Open Sans lokal menjadi font konsisten. Skala judul, teks, label dan metadata bersama.
+- Aksi utama oranye; permukaan putih; workspace abu-abu netral. Status berhasil/gagal
+  tetap dibedakan dengan hijau/merah, disertai teks.
+- Tombol/form memakai radius 8px, kartu 10px, dialog 16px. Foto katalog berasio 4:3.
+- Sidebar ringkas tetap dapat dipakai keyboard dan tetap menegakkan izin setiap menu.
+- CSS layar umum dimuat sebelum CSS khusus kasir; aturan layout kasir lama yang
+  saling menimpa dikeluarkan dari lapisan umum.
+- Keranjang memakai satu renderer untuk tampilan awal maupun pembaruan jumlah.
+- Nilai subtotal/diskon/total berasal dari kalkulasi kasir yang sama dengan pembayaran.
+- Tidak ada perubahan harga, stok, master pelanggan, atau transaksi pada database.
+
+Pemeriksaan otomatis:
+- npm test: 160 lulus, 0 gagal.
+- npm run check: lulus sintaks, import/aset lokal, identitas modul, navigasi, stylesheet,
+  dan konsistensi hasil build database.
+- tests/sidebar.test.mjs: lulus setelah perubahan navigasi ringkas.
+- tests/pwa.test.mjs: lulus setelah perubahan warna manifest.
+
+Pemeriksaan browser (data contoh terisolasi):
+- Login fixture dan 20 menu: kasir, master barang, dashboard, stok, supplier, shift,
+  kitchen, produksi, resep, laporan, dokumen, reject, member, diskon, karyawan, outlet,
+  pembayaran, perangkat, absensi, panduan. Tidak ditemukan overflow horizontal halaman.
+- Keranjang: tambah 3 produk, tambah jumlah, hapus item, total dihitung ulang.
+- Scan barcode statis menambahkan produk kemasan ke keranjang yang sama.
+- Nomor meja 4 terbawa ke popup pembayaran. Metode QRIS tetap membuka kontrol QR.
+- Pembayaran dibatalkan; tidak ada transaksi nyata.
+- Dialog tambah barang dan pengaturan kategori dibuka dan diperiksa.
+- Sidebar desktop diperluas/diperkecil; kontrol menu tetap dapat diakses.
+- Viewport 390: kasir, master, stok, laporan, karyawan, dashboard diperiksa tanpa
+  overflow horizontal halaman; menu mobile menutup setelah navigasi.
+- Viewport 768 dan 1024: layout kasir menyesuaikan lebar, katalog dua kolom.
+- Tema terang/gelap kasir diperiksa. Halaman pairing tablet diperiksa dalam gaya baru.
+
+Batas validasi:
+- Pengujian memakai browser desktop dengan viewport simulasi, belum perangkat toko.
+- Tidak ada deployment website atau transaksi pembayaran nyata pada tahap UI ini.
+- Mekanisme wireless/QR dari 103 dipertahankan; koneksi bank tidak ditambahkan.
+- Foto produk memakai sumber foto master yang sudah tersedia; contoh/fallback memakai
+  aset lokal yang sudah ada. Logo Maniac Duren dipertahankan.

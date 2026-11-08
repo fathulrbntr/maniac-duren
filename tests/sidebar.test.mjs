@@ -23,8 +23,8 @@ function fixture({mobile=false,saved='{}',blocked=false}={}) {
   const root={activeElement:null,body:{classList:{toggle(k,v){v?flags.add(k):flags.delete(k)},remove(k){flags.delete(k)}}},addEventListener(k,fn){listeners[k]=fn}};
   const node=()=>({dataset:{},attrs:{},inert:false,focus(){root.activeElement=this},setAttribute(k,v){this.attrs[k]=v},getClientRects(){return [1]}});
   const shell=node(),panel=node(),main=node(),outside=node(),inside=node(),last=node(),nav={scrollTop:0};
-  panel.querySelectorAll=()=>[inside,last];panel.contains=x=>[inside,last].includes(x);
-  const group={open:true,isConnected:true,dataset:{navGroup:'inventory'},addEventListener(_,fn){this.onToggle=fn}};
+  panel.querySelectorAll=k=>k==='[data-nav-group]'?[group]:[inside,last];panel.contains=x=>[inside,last].includes(x);
+  const group={querySelector:()=>null,open:true,isConnected:true,dataset:{navGroup:'inventory'},addEventListener(_,fn){this.onToggle=fn}};
   const lookup={'.shell':shell,'#pos-sidebar':panel,'#pos-main':main,'#sidebar-toggle':outside,'#pos-sidebar [data-sidebar-toggle]':inside,'#pos-navigation':nav};
   root.querySelector=k=>lookup[k]||null;
   root.querySelectorAll=k=>k==='[data-sidebar-toggle]'?[outside,inside]:k==='[data-nav-group]'?[group]:[];
@@ -36,15 +36,19 @@ function fixture({mobile=false,saved='{}',blocked=false}={}) {
   return {ctrl,root,shell,panel,main,outside,inside,last,nav,group,values,flags,media,click,key};
 }
 let f=fixture();
+assert.equal(f.shell.dataset.sidebarCollapsed,'true','New sessions start in compact navigation');
+assert.equal(f.panel.inert,false,'Compact navigation remains keyboard accessible');
+assert.equal(f.group.open,true,'All compact groups expose their icons');
+f=fixture({saved:'{"collapsed":false}'});
 assert.equal(f.panel.inert,false);assert.equal(f.main.inert,false);
-f.click('[data-sidebar-toggle]');assert.equal(f.shell.dataset.sidebarCollapsed,'true');assert.equal(f.panel.inert,true);assert.equal(f.outside.attrs['aria-expanded'],'false');assert.equal(f.root.activeElement,f.outside);
+f.click('[data-sidebar-toggle]');assert.equal(f.shell.dataset.sidebarCollapsed,'true');assert.equal(f.panel.inert,false);assert.equal(f.outside.attrs['aria-expanded'],'false');assert.equal(f.root.activeElement,f.outside);
 assert.equal(JSON.parse(f.values.get('maniac-pos-sidebar-v1')).collapsed,true);
 f.click('[data-sidebar-toggle]');assert.equal(f.panel.inert,false);assert.equal(f.root.activeElement,f.inside);
 f.nav.scrollTop=200;f.ctrl.capture();f.nav.scrollTop=0;f.ctrl.mount();assert.equal(f.nav.scrollTop,200);
 f.group.open=false;f.group.onToggle();assert.equal(f.ctrl.closedGroups.inventory,true);
 assert.equal(JSON.parse(f.values.get('maniac-pos-sidebar-v1')).groups.inventory,true);
-f=fixture({saved:'{"collapsed":true,"groups":{"laporan":true}}'});assert.equal(f.panel.inert,true);assert.equal(f.ctrl.closedGroups.laporan,true);
-for(const config of [{saved:'invalid json'},{blocked:true}]){f=fixture(config);f.click('[data-sidebar-toggle]');assert.equal(f.panel.inert,true);}
+f=fixture({saved:'{"collapsed":true,"groups":{"laporan":true}}'});assert.equal(f.panel.inert,false);assert.equal(f.ctrl.closedGroups.laporan,true);
+for(const config of [{saved:'invalid json'},{blocked:true}]){f=fixture(config);f.click('[data-sidebar-toggle]');assert.equal(f.panel.inert,false);}
 f=fixture({mobile:true});assert.equal(f.panel.inert,true);assert.equal(f.main.inert,false);
 f.click('[data-sidebar-toggle]');assert.equal(f.panel.inert,false);assert.equal(f.main.inert,true);assert(f.flags.has('sidebar-mobile-open'));assert.equal(f.root.activeElement,f.inside);
 f.root.activeElement=f.last;assert(f.key('Tab'));assert.equal(f.root.activeElement,f.inside);
