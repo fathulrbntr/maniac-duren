@@ -23,9 +23,13 @@ export function barcodeProduct(state, raw, settings = readDeviceSettings()) {
   const products = state.products || [];
   const scale = parseScaleBarcode(code);
   if (scale) {
+    // A received tracking label keeps its original product identity even when
+    // the scale's current Item Code mapping is later changed. Sale validation
+    // still enforces outlet, availability, lot and weight in scale-label.mjs / SQL.
+    const tracked = scale.tracking && state.fruitUnits?.find(u => u.barcode === code);
     // CAS I means Item Code. Match the four-digit master barcode exactly;
     // never infer a product from its name, SKU, PLU number or printed price.
-    const matches = products.filter(p => String(p.barcode || '').trim() === scale.itemCode);
+    const matches = tracked ? products.filter(p => p.id === tracked.productId) : products.filter(p => String(p.barcode || '').trim() === scale.itemCode);
     if (matches.length > 1) throw Error(`Kode timbangan ${scale.itemCode} dipakai lebih dari satu produk. Perbaiki Barcode di Master Barang.`);
     if (!matches.length) throw Error(`Kode timbangan ${scale.itemCode} belum terdaftar. Isi Barcode produk di Master Barang dengan ${scale.itemCode}.`);
     const product = matches[0];

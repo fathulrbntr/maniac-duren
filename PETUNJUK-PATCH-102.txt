@@ -1,0 +1,128 @@
+MANIAC DUREN — PATCH 102
+Barcode buah + layar pelanggan + tampilan QR dinamis EDC BCA
+Basis: maniac-duren(10).zip dari Anda, 8 November 2026.
+
+STATUS
+Kode 12 buah sudah disesuaikan langsung pada Supabase maniac-duren-pos.
+8 kode berubah, 4 kode sudah benar. Harga, stok, transaksi, dan label lama tidak diubah.
+Kode web dalam paket ini BELUM dipasang ke website Vercel Anda.
+Tidak ada pembayaran nyata, permintaan charge, atau koneksi ECR yang dibuat.
+
+PASANG WEB
+1. Cadangkan folder proyek yang sedang Anda gunakan.
+2. Ekstrak isi ZIP ini ke folder proyek Maniac Duren yang berisi package.json.
+   Gabungkan folder pos, tests, database, docs; timpa hanya file dalam patch.
+   Jangan membuat folder pos/pos dan jangan mengganti keseluruhan proyek.
+3. Buka terminal pada folder proyek tersebut. Jalankan tiap baris:
+
+   npm ci
+   npm test
+   npm run check
+   git add --pathspec-from-file=PATCH-102-FILES.txt
+   git diff --cached --stat
+   git commit -m "Add fruit barcode mapping and customer display with EDC QR"
+   git push origin main
+
+   Periksa hasil git diff: pastikan commit hanya memuat perubahan yang Anda inginkan.
+   Jika cabang deployment Anda bukan main, gunakan cabang yang benar.
+4. Tunggu deployment Vercel selesai, lalu muat ulang POS dan login kembali.
+5. SQL fruit-barcode-mapping-102.sql disertakan untuk dokumentasi, bukan wajib dijalankan ulang
+   pada project ini. Tidak ada migration schema baru yang diperlukan.
+
+DAFTAR BUAH — BARCODE MASTER / ITEMCODE TIMBANGAN
+PLU 1  MONTHONG                  0001
+PLU 2  BAWOR                     0002
+PLU 3  MUSANG KING FRESH         0003
+PLU 4  PETRUK                    0004
+PLU 5  MUSANG KING NITROGEN      0005
+PLU 6  MATAHARI                  0006
+PLU 8  BLACK THORN FRESH         0008
+PLU 9  BLACK THORN NITROGEN      0009
+PLU 10 CUMASI                    0010
+PLU 12 LOKAL SUPER               0012
+PLU 14 MIMANG                    0014
+PLU 15 SUPER TEMBAGA             0015
+
+Di screenshot, kolom ItemCode tidak terlihat. Nomor PLU tidak otomatis membuktikan ItemCode.
+Tampilkan kolom ItemCode di CL-Works dan samakan dengan daftar di atas.
+Saat kolom numerik menampilkan 1, kode pada barcode harus tetap terisi empat digit: 0001.
+Format label yang digunakan: 92 + mesin(2) + tanggal DDMMYY(6) + urutan(6)
++ ItemCode(4) + berat gram(6). Total 26 digit. Contoh data uji, bukan stok:
+92010811260001000001000886 = ItemCode 0001, berat 886 gram.
+Label buah harus diterima/tercatat terlebih dahulu agar dapat dijual lewat POS.
+Label yang sudah diterima tetap mengikuti produk asalnya jika master kemudian berubah.
+Label lama yang belum pernah diterima dan memakai kode lama perlu dicetak ulang.
+
+HARGA
+Master sistem tetap Rp150.000/kg sesuai data sebelum patch. Barcode 26 digit ini tidak membawa harga.
+POS menghitung harga dari master. Samakan harga cetak timbangan dengan master; nilai Unit Price
+mentah di CL-Works dapat bergantung pada konfigurasi desimal. Verifikasi dengan label uji 1 kg.
+Patch web tidak mengubah batas total harga atau firmware timbangan fisik.
+
+BARANG BARCODE TETAP, MISAL CRYSTALINE
+Simpan barcode pabrik lengkap pada Master Barang produk bersatuan pcs.
+Scan pada input barcode kasir yang sama. Produk dicari berdasarkan barcode/SKU, lalu masuk
+sebagai produk biasa. Tidak memakai format dinamis, timbangan, atau popup batch durian.
+Harga dan ketersediaan tetap mengikuti master/stok toko. Scan ulang menambah jumlah sesuai alur POS.
+
+LAYAR PELANGGAN
+1. Hubungkan monitor kedua pada komputer kasir, lalu Windows + P → Extend.
+2. Buka POS melalui Chrome/Edge terbaru dan buka halaman Pesanan kasir.
+3. Klik Layar pelanggan. Izinkan pop-up jika browser memblokir.
+4. Pindahkan jendela baru ke monitor kedua. Klik Layar penuh.
+5. Keranjang, jumlah/berat, harga, diskon, dan total akan berubah mengikuti kasir.
+   Setiap tab kasir menggunakan salurannya sendiri; jangan menyalin link layar kasir lain.
+6. Setelah logout/ganti toko, layar dibersihkan. Jika browser kasir dimuat ulang,
+   tutup layar lama dan buka lagi melalui tombol Layar pelanggan.
+
+Layar ini untuk dua jendela pada browser/profil komputer yang sama.
+Bukan mode tablet/HP terpisah, bukan sinkronisasi antarkomputer melalui internet.
+Link layar pelanggan tidak berisi token login. Foto, supplier, modal, nomor telepon,
+catatan internal, dan data karyawan tidak dikirim ke display.
+
+QRIS EDC BCA — SESUAI CARA ANDA SEKARANG: INPUT NOMINAL DI EDC
+1. Selesaikan keranjang dan diskon; klik Bayar sekarang, pilih QRIS.
+2. Masukkan TOTAL BELANJA yang sama pada EDC BCA dan keluarkan QR dinamis dari EDC.
+3. Klik kolom Scan QR dari EDC lalu scan QR dengan scanner 2D.
+   Scanner laser barcode 1D biasa tidak dapat membaca QR.
+   Alternatif: pilih foto/screenshot QR melalui Foto QR dari EDC. Foto harus tersedia
+   di komputer kasir, JPG/PNG/WebP maksimal 8 MB. Pemrosesan dilakukan lokal.
+4. Sistem memeriksa struktur, CRC, tipe dinamis, IDR, negara Indonesia, dan nominal.
+5. Cocokkan nama merchant dengan EDC/toko, centang konfirmasi merchant, lalu Tampilkan QR.
+6. Pelanggan scan QR dari monitor. QR yang ditampilkan berisi payload resmi dari EDC,
+   tanpa perubahan nominal atau data merchant.
+7. Periksa pembayaran berhasil DI EDC. Centang konfirmasi pembayaran dan lanjutkan
+   konfirmasi POS. Status selesai di display muncul setelah penyimpanan POS berhasil.
+
+QR tidak wajib dipindah ke layar: pelanggan tetap boleh scan langsung pada EDC.
+QR disembunyikan saat metode/keranjang berubah, dibatalkan, masuk konfirmasi, logout,
+ganti toko, atau sumber layar terputus. Tampilan QR dibatasi 3 menit sejak pertama ditampilkan;
+masa berlaku bank bisa lebih pendek. QR tidak diperpanjang otomatis.
+Jika status jaringan tidak pasti, display meminta pelanggan menunggu pemeriksaan kasir.
+Jangan menganggap hilangnya QR atau tulisan selesai di web sebagai notifikasi bank.
+Dalam mode demo, QR pembayaran nyata dinonaktifkan.
+
+BATAS INTEGRASI
+EDC Anda belum terhubung ECR/API. Web belum dapat memerintahkan EDC membuat QR secara otomatis
+atau mengetahui pembayaran sukses otomatis. QR nominal langsung dari web membutuhkan akses
+merchant API QRIS BCA / koneksi ECR yang disetujui bank, berikut credential server dan webhook
+atau inquiry resmi. Paket ini tidak membuat QR pembayaran rekaan dari barcode barang.
+CRC membuktikan integritas teks QR, bukan keaslian bank; ambil QR hanya dari EDC toko Anda.
+Pencegahan penggunaan QR yang sama pada transaksi lain berlaku selama tab kasir masih terbuka;
+status sah/terpakainya QR tetap ditentukan EDC/bank.
+
+UJI SEBELUM OPERASIONAL
+- Refresh Master Barang dan verifikasi daftar 12 kode.
+- Cetak satu label per jenis, scan, cocokkan nama dan berat; cocokkan harga cetak dengan POS.
+- Uji barang barcode tetap (misalnya Crystaline) secara terpisah.
+- Buka dua tab kasir dan pastikan display masing-masing mengikuti tab yang benar.
+- Uji QR resmi EDC dengan nominal kecil yang Anda pilih; periksa merchant dan nominal di aplikasi.
+- Uji batal, ganti metode, dan logout. Pastikan QR lama tidak tetap terlihat.
+- Catat transaksi hanya setelah EDC mengonfirmasi berhasil.
+
+HASIL PENGUJIAN PENGEMBANGAN
+158 pengujian otomatis lulus; syntax/import/assets/database build lulus.
+Audit dependensi npm: 0 kerentanan yang tercatat pada saat pemeriksaan.
+Uji browser: keranjang, QR uji, kedaluwarsa, konfirmasi, selesai, reset, putus sambungan.
+Uji QR menggunakan data sintetis tanpa akun merchant; belum diuji pembayaran uang nyata.
+Lihat docs/audit-102.txt untuk ruang lingkup, temuan, dan keterbatasan audit.

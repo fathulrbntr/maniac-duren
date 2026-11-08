@@ -1,3 +1,4 @@
+import {resetCustomerDisplay} from './customer-display-channel.mjs';
 import {attachFruitScanSelection} from './fruit-scan-selection.mjs';
 import { crmPage, bindCrm, memberFields, bindMemberPicker } from "./crm-ui.mjs";
 import {
@@ -435,6 +436,7 @@ async function request(path, body, auth = true, allowDemoRead = false) {
   }
 }
 function resetWorkspace(forget = false) {
+  resetCustomerDisplay();
   if (forget) sessions?.clear(activeSessionId || undefined);
   resetDashboard();
   loginAttempt++;
@@ -452,6 +454,7 @@ function resetWorkspace(forget = false) {
   store = "";
   clearOrderDraft();
   document.querySelectorAll("dialog[open]").forEach((dialog) => dialog.close());
+  resetCustomerDisplay();
 }
 function defaultView() {
   return state.access?.sell
@@ -803,6 +806,7 @@ function changeStore(next) {
     !confirm("Ganti toko akan mengosongkan pesanan. Lanjutkan?")
   )
     return false;
+  resetCustomerDisplay();
   store = next;
   cart = [];
   clearOrderDraft();

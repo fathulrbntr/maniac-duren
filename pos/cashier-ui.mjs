@@ -1,3 +1,5 @@
+import {customerSnapshot,publishCustomer,publishCustomerCart,openCustomerDisplay,getDisplayEpoch} from './customer-display-channel.mjs';
+import {paymentQRFields,bindPaymentQR} from './payment-qr-ui.mjs';
 import {memberFields,bindMemberPicker,memberReceipt} from './crm-ui.mjs';
 import {requireEnabledPayment,availablePayments} from './payment-methods.mjs';
 import {paymentOptions,paymentInfo} from './payment-methods-ui.mjs';
@@ -46,6 +48,7 @@ export function bindCheckout(ctx,store,getDraft,clearDraft){
  const table=document.querySelector('#order-table'),note=document.querySelector('#order-note'),select=document.querySelector('#order-discount'),requestButton=document.querySelector('#request-discount'),status=document.querySelector('#discount-status'),save=document.querySelector('#save-order');
  if(!table||!select)return ()=>{};
  const memberPicker=bindMemberPicker(ctx,document,getDraft);
+ document.querySelector('#customer-display-open')?.addEventListener('click',()=>{try{openCustomerDisplay();}catch(error){ctx.toast(error.message);}});
  const checkout=()=>({storeId:store,date:today(),lines:structuredClone(getDraft()),tableNo:table.value?Number(table.value):null,note:note.value,memberId:memberPicker.get()?.id||null,memberName:memberPicker.get()?.name||null});
  const approval=()=>{const s=ctx.getState(),p=checkout();if(!select.value)return {s,p,a:null};const quote=cashierQuote(s,p);return {s,p,a:findDiscountApproval(s,quote,select.value)};};
  let requesting=false,lastError='';
@@ -61,6 +64,8 @@ export function bindCheckout(ctx,store,getDraft,clearDraft){
   const stock=checkOrder(s,store,getDraft(),today());save.disabled=!getDraft().length||!stock.ok||!!(selected&&a?.status!=='approved');
   if(!(s.cashierVersion>=54)){save.disabled=true;status.textContent='Jalankan SQL kasir 054 terlebih dahulu.';}
   if(!(s.cashierShiftVersion>=83)||!activeShift(s,store)){save.disabled=true;status.textContent=s.cashierShiftVersion>=83?'Buka kasir sebelum menerima pembayaran.':'Pasang SQL cashier-shifts-083 terlebih dahulu.';}
+  const subtotal=getDraft().reduce((n,l)=>n+l.qty*l.price,0);
+  publishCustomerCart(customerSnapshot(s,checkout(),{subtotal,total,discountAmount:Math.max(0,subtotal-total)}));
   document.querySelector('#order-total').textContent=money(total);save.textContent=`${s.stockDemo?'Uji pembayaran':'Bayar sekarang'} · ${money(total)}`;
  };
  for(const node of [table,note,select]){node.addEventListener('change',()=>{lastError='';update();});node.addEventListener('input',()=>{lastError='';update();});}
@@ -88,18 +93,23 @@ export function payExistingOrder(ctx,store,orderId){
 }
 function paymentDialog(ctx,p,t,onSaved){
  const s=ctx.getState();if(!availablePayments(s,p.storeId).length)return ctx.toast('Tidak ada metode pembayaran aktif. Hubungi owner.');
- const d=ctx.modal('Pembayaran pesanan',`<h3>${money(t.total)}</h3><p>${e(tableLabel(p.tableNo))}</p>${p.orderId?memberFields(s):`<p>${p.memberId?"Member: "+e(p.memberName):"Tanpa member"}</p>`}<label class="field">Metode pembayaran<select name="payment" required>${paymentOptions(s,p.storeId)}</select></label><label class="field">Uang diterima<input type="number" name="paid" min="${t.total}" step="any" value="${t.total}" required></label><p id="payment-change"></p><p class="payment-account-info" data-payment-info></p><label class="payment-receive-confirm" data-receive-label hidden><input type="checkbox" name="paymentConfirmed"><span>Saya sudah memeriksa dan memastikan pembayaran berhasil di aplikasi / mesin EDC.</span></label><p class="muted">${s.stockDemo?'Simulasi pembayaran demo.':'Pembayaran non-tunai dicatat manual setelah diverifikasi kasir.'}</p>`,'Lanjut konfirmasi');
+ const d=ctx.modal('Pembayaran pesanan',`<h3>${money(t.total)}</h3><p>${e(tableLabel(p.tableNo))}</p>${p.orderId?memberFields(s):`<p>${p.memberId?"Member: "+e(p.memberName):"Tanpa member"}</p>`}<label class="field">Metode pembayaran<select name="payment" required>${paymentOptions(s,p.storeId)}</select></label><label class="field">Uang diterima<input type="number" name="paid" min="${t.total}" step="any" value="${t.total}" required></label><p id="payment-change"></p><p class="payment-account-info" data-payment-info></p>${paymentQRFields(!!s.stockDemo)}<label class="payment-receive-confirm" data-receive-label hidden><input type="checkbox" name="paymentConfirmed"><span>Saya sudah memeriksa dan memastikan pembayaran berhasil di aplikasi / mesin EDC.</span></label><p class="muted">${s.stockDemo?'Simulasi pembayaran demo.':'Pembayaran non-tunai dicatat manual setelah diverifikasi kasir.'}</p>`,'Lanjut konfirmasi');
  const picker=p.orderId?bindMemberPicker(ctx,d,()=>p.lines):null;
  const f=d.querySelector('form'),method=f.elements.namedItem('payment'),amount=f.elements.namedItem('paid');
- const update=()=>{amount.readOnly=method.value!=='Tunai';if(amount.readOnly)amount.value=t.total;d.querySelector('#payment-change').textContent='Kembalian: '+money(Math.max(0,Number(amount.value)-t.total));};const received=f.elements.namedItem('paymentConfirmed');const methodChanged=()=>{received.checked=false;received.required=method.value!=='Tunai';d.querySelector('[data-receive-label]').hidden=!received.required;d.querySelector('[data-payment-info]').textContent=paymentInfo(ctx.getState(),p.storeId,method.value);update();};method.onchange=methodChanged;amount.oninput=update;methodChanged();
- let advanced=false,cancelled=false;const cancel=()=>{if(advanced||cancelled)return;cancelled=true;resultPopup(ctx,{success:false,title:'Pembayaran dibatalkan',message:'Pesanan belum disimpan. Keranjang tetap tersedia.'});};
- d.addEventListener('close',cancel);
- f.onsubmit=ev=>{ev.preventDefault();try{const payment={...p,...(picker?{memberId:picker.get()?.id||null,memberName:picker.get()?.name||null}:{}),payment:method.value,paid:amount.value};requireEnabledPayment(ctx.getState(),p.storeId,method.value);if(method.value!=='Tunai'&&!received.checked)throw Error('Periksa dan konfirmasi pembayaran terlebih dahulu');validPayment(payment,t.total);advanced=true;d.close();confirmPayment(ctx,payment,t,onSaved);}catch(error){err(d,error);}};
+ let advanced=false,cancelled=false;const displayEpoch=getDisplayEpoch();
+ const display=(phase='payment',qr=null)=>{if(displayEpoch===getDisplayEpoch()&&!(advanced&&phase==='payment'))publishCustomer(customerSnapshot(ctx.getState(),{...p,payment:method.value},t,phase,qr));};
+ const qrUI=bindPaymentQR(d,{total:t.total,transactionId:p.id,demo:!!s.stockDemo,onQR:qr=>{if(qr){const fresh=p.orderId?ctx.getState().orders.find(o=>o.id===p.orderId):checkoutTotals(ctx.getState(),p);if(fresh?.total!==t.total)throw Error('Total berubah. Tutup pembayaran dan periksa pesanan.');}display('payment',qr);},onError:error=>err(d,error)});
+ const update=()=>{amount.readOnly=method.value!=='Tunai';if(amount.readOnly)amount.value=t.total;d.querySelector('#payment-change').textContent='Kembalian: '+money(Math.max(0,Number(amount.value)-t.total));};const received=f.elements.namedItem('paymentConfirmed');const methodChanged=()=>{qrUI.setMethod(method.value);received.checked=false;received.required=method.value!=='Tunai';d.querySelector('[data-receive-label]').hidden=!received.required;d.querySelector('[data-payment-info]').textContent=paymentInfo(ctx.getState(),p.storeId,method.value);update();};method.onchange=methodChanged;amount.oninput=update;methodChanged();
+ const cancel=()=>{if(advanced||cancelled)return;cancelled=true;resultPopup(ctx,{success:false,title:'Pembayaran dibatalkan',message:'Pesanan belum disimpan. Keranjang tetap tersedia.'});};
+ d.addEventListener('close',()=>{qrUI.dispose();if(!advanced)display('cart');cancel();});
+ f.onsubmit=ev=>{ev.preventDefault();try{const payment={...p,...(picker?{memberId:picker.get()?.id||null,memberName:picker.get()?.name||null}:{}),payment:method.value,paid:amount.value};requireEnabledPayment(ctx.getState(),p.storeId,method.value);if(method.value!=='Tunai'&&!received.checked)throw Error('Periksa dan konfirmasi pembayaran terlebih dahulu');validPayment(payment,t.total);advanced=true;d.close();display('confirming');confirmPayment(ctx,payment,t,onSaved);}catch(error){err(d,error);}};
 }
 function confirmPayment(ctx,p,t,onSaved){
  const autoPrint=readDeviceSettings().printer.autoPrint;
  const s=ctx.getState(),d=ctx.modal('Konfirmasi pembayaran',`<p><b>${e(tableLabel(p.tableNo))}</b> · ${e(p.note||'Tanpa catatan')}</p><p>${p.memberId?"Member: "+e(p.memberName):"Tanpa member"}</p><div class="checkout-review">${p.lines.map(l=>`<p>${e(s.products.find(x=>x.id===l.productId)?.name)} × ${num(l.qty)} <b>${money(l.qty*l.price)}</b></p>`).join('')}<hr><p>Subtotal <b>${money(t.subtotal)}</b></p><p>Diskon <b>−${money(t.discountAmount)}</b></p><p>Total dibayar <b>${money(t.total)}</b></p><p>${e(p.payment)} <b>${money(p.paid)}</b></p><p>Kembalian <b>${money(Number(p.paid)-t.total)}</b></p></div><p class="muted">${s.stockDemo?'Ini transaksi demo.':(autoPrint?'Konfirmasi menyimpan transaksi dan membuka proses cetak struk.':'Konfirmasi menyimpan transaksi. Struk dapat dicetak dari detail pesanan.')}</p><p id="confirmation-status" role="status"></p>`,autoPrint?'Konfirmasi & cetak struk':'Konfirmasi pembayaran');
- let saving=false,done=false,cancelled=false,uncertain=false;const cancel=()=>{if(done||cancelled)return;cancelled=true;resultPopup(ctx,{success:false,title:uncertain?'Status pembayaran belum pasti':'Pembayaran dibatalkan',message:uncertain?'Periksa transaksi / pengiriman tertunda sebelum mencoba pembayaran lagi.':'Pesanan belum disimpan. Keranjang tetap tersedia.'});};
+ const displayEpoch=getDisplayEpoch();
+ const display=phase=>{if(displayEpoch===getDisplayEpoch())publishCustomer(customerSnapshot(ctx.getState(),p,t,phase));};
+ let saving=false,done=false,cancelled=false,uncertain=false;const cancel=()=>{if(done||cancelled)return;cancelled=true;display(uncertain?'uncertain':'cart');resultPopup(ctx,{success:false,title:uncertain?'Status pembayaran belum pasti':'Pembayaran dibatalkan',message:uncertain?'Periksa transaksi / pengiriman tertunda sebelum mencoba pembayaran lagi.':'Pesanan belum disimpan. Keranjang tetap tersedia.'});};
  d.addEventListener('close',cancel);d.querySelectorAll('.modal-actions .close').forEach(b=>b.textContent='Cancel');
  d.querySelector('form').onsubmit=async ev=>{
   ev.preventDefault();if(saving||done)return;saving=true;submitted(d).disabled=true;let sent=false;
@@ -109,9 +119,9 @@ function confirmPayment(ctx,p,t,onSaved){
    if(p.orderId&&(!existing||existing.payment_status!=='unpaid'||existing.status==='cancelled'))throw Error('Pesanan sudah dibayar atau dibatalkan');
    const current=existing?{total:existing.total}:checkoutTotals(ctx.getState(),p);validPayment(p,current.total);requireEnabledPayment(ctx.getState(),p.storeId,p.payment);
    if(current.total!==t.total)throw Error('Total berubah. Tutup dan periksa kembali pesanan');
-   sent=true;const ok=await ctx.mutate(p.orderId?'order_pay':'order_create',p,{throwOnError:true});if(!ok)throw Error('Transaksi belum tersimpan');
-   done=true;onSaved();d.close();ctx.render();resultPopup(ctx,{success:true,title:'Pesanan berhasil',message:'Pembayaran tersimpan. Struk siap dicetak.',orderId:p.orderId||p.id,print:autoPrint});
-  }catch(error){uncertain=uncertain||(!s.stockDemo&&sent&&!error.definitive);err(d,error);d.querySelector('#confirmation-status').textContent=uncertain?'Status belum pasti. Periksa transaksi sebelum membayar lagi.':'';}
+   display('confirming');sent=true;const ok=await ctx.mutate(p.orderId?'order_pay':'order_create',p,{throwOnError:true});if(!ok)throw Error('Transaksi belum tersimpan');
+   done=true;onSaved();d.close();ctx.render();display('paid');resultPopup(ctx,{success:true,title:'Pesanan berhasil',message:'Pembayaran tersimpan. Struk siap dicetak.',orderId:p.orderId||p.id,print:autoPrint});
+  }catch(error){uncertain=uncertain||(!s.stockDemo&&sent&&!error.definitive);display(uncertain?'uncertain':'cart');err(d,error);d.querySelector('#confirmation-status').textContent=uncertain?'Status belum pasti. Periksa transaksi sebelum membayar lagi.':'';}
   finally{saving=false;if(!done)submitted(d).disabled=false;}
  };
 }

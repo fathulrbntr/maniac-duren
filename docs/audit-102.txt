@@ -1,0 +1,117 @@
+AUDIT MANIAC DUREN — 8 NOVEMBER 2026
+Sumber: ZIP maniac-duren(10).zip dan database Supabase zxnaufihgnrunktxfcbj (maniac-duren-pos).
+
+RUANG LINGKUP
+Audit kode alur kasir, barcode, pembayaran, API login/akun, isolasi demo, dan regresi lewat
+seluruh pengujian repository. Pemeriksaan database meliputi master buah, label tracking,
+potensi benturan barcode, serta security/performance/health advisors.
+Ini bukan penetration test seluruh endpoint dan bukan sertifikasi keamanan/pembayaran.
+Website live tidak dideploy atau diubah pada tugas ini; perubahan kode dikirim sebagai patch.
+Perubahan data live terbatas pada delapan nilai barcode master dalam daftar 12 buah.
+
+TEMUAN YANG DITANGANI
+1. Delapan kode master berbeda dari daftar PLU terbaru. Mapping diperbarui secara atomik,
+   dengan guard jika SKU hilang/kode diubah pihak lain atau kode dipakai produk lain.
+   Semua kolom selain barcode diperiksa tetap identik dalam transaksi update.
+2. Label tracking sebelumnya selalu bergantung pada pemetaan master yang sedang berlaku.
+   Label yang sudah diterima kini dicari melalui productId asli pada unit tracking.
+   Pemeriksaan outlet, status unit, stok, lot, dan berat tetap berjalan pada UI dan server.
+3. Belum ada customer-facing display. Ditambahkan layar kedua dengan kanal acak per tab,
+   snapshot minimal, heartbeat, kedaluwarsa koneksi, fullscreen, dan format Rupiah.
+4. Pembayaran QRIS awalnya hanya pilihan metode dan konfirmasi manual. Ditambahkan jalur
+   membaca QR resmi EDC melalui scanner 2D atau foto lokal, validasi nominal dan merchant,
+   serta tampilan QR yang tetap identik dengan payload sumber.
+5. Event close dialog browser berjalan asinkron. Penanganan ditambahkan agar event lama
+   tidak menimpa status konfirmasi atau menghidupkan kembali display setelah logout.
+
+DATA YANG DIVERIFIKASI
+- 12 buah target cocok SKU/nama; 4 kode sudah benar, 8 berubah.
+- Tidak ada benturan barcode dengan produk lain sebelum update.
+- 8 label tracking tersimpan, semuanya Monthong/0001 dan berstatus sold saat pemeriksaan.
+  Identitas dan riwayat label tidak diubah. Tidak ada label tersimpan untuk delapan kode
+  yang dipindahkan pada waktu pemeriksaan.
+- Harga buah target tetap Rp150.000/kg. Stok, transaksi, supplier, resep, employee/auth tidak diubah.
+- Lokal Mentega, Lokal Premium, Masmuar dan produk di luar daftar tetap memakai kode semula.
+- Daftar kode sebelum/sesudah tersedia pada barcode-sebelum-sesudah-102.json.
+
+PENGAMATAN API/AUTH
+- Key service role digunakan di sisi server melalui environment, bukan customer display.
+- Endpoint login menerapkan throttle melalui RPC, pesan gagal umum, dan timeout.
+- Endpoint akun memeriksa Bearer dan RPC otorisasi; pos_account_target meminta permission
+  employees. pos_allowed membatasi permission employees pada owner dan memeriksa pegawai aktif.
+- Tidak ditambahkan penyimpanan credential merchant, akses auth, atau akses database pada display.
+- Customer display CSP membatasi resource lokal dan tidak mengizinkan connect/fetch keluar.
+- QR dan foto tidak dikirim ke layanan pihak ketiga oleh fitur baru ini.
+
+TEMUAN YANG MASIH PERLU DITINJAU
+A. QR otomatis end-to-end belum tersedia.
+   Cara saat ini adalah input nominal di EDC standalone. Tidak ada akses ECR/API yang diberikan.
+   Generate QR, inquiry, notification/webhook bank baru dapat diimplementasikan setelah akses
+   merchant resmi tersedia. Status pembayaran tetap diverifikasi kasir di EDC.
+   BCA mendokumentasikan Generate Dynamic QR, QR Status Inquiry dan Notification pada SNAP:
+   https://www.bca.co.id/en/Campaign/2023/Migrasi-SNAP
+   EDC/ECR BCA:
+   https://www.bca.co.id/bisnis/produk/penerimaan-bisnis/EDC-BCA
+
+B. Leaked password protection Supabase belum aktif (WARN).
+   Belum mengubah pengaturan Auth global. Tinjau pengaktifan sesuai paket/config project.
+   https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection
+
+C. 30 fungsi SECURITY DEFINER dapat dipanggil authenticated (WARN advisor).
+   Sebagian adalah RPC aplikasi yang sengaja tersedia dan memiliki guard permission.
+   Sampling pos_allowed dan pos_account_target diperiksa, bukan seluruh jalur fungsi.
+   Jangan mencabut seluruh EXECUTE secara massal karena akan merusak POS.
+   Lakukan review per fungsi untuk auth.uid(), scope outlet, search_path, dan grant.
+   https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable
+
+D. 1 fungsi rls_auto_enable ditandai executable oleh anon (WARN advisor).
+   Definisi yang diperiksa returns event_trigger, search_path pg_catalog, menyalakan RLS
+   pada CREATE TABLE public. PostgreSQL tidak mengizinkan pemanggilan biasa fungsi event-trigger.
+   Temuan ini tidak diperlakukan sebagai bukti endpoint publik yang dapat membaca data.
+   Hardening grant dapat ditinjau terpisah dengan pemilik trigger; tidak diubah otomatis.
+   https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable
+
+E. 56 tabel RLS enabled tanpa policy (INFO).
+   Arsitektur aplikasi memakai RPC terotorisasi. Tidak adanya policy memblokir akses tabel
+   langsung; bukan alasan menambahkan policy allow-all. Verifikasi setiap kebutuhan akses.
+   https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy
+
+F. 90 foreign key tanpa covering index, 8 index belum terpakai (INFO).
+   Potensi biaya query/relasi, bukan bukti bahwa semuanya sedang memperlambat POS.
+   Belum membuat 90 index atau menghapus index karena belum ada EXPLAIN ANALYZE/workload
+   yang menunjukkan prioritas. Dahulukan query transaksi/outlet yang benar-benar lambat.
+   https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys
+   https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index
+
+G. Harga cetak timbangan dan POS perlu dicocokkan operasional.
+   Barcode 26 digit yang digunakan menyimpan kode, tanggal/urutan, berat; tidak membawa harga.
+   Perbedaan harga master vs timbangan dapat membuat nominal label dan tagihan berbeda.
+   Screenshot Unit Price mentah bukan cukup untuk menyimpulkan harga karena skala desimal.
+   Patch hanya mengubah kode sesuai permintaan, tidak menafsirkan ulang harga timbangan.
+
+Health advisor: tidak ada temuan pada pemeriksaan ini.
+Changelog Supabase diperiksa. Tidak ada upgrade SDK/CLI/framework pada patch ini.
+
+VALIDASI
+- Baseline sebelum perubahan: 155 tes lulus, 0 gagal.
+- Setelah perubahan: 158 tes lulus, 0 gagal.
+- npm run check: syntax, import/asset lokal, module identity, navigation/style unik,
+  konsistensi database foundation. Lulus.
+- npm audit: 0 vulnerability yang dilaporkan registry, bukan jaminan bebas seluruh celah.
+- SQL mapping diuji dengan PGlite: 12 kode, penerapan ulang, abort collision,
+  harga/produk biasa/riwayat tetap, semua format label, barcode barang tetap.
+- QR: CRC known vector, TLV rusak/duplikat, statis, mata uang/negara/nominal salah,
+  tip tambahan, merchant confirmation, expiry, reuse transaksi, round-trip generator→jsQR.
+- Kasir: close asinkron, cancel, simpan sekali, status paid setelah sukses,
+  status jaringan tidak pasti, logout dan dialog dari sesi lama.
+- Browser lokal: keranjang, tampilan QR sintetis, expiry, confirming, paid, reset,
+  serta layar lama menjadi menunggu kasir saat sumber dimuat ulang.
+- Belum diuji langsung pada monitor fisik kasir, scanner 2D toko, foto QR EDC asli,
+  koneksi/uang nyata BCA, atau deployment produksi setelah patch dipasang.
+
+KETERBATASAN DISPLAY
+Satu komputer/profil browser, dua jendela. Belum memakai sinkronisasi lintas perangkat.
+Perlindungan reuse QR bersifat in-memory pada tab; bank tetap sumber kebenaran pembayaran.
+Validasi mendukung payload EMV printable ASCII; payload dengan karakter lain ditolak
+secara eksplisit dan pelanggan dapat scan langsung di EDC.
+3 menit adalah batas tampilan lokal, bukan perpanjangan masa berlaku QR bank.

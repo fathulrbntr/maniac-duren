@@ -1,0 +1,288 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> test
+> node scripts/test.mjs
+
+✔ 500 kg basis: physical fruit, processing, actual output, skin and reject with explicit overlap (16.282996ms)
+✔ unit cost is per actual pcs/kg, carries shrinkage cost and matches supplier allocation (0.449444ms)
+✔ zero receipt or unknown physical quantities stay unknown; percentages are never silently capped (0.450276ms)
+✔ mixed products show full product cost separately from the batch portion (0.295213ms)
+✔ second-stage Coral yield uses input Coral, without adding it to first-stage skin/output again (0.269895ms)
+✔ Excel/PDF include ratio denominators and numeric unit costs, respect role and filter (10.788766ms)
+✔ actual profit, capital and projected sales are distinct; processing shrinkage is not a second loss (4.89065ms)
+✔ new sale updates capital and realized profit while keeping the full-price projection conserved (0.569825ms)
+✔ reject waiting is capital, disposal realizes loss, reversing the waste restores the result (0.776506ms)
+✔ negative results, full disposal and break-even have explicit statuses (0.563706ms)
+✔ missing prices, units, raw materials, cost, reconciliation and access scope never become zero-profit claims (1.10601ms)
+✔ mixed batches allocate actual and potential revenue by material cost, never duplicate the whole product (7.230672ms)
+✔ summary/export preserve unknown results, filters and finance permissions (1.825069ms)
+PASS batch report: mixed supplier allocation without double-counted value, descendants, cross-outlet roots, missing/unknown history, pending kitchen orders, non-finance reconciliation and immutable filters.
+✔ tests/batch-report.test.mjs (82.145191ms)
+PASS batch tracking fresh: actual intake/reject, pending stock, PO variance, actual HPP, daily reject, two-stage yield, cost conservation, supplier lineage, sales, retry, rollback, access, closure
+PASS batch tracking upgrade: actual intake/reject, pending stock, PO variance, actual HPP, daily reject, two-stage yield, cost conservation, supplier lineage, sales, retry, rollback, access, closure
+✔ tests/batch-tracking.test.mjs (4962.708695ms)
+PASS recovery scope/cache isolation and retirement worker: no fetch interception, no unrelated cache deletion
+✔ tests/cache-recovery.test.mjs (72.164232ms)
+PASS deposit SQL: full feature chain, server date and cashier identity, proof validation/privacy, net cash, atomic balance limit, retries, permissions, cancellation audit, cumulative scope, migration rerun, and restricted RPC grants.
+✔ tests/cash-deposits-db.test.mjs (3144.057034ms)
+✔ cash balance uses net cash sale, not tendered amount, QRIS, opening float or expenses; deposits do not alter sales or profit (15.729286ms)
+✔ locked date, amount and proof are validated independently of the rendered form (13.768793ms)
+✔ finance-only void preserves proof, restores balance, and leaves an audit trail (4.602126ms)
+✔ refund after deposit shows a negative balance instead of hiding a reconciliation deficit (10.459858ms)
+✔ demo reset discards bank evidence and real balances; reads and totals stay within outlet access (4.232081ms)
+✔ history date filter does not reset lifetime pending balance and paging uses a lookahead row (4.798942ms)
+✔ summary does not convert missing installation or outlet totals into false zero balances (2.550267ms)
+✔ uncertain deposit writes keep one operation ID and reconcile with server event ids (3.446212ms)
+✔ popup locks server date, requires an image, sends no editable date/identity and submits once (9.092175ms)
+PASS shift SQL: atomic payment guard, cashier snapshot, change/discount/net totals, refund in processing shift, frozen closure, revision conflict, retries, scoped access, supervisor audit, rerun and RPC permissions
+✔ tests/cashier-shifts-db.test.mjs (3187.86572ms)
+PASS shift demo: closed/open gate, immutable cashier, cash/change, QRIS, refunds, snapshots, access, reset, decimal totals, retry reconciliation
+✔ tests/cashier-shifts.test.mjs (138.447944ms)
+PASS cashier SQL: rerunnable upgrade, owner controls, scoped single-use approvals, quote binding, master-price enforcement, net checkout/journal/refund, table/note, direct/mixed void, stock provenance, recipe waste, free order, version conflicts and RPC/table permissions.
+✔ tests/cashier-sql.test.mjs (2328.663682ms)
+PASS cashier UI/demo: owner settings, cashier authorization, table/note separation, approval binding, cancel-without-save, final confirmation, single save/print, discounted receipt/report, void/refund/stock return, failed and uncertain result states.
+✔ tests/cashier-ui.test.mjs (198.26706ms)
+PASS current SQL chain + CRM: migrations, members, normalized duplicate phone, permissions, opt-in audit/export, rules, quantity aggregation, exact decimals, guest and invalid-member rollback, retries, settlement, legacy sale, discounts, immutable receipt, void reversal, RLS/RPC grants
+✔ tests/crm-db.test.mjs (3499.734131ms)
+PASS CRM model: identity validation, deduplication, product rules, decimal and split lines, paid/guest/refund/retry, opt-out export, CSV escaping, permissions and demo isolation
+✔ tests/crm.test.mjs (92.956299ms)
+PASS real checkout handlers: QR cancellation, async close ordering, exactly-once save, paid only after success, uncertain network, logout and stale-dialog isolation.
+✔ tests/customer-display-payment-flow.test.mjs (120.765798ms)
+PASS customer display: CRC, TLV, static/amount/currency rejection, exact QR round-trip, merchant confirmation, expiry, reuse prevention, private channels, polling, clear/cancel, privacy and demo isolation.
+✔ tests/customer-display.test.mjs (151.220877ms)
+PASS dashboard app integration: session restore, shared outlet selector, all-store scope, local navigation, refresh, demo and live restoration.
+(node:173) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///workspace/scratch/a1cb6db9eb1e/web-audit-20261108/maniac-duren/pos/app.js?dashboard-integration is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /workspace/scratch/a1cb6db9eb1e/web-audit-20261108/maniac-duren/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ tests/dashboard-app.test.mjs (274.041113ms)
+✔ summary, payment composition and recent table share paid outlet/date scope; free receipts remain counted (18.347103ms)
+✔ restricted reporting account never receives finance or stock panels or their actions (4.062466ms)
+✔ empty period provides true zero summaries and empty states without invalid chart or donut values (3.795346ms)
+✔ profit reconciles sale snapshots, discount, signed waste and operating costs without charging stock purchases again (3.529957ms)
+✔ assets count every physical lot once, do not double kg and pieces, and value mixed finished goods at their full unit cost (0.434412ms)
+✔ missing or invalid costs and incompatible units remain unknown, but explicit zero cost is valid (0.863726ms)
+✔ missing expense amount and undated loss prevent a misleading complete profit (0.306881ms)
+✔ voids are shown on their cancellation date but not deducted twice, and future/foreign data stays excluded (0.341823ms)
+✔ mixed units and permission boundaries survive printed output; names are escaped and demo is unmistakable (15.601985ms)
+✔ empty scope produces valid zeros without leaking stock from another outlet (0.193701ms)
+✔ cash pagination includes lookahead once, scopes stores/dates in WIB, and uses refund dates independently of sale date (5.080104ms)
+✔ print handler opens synchronously, fills complete A4 report, recovers a history error and blocks invalid custom dates (19.494165ms)
+✔ dashboard stock uses shared category memberships, Makan alias, multi-category membership and authorized outlet totals (4.334555ms)
+✔ sort is stable, keeps available items first by default and compares quantities within each unit (0.723015ms)
+✔ category and sort handlers update list/totals locally and retain selections across tabs and outlets, resetting for a new session (37.979326ms)
+✔ dashboard reconciles net revenue and receipt counts with reports, excludes duplicates, voids and inaccessible outlets (3.237318ms)
+✔ hourly chart uses WIB and keeps missing or mismatched hours outside the bars while retaining revenue (0.65273ms)
+✔ date presets handle Monday/new year and custom validation rejects impossible or reversed ranges (0.502604ms)
+✔ stock keeps physical units separate and reject history does not count voided or legacy duplicates (1.145499ms)
+✔ customer names come only from issued invoices linked to scoped paid sales, with no duplicate receipts (0.446851ms)
+✔ dashboard handlers switch period/store/tabs without requests, validate dates, show chart details and recover refresh errors (57.588217ms)
+PASS database fresh: schema, authorization, duplicate saves, atomic rollback, sales by piece/kg stock, transfer dates, waste evidence, reversal, recipes and production.
+PASS database upgrade: schema, authorization, duplicate saves, atomic rollback, sales by piece/kg stock, transfer dates, waste evidence, reversal, recipes and production.
+✔ tests/database.test.mjs (3078.473175ms)
+PASS device settings and CAS POS: harmless scanner/print tests, local settings, exact variants, framing, fruit modal, date/supplier origin, kg/piece mixed sale, automatic label quantities, exact QRIS, invalid barcode rejection, correct 5.446 kg / 2 fruit deduction, cancel without sale, repeat/IME, auto-print off and manual reprint. No physical hardware/render test.
+✔ tests/devices.test.mjs (281.12234ms)
+PASS fresh: direct checkout, mixed split consumption, no duplicate stock/cost, legacy cashier completion, refund and helper permissions.
+PASS upgrade: direct checkout, mixed split consumption, no duplicate stock/cost, legacy cashier completion, refund and helper permissions.
+✔ tests/direct-orders.test.mjs (3911.225982ms)
+PASS document demo UI: examples, four detail/print views, PO draft/issue → purchase → local stock, letterhead; no network.
+✔ tests/documents-demo-ui.test.mjs (129.521293ms)
+✔ examples form a consistent PO → purchase → paid POS → invoice/delivery flow, entirely in demo (17.883648ms)
+✔ draft edit, issue, version guard, cancellation and numbering preserve document history (3.955296ms)
+✔ partial PO purchases allocate shipping, cannot over-receive, and cannot be cancelled after receipt (4.491801ms)
+✔ delivery transfer changes only local lots and rejects overselling, duplicate lots and reserved kitchen stock (6.461346ms)
+✔ invoice takes authoritative paid sale totals; duplicate, cancelled or foreign-store sources fail atomically (4.719713ms)
+✔ letterhead snapshots, permissions, reset, UI enabling and unsupported RPC guard (3.473573ms)
+✔ document examples use an enabled payment method when cash is disabled (3.568886ms)
+PASS employee details: create/edit/read/clear, leading zeros, old clients, both RPCs, retry safety, validation, private audit, permissions, repeat migration, existing store flow.
+✔ tests/employee-details.test.mjs (2467.996571ms)
+PASS database: employee/profile retry, username/phone isolation, private login RPC, account targeting, rate limit, attendance, schedule snapshots, repeat migrations, archived duplicate consolidation.
+PASS API: server login exchange, generic rejection, rate limiting, owner authorization, linked-ID password reset, account create/link, malformed input.
+✔ tests/employees-attendance.test.mjs (2075.555759ms)
+PASS fresh cleanup: read-only checks, missing DB, empty snapshots, pending/conflict/retry preservation, unknown formats, repeat cleanup, terminal lock, other-app isolation and cache-only HTTP header
+✔ tests/fresh-cache.test.mjs (93.746469ms)
+PASS PLU mapping: all 12 codes, repeat application, collision abort, preserved prices/non-fruit/history, immutable received labels and ordinary retail barcode.
+✔ tests/fruit-barcode-mapping-102.test.mjs (1671.621105ms)
+PASS keyboard fruit popup: DDMMYYYY/leap-date validation, numpad Enter/focus, arrow supplier/receipt and unit selection, repeat/IME guards, immediate cart add, automatic scan quantities, manual keyboard flow, exact batch, stock/price/remapping guards and cancel/double submit.
+✔ tests/fruit-sale-dialog.test.mjs (149.603966ms)
+PASS tracking SQL: receipt identities, duplicates/retries, rollback, sale/void, transfer, reject/waste reversals, wrapper compatibility, permissions, safe reinstall.
+✔ tests/fruit-tracking-db.test.mjs (3446.08012ms)
+PASS current navigation: no extra requests, reset scroll, outlet persistence and logout.
+(node:320) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///workspace/scratch/a1cb6db9eb1e/web-audit-20261108/maniac-duren/pos/app.js?navigation-regression is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /workspace/scratch/a1cb6db9eb1e/web-audit-20261108/maniac-duren/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ tests/instant-navigation.test.mjs (169.230258ms)
+PASS fresh: oversell rollback, combined reservations, retry, cancellation, kitchen permissions, consume once, ready and paid, no auto-prep.
+PASS upgrade: oversell rollback, combined reservations, retry, cancellation, kitchen permissions, consume once, ready and paid, no auto-prep.
+✔ tests/kitchen-orders.test.mjs (4249.618814ms)
+PASS app login-progress
+PASS app restore
+PASS app expired
+PASS app network-retry
+PASS app invalid
+PASS app unauthorized-retry
+PASS app cross-tab-logout
+PASS app logout-during-read
+✔ tests/login-session.test.mjs (1058.991984ms)
+PASS real startup without sidebar, login theme/storage events, form submission and failed-login recovery
+(node:417) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///workspace/scratch/a1cb6db9eb1e/web-audit-20261108/maniac-duren/pos/app.js?startup-regression is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /workspace/scratch/a1cb6db9eb1e/web-audit-20261108/maniac-duren/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ tests/login-startup.test.mjs (119.862517ms)
+PASS monetary grouping and raw numeric round trip
+✔ tests/money-input.test.mjs (60.908234ms)
+PASS multi-product fresh: allocation, retry, changed retry, duplicate product, rollback, zero shipping, exact allocation, migration rerun
+PASS multi-product upgrade: allocation, retry, changed retry, duplicate product, rollback, zero shipping, exact allocation, migration rerun
+✔ tests/multi-product-receipt.test.mjs (3530.223791ms)
+PASS offline SQL fresh: replay once, conflicting payload, rollback, recipe version, kitchen reservation, authorization, rerunnable upgrade.
+PASS offline SQL upgrade: replay once, conflicting payload, rollback, recipe version, kitchen reservation, authorization, rerunnable upgrade.
+✔ tests/offline-database.test.mjs (3596.719929ms)
+✔ pending orders reserve direct stock AND recipe ingredients across repeated sales/reloads (3.631939ms)
+✔ a response lost after commit never reserves stock twice once server read sees it (0.351736ms)
+✔ reject negative/fractional quantities, mismatched fruit lot, invalid payment/access (0.787749ms)
+✔ decimal quantities match SQL total without rounding weights (0.186259ms)
+fresh: stock, costs, mixed orders, waste, rollback, idempotency, role/store isolation, attendance OK
+upgrade: stock, costs, mixed orders, waste, rollback, idempotency, role/store isolation, attendance OK
+✔ tests/operations.test.mjs (4738.114056ms)
+PASS availability: recipe yield, combined ingredients, prep stock, expiry, branch, reservation and cancellation.
+✔ tests/order-stock.test.mjs (75.13724ms)
+PASS shared reads, instant cached access, stale-response rejection, outlet isolation, mutation invalidation and logout clearing
+✔ tests/page-cache.test.mjs (76.371438ms)
+PASS payment SQL: 25 methods, stored settings, authorization, outlet isolation, revisions, retry deduplication, disabled checkout, refund, legacy settlement, debit sale, discount, shift totals, migration rerun and RPC grants
+✔ tests/payment-methods-db.test.mjs (3623.772349ms)
+PASS payment model: 25 methods, outlet isolation, owner-only settings, revisions, leading zeros, no-active prevention, exact noncash totals, retries, disabled-method refund, shift and report totals
+✔ tests/payment-methods.test.mjs (120.491384ms)
+PASS: async login form handling, owner rejection, login without full POS read, unsupported folder API, logout.
+✔ tests/photo-maintenance-page.test.mjs (101.541024ms)
+PASS: SQL installation/re-run, owner-only access, no pos_read changes, all photo sources, size/signature guards, stale updates rejected, unrelated data unchanged.
+✔ tests/photo-maintenance-sql.test.mjs (2147.134036ms)
+PASS: backups before writes, backup failure stops writes, small/corrupt photos, conflict handling, cancellation, evidence slots.
+✔ tests/photo-maintenance.test.mjs (73.859327ms)
+PASS POS category membership SQL: fresh install, additive links, scoped removal, category deletion with links/empty/all categories, exact retry, no resurrection, permissions/RLS, stale guards, read/service metadata, unchanged products/stock/cost/recipe/reject lineage.
+✔ tests/pos-categories-sql.test.mjs (2479.224315ms)
+PASS POS category membership UI: manage/add/select flow, existing member exclusion, additive selection across categories, scoped removal, rename, search/multi-select, price and permission rules, unchanged master/stock, one card and cart line per product, local filters/poll refresh, cart/note preservation, retry recovery.
+✔ tests/pos-categories-ui.test.mjs (187.804849ms)
+PASS category filters/bulk: select all/none/partial groups, 55 of 57 scoped removal, empty category, all saleable products in Semua, other memberships/master/stock preserved, filtered selection, empty search, failed save/retry.
+✔ tests/pos-category-bulk.test.mjs (251.618626ms)
+PASS category delete UI/model: row action, confirmation/back, empty/filled/global categories, exact retry/double submit, visible failure, version guard, no Semua deletion, no default resurrection, master/stock/other memberships preserved.
+✔ tests/pos-category-delete.test.mjs (83.177514ms)
+PASS actual app → category error flow: exact SQL/network/permission/schema/retry errors visible inside dialog, no false success, selection retained, uncertain operation retained, controls restored, legacy callers unchanged.
+✔ tests/pos-category-errors.test.mjs (87.38583ms)
+PASS Durpas Bawor visibility: actual manage/select/save/filter flow, unpriced group visible but disabled, priced group opens with unavailable variants disabled, invalid-price and polling guards, original master/stock preserved, raw/prep excluded, no extra reads.
+✔ tests/pos-category-visibility.test.mjs (157.341145ms)
+PASS ready-first POS: initial/live ordering, alphabetical ties, category-specific variants, unavailable click/race guards, ingredients/outlet/date/expiry, cart consume/restore, SVG footer structure, reused cards/images and preserved local inputs without network reads.
+✔ tests/pos-ready-first.test.mjs (141.883516ms)
+PASS POS sale variants: one card/group, category-specific variants, confirm/cancel/double submit, exact cart/payment leaf IDs/prices, stock/price refresh and stale guard, recipe ingredients, fruit weighing, unavailable groups, single-variant groups, nonvariant sale, scoped removal, no extra reads.
+✔ tests/pos-sale-variants.test.mjs (218.766177ms)
+PASS SQL per-piece cost: repeatable migration, legacy values preserved, save/read, null/zero/omitted, validation and atomic rollback, variant batch/retry, cleared obsolete units, and access restrictions.
+✔ tests/product-buy-piece-sql.test.mjs (2627.723269ms)
+PASS per-piece cost: validation, zero/null/omitted values, demo persistence, card ranges/availability, actual edit and bulk variant handlers, permissions and migration gate.
+✔ tests/product-buy-piece.test.mjs (167.648801ms)
+PASS product cards: thumbnails, sorting/filtering, fixed/range prices, missing/zero prices, kg/butir separation, standalone products, deletion guards, preserved stock/identity and singleton POS behavior.
+✔ tests/product-card-summary.test.mjs (103.875168ms)
+PASS: metadata, initial stock, per-store adjustment, idempotence, stale rejection/rollback, delete guards, photo limits, escaping, dual-unit adjustment and integer quantities.
+✔ tests/product-details.test.mjs (105.507632ms)
+PASS product popup: real Add Variant toggle, retained values, category assignment for products/variants, partial-save recovery before/after commit, stable retry IDs, raw exclusion, barcode and photo preservation.
+✔ tests/product-dialog-ui.test.mjs (168.687126ms)
+PASS dummy photos: 157 catalogue/seed/raw names, existing-photo priority, appropriate type mapping, lightweight local assets and no dummy URLs in saved data.
+✔ tests/product-photos.test.mjs (133.991337ms)
+PASS SQL: idempotent legacy repair, atomic 3→2→1 deletion, protected used products, exact survivor/stock preservation, permissions, identity guard, read contract, retry and re-adoption.
+✔ tests/product-single-variant-sql.test.mjs (1906.182938ms)
+PASS SQL: 19 groups / 42 existing IDs preserved, atomic writes, duplicate SKU/barcode/combination guards, permissions, replay, stale additions, all item types, old product editing, reject links, photo/read contract, idempotent installation, existing-product adoption, rollback, stale data, original names/SKUs/photos, stock/cost/supplier/recipe/reject lineage and price edits preserved.
+✔ tests/product-variants-sql.test.mjs (2326.506319ms)
+PASS UI: 4 full-name combinations, duplicate/limit checks, price/SKU retention, real toggle/builder/bulk/save/edit/add handlers, grouping and search, individual stock names, regular raw entry and retry recovery.
+✔ tests/product-variants-ui.test.mjs (164.348323ms)
+PASS: FIFO, store/date/expiry isolation, insufficient-stock rollback, double-submit idempotence, multi-stage prep, actual yield, cancellation guards/restoration, recipe versions/snapshots, unit locks, HTML output, old durian regression.
+✔ tests/production.test.mjs (90.471375ms)
+✔ Audit cleanup archives guides, preserves modified files and is repeatable (580.132101ms)
+PASS manifest links, POS scope, standalone display and actual icon dimensions
+PASS install lifecycle: single user prompt, dismissal, acceptance, render changes, errors, standalone and installed state
+✔ tests/pwa.test.mjs (55.099438ms)
+{"status":"PASS exact response/photos, role/store/cost isolation, private helper grants, no-login denial, rerun, undo/reapply","fixturePayloadBytes":6564787,"beforeMs":71,"afterMs":33,"speedup":2.11}
+✔ tests/read-photos.test.mjs (2502.601783ms)
+PASS receipt barcode: exact product/weight, no price/stock prerequisite, permissions, repeat confirmation, invalid scan, manual correction with label history, reopen, draft-only scans and final receipt payload.
+✔ tests/receipt-barcode.test.mjs (128.727392ms)
+PASS receipt printing: content-sized 80 mm page, isolated document, auto/manual/reprint, saved totals/table/discount, demo/void, 100 items, stale/duplicate requests, zero-height and printer errors; no transaction/network writes. DOM measurement is simulated, not a physical/browser print test.
+✔ tests/receipt-print.test.mjs (127.428152ms)
+PASS SQL 019: invoice persistence, exact costs, atomic rollback, idempotency, access, safe rerun, existing mutation preserved
+PASS SQL 021: invoice persistence, exact costs, atomic rollback, idempotency, access, safe rerun, existing mutation preserved
+✔ tests/receipt-shipment-db.test.mjs (3635.915706ms)
+PASS receipt totals, validation, demo isolation, duplicate prevention, and network reconciliation
+✔ tests/receipt-shipment.test.mjs (90.114756ms)
+PASS weighing receipt fresh: confirmation, totals, history, costs, retry, migration rerun
+PASS weighing receipt upgrade: confirmation, totals, history, costs, retry, migration rerun
+✔ tests/receipt-weighing.test.mjs (3309.343652ms)
+PASS: 60 stable links, 45 reject outputs, atomic/repeated installation, read metadata, no photo/login change, rename-safe lookup, Fresh/Nitrogen isolation, size/generic-output rejection, ACL, supplier/cost lineage, legacy retry/void, new processing/void and total waste.
+✔ tests/reject-family-sql.test.mjs (2275.344727ms)
+PASS reject family mapping: exact source IDs, Fresh/Nitrogen isolation, missing/duplicate links, rename-safe lookup, and migration gate.
+✔ tests/reject-family-ui.test.mjs (86.652932ms)
+PASS SQL reject flow: idempotent migration/retry, ACL, isolated reject stock, actual Coral/flesh, inherited cost/origins, photos omitted from reads, partial/direct processing, atomic failure, old history, total waste and chained reversals.
+✔ tests/reject-flow-sql.test.mjs (2845.175927ms)
+PASS UI/demo: real forms mark/process/Coral/waste/undo, POS exclusion, actual mass and cost, complete batch detail, isolated filters, photo loading, one submission and original-state isolation.
+✔ tests/reject-flow-ui.test.mjs (160.565665ms)
+✔ 500 received / 400 direct reject: one marking, preserved stock and readable stages (8.359186ms)
+✔ mark-only and mark then process on a different date count the same 400 kg (1.236336ms)
+✔ reject from opening stock is not clamped to receipts in the selected period (0.289805ms)
+✔ void reverses marking once at its own date, including the combined direct journal (0.524287ms)
+✔ server records, event payloads and journal quality provide consistent classification (0.78627ms)
+✔ repeated marks in different events are added, not collapsed by product (0.237517ms)
+✔ Excel/PDF use the same corrected totals and stage labels (13.147922ms)
+PASS migration repeat, document lifecycle, sequence, partial PO limit, atomic receipts, mixed transfers, invoice without duplicate sale, duplicate source prevention, letterhead snapshots, expenses, role/store isolation.
+✔ tests/reports-admin-sql.test.mjs (3154.950929ms)
+✔ discount totals reconcile product, store and supplier; no duplicate same transaction; exclude unpaid/refunded (1.632631ms)
+✔ purchases come from original receipts, exclude transferred and opening lots; null cost never treated as complete (6.578473ms)
+✔ stock period reconstructs closing, rejects stay in physical stock, transfer both stores reconciles (0.922615ms)
+✔ period boundaries use Monday and handle new year / leap month (1.204988ms)
+✔ Excel is real XLSX and preserves untrusted strings without formulas (2.02597ms)
+✔ finance and stock access are applied to exported sheets (0.63998ms)
+✔ demo discards real documents, expense entries and admin history (8.473777ms)
+PASS: uncertain retry, stable IDs, session/account isolation, reconciliation, definitive failure, transfer availability date.
+✔ tests/retry.test.mjs (85.21361ms)
+PASS patch 027 real startup, failed/successful login, theme, navigation without another read, outlet switch and logout
+(node:925) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///workspace/scratch/a1cb6db9eb1e/web-audit-20261108/maniac-duren/pos/app.js?startup-regression is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /workspace/scratch/a1cb6db9eb1e/web-audit-20261108/maniac-duren/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ tests/rollback-startup.test.mjs (130.618706ms)
+PASS CAS barcode: both real labels, exact item mapping, checksum, gram boundaries, duplicate/raw/unpriced rejection, scanner framing, legacy rejection and ordinary barcode/SKU compatibility.
+✔ tests/scale-barcode.test.mjs (81.687479ms)
+PASS service read authorization, rerunnable upgrade, reset employee/account/outlet preservation
+✔ tests/service-reset.test.mjs (1863.149247ms)
+✔ refresh survives a new page; only tokens, user ID and location are persisted (5.390998ms)
+✔ parallel requests and tabs share one refresh through Web Locks (1.037397ms)
+✔ invalid refresh clears session; network/server failures preserve it for retry (3.028582ms)
+✔ a late refresh cannot resurrect logout or replace another account (1.296196ms)
+✔ forced token retry uses latest rotated credentials and corrupt storage is ignored (0.790987ms)
+✔ restricted storage falls back to memory and reports that persistence is unavailable (1.1433ms)
+PASS shared categories: actual Master/Stock entry points, same POS memberships and pickers, multi-category add/remove/create/rename/delete, failed save/retry, group filtering, deleted filter fallback, product form/new product flow, preserved stock/recipes and no additional reads.
+✔ tests/shared-categories.test.mjs (274.760759ms)
+PASS: menu permissions, unique groups, desktop toggle/persistence, scroll retention, blocked storage, mobile overlay, Escape, focus trap, navigation and resize.
+✔ tests/sidebar.test.mjs (70.685115ms)
+PASS actual app isolation: zero demo requests/retry writes, all mutation endpoints blocked, real state untouched, reset, fresh restore, failed restore protected, pending/modal/draft gates, token refresh, busy/double switch, stale manual/poll responses ignored.
+✔ tests/stock-demo-isolation.test.mjs (115.866989ms)
+PASS actual demo POS UI: product click, local cart, simulated payment, stock decrement, cleared draft, demo receipt watermark and kitchen status.
+✔ tests/stock-demo-ui.test.mjs (178.145411ms)
+PASS stock demo: 100 per physical SKU/outlet, Rp150000 demo prices, unchanged source/recipes, local fruit/variant sales, kitchen reservations/consumption/cancellation, retries, atomic validation, permissions, categories, repeat edits, no auto-refill, reset.
+✔ tests/stock-demo.test.mjs (130.210174ms)
+PASS store receipt SQL: complete profile, old address preserved, logo omitted from reads/audit, scoped logo RPC, validation, ACL, retries, stale edits, removal, create, existing feature wrappers and stock unchanged.
+✔ tests/store-receipt-sql.test.mjs (2250.614944ms)
+PASS store/receipt UI: edit/create/remove/upload/preview, duplicate guard, required fields, demo isolation, escaped header, migration gate, lazy versioned logo cache, exact transaction outlet, image before measurement, failed image handling and retry. DOM adapter only.
+✔ tests/store-receipt-ui.test.mjs (119.379892ms)
+PASS store settings: rename, retry, rename back, stock links, validation, permissions, repeat migration.
+✔ tests/store-settings.test.mjs (1918.768093ms)
+PASS 26-digit labels: real scan examples, dates/gram boundaries, exact mapping, receipt dedupe, automatic lot/supplier, immutable quantities, duplicate cart guard, demo sale/refund/transfer and history.
+✔ tests/tracking-barcode.test.mjs (116.532643ms)
+PASS unified catalog: matching closed cards, single-product action delegation, preserved source ID/name/metadata, adoption preview/save, subsequent variants and multi-attribute adoption.
+✔ tests/variants-unified-ui.test.mjs (113.901399ms)
+PASS: exact date/batch/store/supplier, three output units, weight balance, rollback, duplicate save, invalid outputs, total waste, guarded reversal, history and store isolation.
+✔ tests/waste.test.mjs (106.187738ms)
+ℹ tests 158
+ℹ suites 0
+ℹ pass 158
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 49425.980841

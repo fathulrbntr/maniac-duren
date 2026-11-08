@@ -1,0 +1,62 @@
+[
+  {
+    "sku": "MD-MONTHONG-BUAH",
+    "old_code": "0001",
+    "new_code": "0001"
+  },
+  {
+    "sku": "MD-BAWOR-BUAH",
+    "old_code": "0002",
+    "new_code": "0002"
+  },
+  {
+    "sku": "MD-MK-FRESH-BUAH",
+    "old_code": "0003",
+    "new_code": "0003"
+  },
+  {
+    "sku": "MD-PETRUK-BUAH",
+    "old_code": "0004",
+    "new_code": "0004"
+  },
+  {
+    "sku": "MD-MK-NITROGEN-BUAH",
+    "old_code": "0007",
+    "new_code": "0005"
+  },
+  {
+    "sku": "MD-MATAHARI-BUAH",
+    "old_code": "0011",
+    "new_code": "0006"
+  },
+  {
+    "sku": "MD-BT-FRESH-BUAH",
+    "old_code": "0028",
+    "new_code": "0008"
+  },
+  {
+    "sku": "MD-BT-NITROGEN-BUAH",
+    "old_code": "0029",
+    "new_code": "0009"
+  },
+  {
+    "sku": "MD-CUMASI-BUAH",
+    "old_code": "0030",
+    "new_code": "0010"
+  },
+  {
+    "sku": "MD-LOKAL-SUPER-BUAH",
+    "old_code": "0032",
+    "new_code": "0012"
+  },
+  {
+    "sku": "MD-MIMANG-BUAH",
+    "old_code": "0034",
+    "new_code": "0014"
+  },
+  {
+    "sku": "MD-SUPER-TEMBAGA-BUAH",
+    "old_code": "0035",
+    "new_code": "0015"
+  }
+]
