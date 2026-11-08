@@ -3,6 +3,8 @@ const decode=s=>String(s).replace(/&(amp|lt|gt|quot|#39);/g,(_,x)=>({amp:'&',lt:
 const camel=s=>s.replace(/-([a-z])/g,(_,c)=>c.toUpperCase());
 export class Node {
  constructor(tag='div',attrs={}){this.tagName=tag.toUpperCase();this.attrs=attrs;this.children=[];this.listeners={};this.dataset=Object.fromEntries(Object.entries(attrs).filter(([k])=>k.startsWith('data-')).map(([k,v])=>[camel(k.slice(5)),v]));this.hidden='hidden' in attrs;this.disabled='disabled' in attrs;this.checked='checked' in attrs;this.required='required' in attrs;this._text='';this._value=attrs.value;this.classList={add:(...x)=>this.attrs.class=[this.attrs.class||'',...x].join(' '),toggle:()=>{}};}
+ get parentNode(){return this.parent||null}get nextSibling(){return this.parent?.children[this.parent.children.indexOf(this)+1]||null}
+ dispatchEvent(event){const target=this;for(let node=this;node;node=event.bubbles?node.parent:null){const e={type:event.type,target,currentTarget:node,preventDefault(){}};node['on'+event.type]?.(e);for(const fn of node.listeners[event.type]||[])fn(e);}return true;}
  get name(){return this.attrs.name||''}get type(){return this.attrs.type||''}get options(){return this.querySelectorAll('option')}
  get value(){if(this._value!==undefined)return String(this._value);if(this.tagName==='SELECT')return (this.options.find(o=>'selected' in o.attrs)||this.options.find(o=>!o.disabled))?.value||'';if(this.tagName==='OPTION')return this.textContent;return '';}
  set value(x){this._value=String(x)}

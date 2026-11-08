@@ -1,5 +1,26 @@
+import {stockScanCandidate,checkFruitStockSelection} from './fruit-stock.mjs';
+import {id} from './core.mjs';
 import {parseTrackingBarcode,trackedFruit,checkTrackedLines} from './scale-label.mjs';
 const clone=x=>structuredClone(x);
+export function linkFruitStockDemo(s,action,p){
+ if(!['movement','reject_mark','reject_process','reject_loss'].includes(action)||(p.fruitStockMode!=='barcode'&&!p.linkBarcodes))return;
+ const lotId=p.sourceLotId||p.lotId,lot=s.lots.find(l=>l.id===lotId);
+ if(!lot||lot.storeId!==p.storeId)throw Error('Outlet asal tidak cocok dengan batch');
+ if(!Array.isArray(p.barcodes)||!p.barcodes.length)throw Error('Scan barcode setiap buah pada batch ini.');
+ const links=p.linkBarcodes||[];
+ if(!Array.isArray(links)||new Set(links).size!==links.length||links.some(x=>!p.barcodes.includes(x)))throw Error('Daftar tautan barcode tidak cocok atau terduplikasi');
+ const allowed=action==='reject_mark'?['available']:action==='reject_process'?['reject']:['available','reject'];
+ const units=p.barcodes.map(code=>stockScanCandidate(s,code,p.storeId,lotId,allowed));
+ if(units.some(u=>u.pendingLink&&!links.includes(u.barcode)))throw Error('Konfirmasi batch untuk label yang belum tertaut');
+ checkFruitStockSelection(s,lotId,units);
+ const linkId=id();let root=lot,seen=new Set();
+ while(root.sourceLotId){if(seen.has(root.id))throw Error('Jejak batch membentuk siklus');seen.add(root.id);root=s.lots.find(l=>l.id===root.sourceLotId);if(!root)throw Error('Batch asal tidak ditemukan');}
+ s.fruitUnits||=[];s.fruitEvents||=[];
+ for(const item of units.filter(u=>u.pendingLink)){
+  const {pendingLink,...unit}=item;Object.assign(unit,{receiptLotId:root.id,lastEvent:linkId});s.fruitUnits.push(unit);
+  s.fruitEvents.push({eventId:linkId,barcode:unit.barcode,action:'label_link',actor:s.me?.name||'Demo',at:new Date().toISOString(),before:null,after:clone(unit)});
+ }
+}
 export function validateFruitDemo(s,action,p){
  if(['order_create','sale'].includes(action))checkTrackedLines(s,p.storeId,p.lines);
  if(['movement','reject_mark','reject_process','reject_loss'].includes(action)){
@@ -27,7 +48,7 @@ export function recordFruitDemo(s,before,action,p){
  }
  if(['order_create','sale'].includes(action))for(const line of p.lines)if(line.barcode?.startsWith('92'))change(line.barcode,line.lotId,'sold');
  if(['movement','reject_mark','reject_process','reject_loss'].includes(action))for(const code of p.barcodes||[]){
-  const old=before.fruitUnits.find(u=>u.barcode===code);
+  const old=s.fruitUnits.find(u=>u.barcode===code);
   change(code,action==='movement'?p.id:action==='reject_mark'?p.rejectLotId:old.lotId,action==='movement'?old.status:action==='reject_loss'?'waste':action==='reject_process'||p.processNow?'processed':'reject');
  }
  if(action==='reject_void')for(const event of before.fruitEvents.filter(e=>e.eventId===p.recordId))change(event.barcode,event.before.lotId,event.before.status,event.before.lastEvent);

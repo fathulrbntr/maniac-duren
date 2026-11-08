@@ -1,0 +1,42 @@
+import assert from 'node:assert/strict';
+import {id,today} from '../pos/core.mjs';
+import {openFruitTransfer} from '../pos/fruit-transfer-ui.mjs';
+import {attachFruitScanSelection} from '../pos/fruit-scan-selection.mjs';
+import {checkFruitStockSelection,stockScanCandidate} from '../pos/fruit-stock.mjs';
+import {createStockDemo,applyStockDemoAction} from '../pos/stock-demo.mjs';
+import {fixture} from './stock-demo-fixture.mjs';
+import {Node,makeModal,FormDataAdapter} from './variant-dom.mjs';
+const f=fixture();f.fruit.barcode='0001';f.state.access.stock=true;f.state.access.waste=true;
+let s=createStockDemo(f.state);const root=s.lots.find(l=>l.storeId===f.store&&l.productId===f.fruit.id);Object.assign(root,{kg:6,pieces:3,receivedKg:6,receivedPieces:3,unitCost:50000,costFinalized:true});
+const code=n=>'9201071126'+String(n).padStart(6,'0')+'0001002000';
+const before={document:globalThis.document,FormData:globalThis.FormData};
+globalThis.document={createElement:t=>new Node(t)};globalThis.FormData=FormDataAdapter;
+const modal=makeModal(),posts=[];
+const ctx={modal:modal.modal,toast(){},render(){},async mutate(action,p){s=applyStockDemoAction(s,action,p);posts.push({action,p});return true;}};
+const c=(d,name)=>d.querySelector(`[name="${name}"]`),scan=async(d,barcode)=>{d.querySelector('[data-fruit-scan]').value=barcode;await d.querySelector('[data-fruit-scan-add]').fire('click');};
+try{
+ const d=openFruitTransfer(s,f.store,ctx);
+ assert(d.querySelector('[data-fruit-scan]'),'Input exists with zero registered labels, in div.field form');
+ assert.equal(Node.activeElement,d.querySelector('[data-fruit-scan]'));
+ assert.equal(c(d,'toStoreId').options.length,1);assert(c(d,'kg').readOnly);assert(c(d,'pieces').readOnly);
+ c(d,'note').value='Kirim batch asli';await d.querySelector('form').fire('submit');assert.match(d.querySelector('#form-error').textContent,/Scan minimal/);assert.equal(posts.length,0);
+ await scan(d,code(500));assert(!d.querySelector('[data-fruit-link]').hidden);assert.equal(c(d,'kg').value,'');
+ await d.querySelector('form').fire('submit');assert.match(d.querySelector('#form-error').textContent,/Konfirmasi/);
+ await d.querySelector('[data-fruit-link-confirm]').fire('click');assert.equal(c(d,'kg').value,'2');assert.equal(c(d,'pieces').value,'1');
+ await scan(d,code(500));assert.match(d.querySelector('[data-fruit-scan-status]').textContent,/sudah dipilih/);assert.equal(c(d,'pieces').value,'1');
+ d.querySelector('[data-fruit-scan]').value='';await d.querySelector('form').fire('submit');assert(d.closed);assert.equal(posts.length,1);await d.querySelector('form').fire('submit');assert.equal(posts.length,1);
+ assert.deepEqual(posts[0].p.linkBarcodes,[code(500)]);assert.equal(s.lots.find(l=>l.id===root.id).kg,4);
+ const target=s.lots.find(l=>l.id===posts[0].p.id),unit=s.fruitUnits.find(u=>u.barcode===code(500));
+ assert.equal(target.sourceLotId,root.id);assert.equal(target.supplierId,root.supplierId);assert.equal(target.unitCost,50000);assert.equal(unit.receiptLotId,root.id);assert.equal(unit.storeId,f.otherStore);assert.equal(s.fruitEvents[0].action,'label_link');assert.equal(s.fruitEvents[1].action,'movement');
+ const back=openFruitTransfer(s,f.otherStore,ctx);await scan(back,code(500));assert.equal(c(back,'lotId').value,target.id);assert.equal(c(back,'kg').value,'2');assert(back.querySelector('[data-fruit-link]').hidden);c(back,'note').value='Kembali';await back.querySelector('form').fire('submit');assert(back.closed);
+ // label.field layout used by reject: the same widget, correct scope and immutable quantities.
+ const reject=modal.modal('Reject',`<label class="field">Batch<select name="sourceLotId"><option value="${root.id}">Batch A</option></select></label><input name="kg"><input name="pieces">`);
+ const selection=attachFruitScanSelection(reject,{state:s,store:f.store,states:['available']});await scan(reject,code(501));await reject.querySelector('[data-fruit-link-confirm]').fire('click');assert.equal(selection.payload().kg,2);
+ await reject.querySelector('[data-remove-fruit]').fire('click');assert.throws(()=>selection.payload(),/Scan minimal/);
+ const stale={...s,fruitUnits:[{...unit,storeId:f.store,lotId:root.id,status:'sold'}]};assert.throws(()=>stockScanCandidate(stale,code(500),f.store,root.id,['available']),/Terjual/);
+ assert.throws(()=>stockScanCandidate(s,code(500),f.otherStore,target.id,['available']),/outlet lain/);
+ assert.throws(()=>stockScanCandidate(s,'8991234567890',f.store,root.id,['available']),/26 digit/);
+ const fresh=stockScanCandidate(s,code(502),f.store,root.id,['available']);assert.throws(()=>checkFruitStockSelection(s,root.id,[fresh,fresh]),/sudah ada/);
+ assert.throws(()=>checkFruitStockSelection(s,root.id,[{...fresh,grams:5000}]),/melebihi/);
+ console.log('PASS barcode stock UI: div/label forms, empty registration, explicit batch linking, immutable kg/pieces, duplicate guard, remove, transfer and return with supplier/cost/receipt lineage, sold/outlet/static-code rejection, no duplicate submit.');
+}finally{Object.assign(globalThis,before);}

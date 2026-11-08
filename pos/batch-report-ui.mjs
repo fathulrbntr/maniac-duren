@@ -57,7 +57,7 @@ export function bindBatchReport(s,store,ctx){
   d.addEventListener('click',async ev=>{
    const b=ev.target.closest('[data-fruit-history]');if(!b)return;b.disabled=true;
    try{const events=await ctx.rpc('pos_fruit_history',{code:b.dataset.fruitHistory});
-    const labels={receipt:'Penerimaan',receipt_batch:'Penerimaan',order_create:'Penjualan',sale:'Penjualan',order_void:'Pembatalan penjualan',order_cancel:'Pembatalan pesanan',void:'Pembatalan penjualan',movement:'Transfer',reject_mark:'Catat reject',reject_process:'Olah reject',reject_loss:'Waste',reject_void:'Pembatalan reject / waste'};
+    const labels={label_link:'Tautkan label ke stok batch',receipt:'Penerimaan',receipt_batch:'Penerimaan',order_create:'Penjualan',sale:'Penjualan',order_void:'Pembatalan penjualan',order_cancel:'Pembatalan pesanan',void:'Pembatalan penjualan',movement:'Transfer',reject_mark:'Catat reject',reject_process:'Olah reject',reject_loss:'Waste',reject_void:'Pembatalan reject / waste'};
     const h=ctx.modal('Jejak buah',`<p><code>${e(b.dataset.fruitHistory)}</code></p>${table(['Waktu','Kegiatan','Status setelah proses','Outlet','Petugas'],events.map(x=>`<tr><td>${e(new Date(x.at).toLocaleString('id-ID'))}</td><td>${e(labels[x.action]||x.action)}</td><td>${e(fruitStatus[x.toStatus]||x.toStatus)}</td><td>${e(name(s,'stores',x.storeId))}</td><td>${e(x.actor||'—')}</td></tr>`))}`,'Tutup');h.querySelector('form').onsubmit=ev=>{ev.preventDefault();h.close();};
    }catch(err){ctx.toast(err.message);}finally{b.disabled=false;}
   });

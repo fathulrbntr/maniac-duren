@@ -1,0 +1,17 @@
+PATCH-105-FILES.txt
+PETUNJUK-PATCH-105.txt
+database/fruit-stock-barcode-105.sql
+pos/app.js
+pos/batch-report-ui.mjs
+pos/fruit-scan-selection.mjs
+pos/fruit-stock.mjs
+pos/fruit-tracking-demo.mjs
+pos/fruit-transfer-ui.mjs
+pos/receipt-shipment.css
+pos/stock-demo.mjs
+pos/waste-ui.mjs
+supabase/migrations/20261108132813_fruit_stock_barcode.sql
+tests/fruit-stock-ui.test.mjs
+tests/fruit-tracking-db.test.mjs
+tests/reject-flow-ui.test.mjs
+tests/variant-dom.mjs

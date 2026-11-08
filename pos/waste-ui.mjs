@@ -40,7 +40,7 @@ export function openRejectDialog(kind,s,store,ctx,selected=''){
   if(processing){const kg=Number(c('kg').value||0),out=Number(c('durpas500_qty').value||0)*.5+Number(c('durpas1000_qty').value||0)+Number(c('coral_qty').value||0);message+=` Hasil ${num(out)} kg · kulit dan sisa proses ${num(kg-out)} kg${kg>0?' · hasil bersih '+num(out/kg*100)+'%':''}.`;}
   else if(kind==='mark')message+=' Buah dipindahkan ke reject dan tidak lagi tersedia di kasir.';
   else if(kind==='coral'){const kg=Number(c('kg').value||0),net=Number(c('netKg').value||0);d.querySelector('[data-flesh-name]').textContent='Hasil otomatis: '+(fleshProduct(s,product)?.name||'Master daging belum dihubungkan');message+=` Biji dan sisa proses ${num(kg-net)} kg${kg>0?' · hasil bersih '+num(net/kg*100)+'%':''}.`;}
-  else{const fruit=source.kg!==undefined;d.querySelector('[data-fruit-pieces]').hidden=!fruit;c('pieces').disabled=!fruit;c('qty').step=!fruit&&['pcs','porsi'].includes(source.unit)?'1':'0.000001';const shrink=c('cause').querySelector('[value="shrinkage"]');const tracking=s.fruitUnits?.some(u=>u.lotId===source.id);if(shrink)shrink.disabled=!fruit||tracking;if(tracking&&c('cause').value==='shrinkage')c('cause').value='discard';if(!fruit&&c('cause').value==='shrinkage')c('cause').value='spoiled';if(c('cause').value==='shrinkage'){c('pieces').value='0';c('pieces').readOnly=true;}else c('pieces').readOnly=!!tracking;message+=' Stok berkurang tanpa menghasilkan produk.';}
+  else{const fruit=source.kg!==undefined;d.querySelector('[data-fruit-pieces]').hidden=!fruit;c('pieces').disabled=!fruit;c('qty').step=!fruit&&['pcs','porsi'].includes(source.unit)?'1':'0.000001';const shrink=c('cause').querySelector('[value="shrinkage"]');const tracking=fruit;if(shrink)shrink.disabled=!fruit||tracking;if(tracking&&c('cause').value==='shrinkage')c('cause').value='discard';if(!fruit&&c('cause').value==='shrinkage')c('cause').value='spoiled';if(c('cause').value==='shrinkage'){c('pieces').value='0';c('pieces').readOnly=true;}else c('pieces').readOnly=!!tracking;message+=' Stok berkurang tanpa menghasilkan produk.';}
   d.querySelector('[data-reject-preview]').textContent=message;
  }
  preview();if(kind==='process'&&selected){const l=available.find(l=>l.id===selected);c('kg').value=l.kg;c('pieces').value=l.pieces;preview();}if(kind==='loss'&&selected){const l=available.find(l=>l.id===selected);c('qty').value=l.kg??l.qty;c('pieces').value=l.pieces||0;c('cause').value='discard';preview();}
@@ -48,15 +48,16 @@ export function openRejectDialog(kind,s,store,ctx,selected=''){
  f.addEventListener('input',preview);f.addEventListener('change',preview);
  f.onsubmit=async ev=>{
   ev.preventDefault();if(saving||completed)return;const error=d.querySelector('#form-error');error.textContent='';if(evidence.busy()){error.textContent='Tunggu foto selesai diproses';return;}
+  let scanned;try{scanned=selection?.payload()||{};}catch(err){error.textContent=err.message;return;}
   const values=Object.fromEntries(new FormData(f)),source=available.find(l=>l.id===values.sourceLotId);if(!source)return;
   const processNow=kind==='mark'&&c('processNow').checked;
-  const p={...values,id:request,storeId:store,date:today(),rejectLotId,outputLotId,processNow,evidence:evidence.values(),...selection?.payload()};
+  const p={...values,id:request,storeId:store,date:today(),rejectLotId,outputLotId,processNow,evidence:evidence.values(),...scanned};
   if(kind==='process'||processNow){p.outputs=wasteOutputProducts(s,source.productId).map(o=>({key:o.key,productId:o.product?.id||'',qty:Number(c(o.key+'_qty').value),lotId:outputIds[o.key],expiry:values.expiry||''}));if(p.outputs.every(o=>o.qty===0)&&!confirm('Semua hasil 0. Catat buah ini sebagai waste total?'))return;}
   saving=true;const submit=d.querySelector('[type="submit"]');submit.disabled=true;
   try{if(await ctx.mutate('reject_'+kind,p)){completed=true;d.close();ctx.render();ctx.toast('Pencatatan tersimpan; stok dan jejak batch diperbarui.');}}
   catch(err){error.textContent=err.message;}finally{saving=false;if(!completed)submit.disabled=false;}
  };
- return d;
+ selection?.focus();return d;
 }
 export function bindWaste(view,s,store,ctx){
  if(!['waste','losses'].includes(view))return;

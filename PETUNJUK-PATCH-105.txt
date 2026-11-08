@@ -1,0 +1,50 @@
+PATCH 105 — TRANSFER & REJECT BUAH DENGAN BARCODE
+Basis: kode Maniac Duren dengan patch UI 104. ZIP hanya berisi file yang berubah/ditambahkan untuk patch ini.
+
+STATUS
+- Database Supabase maniac-duren-pos sudah diperbarui pada 8 November 2026.
+- Tidak ada stok nyata, harga, penerimaan, atau transaksi yang diubah oleh pemasangan migration.
+- Website Vercel belum di-deploy dari sesi ini. Pasang file patch, lalu commit dan push.
+
+PEMASANGAN
+1. Simpan perubahan kerja Anda. Ekstrak isi ZIP ke folder utama proyek (folder yang memuat package.json). Gabungkan folder dan ganti file yang sama.
+2. Tidak perlu menjalankan SQL lagi di project Supabase yang sama. database/fruit-stock-barcode-105.sql disertakan untuk instalasi di lingkungan lain yang sudah memiliki patch 101. Salinan migration CLI memiliki isi yang sama; jalankan salah satu, bukan kedua-duanya.
+3. Dari terminal di folder proyek, jalankan:
+   npm test
+   npm run check
+   git add --pathspec-from-file=PATCH-105-FILES.txt
+   git commit -m "Track fruit transfers and rejects by barcode"
+   git push origin main
+4. Setelah deployment Vercel selesai, refresh POS. Pastikan kolom Scan barcode buah muncul.
+
+TRANSFER BUAH
+- Stok & Penerimaan → Transfer.
+- Scan barcode tracking 26 digit setiap buah. Label yang terdaftar memilih batch asal otomatis.
+- Supplier, tanggal masuk, nomor batch, berat, dan jumlah terlihat sebelum menyimpan. Berat dan butir terkunci mengikuti hasil scan.
+- Pilih outlet tujuan dan isi catatan, lalu Simpan transfer.
+- Satu pencatatan memproses satu batch. Selesaikan transaksi ini sebelum memindai batch lain.
+- Stok sumber berkurang dan stok tujuan bertambah; supplier, modal dan hubungan ke penerimaan asal ikut terbawa. Barcode buah tetap sama.
+
+BARCODE UNTUK STOK LAMA / BELUM TERTAUT
+- Barcode mesin memuat identitas label, kode produk, dan berat; tidak memuat supplier atau ID batch penerimaan.
+- Pilih batch asal yang benar, scan label, lalu periksa pesan konfirmasi dan klik Gunakan batch ini.
+- Tautan disimpan bersamaan dengan transfer/reject. Ini tidak menambah stok atau mencatat penerimaan kedua kali.
+- Produk harus sesuai kode Master Barang. Kuantitas yang belum tertaut harus cukup.
+- Jika berat dan butir tersisa tidak seimbang, periksa data batch dan selisih timbang; sistem tidak menebak batch atau mengubah berat label.
+- Untuk penerimaan BARU, tetap gunakan Barang masuk; jangan menautkan buah baru ke stok lama.
+
+REJECT, PENGOLAHAN, DAN WASTE
+- Reject & Waste → Catat reject → scan buah → pilih penyebab, unggah foto, isi alasan → Simpan pencatatan.
+- Buah keluar dari stok siap jual dan masuk stok reject dengan jejak batch/supplier yang sama.
+- Olah reject dan Catat waste juga menggunakan scan untuk buah utuh. Produk olahan/bahan biasa tetap menggunakan satuan produknya.
+- Foto bukti, keluaran pengolahan, dan aturan pembatalan yang sudah ada tetap berlaku.
+- Pembatalan reject/waste mengikuti urutan proses, sehingga buah yang sudah diproses lagi tidak dapat dikembalikan sembarangan.
+
+PENGAMAN
+Barcode ganda dalam daftar, label sudah terjual/diolah/dibuang, outlet yang salah, produk yang tidak cocok, stok berlebih, dan hasil kg/butir tidak seimbang ditolak. Validasi server menggunakan stok terkini. Pengiriman ulang ID transaksi yang sama tidak menggandakan stok. Penautan label dan pergerakan stok berjalan dalam satu transaksi database: jika gagal, keduanya dibatalkan.
+
+VERIFIKASI
+- 161 pengujian otomatis lulus, termasuk SQL, transfer bolak-balik, penautan stok lama, kegagalan yang harus rollback, duplicate/retry, reject/waste/undo, izin akses, dan kesesuaian batch.
+- Pemeriksaan proyek lulus: sintaks, import, aset dan konsistensi build SQL.
+- Browser diuji dengan data contoh: transfer tersimpan, batch otomatis, berat/butir terkunci, konfirmasi label baru, form reject dan layout 390/1024 px.
+- Scanner fisik dan transaksi produksi nyata belum dicoba. Gunakan scanner dengan akhiran Enter sesuai Pengaturan Printer & Scanner.
