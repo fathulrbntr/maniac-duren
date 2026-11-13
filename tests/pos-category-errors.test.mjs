@@ -1,3 +1,4 @@
+import {applySupplyResponse,supplyActions} from '../pos/warehouse-flow.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {randomUUID as id} from 'node:crypto';
@@ -9,13 +10,13 @@ import {makeModal} from './variant-dom.mjs';
 // This keeps legacy boolean callers and the category's error propagation under test.
 const app=fs.readFileSync(new URL('../pos/app.js',import.meta.url),'utf8');
 const source=app.slice(app.indexOf('async function mutate('),app.indexOf('\nfunction login('));
-const build=new Function('env',`let {busy=false,mode='live',state,stateRevision=0,document,prepareRetry,settleRetry,request,toast,localStorage,applyAction,saveVariantProducts,savePosCategory}=env;${source};return {mutate,getState:()=>state,isBusy:()=>busy};`);
+const build=new Function('env',`let {applySupplyResponse,supplyActions,busy=false,mode='live',state,stateRevision=0,document,prepareRetry,settleRetry,request,toast,localStorage,applyAction,saveVariantProducts,savePosCategory}=env;${source};return {mutate,getState:()=>state,isBusy:()=>busy};`);
 const category=defaultPosCategories().find(c=>c.name==='Durpas'),product={id:id(),name:'Durpas Bawor 500 gr',sku:'DP-BAWOR-500',itemType:'finished',stockUnit:'pcs',salePrice:40000,posCategoryIds:[category.id]};
 const initial={...emptyState(),products:[product],posCategories:[category],posCategoryMembershipVersion:2};
 const serverError=(message,code,definitive=true)=>Object.assign(Error(message),{code,definitive});
 function harness(failure,extra={}){
  const control={disabled:false,isConnected:true},settled=[],messages=[],requests=[];
- const api=build({state:structuredClone(initial),document:{querySelectorAll:()=>[control],querySelector:()=>null},prepareRetry:(a,p)=>p,settleRetry:(...x)=>settled.push(x),request:async(path,body)=>{requests.push({path,body});if(failure)throw failure;return structuredClone(initial);},toast:s=>messages.push(s),...extra});
+ const api=build({applySupplyResponse,supplyActions,state:structuredClone(initial),document:{querySelectorAll:()=>[control],querySelector:()=>null},prepareRetry:(a,p)=>p,settleRetry:(...x)=>settled.push(x),request:async(path,body)=>{requests.push({path,body});if(failure)throw failure;return structuredClone(initial);},toast:s=>messages.push(s),...extra});
  return {...api,settled,messages,requests,control};
 }
 for(const failure of [

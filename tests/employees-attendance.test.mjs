@@ -106,7 +106,7 @@ try{
  calls=[];denyOwner=true;response=await invoke(accounts,{employeeId,password:'new-password-123',action:'reset'});assert.equal(response.code,400);assert(!calls.some(x=>x.url.includes('/admin/')));denyOwner=false;
  calls=[];response=await invoke(accounts,{employeeId,password:'new-password-123',action:'reset'});assert.equal(response.code,200);assert(calls.some(x=>x.url.endsWith('/admin/users/'+userId)&&x.options.method==='PUT'));
  calls=[];linked=false;response=await invoke(accounts,{employeeId,password:'new-password-123',action:'reset'});assert.equal(response.code,400);assert(!calls.some(x=>x.url.includes('/admin/')));
- calls=[];response=await invoke(accounts,{employeeId,password:'new-password-123',action:'create'});assert.equal(response.code,200);assert(calls.some(x=>x.url.endsWith('/pos_mutate')));
+ calls=[];response=await invoke(accounts,{employeeId,password:'new-password-123',action:'create'});assert.equal(response.code,200);assert(calls.some(x=>x.url.endsWith('/pos_mutate')));const createdAccount=JSON.parse(calls.find(x=>x.url.endsWith('/admin/users')).options.body);assert.deepEqual(createdAccount.app_metadata,{employee_id:employeeId});assert(!createdAccount.user_metadata);
  calls=[];response=await invoke(accounts,{employeeId,password:'abc123',action:'create'});assert.equal(response.code,200);assert(calls.some(x=>x.url.includes('/admin/users')&&JSON.parse(x.options.body).password==='abc123'));
  calls=[];response=await invoke(accounts,{employeeId,password:'abc12',action:'create'});assert.equal(response.code,400);assert.equal(calls.length,0);
  linked=true;response=await invoke(accounts,{employeeId,password:'abc123',action:'reset'});assert.equal(response.code,200);

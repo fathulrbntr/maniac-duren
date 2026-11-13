@@ -33,7 +33,7 @@ module.exports = async (req, res) => {
     if (target.existingUnrelated) throw Error('Email sudah digunakan akun lain. Gunakan email berbeda.');
     let userId = target.userId;
     if (!userId) {
-      const user = await api('/auth/v1/admin/users', { email: target.email, password, email_confirm: true, user_metadata: { employee_id: employeeId } }, true);
+      const user = await api('/auth/v1/admin/users', { email: target.email, password, email_confirm: true, app_metadata: { employee_id: employeeId } }, true);
       userId = user.id || user.user?.id;
       if (!userId) throw Error('Respons pembuatan akun tidak valid');
     }

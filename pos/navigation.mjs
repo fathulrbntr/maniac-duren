@@ -1,3 +1,4 @@
+import {workspaceGroups} from './workspaces.mjs';
 // Sidebar grouping only. Existing page IDs, permissions and transaction flow are unchanged.
 export const sections = [
   { id: 'utama', label: 'Ringkasan', pages: ['dashboard'] },
@@ -11,6 +12,7 @@ export const sections = [
   { id: 'bantuan', label: 'Karyawan & Panduan', pages: ['attendance', 'guide'] },
 ];
 export function visibleSections(access) {
+  if(access?.workspace)return workspaceGroups(access);
   const allowed = access ? {
     crm: access.crmAdmin, payments: access.cashierOwner, devices: access.cashierOwner || access.sell || access.master, discounts: access.cashierOwner, salesreport: access.reports, orders: access.sell, kitchen: access.kitchen || access.sell,
     shifts: access.sell || access.reports || access.finance, dashboard: access.reports, stock: access.stock || access.produce,

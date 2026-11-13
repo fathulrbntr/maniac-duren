@@ -14,7 +14,7 @@ export function parseTrackingBarcode(value) {
   return {barcode:code,tracking:true,machineId,packedDate:parsed.toISOString().slice(0,10),sequence:code.slice(10,16),identity:code.slice(0,16),itemCode:code.slice(16,20),grams,kg:grams/1000};
 }
 
-export const fruitStatus={available:'Tersedia',sold:'Terjual',reject:'Reject',processed:'Diolah',waste:'Waste'};
+export const fruitStatus={available:'Tersedia',in_transit:'Dalam perjalanan',sold:'Terjual',reject:'Reject',processed:'Diolah',waste:'Waste'};
 
 export function trackedFruit(state,barcode,store,states=['available']) {
   const scale=parseTrackingBarcode(barcode);
@@ -32,6 +32,7 @@ export function checkTrackedLines(state,store,lines) {
   for(const line of lines){
     const isTracked=line.barcode?.startsWith('92');
     if(!isTracked){
+      if(state.warehouseVersion&&!state.stockDemo&&(line.lotId||state.products?.find(p=>p.id===line.productId)?.stockUnit==='kg_butir'))throw Error('Durian wajib menggunakan barcode terdaftar.');
       if(state.fruitUnits?.some(u=>u.lotId===line.lotId))throw Error('Batch ini memakai tracking per buah. Scan barcode pada buah.');
       continue;
     }
@@ -48,7 +49,7 @@ export function checkReceiptLabels(state,lines) {
   for(const line of lines){
     let tracked=0;
     for(const row of line.weighings||[]){
-      const scale=parseTrackingBarcode(row.barcode||'');if(!scale)continue;tracked++;
+      const scale=parseTrackingBarcode(row.barcode||'');if(!scale){if(state.warehouseVersion&&!state.stockDemo)throw Error('Semua durian wajib barcode tracking 26 digit.');continue;}tracked++;
       if(state.fruitTrackingVersion!==101)throw Error('Pembaruan tracking barcode belum terpasang. Hubungi admin.');
       if(seen.has(scale.identity)||state.fruitUnits?.some(u=>u.barcode.slice(0,16)===scale.identity))throw Error('Barcode sudah tercatat. Stok tidak ditambahkan lagi.');
       seen.add(scale.identity);

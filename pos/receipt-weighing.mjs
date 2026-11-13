@@ -9,6 +9,8 @@ import { weighingTotals, shipmentTotals, validateShipment } from './receipt-ship
 export { weighingTotals, shipmentTotals } from './receipt-shipment.mjs';
 
 export function openWeighingReceipt(state, store, ctx) {
+  const plan=ctx.plan,strict=state.warehouseVersion&&!state.stockDemo;
+  if(strict&&!plan)return ctx.toast('Pilih nota supplier dari admin back office terlebih dahulu.');
   const options = (kind, selected) => state[kind].map(p => `<option value="${e(p.id)}" ${p.id === selected ? 'selected' : ''}>${e(p.name)}</option>`).join('');
   const products = state.products.filter(isLegacyStock);
   if (!products.length || !state.suppliers.length || !state.stores.length) return ctx.toast('Tambahkan produk, store dan supplier terlebih dahulu.');
@@ -21,7 +23,7 @@ export function openWeighingReceipt(state, store, ctx) {
   const payload = () => ({id:requestId,date:f.elements.date.value,storeId:f.elements.storeId.value,
     supplierId:f.elements.supplierId.value,invoiceNo:f.elements.invoiceNo.value.trim(),
     shippingCost:f.elements.shippingCost.value,note:f.elements.note.value.trim(),
-    unloadingComplete:true,lines:structuredClone(lines)});
+    unloadingComplete:true,lines:structuredClone(lines),...(plan?{planId:plan.id}:{})});
   const syncOptions = () => {
     const used = new Set(lines.map(line => line.productId));
     lines.forEach((line, index) => {
@@ -46,11 +48,11 @@ export function openWeighingReceipt(state, store, ctx) {
       error.textContent = '';
     } catch (err) { error.textContent = err.message; submit.disabled = true; }
   };
-  const addLine = () => {
+  const addLine = (planned=null) => {
     if (saving || lines.length >= 50) return;
-    const product = products.find(p => !lines.some(line => line.productId === p.id));
+    const product = planned?products.find(p=>p.id===planned.productId):products.find(p => !lines.some(line => line.productId === p.id));
     if (!product) return;
-    const line = {id:id(),productId:product.id,purchaseCost:'',weighings:[]};
+    const line = {id:id(),productId:product.id,purchaseCost:planned?planned.purchaseCost:'',weighings:[]};
     lines.push(line);
     const card = document.createElement('section'); card.className = 'receipt-product';
     card.innerHTML = `<div class="receipt-product-head"><h4 data-line-title></h4><button type="button" data-remove-product class="receipt-remove">Hapus</button></div><div class="form-grid"><label class="field">Produk<select data-product required></select></label><label class="field">Total harga produk di nota (Rp)<input name="purchaseCost" data-purchase type="number" min="0" step="any" required placeholder="0"></label></div><div class="receipt-product-actions"><button type="button" data-weigh-open>Catat timbang aktual</button></div><div data-line-summary class="receipt-line-summary"></div>`;
@@ -70,6 +72,7 @@ export function openWeighingReceipt(state, store, ctx) {
     };
     card.querySelector('[data-weigh-open]').onclick = () => openLineWeighing(line, state, lines, d, update);
     syncOptions(); update();
+    if(planned){card.querySelector('[data-product]').disabled=true;card.querySelector('[data-purchase]').value=planned.purchaseCost;card.querySelector('[data-purchase]').readOnly=true;card.querySelector('[data-remove-product]').hidden=true;}
     return card;
   };
   d.querySelector('[data-add-product]').onclick = () => { const card = addLine(); if (card) {d.dataset.dirty = 'true';card.querySelector('[data-product]').focus();} };
@@ -84,17 +87,25 @@ export function openWeighingReceipt(state, store, ctx) {
       if (await ctx.mutate('receipt_batch', p)) { d.close(); ctx.render(); ctx.toast(`Nota ${p.invoiceNo} tersimpan · ${lines.length} produk · ${num(t.kg)} kg · ${num(t.pieces)} butir`); }
     } catch (err) { error.textContent = err.message; } finally { saving = false; submit.disabled = lines.some(line => !line.weighings.length); }
   };
-  addLine();
+  if(plan){
+    for(const [key,value] of Object.entries({date:plan.date,storeId:plan.storeId,supplierId:plan.supplierId,invoiceNo:plan.invoiceNo,shippingCost:plan.shippingCost})){
+      f.elements[key].value=value;if(['storeId','supplierId'].includes(key))f.elements[key].disabled=true;else f.elements[key].readOnly=true;
+    }
+    plan.lines.forEach(addLine);d.querySelector('[data-add-product]').hidden=true;
+    d.querySelectorAll('[data-remove-product]').forEach(b=>b.hidden=true);update();
+  }else addLine();
   return d;
 }
 
 function openLineWeighing(line, state, lines, d, update) {
   const products=state.products;
   let rows = line.weighings, editing = null;
-  const scannerEnabled = readDeviceSettings().scanner.enabled;
+  const strict=state.warehouseVersion&&!state.stockDemo;
+  const scannerEnabled = strict||readDeviceSettings().scanner.enabled;
   const w = document.createElement('dialog');
   w.className = 'modal weighing-dialog';
   w.innerHTML = `<div class="modal-head"><h2>Catat timbang aktual</h2><button type="button" data-close aria-label="Tutup">×</button></div><p><b>${e(products.find(p => p.id === line.productId)?.name)}</b></p><form class="weigh-scan"><label class="field" for="receipt-weigh-scan">Scan barcode timbangan</label><div class="weigh-scan-controls"><input id="receipt-weigh-scan" type="text" maxlength="256" autocomplete="off" spellcheck="false" placeholder="Scan label durian di sini" aria-describedby="receipt-scan-help receipt-scan-status" ${scannerEnabled ? 'autofocus' : 'disabled'}><button type="submit" class="primary" ${scannerEnabled ? '' : 'disabled'}>Catat barcode</button></div><p id="receipt-scan-help" class="form-help">1 label = 1 butir. Berat diambil dari barcode timbangan. Setiap scan masuk ke daftar timbang di bawah.</p><p id="receipt-scan-status" class="weigh-scan-status" role="status">${scannerEnabled ? 'Siap menerima barcode.' : 'Scanner nonaktif. Aktifkan di Printer & Scanner atau gunakan input manual.'}</p></form><details class="weigh-manual"><summary>Input manual / koreksi timbang</summary><form class="weigh-entry"><div class="form-grid"><label class="field">Berat (kg)<input name="kg" type="number" min="0.000000001" step="any" required></label><label class="field">Butir<input name="pieces" type="number" min="1" step="1" required></label></div><button class="primary" type="submit">Tambah timbang</button><button type="button" data-reset hidden>Batal edit</button><p class="error" data-error></p></form></details><div data-history class="table-wrap"></div><p data-total aria-live="polite"></p><p class="form-help">Catatan terbaru tampil paling atas. Stok masuk setelah penerimaan diselesaikan.</p><div class="modal-actions"><button type="button" data-close class="primary">Selesai menghitung</button></div>`;
+  if(strict)w.querySelector('.weigh-manual').hidden=true;
   document.body.append(w);
   const wf = w.querySelector('.weigh-entry'), scanInput = w.querySelector('#receipt-weigh-scan');
   const scanStatus = w.querySelector('#receipt-scan-status');
@@ -132,6 +143,7 @@ function openLineWeighing(line, state, lines, d, update) {
         throw Error('Selesaikan atau batalkan isian manual/koreksi sebelum scan berikutnya.');
       const result = receiptBarcode(raw, products, line.productId, settings);
       const tracking=parseTrackingBarcode(result.barcode);
+      if(state.warehouseVersion&&!state.stockDemo&&!tracking)throw Error('Gunakan label tracking 26 digit untuk setiap buah.');
       if(tracking)checkReceiptLabels(state,lines.map(x=>x===line?{...x,weighings:[...rows,result]}:x));
       // Legacy EAN-13 labels identify product/weight; tracking labels identify a fruit.
       if (!tracking && rows.some(row => row.barcode === result.barcode) && !confirm('Barcode dengan produk dan berat ini sudah dicatat. Lanjut hanya jika ini durian lain dengan berat yang sama. Catat sebagai 1 butir tambahan?')) return false;

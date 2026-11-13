@@ -9,7 +9,7 @@ const files = fs
   .readdirSync(new URL("../tests/", import.meta.url))
   .filter((f) => f.endsWith(".test.mjs"))
   .filter((f) => {
-    const database = fs
+    const database = f.endsWith("-db.test.mjs") || fs
       .readFileSync(new URL("../tests/" + f, import.meta.url), "utf8")
       .includes("@electric-sql/pglite");
     return mode === "all" || (mode === "db" ? database : !database);

@@ -1,3 +1,4 @@
+import {supplyActions} from './warehouse-flow.mjs';
 // Keep the same operation ID after an uncertain network result, including page reloads.
 let KEY = "maniac-pos-pending-operation-v1";
 let pending;
@@ -10,6 +11,7 @@ export function setRetryScope(scope) {
   }
 }
 const tracked = new Set([
+  ...supplyActions,
   "cash_deposit_save", "cash_deposit_void",
   "crm_member_save", "crm_rule_save",
   "payment_settings_save", "cashier_shift_open", "cashier_shift_close",
@@ -66,7 +68,7 @@ export function reconcileRetry(state) {
   if (pending.action === "receipt_batch" && pending.payload.lines?.length && pending.payload.lines.every(line => (state.lots || []).some(lot => lot.id === line.id && lot.shipmentId === pending.id))) {
     pending = null; persist(); return true;
   }
-  const rows =
+  const rows = supplyActions.has(pending.action)?state.supplyEvents||[]:
     {
       cash_deposit_save: state.cashDepositEvents, cash_deposit_void: state.cashDepositEvents,
       document_save: state.adminEvents, document_issue: state.adminEvents, document_cancel: state.adminEvents, letterhead_save: state.adminEvents, expense_save: state.adminEvents, expense_void: state.adminEvents,

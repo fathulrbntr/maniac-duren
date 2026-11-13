@@ -1,3 +1,4 @@
+import {applySupplyResponse,supplyActions} from '../pos/warehouse-flow.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {createSessionManager} from '../pos/session.mjs';
@@ -11,7 +12,7 @@ const begin=app.search(declaration),end=app.indexOf('\nfunction login('),pollBeg
 assert(begin>=0&&end>begin&&pollBegin>=0,'Application isolation hooks must be found');
 const source=app.slice(begin,end).replace(declaration,'let stockDemoModule=Promise.resolve(env.engine),demoSource=null;');
 const pollSource=app.slice(pollBegin);
-const build=new Function('env',`let {state,mode='live',busy=false,document,fetch,config,token='token',refreshToken='',expires=Infinity,store,toast,render,pendingRetry,prepareRetry,settleRetry,reconcileRetry,confirm,mayLeave,hasOrderDraft,clearOrderDraft}=env;
+const build=new Function('env',`let {applySupplyResponse,supplyActions,state,mode='live',busy=false,document,fetch,config,token='token',refreshToken='',expires=Infinity,store,toast,render,pendingRetry,prepareRetry,settleRetry,reconcileRetry,confirm,mayLeave,hasOrderDraft,clearOrderDraft}=env;
 let sessions=env.sessions,activeSessionId=sessions.read().sessionId;let reportRefreshPending=false,reportRefreshRevision=0;let stateRevision=0,cart=[],lastSale=null,seenKitchen=new Map(),polling=false,view='kitchen';const observeKitchen=()=>{};let poll;const setInterval=fn=>{poll=fn};
 ${source}\n${pollSource}\nreturn {switchStockDemo,request,refresh,mutate,adminRpc,poll,getState:()=>state,getMode:()=>mode,isBusy:()=>busy};`);
 const defer=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return {promise,resolve,reject};};
@@ -22,7 +23,7 @@ function harness(options={}){
  const fetcher=async(url,init)=>{requests.push({path:url.replace('https://test.invalid',''),body:JSON.parse(init.body||'null')});return handler(url,init);};
  const sessions=createSessionManager({url:'https://test.invalid',key:'test-key',storage:null,locks:null,fetcher});
  sessions.save({access_token:'token',refresh_token:'refresh-token',expires_in:options.expires===0?1:3600,user:{id:'test'}});
- const api=build({engine,sessions,state:f.state,store:f.store,config:{url:'https://test.invalid',key:'test-key'},document:{querySelector:q=>q==='dialog[open]'?ui.dialog:q==='#kitchen-sync'?status:null,querySelectorAll:()=>[control]},fetch:fetcher,toast:message=>messages.push(message),render:()=>ui.renders++,pendingRetry:()=>ui.pending,prepareRetry:(a,p)=>{retry.push(['prepare',a]);return p;},settleRetry:(...args)=>retry.push(['settle',...args]),reconcileRetry:()=>{retry.push(['reconcile']);return false;},confirm:()=>true,mayLeave:()=>true,hasOrderDraft:()=>ui.draft,clearOrderDraft:()=>{ui.clears++;ui.draft=false;},...options});
+ const api=build({applySupplyResponse,supplyActions,engine,sessions,state:f.state,store:f.store,config:{url:'https://test.invalid',key:'test-key'},document:{querySelector:q=>q==='dialog[open]'?ui.dialog:q==='#kitchen-sync'?status:null,querySelectorAll:()=>[control]},fetch:fetcher,toast:message=>messages.push(message),render:()=>ui.renders++,pendingRetry:()=>ui.pending,prepareRetry:(a,p)=>{retry.push(['prepare',a]);return p;},settleRetry:(...args)=>retry.push(['settle',...args]),reconcileRetry:()=>{retry.push(['reconcile']);return false;},confirm:()=>true,mayLeave:()=>true,hasOrderDraft:()=>ui.draft,clearOrderDraft:()=>{ui.clears++;ui.draft=false;},...options});
  return {...api,f,requests,messages,retry,control,status,ui,handle:fn=>handler=fn};
 }
 const h=harness(),original=structuredClone(h.f.state);h.ui.draft=true;

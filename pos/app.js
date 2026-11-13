@@ -1,3 +1,9 @@
+import {applySupplyResponse,supplyActions,location,warehouseId} from './warehouse-flow.mjs';
+import {supplyHome,transfersPage,pricingPage,supplierNotesPage,servicePage,cuttingPage,bindSupply,openDispatch,openWarehouseReceipt} from './warehouse-ui.mjs';
+import {spacesFor,spaceTitles,defaultSpace} from './workspaces.mjs';
+let workspace='';
+function workspaceAccess(){return {...state.access,cashierOwner:state.me?.role==='owner',crmAdmin:['owner','admin'].includes(state.me?.role),...(state.warehouseVersion&&!state.stockDemo?{workspace:workspace||defaultSpace(state)}:{})};}
+function workspaceSwitch(){return state.warehouseVersion&&!state.stockDemo?`<div class="workspace-switch" role="group" aria-label="Area kerja">${spacesFor(state).map(k=>`<button type="button" data-workspace="${k}" aria-pressed="${workspace===k}">${spaceTitles[k]}</button>`).join('')}</div>`:'';}
 import {resetCustomerDisplay} from './customer-display-channel.mjs';
 import {openFruitTransfer} from './fruit-transfer-ui.mjs';
 import { crmPage, bindCrm, memberFields, bindMemberPicker } from "./crm-ui.mjs";
@@ -173,6 +179,7 @@ let state = emptyState(),
 const app = document.querySelector("#app"),
   filter = { from: today(), to: today(), store: "", supplier: "" };
 const title = {
+  backoffice:"Dashboard Back Office",warehouse:"Dashboard Gudang",storehome:"Dashboard Toko",transfers:"Pengiriman & Tagihan",receiving:"Penerimaan Kiriman",pricing:"Harga Transfer",supplierNotes:"Nota Supplier",service:"Pelayanan Meja",cutting:"Tukang Potong",
   crm: "Member & Poin",
   payments: "Metode Pembayaran",
   shifts: "Shift Kasir",
@@ -201,6 +208,16 @@ const title = {
   cashier: "Kasir buah cepat",
 };
 const paths = {
+  backoffice:"M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z",
+  warehouse:"M3 10l9-6 9 6v11H3z M8 21V12h8v9 M8 16h8",
+  storehome:"M3 9l2-6h14l2 6 M3 9v3a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0V9 M5 15v6h14v-6",
+  transfers:"M2 5h12v12H2z M14 9h4l4 5v3h-8 M5 17a2 2 0 1 0 4 0 2 2 0 0 0-4 0 M16 17a2 2 0 1 0 4 0 2 2 0 0 0-4 0",
+  receiving:"M3 13v8h18v-8 M12 3v13 M7 11l5 5 5-5",
+  pricing:"M3 3h8l10 10-8 8L3 11z M7 7h.01 M12 10l5 5 M14 9l-4 6",
+  supplierNotes:"M4 3h11l5 5v13H4z M15 3v6h5 M8 13h8 M8 17h5",
+  service:"M3 13h18 M5 13a7 7 0 0 1 14 0 M12 4v2 M4 17h16 M8 21h8",
+  cutting:"M3 21l6-6 M7 13l4 4 10-10V3z",
+
   crm: "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0 M20 8v6 M17 11h6",
   payments: "M3 5h18v14H3z M3 10h18 M6 15h5",
   shifts: "M4 4h16v16H4z M8 8h8 M8 12h3 M15 12v5 M12 15h6",
@@ -488,6 +505,7 @@ function setLoginProgress(form, text, working) {
     .forEach((input) => (input.readOnly = working));
 }
 function loadingPage(text, error = "", retry = restoreSession) {
+  workspace="";
   sidebar.reset();
   app.innerHTML = `<div class="auth auth-workspace auth-startup">${themeButton("auth-theme")}<section class="auth-form"><div><img class="auth-logo" src="logo.png" alt="Maniac Duren"><h1>${error ? "Koneksi belum siap" : "Menyiapkan POS"}</h1><p class="muted auth-intro">${e(text)}</p>${sessionProgress(text, !!error)}<p class="auth-session-error" role="alert">${e(error)}</p><div class="auth-actions" ${error ? "" : "hidden"}><button type="button" id="auth-retry" class="primary">Coba lagi</button><button type="button" id="auth-switch">Gunakan akun lain</button></div></div></section></div>`;
   syncThemeControls();
@@ -577,11 +595,14 @@ async function mutate(action, payload, { throwOnError = false } = {}) {
   controls.forEach(({ node }) => (node.disabled = true));
   try {
     if (mode === "stock-demo") {
+      if(supplyActions.has(action))throw Error("Operasional gudang tidak tersedia di mode demo POS.");
       const engine = await demoEngine();
       state = engine.applyStockDemoAction(state, action, payload);
     } else
       state =
-        action === "pos_category_save"
+        supplyActions.has(action)
+          ? applySupplyResponse(state,await request("/rest/v1/rpc/pos_warehouse_mutate",{action,payload}))
+          : action === "pos_category_save"
           ? await request("/rest/v1/rpc/pos_menu_category_save", { payload })
           : action === "product_variants_save"
             ? await request("/rest/v1/rpc/pos_product_variants_save", {
@@ -707,6 +728,8 @@ function accountProfile() {
       owner: "Owner · Akses penuh",
       manager: "Manager",
       cashier: "Kasir",
+      admin: "Admin Back Office",
+      waitress:"Waitress",cutter:"Tukang Potong",
       kitchen: "Kitchen",
       warehouse: "Gudang",
       staff: "Staff",
@@ -725,13 +748,13 @@ function shell(body) {
     <aside class="sidebar" id="pos-sidebar" aria-label="Sidebar Maniac Duren">
       <div class="sidebar-header">
         <div class="sidebar-brand-row"><div class="brand"><img src="logo.png" alt=""><div><strong>Maniac Duren</strong><span>Operasional outlet</span></div></div><button type="button" class="sidebar-toggle" data-sidebar-toggle aria-controls="pos-sidebar" aria-label="Tutup sidebar">${sidebarIcon}</button></div>
-        <div class="sidebar-store"><label for="active-store">Outlet aktif</label><div class="store-select-wrap">${icon("stores")}<select id="active-store" aria-label="Outlet aktif" title="${e(name("stores", store))}">${options("stores", store)}</select></div></div>
+        ${workspaceSwitch()}<div class="sidebar-store"><label for="active-store">Lokasi aktif</label><div class="store-select-wrap">${icon("stores")}<select id="active-store" aria-label="Outlet aktif" title="${e(name("stores", store))}">${(state.warehouseVersion&&!state.stockDemo?state.stores.filter(x=>workspace==="backoffice"||(workspace==="warehouse"?x.locationType==="warehouse":x.locationType!=="warehouse")):state.stores).map(x=>`<option value="${e(x.id)}" ${x.id===store?"selected":""}>${e(x.name)}</option>`).join("")}</select></div></div>
       </div>
-      <nav class="nav" id="pos-navigation" aria-label="Navigasi POS">${navigation(title, view, icon, { ...state.access, cashierOwner: state.me?.role === "owner", crmAdmin: ["owner", "manager"].includes(state.me?.role) }, sidebar.closedGroups)}</nav>
+      <nav class="nav" id="pos-navigation" aria-label="Navigasi POS">${navigation(title, view, icon, workspaceAccess(), sidebar.closedGroups)}</nav>
       <div class="sidebar-account">${accountProfile()}<button id="logout" class="sidebar-logout" type="button" aria-label="Logout" title="Logout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 4H4v16h5M14 8l4 4-4 4M8 12h10"/></svg><span>Logout</span></button></div>
     </aside>
     <button type="button" class="sidebar-backdrop" data-sidebar-close tabindex="-1" aria-label="Tutup sidebar"></button>
-    <main id="pos-main"><header class="topbar"><div class="workspace-heading"><button id="sidebar-toggle" type="button" class="sidebar-toggle" data-sidebar-toggle aria-controls="pos-sidebar" aria-label="Buka sidebar">${sidebarIcon}</button><div class="workspace-title"><span class="workspace-breadcrumb">${view === "orders" ? "Maniac Duren · Kasir" : "Workspace / " + e(title[view] || "Maniac Duren")}</span><h1>${view === "orders" ? "Selamat datang, " + e((state.me?.name || "Kasir").trim().split(/\s+/)[0]) : e(title[view] || "Maniac Duren")}</h1></div></div><div class="workspace-tools">${installButton()}<span class="workspace-outlet">${icon("stores")}<span>${e(name("stores", store))}</span></span><button type="button" id="stock-demo-toggle" class="stock-demo-toggle" role="switch" aria-label="Mode demo" aria-checked="${mode === "stock-demo"}"><span class="stock-demo-track" aria-hidden="true"></span>Mode demo</button>${themeButton()}</div></header><div class="workspace-content">${mode === "stock-demo" ? '<aside class="stock-demo-banner" role="status"><div><b>MODE DEMO · Stok awal 100</b><p>Data uji hanya di tab ini. Semua penyimpanan demo terpisah dari database asli. Harga jual demo Rp150.000 per satuan; resep mengikuti master.</p><small>Buah: 100 kg + 100 butir. Bahan / produk stok: 100 sesuai satuannya. ${e(itemTypes.recipe)} mengikuti bahan.</small></div><button type="button" id="stock-demo-reset">Reset demo</button></aside>' : ""}${body}<p class="page-foot">Maniac Duren · ${e(name("stores", store))}</p></div>${systemDock(view, { ...state.access, cashierOwner: state.me?.role === "owner", crmAdmin: ["owner", "manager"].includes(state.me?.role) })}</main>
+    <main id="pos-main"><header class="topbar"><div class="workspace-heading"><button id="sidebar-toggle" type="button" class="sidebar-toggle" data-sidebar-toggle aria-controls="pos-sidebar" aria-label="Buka sidebar">${sidebarIcon}</button><div class="workspace-title"><span class="workspace-breadcrumb">${view === "orders" ? "Maniac Duren · Kasir" : "Workspace / " + e(title[view] || "Maniac Duren")}</span><h1>${view === "orders" ? "Selamat datang, " + e((state.me?.name || "Kasir").trim().split(/\s+/)[0]) : e(title[view] || "Maniac Duren")}</h1></div></div><div class="workspace-tools">${installButton()}<span class="workspace-outlet">${icon("stores")}<span>${e(name("stores", store))}</span></span><button type="button" id="stock-demo-toggle" class="stock-demo-toggle" role="switch" aria-label="Mode demo" aria-checked="${mode === "stock-demo"}"><span class="stock-demo-track" aria-hidden="true"></span>Mode demo</button>${themeButton()}</div></header><div class="workspace-content">${mode === "stock-demo" ? '<aside class="stock-demo-banner" role="status"><div><b>MODE DEMO · Stok awal 100</b><p>Data uji hanya di tab ini. Semua penyimpanan demo terpisah dari database asli. Harga jual demo Rp150.000 per satuan; resep mengikuti master.</p><small>Buah: 100 kg + 100 butir. Bahan / produk stok: 100 sesuai satuannya. ${e(itemTypes.recipe)} mengikuti bahan.</small></div><button type="button" id="stock-demo-reset">Reset demo</button></aside>' : ""}${body}<p class="page-foot">Maniac Duren · ${e(name("stores", store))}</p></div>${systemDock(view, workspaceAccess())}</main>
   </div>`;
 }
 function dashboard() {
@@ -820,6 +843,14 @@ function changeStore(next) {
 }
 
 function render() {
+  if(state.warehouseVersion&&!state.stockDemo){
+    if(!spacesFor(state).includes(workspace)){workspace=defaultSpace(state);if(view==='dashboard')view=workspace==='store'?'storehome':workspace;}
+    const locations=state.stores.filter(x=>workspace==='backoffice'||(workspace==='warehouse'?x.locationType==='warehouse':x.locationType!=='warehouse'));
+    if(!locations.some(x=>x.id===store))store=locations[0]?.id||'';
+    const permitted=new Set(visibleSections(workspaceAccess()).flatMap(g=>g.pages));
+    if(!permitted.has(view))view=workspace==='store'?'storehome':workspace;
+  }
+
   if (["salesreport", "finance", "batches", "trace"].includes(view)) {
     selectReportTab(
       {
@@ -842,6 +873,8 @@ function render() {
       payments: () => paymentsPage(state, store),
       shifts: () => shiftsPage(state, store),
       dashboard,
+      backoffice:()=>supplyHome(state,store,'backoffice'),warehouse:()=>supplyHome(state,store,'warehouse'),storehome:()=>supplyHome(state,store,'store'),
+      transfers:()=>transfersPage(state,store),receiving:()=>transfersPage(state,store,true),pricing:()=>pricingPage(state),supplierNotes:()=>supplierNotesPage(state,store),service:()=>servicePage(state,store),cutting:()=>cuttingPage(state,store),
       recipes: () => recipesPage(state, store),
       production: () => productionPage(state, store),
       cashier,
@@ -881,6 +914,12 @@ function render() {
       return data;
     },
   };
+  bindSupply(state,store,view,{...shiftContext,getState:()=>state,refresh});
+  document.querySelectorAll('[data-workspace]').forEach(b=>b.onclick=()=>{
+    if(!mayLeave(busy))return;
+    if(hasOrderDraft()&&!confirm('Pesanan belum dibayar. Pindah area dan kosongkan keranjang?'))return;
+    clearOrderDraft();workspace=b.dataset.workspace;view=workspace==='store'?'storehome':workspace;render();
+  });
   if (view === "crm") bindCrm(shiftContext);
   if (view === "payments") bindPayments(shiftContext, store);
   bindShiftBanner(shiftContext, store);
@@ -915,6 +954,7 @@ function render() {
   );
   document.querySelector("[data-dock-scan]")?.addEventListener("click", () => {
     if (busy || (state.access && !state.access.stock)) return;
+    if(state.warehouseVersion&&!state.stockDemo&&location(state,store)?.locationType!=='warehouse'){view='receiving';render();return;}
     if (document.querySelector("dialog[open]")) {
       toast("Tutup pop-up sebelum scan barcode.");
       return;
@@ -1130,7 +1170,9 @@ function render() {
       toast,
       getState: () => state,
     });
-    document.querySelector("#add-receipt").onclick = () => {
+    const receiveButton=document.querySelector("#add-receipt");
+    if(receiveButton)receiveButton.onclick = () => {
+      if(state.warehouseVersion&&!state.stockDemo&&!state.access?.backoffice)return addReceipt();
       const d = modal(
         "Barang masuk",
         '<p>Pilih jenis barang yang diterima.</p><button type="button" id="receive-durian">Durian utuh (kg + butir)</button> <button type="button" id="receive-unit">Bahan / produk satuan</button>',
@@ -1145,7 +1187,7 @@ function render() {
         receiptDialog(state, store, { modal, mutate, render, toast });
       };
     };
-    document.querySelector("#movement").onclick = movement;
+    document.querySelector("#movement")?.addEventListener("click",movement);
   }
   if (["products", "stores", "suppliers"].includes(view)) {
     if (view === "products") {
@@ -1281,10 +1323,12 @@ function addItem(productId) {
   };
 }
 function addReceipt() {
+  if(state.warehouseVersion&&!state.stockDemo)return openWarehouseReceipt(state,store,{modal,mutate,render,toast,getState:()=>state});
   openWeighingReceipt(state, store, { modal, mutate, render, toast });
 }
 
 function movement() {
+  if(state.warehouseVersion&&!state.stockDemo)return openDispatch(state,store,{modal,mutate,render,toast,getState:()=>state});
   return openFruitTransfer(state,store,{modal,mutate,render,toast});
 }
 

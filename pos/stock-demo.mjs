@@ -16,7 +16,7 @@ import {checkOrder,requirements} from './order-stock.mjs';
 import {savePosCategory} from './pos-categories.mjs';
 import {saveVariantProducts} from './product-variants.mjs';
 const localMaster=new Set(['master','master_details','product_save','product_update','product_delete','recipe_save']);
-const transactionKeys=['fruitUnits','fruitEvents','cashDeposits','cashDepositEvents','cashDepositSummary','cashDepositProofs','members','pointLedger','crmEvents','cashierShifts','cashierShiftEvents','cashierShiftEntries','documents','expenses','adminEvents','lots','unitLots','sales','movements','orders','events','journal','money','moneyJournal','origins','productions','wasteRuns','stockAdjustments','batchProcesses','receiptShipments','rejectRecords','batchOpenOrders','attendance','cashierApprovals'];
+const transactionKeys=['transfers','receiptPlans','supplyEvents','cutChecks','fruitUnits','fruitEvents','cashDeposits','cashDepositEvents','cashDepositSummary','cashDepositProofs','members','pointLedger','crmEvents','cashierShifts','cashierShiftEvents','cashierShiftEntries','documents','expenses','adminEvents','lots','unitLots','sales','movements','orders','events','journal','money','moneyJournal','origins','productions','wasteRuns','stockAdjustments','batchProcesses','receiptShipments','rejectRecords','batchOpenOrders','attendance','cashierApprovals'];
 const clone=x=>structuredClone(x);
 const positive=(value,label)=>{const n=Number(value);if(!Number.isFinite(n)||n<=0)throw Error(label+' harus lebih dari 0');return n;};
 const unitQty=(value,unit)=>{const n=positive(value,'Jumlah');if(['pcs','porsi'].includes(unit)&&!Number.isInteger(n))throw Error('Jumlah harus bilangan bulat');return n;};

@@ -18,7 +18,9 @@
     "test:unit": "node scripts/test.mjs unit",
     "check": "node scripts/check-project.mjs",
     "project:tidy": "node scripts/clean-project.mjs",
-    "project:tidy:check": "node scripts/clean-project.mjs --check"
+    "project:tidy:check": "node scripts/clean-project.mjs --check",
+    "test:warehouse": "node tests/warehouse-legacy-kinds-db.test.mjs && node tests/warehouse-flow-db.test.mjs && node tests/warehouse-flow-ui.test.mjs",
+    "test:warehouse:browser": "node tests/warehouse-browser.mjs"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.8",

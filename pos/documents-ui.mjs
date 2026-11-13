@@ -30,10 +30,10 @@ let kind = "",
 const can = (s, k) =>
   !s.access || (k === "DO" ? s.access.stock : s.access.finance);
 export function documentsPage(s, store = "") {
-  return `<div class="intro"><div><h2>Admin Dokumen</h2><p class="muted">PO → pembelian · transaksi POS → invoice / surat jalan · transfer → surat jalan.</p></div><div class="doc-toolbar">${s.me?.role === "owner" ? `<button id="letterhead" ${s.reportsAdminVersion >= 71 ? "" : "disabled"}>Kop surat</button>` : ""}<button id="documents-refresh">Perbarui</button>${s.stockDemo && (!s.access || (s.access.finance && s.access.stock && s.access.sell)) ? `<button type="button" id="documents-examples" ${s.stockDemo.documentExamples?.[store || s.stores[0]?.id] || !activeShift(s, store || s.stores[0]?.id) ? "disabled" : ""}>Buat contoh dokumen</button>` : ""}</div></div>${s.reportsAdminVersion >= 71 ? "" : '<p class="notice">Jalankan database/reports-admin-071.sql untuk mengaktifkan penyimpanan dokumen.</p>'}${s.stockDemo ? '<p class="notice">Latihan dokumen: simpan draft, terbitkan, cetak/PDF, dan batalkan. Semua hasil diberi label DEMO. Pembelian dan transfer hanya mengubah stok demo di tab ini.</p>' + (!activeShift(s, store || s.stores[0]?.id) ? '<p class="notice">Untuk membuat contoh dokumen, <button type="button" data-view="orders">buka kasir demo</button> di outlet aktif terlebih dahulu.</p>' : "") : ""}<div class="doc-toolbar">${Object.entries(
+  return `${s.warehouseVersion&&!s.stockDemo?'<p class="notice">Distribusi stok memakai <button type="button" data-view="transfers">Pengiriman & Tagihan</button>. Nota masuk durian dibuat di <button type="button" data-view="supplierNotes">Nota Supplier</button>. Dokumen di bawah untuk administrasi dan cetak referensi.</p>':''}<div class="intro"><div><h2>Admin Dokumen</h2><p class="muted">PO → pembelian · transaksi POS → invoice / surat jalan · transfer → surat jalan.</p></div><div class="doc-toolbar">${s.me?.role === "owner" ? `<button id="letterhead" ${s.reportsAdminVersion >= 71 ? "" : "disabled"}>Kop surat</button>` : ""}<button id="documents-refresh">Perbarui</button>${s.stockDemo && (!s.access || (s.access.finance && s.access.stock && s.access.sell)) ? `<button type="button" id="documents-examples" ${s.stockDemo.documentExamples?.[store || s.stores[0]?.id] || !activeShift(s, store || s.stores[0]?.id) ? "disabled" : ""}>Buat contoh dokumen</button>` : ""}</div></div>${s.reportsAdminVersion >= 71 ? "" : '<p class="notice">Jalankan database/reports-admin-071.sql untuk mengaktifkan penyimpanan dokumen.</p>'}${s.stockDemo ? '<p class="notice">Latihan dokumen: simpan draft, terbitkan, cetak/PDF, dan batalkan. Semua hasil diberi label DEMO. Pembelian dan transfer hanya mengubah stok demo di tab ini.</p>' + (!activeShift(s, store || s.stores[0]?.id) ? '<p class="notice">Untuk membuat contoh dokumen, <button type="button" data-view="orders">buka kasir demo</button> di outlet aktif terlebih dahulu.</p>' : "") : ""}<div class="doc-toolbar">${Object.entries(
     documentKinds,
   )
-    .filter(([k]) => can(s, k))
+    .filter(([k]) => can(s, k)&&!(s.warehouseVersion&&!s.stockDemo&&k==="PUR"))
     .map(
       ([k, v]) =>
         `<button class="primary" data-new-document="${k}" ${s.reportsAdminVersion >= 71 ? "" : "disabled"}>+ ${v}</button>`,
@@ -388,7 +388,7 @@ export function bindDocuments(s, store, ctx) {
                 ["sale", "Penjualan buah lama"],
               ]
             : [
-                ["transfer", "Transfer baru → pindahkan stok"],
+                ...(s.warehouseVersion&&!s.stockDemo?[]:[["transfer", "Transfer baru → pindahkan stok"]]),
                 ["movement", "Transfer buah yang sudah ada"],
                 ["order", "Penjualan POS"],
                 ["sale", "Penjualan buah lama"],

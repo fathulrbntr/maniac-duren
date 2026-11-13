@@ -1,7 +1,8 @@
+import {inTransitLots} from './warehouse-flow.mjs';
 // Quantities in ancestry are equivalents of the original fruit, used internally
 // for attribution. Physical stock is always shown in each product's own unit.
 export function batchReports(s,store=''){
- const lots=new Map([...s.lots,...s.unitLots].map(l=>[l.id,l])),origins=new Map((s.origins||[]).map(o=>[o.lot_id,o.inputs]));
+ const lots=new Map([...s.lots,...s.unitLots,...inTransitLots(s)].map(l=>[l.id,l])),origins=new Map((s.origins||[]).map(o=>[o.lot_id,o.inputs]));
  for(const r of s.wasteRuns||[])if(!r.voided&&r.outputKg>0)for(const o of r.outputs||[])if(!origins.has(o.lotId))origins.set(o.lotId,[{lotId:r.sourceLotId,qty:r.kg*o.weightKg/r.outputKg}]);
  for(const r of s.productions||[])if(!r.voided&&!origins.has(r.id)&&r.used)origins.set(r.id,r.used);
  for(const r of s.rejectRecords||[])if(!r.voided&&r.kind==='coral')for(const o of r.outputs)origins.set(o.lotId,[{lotId:r.sourceLotId,qty:r.kg}]);
@@ -15,11 +16,23 @@ export function batchReports(s,store=''){
   else if(l.kg!==undefined)result.set(l.id,1);
   cache.set(key,result);return result;
  }
- const reports=new Map(s.lots.filter(l=>!l.sourceLotId||!lots.has(l.sourceLotId)).map(root=>[root.id,{root,relatedStores:new Set([root.storeId]),stock:[],records:[],journal:[],pendingOrders:new Set(),readyKg:0,readyPieces:0,rejectKg:0,rejectPieces:0,otherFruitKg:0,markedKg:0,markedPieces:0,processedKg:0,firstLossKg:0,coralKg:0,fleshKg:0,secondLossKg:0,soldKg:0,soldPieces:0,soldEquivalent:0,lostEquivalent:0,remainingEquivalent:0,fruitRevenue:0,allocatedRevenue:0,revenueIncomplete:false,scopeIncomplete:!!root.sourceLotId&&!lots.has(root.sourceLotId)}]));
+ // Central supplier attribution excludes internal transfer markup at every generation.
+ const costCache=new Map();
+ function supplierCost(key,path=new Set()){
+  if(costCache.has(key))return costCache.get(key);if(path.has(key))return null;
+  const l=lots.get(key);if(!l)return null;const next=new Set(path).add(key);let cost;
+  if(origins.has(key)){
+   const denominator=l.receivedQty??l.receivedKg,inputs=origins.get(key).map(x=>({...x,cost:supplierCost(x.lotId,next)}));
+   cost=denominator>0&&inputs.every(x=>x.cost!=null)?inputs.reduce((n,x)=>n+x.qty*x.cost,0)/denominator:null;
+  }else if(l.sourceLotId&&lots.has(l.sourceLotId))cost=supplierCost(l.sourceLotId,next);
+  else cost=l.supplierUnitCost??l.unitCost??null;
+  costCache.set(key,cost);return cost;
+ }
+ const reports=new Map(s.lots.filter(l=>!l.sourceLotId||!lots.has(l.sourceLotId)).map(root=>[root.id,{root,relatedStores:new Set([root.storeId]),transitKg:0,stock:[],records:[],journal:[],pendingOrders:new Set(),readyKg:0,readyPieces:0,rejectKg:0,rejectPieces:0,otherFruitKg:0,markedKg:0,markedPieces:0,processedKg:0,firstLossKg:0,coralKg:0,fleshKg:0,secondLossKg:0,soldKg:0,soldPieces:0,soldEquivalent:0,lostEquivalent:0,remainingEquivalent:0,fruitRevenue:0,allocatedRevenue:0,revenueIncomplete:false,scopeIncomplete:!!root.sourceLotId&&!lots.has(root.sourceLotId)}]));
  const distribute=(key,quantity,fn)=>{for(const [root,factor] of ancestry(key)){const r=reports.get(root);if(r)fn(r,quantity*factor);}};
  for(const l of lots.values()){
   const qty=l.kg??l.qty;if(!(qty>1e-8))continue;
-  distribute(l.id,qty,(r,equivalent)=>{r.relatedStores.add(l.storeId);r.remainingEquivalent+=equivalent;r.stock.push({lot:l,equivalent,mixed:ancestry(l.id).size>1});if(l.kg!==undefined){if(l.quality==='reject'){r.rejectKg+=l.kg;r.rejectPieces+=l.pieces;}else if(l.quality==='ready'){r.readyKg+=l.kg;r.readyPieces+=l.pieces;}else r.otherFruitKg+=l.kg;}});
+  distribute(l.id,qty,(r,equivalent)=>{r.relatedStores.add(l.storeId);if(l.transit){r.relatedStores.add(l.targetStoreId);r.transitKg+=l.kg||0;}r.remainingEquivalent+=equivalent;r.stock.push({lot:l,equivalent,mixed:ancestry(l.id).size>1});if(l.kg!==undefined){if(l.quality==='reject'){r.rejectKg+=l.kg;r.rejectPieces+=l.pieces;}else if(l.quality==='ready'){r.readyKg+=l.kg;r.readyPieces+=l.pieces;}else r.otherFruitKg+=l.kg;}});
  }
  const seen=new Set((s.rejectRecords||[]).map(r=>r.id));
  const records=[...(s.rejectRecords||[]),...(s.wasteRuns||[]).filter(w=>!seen.has(w.id)).map(w=>({...w,kind:'legacy',stage:1}))];
@@ -42,7 +55,7 @@ export function batchReports(s,store=''){
   if(!isPaid(order))continue;
   const gross=order.subtotal??order.lines.reduce((n,l)=>n+l.qty*l.price,0);
   for(const line of order.lines){
-   const consumed=(order.consumption||[]).filter(c=>c.lineId===line.lineId),known=consumed.length>0&&consumed.every(c=>c.unitCost!=null),base=known?consumed.reduce((n,c)=>n+c.qty*c.unitCost,0):null,revenue=gross>0?line.qty*line.price*order.total/gross:0;
+   const consumed=(order.consumption||[]).filter(c=>c.lineId===line.lineId),costOf=c=>s.warehouseVersion?supplierCost(c.lotId):c.unitCost,known=consumed.length>0&&consumed.every(c=>costOf(c)!=null),base=known?consumed.reduce((n,c)=>n+c.qty*costOf(c),0):null,revenue=gross>0?line.qty*line.price*order.total/gross:0;
    if(line.itemType==='fruit')distribute(line.lotId,1,(r)=>{r.soldKg+=line.kg;r.soldPieces+=line.pieces;r.fruitRevenue+=revenue;});
    for(const c of consumed)distribute(c.lotId,c.qty,(r,equivalent)=>{r.soldEquivalent+=equivalent;if(order.status!=='paid')r.pendingOrders.add(order.id);if(line.itemType!=='fruit'){if(base>0&&r.root.unitCost!=null)r.allocatedRevenue+=revenue*equivalent*r.root.unitCost/base;else r.revenueIncomplete=true;}});
   }
