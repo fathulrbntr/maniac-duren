@@ -12,3 +12,39 @@
 @media(max-width:640px){.store-editor{grid-template-columns:1fr;gap:16px}.store-dialog{width:calc(100vw - 20px)}.store-receipt-preview{width:100%}}
 .receipt-dialog .receipt-print{background:#fff;color:#000;padding:16px;white-space:normal}
 .receipt-dialog .receipt-plain{white-space:pre-wrap}
+
+/* Location management: retail branches and the central warehouse have distinct sections. */
+.location-directory{display:grid;gap:22px;min-width:0}
+.location-directory-intro h2{margin:0 0 6px;font-size:var(--text-section)}
+.location-directory-intro p{margin:0;color:var(--muted);font-size:var(--text-sm)}
+.location-directory .location-section{margin:0;padding:0;overflow:hidden;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.location-section-head{display:flex;justify-content:space-between;align-items:center;gap:20px;padding:20px;border-bottom:1px solid var(--line)}
+.location-section-title{display:flex;align-items:center;gap:14px;min-width:0}
+.location-section-title h2{display:flex;align-items:center;gap:10px;margin:0;font-size:var(--text-section);line-height:1.4}
+.location-section-title p{margin:4px 0 0;font-size:var(--text-sm);color:var(--muted)}
+.location-section-icon{display:grid;place-items:center;width:42px;height:42px;flex:0 0 42px;border-radius:10px;background:var(--accent-soft);color:var(--accent)}
+.location-section-icon svg{width:22px;height:22px}
+.location-section.warehouse .location-section-icon{background:var(--info-bg);color:var(--info)}
+.location-count{display:inline-flex;align-items:center;justify-content:center;min-width:25px;height:25px;padding:0 7px;border-radius:8px;background:var(--surface-soft);color:var(--muted);font-size:var(--text-xs);font-weight:600}
+.location-section .table-wrap{margin:0;padding:0 20px 10px;max-width:100%;overflow-x:auto}
+.location-table{width:100%;min-width:760px;margin:0;border-collapse:collapse}
+.location-table th,.location-table td{text-align:left;vertical-align:middle;padding:15px 14px;font-size:var(--text-sm)}
+.location-table th{font-size:var(--text-xs);font-weight:600;background:var(--surface-soft);color:var(--muted)}
+.location-table th:first-child{width:27%}.location-table th:nth-child(2){width:36%}
+.location-table td:first-child b{display:block;line-height:1.5;overflow-wrap:anywhere}
+.location-table td:nth-child(3),.location-table td:last-child{white-space:nowrap}
+.location-type{display:inline-flex;align-items:center;max-width:100%;padding:3px 7px;margin-bottom:5px;border-radius:5px;background:var(--accent-soft);color:var(--accent);font-size:11px;font-weight:600;line-height:1.5}
+.location-type.warehouse{background:var(--info-bg);color:var(--info)}
+.location-name-note{display:block;margin-top:5px;color:var(--warning);font-size:var(--text-xs)}
+.location-name-notice{padding:14px 18px;border:1px solid var(--warning);border-radius:10px;background:var(--warning-bg);color:var(--warning);font-size:var(--text-sm)}
+.location-name-notice p{margin:3px 0 0;line-height:1.5}
+.store-kind-summary{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:0 0 18px;color:var(--muted);font-size:var(--text-sm)}
+.store-kind-summary .location-type{margin:0}
+@media(max-width:700px){
+ .location-directory{gap:16px}
+ .location-section-head{flex-direction:column;align-items:stretch;padding:16px;gap:14px}
+ .location-section-title{align-items:flex-start;gap:10px}
+ .location-section-head>button{align-self:flex-start}
+ .location-section .table-wrap{padding:0 12px 10px}
+ .location-name-notice{padding:12px 14px}
+}

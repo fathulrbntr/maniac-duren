@@ -50,7 +50,7 @@ import {
   hasOrderDraft,
 } from "./operations-ui.mjs";
 import { printReceipt } from "./receipt-printer.mjs";
-import { storesPage, storeDialog } from "./store-settings.mjs";
+import { storesPage, storeDialog, locationLabel, locationOptions } from "./store-settings.mjs";
 import { receiptHeader, fillReceiptLogo } from "./store-profile.mjs";
 const storeContext = () => ({
   displayHost: (payload) => {
@@ -202,7 +202,7 @@ const title = {
   documents: "Admin Dokumen",
   employees: "Karyawan & Akses",
   attendance: "Absensi",
-  stores: "Outlet",
+  stores: "Branch Outlet & Gudang",
   suppliers: "Supplier",
   guide: "Panduan",
   cashier: "Kasir buah cepat",
@@ -744,17 +744,19 @@ function accountProfile() {
   return `<div class="account-profile" aria-label="Akun yang login">${photo ? `<img src="${e(photo)}" alt="Foto ${e(accountName)}">` : `<span class="account-avatar" aria-hidden="true">${e(initials)}</span>`}<div><strong>${e(accountName)}</strong><span>${e(role)}</span></div></div>`;
 }
 function shell(body) {
+  const activeLocation=state.stores.find(x=>x.id===store),activeIcon=activeLocation?.locationType==='warehouse'?'warehouse':'stores';
+  const selectableLocations=state.warehouseVersion&&!state.stockDemo?state.stores.filter(x=>workspace==='backoffice'||(workspace==='warehouse'?x.locationType==='warehouse':x.locationType!=='warehouse')):state.stores;
   return `<div class="shell ${["products", "stock"].includes(view) ? "inventory-shell" : ""} ${view === "dashboard" ? "dashboard-shell" : ""}" ${sidebar.attributes()} data-page="${e(view)}">
     <aside class="sidebar" id="pos-sidebar" aria-label="Sidebar Maniac Duren">
       <div class="sidebar-header">
         <div class="sidebar-brand-row"><div class="brand"><img src="logo.png" alt=""><div><strong>Maniac Duren</strong><span>Operasional outlet</span></div></div><button type="button" class="sidebar-toggle" data-sidebar-toggle aria-controls="pos-sidebar" aria-label="Tutup sidebar">${sidebarIcon}</button></div>
-        ${workspaceSwitch()}<div class="sidebar-store"><label for="active-store">Lokasi aktif</label><div class="store-select-wrap">${icon("stores")}<select id="active-store" aria-label="Outlet aktif" title="${e(name("stores", store))}">${(state.warehouseVersion&&!state.stockDemo?state.stores.filter(x=>workspace==="backoffice"||(workspace==="warehouse"?x.locationType==="warehouse":x.locationType!=="warehouse")):state.stores).map(x=>`<option value="${e(x.id)}" ${x.id===store?"selected":""}>${e(x.name)}</option>`).join("")}</select></div></div>
+        ${workspaceSwitch()}<div class="sidebar-store"><label for="active-store">Lokasi aktif</label><div class="store-select-wrap">${icon(activeIcon)}<select id="active-store" aria-label="Lokasi aktif: branch outlet atau gudang" title="${e(locationLabel(activeLocation))}">${locationOptions(selectableLocations,store)}</select></div></div>
       </div>
       <nav class="nav" id="pos-navigation" aria-label="Navigasi POS">${navigation(title, view, icon, workspaceAccess(), sidebar.closedGroups)}</nav>
       <div class="sidebar-account">${accountProfile()}<button id="logout" class="sidebar-logout" type="button" aria-label="Logout" title="Logout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 4H4v16h5M14 8l4 4-4 4M8 12h10"/></svg><span>Logout</span></button></div>
     </aside>
     <button type="button" class="sidebar-backdrop" data-sidebar-close tabindex="-1" aria-label="Tutup sidebar"></button>
-    <main id="pos-main"><header class="topbar"><div class="workspace-heading"><button id="sidebar-toggle" type="button" class="sidebar-toggle" data-sidebar-toggle aria-controls="pos-sidebar" aria-label="Buka sidebar">${sidebarIcon}</button><div class="workspace-title"><span class="workspace-breadcrumb">${view === "orders" ? "Maniac Duren · Kasir" : "Workspace / " + e(title[view] || "Maniac Duren")}</span><h1>${view === "orders" ? "Selamat datang, " + e((state.me?.name || "Kasir").trim().split(/\s+/)[0]) : e(title[view] || "Maniac Duren")}</h1></div></div><div class="workspace-tools">${installButton()}<span class="workspace-outlet">${icon("stores")}<span>${e(name("stores", store))}</span></span><button type="button" id="stock-demo-toggle" class="stock-demo-toggle" role="switch" aria-label="Mode demo" aria-checked="${mode === "stock-demo"}"><span class="stock-demo-track" aria-hidden="true"></span>Mode demo</button>${themeButton()}</div></header><div class="workspace-content">${mode === "stock-demo" ? '<aside class="stock-demo-banner" role="status"><div><b>MODE DEMO · Stok awal 100</b><p>Data uji hanya di tab ini. Semua penyimpanan demo terpisah dari database asli. Harga jual demo Rp150.000 per satuan; resep mengikuti master.</p><small>Buah: 100 kg + 100 butir. Bahan / produk stok: 100 sesuai satuannya. ${e(itemTypes.recipe)} mengikuti bahan.</small></div><button type="button" id="stock-demo-reset">Reset demo</button></aside>' : ""}${body}<p class="page-foot">Maniac Duren · ${e(name("stores", store))}</p></div>${systemDock(view, workspaceAccess())}</main>
+    <main id="pos-main"><header class="topbar"><div class="workspace-heading"><button id="sidebar-toggle" type="button" class="sidebar-toggle" data-sidebar-toggle aria-controls="pos-sidebar" aria-label="Buka sidebar">${sidebarIcon}</button><div class="workspace-title"><span class="workspace-breadcrumb">${view === "orders" ? "Maniac Duren · Kasir" : "Workspace / " + e(title[view] || "Maniac Duren")}</span><h1>${view === "orders" ? "Selamat datang, " + e((state.me?.name || "Kasir").trim().split(/\s+/)[0]) : e(title[view] || "Maniac Duren")}</h1></div></div><div class="workspace-tools">${installButton()}<span class="workspace-outlet" title="${e(locationLabel(activeLocation))}">${icon(activeIcon)}<span>${e(locationLabel(activeLocation))}</span></span><button type="button" id="stock-demo-toggle" class="stock-demo-toggle" role="switch" aria-label="Mode demo" aria-checked="${mode === "stock-demo"}"><span class="stock-demo-track" aria-hidden="true"></span>Mode demo</button>${themeButton()}</div></header><div class="workspace-content">${mode === "stock-demo" ? '<aside class="stock-demo-banner" role="status"><div><b>MODE DEMO · Stok awal 100</b><p>Data uji hanya di tab ini. Semua penyimpanan demo terpisah dari database asli. Harga jual demo Rp150.000 per satuan; resep mengikuti master.</p><small>Buah: 100 kg + 100 butir. Bahan / produk stok: 100 sesuai satuannya. ${e(itemTypes.recipe)} mengikuti bahan.</small></div><button type="button" id="stock-demo-reset">Reset demo</button></aside>' : ""}${body}<p class="page-foot">Maniac Duren · ${e(locationLabel(activeLocation))}</p></div>${systemDock(view, workspaceAccess())}</main>
   </div>`;
 }
 function dashboard() {
