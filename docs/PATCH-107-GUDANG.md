@@ -17,17 +17,17 @@ Jika pemasangan sebelumnya berhenti dengan `23514` pada `md_pos_unit_lots_kind_c
 
 ## Pembagian area dan role
 
-| Area / role | Pekerjaan |
-| --- | --- |
-| Owner | Seluruh area, karyawan dan akun, pengaturan pembayaran/diskon |
+| Area / role       | Pekerjaan                                                                                                           |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Owner             | Seluruh area, karyawan dan akun, pengaturan pembayaran/diskon                                                       |
 | Admin Back Office | Nota supplier dan modal, harga jual dan harga transfer, master, laporan, invoice, surat jalan, pencatatan pelunasan |
-| Gudang | Memilih nota admin, scan penerimaan, stok gudang, reject, scan pengiriman, cetak dokumen |
-| Manager Toko | Operasional toko sesuai penugasan; harga master dan keuangan pusat dikunci |
-| Kasir | Buka/tutup kasir, penerimaan kiriman lengkap, scan penjualan, pembayaran dan struk |
-| Waitress | Nomor meja, status pesanan yang sudah dibayar, menandai pesanan siap yang sudah diantar |
-| Kitchen | Antrean pesanan setelah pembayaran, produksi dan reject sesuai akses |
-| Tukang Potong | Scan pemeriksaan buah dan nomor meja, reject, jejak buah; pembayaran dilakukan kasir |
-| Staff | Absensi; akses operasional mengikuti penugasan owner |
+| Gudang            | Memilih nota admin, scan penerimaan, stok gudang, reject, scan pengiriman, cetak dokumen                            |
+| Manager Toko      | Operasional toko sesuai penugasan; harga master dan keuangan pusat dikunci                                          |
+| Kasir             | Buka/tutup kasir, penerimaan kiriman lengkap, scan penjualan, pembayaran dan struk                                  |
+| Waitress          | Nomor meja, status pesanan yang sudah dibayar, menandai pesanan siap yang sudah diantar                             |
+| Kitchen           | Antrean pesanan setelah pembayaran, produksi dan reject sesuai akses                                                |
+| Tukang Potong     | Scan pemeriksaan buah dan nomor meja, reject, jejak buah; pembayaran dilakukan kasir                                |
+| Staff             | Absensi; akses operasional mengikuti penugasan owner                                                                |
 
 Admin memiliki cakupan semua lokasi. Role lain dibatasi daftar lokasi karyawan. Pengelolaan karyawan tetap khusus owner. Manager lama sekarang dianggap Manager Toko: jika petugas tersebut sebenarnya admin pusat, owner perlu mengganti role ke Admin Back Office.
 
@@ -49,13 +49,13 @@ Barang satuan/bahan masuk melalui menu stok gudang oleh admin; toko tidak mengis
 
 Contoh penerimaan 100 kg, transfer 20 kg, reject 10 kg:
 
-| Posisi | Sebelum kiriman diterima | Setelah diterima lengkap |
-| --- | ---: | ---: |
-| Gudang — siap | 70 kg | 70 kg |
-| Gudang — reject | 10 kg | 10 kg |
-| Dalam perjalanan ke toko | 20 kg | 0 kg |
-| Toko — siap | 0 kg | 20 kg |
-| Total berat buah asal | 100 kg | 100 kg |
+| Posisi                   | Sebelum kiriman diterima | Setelah diterima lengkap |
+| ------------------------ | -----------------------: | -----------------------: |
+| Gudang — siap            |                    70 kg |                    70 kg |
+| Gudang — reject          |                    10 kg |                    10 kg |
+| Dalam perjalanan ke toko |                    20 kg |                     0 kg |
+| Toko — siap              |                     0 kg |                    20 kg |
+| Total berat buah asal    |                   100 kg |                   100 kg |
 
 Laporan → Batch Supplier → Telusuri menampilkan lokasi/status, jejak per buah, stok turunan, dan transaksi. Excel/PDF laporan memakai data lokasi yang sama. Berat pada tabel barcode adalah berat label asal. Buah yang sudah diolah berstatus Diolah; berat hasil olahan dan penyusutannya dijelaskan pada bagian stok turunan/proses, bukan dihitung lagi sebagai buah siap.
 

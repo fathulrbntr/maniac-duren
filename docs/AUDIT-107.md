@@ -2,21 +2,21 @@
 
 Sumber: arsip `maniac-duren.zip` yang diberikan pengguna. Audit difokuskan pada penerimaan, persediaan, barcode, transfer, laporan batch, harga, dan akses divisi. Tidak ada koneksi atau perubahan database produksi maupun deployment situs saat pengerjaan.
 
-| Temuan | Perbaikan |
-| --- | --- |
-| SQL 107 awal menghilangkan jenis `waste` yang masih digunakan data dan proses lama | Pertahankan seluruh jenis lama dan tambahkan `transfer`; validasi semua baris tanpa menghapus atau mengubah datanya |
-| Transfer lama langsung menambah stok tujuan tanpa scan penerima | Pisahkan pengiriman, stok Dalam perjalanan, scan penerimaan, dan konfirmasi lengkap atomik |
-| Dokumen DO/PUR lama dapat menjadi jalur pemindahan stok di luar alur baru | Blokir jenis dokumen stok tersebut di server dan arahkan ke penerimaan/pengiriman gudang |
-| Akses manager/master memungkinkan pengelolaan harga di toko | Admin Back Office/Owner menguasai master dan keuangan pusat; Manager Toko dibatasi operasional lokasi |
-| Barang datang bisa diarahkan ke outlet biasa | Penerimaan baru diwajibkan di lokasi warehouse, dengan nota biaya admin untuk petugas gudang |
-| Manual fruit stock dan jalur timbang nontracking berisiko melepas jejak per buah | Wajib barcode tracking; koreksi stok buah manual ditolak; sediakan rekonsiliasi identitas stok lama tanpa menambah kuantitas |
-| Harga transfer, biaya supplier dan harga retail belum dibedakan | Master harga transfer dan snapshot invoice; unit cost toko dari nilai invoice; biaya supplier dan asal batch dipertahankan |
-| Persediaan dalam perjalanan bisa terlihat seperti selisih batch | Tambah posisi transit pada laporan, detail lokasi/status barcode, dan ekspor lokasi |
-| Penggolongan jurnal baru belum ada pada laporan stok | Transfer keluar/masuk dan pembatalan digolongkan sesuai arah; transfer bukan penjualan retail |
-| Markup transfer dapat mengurangi alokasi omzet olahan ke supplier dalam laporan pusat | Alokasi memakai biaya sumber sepanjang rantai bahan/olahan, bukan markup transfer internal |
-| Metadata kepemilikan akun pending memakai user metadata yang dapat diubah pengguna | API akun dan pemeriksaan target memakai app metadata yang dikelola server; akun yang sudah tertaut tetap memakai user_id yang tersimpan |
-| Scan penerimaan berulang berpotensi mengunduh seluruh snapshot POS | Respons scan berupa delta barcode dan ID event; reload tetap membaca kondisi server |
-| Pengiriman ulang setelah jaringan putus dapat membuat transaksi ganda | ID operasi tetap, payload/actor diverifikasi, jurnal atomik, serta rekonsiliasi retry |
+| Temuan                                                                                | Perbaikan                                                                                                                               |
+| ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| SQL 107 awal menghilangkan jenis `waste` yang masih digunakan data dan proses lama    | Pertahankan seluruh jenis lama dan tambahkan `transfer`; validasi semua baris tanpa menghapus atau mengubah datanya                     |
+| Transfer lama langsung menambah stok tujuan tanpa scan penerima                       | Pisahkan pengiriman, stok Dalam perjalanan, scan penerimaan, dan konfirmasi lengkap atomik                                              |
+| Dokumen DO/PUR lama dapat menjadi jalur pemindahan stok di luar alur baru             | Blokir jenis dokumen stok tersebut di server dan arahkan ke penerimaan/pengiriman gudang                                                |
+| Akses manager/master memungkinkan pengelolaan harga di toko                           | Admin Back Office/Owner menguasai master dan keuangan pusat; Manager Toko dibatasi operasional lokasi                                   |
+| Barang datang bisa diarahkan ke outlet biasa                                          | Penerimaan baru diwajibkan di lokasi warehouse, dengan nota biaya admin untuk petugas gudang                                            |
+| Manual fruit stock dan jalur timbang nontracking berisiko melepas jejak per buah      | Wajib barcode tracking; koreksi stok buah manual ditolak; sediakan rekonsiliasi identitas stok lama tanpa menambah kuantitas            |
+| Harga transfer, biaya supplier dan harga retail belum dibedakan                       | Master harga transfer dan snapshot invoice; unit cost toko dari nilai invoice; biaya supplier dan asal batch dipertahankan              |
+| Persediaan dalam perjalanan bisa terlihat seperti selisih batch                       | Tambah posisi transit pada laporan, detail lokasi/status barcode, dan ekspor lokasi                                                     |
+| Penggolongan jurnal baru belum ada pada laporan stok                                  | Transfer keluar/masuk dan pembatalan digolongkan sesuai arah; transfer bukan penjualan retail                                           |
+| Markup transfer dapat mengurangi alokasi omzet olahan ke supplier dalam laporan pusat | Alokasi memakai biaya sumber sepanjang rantai bahan/olahan, bukan markup transfer internal                                              |
+| Metadata kepemilikan akun pending memakai user metadata yang dapat diubah pengguna    | API akun dan pemeriksaan target memakai app metadata yang dikelola server; akun yang sudah tertaut tetap memakai user_id yang tersimpan |
+| Scan penerimaan berulang berpotensi mengunduh seluruh snapshot POS                    | Respons scan berupa delta barcode dan ID event; reload tetap membaca kondisi server                                                     |
+| Pengiriman ulang setelah jaringan putus dapat membuat transaksi ganda                 | ID operasi tetap, payload/actor diverifikasi, jurnal atomik, serta rekonsiliasi retry                                                   |
 
 ## Bukti uji
 

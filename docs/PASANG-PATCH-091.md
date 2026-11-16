@@ -28,15 +28,15 @@ git push origin main
 
 ## Isi dan cara menghitung
 
-| Bagian | Perhitungan / cakupan |
-| --- | --- |
-| Pendapatan | Transaksi lunas aktif setelah diskon; mengikuti tanggal pembayaran dan toko yang dipilih. |
-| HPP | Snapshot konsumsi stok setiap baris pesanan. Penjualan buah lama menggunakan modal lot asal, sesuai laporan yang sudah ada. |
-| Laba kotor | Pendapatan − HPP. |
-| Kerugian stok / waste | Jurnal kehilangan modal sesuai tanggal kejadian. Koreksi waste negatif tetap diperhitungkan. |
-| Profit / rugi bersih tercatat | Pendapatan − HPP − waste − pengeluaran operasional aktif. Nilai negatif berarti rugi. |
-| Estimasi nilai aset persediaan | Jumlah fisik stok saat ini × modal per satuan setiap lot. Termasuk buah, olahan, bahan baku, bahan produksi, dan reject yang masih tersedia. |
-| Transaksi tunai | Pembayaran masuk dan refund dari riwayat shift berdasarkan waktu aktivitas WIB. Selisih kas berasal dari shift yang ditutup pada periode terpilih. |
+| Bagian                         | Perhitungan / cakupan                                                                                                                              |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Pendapatan                     | Transaksi lunas aktif setelah diskon; mengikuti tanggal pembayaran dan toko yang dipilih.                                                          |
+| HPP                            | Snapshot konsumsi stok setiap baris pesanan. Penjualan buah lama menggunakan modal lot asal, sesuai laporan yang sudah ada.                        |
+| Laba kotor                     | Pendapatan − HPP.                                                                                                                                  |
+| Kerugian stok / waste          | Jurnal kehilangan modal sesuai tanggal kejadian. Koreksi waste negatif tetap diperhitungkan.                                                       |
+| Profit / rugi bersih tercatat  | Pendapatan − HPP − waste − pengeluaran operasional aktif. Nilai negatif berarti rugi.                                                              |
+| Estimasi nilai aset persediaan | Jumlah fisik stok saat ini × modal per satuan setiap lot. Termasuk buah, olahan, bahan baku, bahan produksi, dan reject yang masih tersedia.       |
+| Transaksi tunai                | Pembayaran masuk dan refund dari riwayat shift berdasarkan waktu aktivitas WIB. Selisih kas berasal dari shift yang ditutup pada periode terpilih. |
 
 - Aset pada laporan ini berarti **persediaan yang tersedia sekarang**. Belum mencakup kas, rekening bank, piutang, bangunan, kendaraan, atau alat. Nilai aset tidak mengikuti tanggal historis filter penjualan.
 - Buah dinilai dari kg; jumlah butir tidak ditambahkan lagi sebagai nilai kedua. Produk resep tidak dihitung sebagai stok fisik. Stok hasil produksi dinilai menggunakan modal keseluruhan produk, bukan dijumlahkan ulang dari setiap batch asal.

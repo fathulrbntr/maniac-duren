@@ -8,10 +8,7 @@ const names = JSON.parse(
 );
 const planned = names.filter((name) => fs.existsSync(path.join(root, name)));
 for (const name of planned) {
-  if (
-    path.basename(name) !== name ||
-    !fs.lstatSync(path.join(root, name)).isFile()
-  )
+  if (path.basename(name) !== name || !fs.lstatSync(path.join(root, name)).isFile())
     throw Error("Invalid archive entry: " + name);
   const target = path.join(root, "docs/archive", name);
   if (

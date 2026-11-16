@@ -15,22 +15,14 @@ import { devicesPage, bindDevices } from "./devices-ui.mjs";
 import { readDeviceSettings } from "./device-settings.mjs";
 import { barcodeProduct, bindBarcodeInput } from "./barcode-scanner.mjs";
 import { tableLabel } from "./cashier.mjs";
-import {
-  posMenuEntries,
-  updatePosCards,
-  posVariantDialog,
-} from "./pos-menu.mjs";
+import { posMenuEntries, updatePosCards, posVariantDialog } from "./pos-menu.mjs";
 import {
   posCategoryTabs,
   posProductCards,
   posCategoryDialog,
   posCategoryManager,
 } from "./pos-categories-ui.mjs";
-import {
-  posVisible,
-  menuCatalogChanged,
-  posProductStatus,
-} from "./pos-categories.mjs";
+import { menuCatalogChanged, posProductStatus } from "./pos-categories.mjs";
 import { employeesPage, bindEmployees } from "./employees-ui.mjs";
 import { checkOrder } from "./order-stock.mjs";
 import { fruitSaleDialog } from "./fruit-sale-dialog.mjs";
@@ -52,11 +44,7 @@ const needsKitchen = (o) => o.lines.some((l) => l.itemType === "recipe");
 const isPaid = (o) =>
   o.payment_status === "paid" || (!o.payment_status && o.status === "paid");
 const paymentLabel = (o) =>
-  o.payment_status === "refunded"
-    ? "Dikembalikan"
-    : isPaid(o)
-      ? "Lunas"
-      : "Belum bayar";
+  o.payment_status === "refunded" ? "Dikembalikan" : isPaid(o) ? "Lunas" : "Belum bayar";
 const orderLabel = (o) =>
   ({
     queued: isPaid(o) ? "Antre" : "Menunggu bayar",
@@ -65,12 +53,6 @@ const orderLabel = (o) =>
     paid: "Selesai",
     cancelled: "Dibatalkan",
   })[o.status] || o.status;
-const quality = {
-  unsorted: "Belum disortir",
-  ready: "Matang / siap jual",
-  unripe: "Belum matang",
-  reject: "Reject",
-};
 const actions = {
   store_save: "Ubah data toko & header struk",
   receipt: "Terima buah",
@@ -126,31 +108,27 @@ const nm = (s, key, value) =>
   "—";
 const button = (label, action, value, cls = "") =>
   `<button class="small ${cls}" data-op="${action}" data-id="${e(value)}">${label}</button>`;
-const balance = (l) =>
-  l.kg !== undefined
-    ? `${num(l.kg)} kg / ${l.pieces} butir`
-    : `${num(l.qty)} ${e(l.unit)}`;
-const lots = (s, store) =>
-  [...s.lots, ...s.unitLots].filter(
-    (x) => x.storeId === store && (x.kg ?? x.qty) > 0,
-  );
 const cost = (n) => (n == null ? "Belum diketahui" : money(n));
 const allowed = (s, p) => !s.access || s.access[p];
 let draft = [];
 const emptyCart = `<div class="order-empty">${uiIcon("bag")}<b>Pesanan masih kosong</b><small>Scan barcode atau pilih produk<br>untuk mulai melayani pelanggan.</small></div>`;
 function cartLines(s) {
-  return draft.map((x, i) => {
-    const p = s.products.find(p => p.id === x.productId);
-    const fruit = p?.stockUnit === "kg_butir";
-    const unit = fruit ? (x.unit === "KG" ? "kg" : "butir") : p?.stockUnit || "pcs";
-    const name = nm(s, "products", x.productId), photo = productPhoto(p);
-    return `<article class="order-cart-line"><div class="order-cart-photo">${photo ? `<img src="${e(photo)}" alt="" loading="lazy" decoding="async">` : uiIcon("bag")}</div><div class="order-cart-copy"><strong>${e(name)}</strong><span>${num(x.qty)} ${e(unit)} × ${money(x.price)}</span><div class="order-cart-actions"><b>${money(x.qty * x.price)}</b>${!fruit ? `<div class="order-qty"><button type="button" data-draft-qty="${i}" data-delta="-1" aria-label="Kurangi jumlah ${e(name)}">−</button><span aria-label="Jumlah ${e(name)}">${num(x.qty)}</span><button type="button" data-draft-qty="${i}" data-delta="1" aria-label="Tambah jumlah ${e(name)}">+</button></div>` : ""}<button type="button" class="order-remove" data-remove-line="${i}" aria-label="Hapus ${e(name)}" title="Hapus item">${uiIcon("remove")}</button></div>${fruit ? `<details class="order-item-trace"><summary>Detail label buah</summary><small>${num(x.kg)} kg aktual · ${x.pieces} butir<br>${e(nm(s, "suppliers", x.supplierId))} · ${e((x.lotId || "").slice(0, 8))}${x.barcode ? `<br>${e(x.barcode)}` : ""}</small></details>` : ""}</div></article>`;
-  }).join("") || emptyCart;
+  return (
+    draft
+      .map((x, i) => {
+        const p = s.products.find((p) => p.id === x.productId);
+        const fruit = p?.stockUnit === "kg_butir";
+        const unit = fruit ? (x.unit === "KG" ? "kg" : "butir") : p?.stockUnit || "pcs";
+        const name = nm(s, "products", x.productId),
+          photo = productPhoto(p);
+        return `<article class="order-cart-line"><div class="order-cart-photo">${photo ? `<img src="${e(photo)}" alt="" loading="lazy" decoding="async">` : uiIcon("bag")}</div><div class="order-cart-copy"><strong>${e(name)}</strong><span>${num(x.qty)} ${e(unit)} × ${money(x.price)}</span><div class="order-cart-actions"><b>${money(x.qty * x.price)}</b>${!fruit ? `<div class="order-qty"><button type="button" data-draft-qty="${i}" data-delta="-1" aria-label="Kurangi jumlah ${e(name)}">−</button><span aria-label="Jumlah ${e(name)}">${num(x.qty)}</span><button type="button" data-draft-qty="${i}" data-delta="1" aria-label="Tambah jumlah ${e(name)}">+</button></div>` : ""}<button type="button" class="order-remove" data-remove-line="${i}" aria-label="Hapus ${e(name)}" title="Hapus item">${uiIcon("remove")}</button></div>${fruit ? `<details class="order-item-trace"><summary>Detail label buah</summary><small>${num(x.kg)} kg aktual · ${x.pieces} butir<br>${e(nm(s, "suppliers", x.supplierId))} · ${e((x.lotId || "").slice(0, 8))}${x.barcode ? `<br>${e(x.barcode)}` : ""}</small></details>` : ""}</div></article>`;
+      })
+      .join("") || emptyCart
+  );
 }
 export function opsPage(view, s, store) {
   if (view === "devices") return devicesPage(s);
-  if (["employees", "attendance"].includes(view))
-    return employeesPage(view, s, store);
+  if (["employees", "attendance"].includes(view)) return employeesPage(view, s, store);
   const note = !s.opsVersion
     ? '<div class="notice">Fitur operasional baru memerlukan SQL versi 009 dan login. Demo lama hanya menampilkan struktur; tombol simpan baru tidak mengubah data demo.</div>'
     : "";
@@ -162,7 +140,6 @@ export function opsPage(view, s, store) {
   if (view === "discounts") html = discountsPage(s);
   if (view === "kitchen") html = kitchenPage(s, store);
   if (view === "orders") {
-    const sellable = s.products.filter(posVisible);
     const draftTotal = draft.reduce((a, x) => a + x.qty * x.price, 0);
     const itemCount = draft.reduce((a, x) => a + x.qty, 0);
     html =
@@ -211,16 +188,14 @@ export function bindOps(view, s, store, ctx) {
     bindDiscounts(ctx);
     return;
   }
-  document
-    .querySelector("#ops-refresh")
-    ?.addEventListener("click", async () => {
-      try {
-        await ctx.refresh();
-        ctx.render();
-      } catch (err) {
-        ctx.toast(err.message);
-      }
-    });
+  document.querySelector("#ops-refresh")?.addEventListener("click", async () => {
+    try {
+      await ctx.refresh();
+      ctx.render();
+    } catch (err) {
+      ctx.toast(err.message);
+    }
+  });
   const save = async (action, p) => {
     if (!s.opsVersion) {
       ctx.toast("Hubungkan database versi 009 untuk fitur ini.");
@@ -333,23 +308,21 @@ export function bindOps(view, s, store, ctx) {
       return true;
     };
     showDraft();
-    document
-      .querySelector("#order-products")
-      .addEventListener("stock-refresh", (ev) => {
-        const changed = menuCatalogChanged(s, ev.detail);
-        s = ev.detail;
-        if (changed) refreshCatalog();
-        showDraft();
-        variantDialog?.refresh();
-        fruitDialog?.refresh();
-        const template = document.createElement("template");
-        template.innerHTML = opsPage("orders", s, store);
-        const queue = template.content.querySelector(".order-queue");
-        if (queue) {
-          document.querySelector(".order-queue")?.replaceWith(queue);
-          bindActions(queue);
-        }
-      });
+    document.querySelector("#order-products").addEventListener("stock-refresh", (ev) => {
+      const changed = menuCatalogChanged(s, ev.detail);
+      s = ev.detail;
+      if (changed) refreshCatalog();
+      showDraft();
+      variantDialog?.refresh();
+      fruitDialog?.refresh();
+      const template = document.createElement("template");
+      template.innerHTML = opsPage("orders", s, store);
+      const queue = template.content.querySelector(".order-queue");
+      if (queue) {
+        document.querySelector(".order-queue")?.replaceWith(queue);
+        bindActions(queue);
+      }
+    });
     const scanInput = document.querySelector("#order-scan");
     const scanStatus = document.querySelector("#order-scan-status");
     const openFruit = (product, scale = null, verifyBarcode) => {
@@ -408,11 +381,7 @@ export function bindOps(view, s, store, ctx) {
               scale,
               scale
                 ? () => {
-                    const current = barcodeProduct(
-                      ctx.getState?.() || s,
-                      raw,
-                      settings,
-                    );
+                    const current = barcodeProduct(ctx.getState?.() || s, raw, settings);
                     if (
                       current.product.id !== product.id ||
                       current.scale?.kg !== scale.kg
@@ -438,31 +407,27 @@ export function bindOps(view, s, store, ctx) {
       });
       document.querySelector("#order-scan-add").onclick = scan;
     }
-    document
-      .querySelector("#order-products")
-      ?.addEventListener("click", (ev) => {
-        const card = ev.target.closest("[data-menu-key]");
-        if (!card || card.disabled || card.hidden) return;
-        const entry = posMenuEntries(s, activeCategory).find(
-          (x) => x.key === card.dataset.menuKey,
-        );
-        if (!entry) return;
-        if (entry.hasVariants)
-          variantDialog = posVariantDialog({
-            key: entry.key,
-            category: activeCategory,
-            getState: () => s,
-            getDraft: () => draft,
-            store,
-            modal: ctx.modal,
-            onConfirm: selectProduct,
-          });
-        else selectProduct(entry.products[0]);
-      });
+    document.querySelector("#order-products")?.addEventListener("click", (ev) => {
+      const card = ev.target.closest("[data-menu-key]");
+      if (!card || card.disabled || card.hidden) return;
+      const entry = posMenuEntries(s, activeCategory).find(
+        (x) => x.key === card.dataset.menuKey,
+      );
+      if (!entry) return;
+      if (entry.hasVariants)
+        variantDialog = posVariantDialog({
+          key: entry.key,
+          category: activeCategory,
+          getState: () => s,
+          getDraft: () => draft,
+          store,
+          modal: ctx.modal,
+          onConfirm: selectProduct,
+        });
+      else selectProduct(entry.products[0]);
+    });
     const filterProducts = () => updateCards();
-    document
-      .querySelector("#order-search")
-      ?.addEventListener("input", filterProducts);
+    document.querySelector("#order-search")?.addEventListener("input", filterProducts);
     const selectCategory = (key) => {
       activeCategory = key;
       document.querySelectorAll("[data-order-category]").forEach((item) => {
@@ -472,15 +437,12 @@ export function bindOps(view, s, store, ctx) {
       });
       filterProducts();
     };
-    document
-      .querySelector(".order-categories")
-      ?.addEventListener("click", (ev) => {
-        const button = ev.target.closest("[data-order-category]");
-        if (button) selectCategory(button.dataset.orderCategory);
-      });
+    document.querySelector(".order-categories")?.addEventListener("click", (ev) => {
+      const button = ev.target.closest("[data-order-category]");
+      if (button) selectCategory(button.dataset.orderCategory);
+    });
     function refreshCatalog() {
-      document.querySelector(".order-categories").innerHTML =
-        posCategoryTabs(s);
+      document.querySelector(".order-categories").innerHTML = posCategoryTabs(s);
       document.querySelector("#order-products").innerHTML = posProductCards(
         s,
         store,
@@ -554,11 +516,7 @@ export function bindOps(view, s, store, ctx) {
             }
         }
         for (const l of s.lots) {
-          if (
-            ancestry.has(l.id) &&
-            l.sourceLotId &&
-            !ancestry.has(l.sourceLotId)
-          ) {
+          if (ancestry.has(l.id) && l.sourceLotId && !ancestry.has(l.sourceLotId)) {
             ancestry.add(l.sourceLotId);
             changed = true;
           }
@@ -572,13 +530,7 @@ export function bindOps(view, s, store, ctx) {
           ? `<p>Menampilkan lot terpilih beserta ${Math.max(0, ancestry.size - 1)} lot asalnya. Penerimaan sebelum upgrade mungkin belum mempunyai jurnal.</p>`
           : "") +
         table(
-          [
-            "Waktu / kegiatan",
-            "Produk / lot",
-            "Supplier",
-            "Perubahan stok",
-            "Pelaksana",
-          ],
+          ["Waktu / kegiatan", "Produk / lot", "Supplier", "Perubahan stok", "Pelaksana"],
           rows.map((x) => {
             const ev = s.events.find((v) => v.id === x.event_id);
             return `<tr><td>${e(ev?.business_date)}<small>${e(actions[ev?.action] || ev?.action)}</small></td><td>${e(nm(s, "products", x.product_id))}<small>${e(x.lot_id.slice(0, 8))}</small></td><td>${e(nm(s, "suppliers", x.supplier_id))}</td><td>${x.qty > 0 ? "+" : ""}${num(x.qty)} ${e(x.unit)}${x.pieces ? ` / ${num(x.pieces)} butir` : ""}</td><td>${e(nm(s, "employees", ev?.employee_id))}</td></tr>`;
@@ -647,9 +599,7 @@ export function bindOps(view, s, store, ctx) {
       const rows = (s.money || []).filter((x) => {
         const ev = s.events.find((e) => e.id === x.event_id);
         return (
-          x.store_id === store &&
-          ev?.business_date >= from &&
-          ev?.business_date <= to
+          x.store_id === store && ev?.business_date >= from && ev?.business_date <= to
         );
       });
       const unknown = rows.filter((x) => x.cost == null).length,
@@ -662,10 +612,7 @@ export function bindOps(view, s, store, ctx) {
           .reduce((a, x) => a + +(x.cost || 0), 0);
       const paidOrders = (s.orders || []).filter(
         (o) =>
-          isPaid(o) &&
-          o.store_id === store &&
-          o.paid_date >= from &&
-          o.paid_date <= to,
+          isPaid(o) && o.store_id === store && o.paid_date >= from && o.paid_date <= to,
       );
       const margins = orderMargins(s, paidOrders),
         recovered = margins.filter((m) => m.recovered);
@@ -683,10 +630,7 @@ export function bindOps(view, s, store, ctx) {
       }
 
       const fruitRows = (s.sales || [])
-        .filter(
-          (x) =>
-            !x.voided && x.storeId === store && x.date >= from && x.date <= to,
-        )
+        .filter((x) => !x.voided && x.storeId === store && x.date >= from && x.date <= to)
         .flatMap((x) => x.lines)
         .concat(
           (s.orders || [])
@@ -766,9 +710,7 @@ function kitchenPage(s, store) {
         ["queued", "preparing", "ready"].includes(o.status),
     )
     .sort((a, b) =>
-      (a.created_at || a.business_date).localeCompare(
-        b.created_at || b.business_date,
-      ),
+      (a.created_at || a.business_date).localeCompare(b.created_at || b.business_date),
     );
   return (
     header(

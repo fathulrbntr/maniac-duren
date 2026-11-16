@@ -15,13 +15,8 @@
   }
   function price(value) {
     if (value == null || value === "") return null;
-    if (
-      typeof value !== "number" &&
-      !(typeof value === "string" && /^\d+$/.test(value))
-    )
-      throw Error(
-        "Harga harus angka Rupiah utuh atau kosong untuk Stok Habis.",
-      );
+    if (typeof value !== "number" && !(typeof value === "string" && /^\d+$/.test(value)))
+      throw Error("Harga harus angka Rupiah utuh atau kosong untuk Stok Habis.");
     const n = Number(value);
     if (!Number.isSafeInteger(n) || n < 0 || n > 1000000000)
       throw Error("Harga harus 0–1.000.000.000 tanpa desimal.");

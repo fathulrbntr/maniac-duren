@@ -27,13 +27,12 @@ let kind = "",
   query = "",
   outlet = "",
   page = 0;
-const can = (s, k) =>
-  !s.access || (k === "DO" ? s.access.stock : s.access.finance);
+const can = (s, k) => !s.access || (k === "DO" ? s.access.stock : s.access.finance);
 export function documentsPage(s, store = "") {
-  return `${s.warehouseVersion&&!s.stockDemo?'<p class="notice">Distribusi stok memakai <button type="button" data-view="transfers">Pengiriman & Tagihan</button>. Nota masuk durian dibuat di <button type="button" data-view="supplierNotes">Nota Supplier</button>. Dokumen di bawah untuk administrasi dan cetak referensi.</p>':''}<div class="intro"><div><h2>Admin Dokumen</h2><p class="muted">PO → pembelian · transaksi POS → invoice / surat jalan · transfer → surat jalan.</p></div><div class="doc-toolbar">${s.me?.role === "owner" ? `<button id="letterhead" ${s.reportsAdminVersion >= 71 ? "" : "disabled"}>Kop surat</button>` : ""}<button id="documents-refresh">Perbarui</button>${s.stockDemo && (!s.access || (s.access.finance && s.access.stock && s.access.sell)) ? `<button type="button" id="documents-examples" ${s.stockDemo.documentExamples?.[store || s.stores[0]?.id] || !activeShift(s, store || s.stores[0]?.id) ? "disabled" : ""}>Buat contoh dokumen</button>` : ""}</div></div>${s.reportsAdminVersion >= 71 ? "" : '<p class="notice">Jalankan database/reports-admin-071.sql untuk mengaktifkan penyimpanan dokumen.</p>'}${s.stockDemo ? '<p class="notice">Latihan dokumen: simpan draft, terbitkan, cetak/PDF, dan batalkan. Semua hasil diberi label DEMO. Pembelian dan transfer hanya mengubah stok demo di tab ini.</p>' + (!activeShift(s, store || s.stores[0]?.id) ? '<p class="notice">Untuk membuat contoh dokumen, <button type="button" data-view="orders">buka kasir demo</button> di outlet aktif terlebih dahulu.</p>' : "") : ""}<div class="doc-toolbar">${Object.entries(
+  return `${s.warehouseVersion && !s.stockDemo ? '<p class="notice">Distribusi stok memakai <button type="button" data-view="transfers">Pengiriman & Tagihan</button>. Nota masuk durian dibuat di <button type="button" data-view="supplierNotes">Nota Supplier</button>. Dokumen di bawah untuk administrasi dan cetak referensi.</p>' : ""}<div class="intro"><div><h2>Admin Dokumen</h2><p class="muted">PO → pembelian · transaksi POS → invoice / surat jalan · transfer → surat jalan.</p></div><div class="doc-toolbar">${s.me?.role === "owner" ? `<button id="letterhead" ${s.reportsAdminVersion >= 71 ? "" : "disabled"}>Kop surat</button>` : ""}<button id="documents-refresh">Perbarui</button>${s.stockDemo && (!s.access || (s.access.finance && s.access.stock && s.access.sell)) ? `<button type="button" id="documents-examples" ${s.stockDemo.documentExamples?.[store || s.stores[0]?.id] || !activeShift(s, store || s.stores[0]?.id) ? "disabled" : ""}>Buat contoh dokumen</button>` : ""}</div></div>${s.reportsAdminVersion >= 71 ? "" : '<p class="notice">Jalankan database/reports-admin-071.sql untuk mengaktifkan penyimpanan dokumen.</p>'}${s.stockDemo ? '<p class="notice">Latihan dokumen: simpan draft, terbitkan, cetak/PDF, dan batalkan. Semua hasil diberi label DEMO. Pembelian dan transfer hanya mengubah stok demo di tab ini.</p>' + (!activeShift(s, store || s.stores[0]?.id) ? '<p class="notice">Untuk membuat contoh dokumen, <button type="button" data-view="orders">buka kasir demo</button> di outlet aktif terlebih dahulu.</p>' : "") : ""}<div class="doc-toolbar">${Object.entries(
     documentKinds,
   )
-    .filter(([k]) => can(s, k)&&!(s.warehouseVersion&&!s.stockDemo&&k==="PUR"))
+    .filter(([k]) => can(s, k) && !(s.warehouseVersion && !s.stockDemo && k === "PUR"))
     .map(
       ([k, v]) =>
         `<button class="primary" data-new-document="${k}" ${s.reportsAdminVersion >= 71 ? "" : "disabled"}>+ ${v}</button>`,
@@ -131,8 +130,7 @@ function previewDraft(d, s) {
         total: Number(l.qty) * Number(l.price || 0),
       };
     });
-    d.total =
-      b.lines.reduce((a, l) => a + l.total, 0) + Number(b.shipping || 0);
+    d.total = b.lines.reduce((a, l) => a + l.total, 0) + Number(b.shipping || 0);
     b.party =
       b.party ||
       label(
@@ -195,17 +193,14 @@ export function bindDocuments(s, store, ctx) {
       .forEach((b) => (b.onclick = run(() => detail(b.dataset.openDocument))));
   };
   for (const key of ["kind", "status", "search", "store"])
-    $("#doc-" + key).addEventListener(
-      key === "search" ? "input" : "change",
-      () => {
-        kind = $("#doc-kind").value;
-        status = $("#doc-status").value;
-        query = $("#doc-search").value;
-        outlet = $("#doc-store").value;
-        page = 0;
-        draw();
-      },
-    );
+    $("#doc-" + key).addEventListener(key === "search" ? "input" : "change", () => {
+      kind = $("#doc-kind").value;
+      status = $("#doc-status").value;
+      query = $("#doc-search").value;
+      outlet = $("#doc-store").value;
+      page = 0;
+      draw();
+    });
   document
     .querySelectorAll("[data-new-document]")
     .forEach((b) => (b.onclick = () => editor(b.dataset.newDocument)));
@@ -225,9 +220,7 @@ export function bindDocuments(s, store, ctx) {
         })
       ) {
         ctx.render();
-        ctx.toast(
-          "Empat contoh dokumen siap. Buka Detail untuk melihat atau mencetak.",
-        );
+        ctx.toast("Empat contoh dokumen siap. Buka Detail untuk melihat atau mencetak.");
       }
     }),
   );
@@ -280,8 +273,7 @@ export function bindDocuments(s, store, ctx) {
       run(async () => {
         if (
           !confirm(
-            d.kind === "PUR" &&
-              !["receipt", "unit_receipt"].includes(d.source_type)
+            d.kind === "PUR" && !["receipt", "unit_receipt"].includes(d.source_type)
               ? "Terbitkan dan masukkan pembelian ke stok?"
               : d.source_type === "transfer"
                 ? "Terbitkan dan pindahkan stok ke toko tujuan?"
@@ -334,8 +326,7 @@ export function bindDocuments(s, store, ctx) {
       run(async () => {
         let lines = structuredClone(body.lines || []);
         const issued = (ctx.getState().documents || []).filter(
-          (x) =>
-            x.source_id === d.id && x.status === "issued" && x.kind === "PUR",
+          (x) => x.source_id === d.id && x.status === "issued" && x.kind === "PUR",
         );
         for (const ref of issued) {
           const purchase = await ctx.rpc("pos_document_get", {
@@ -388,7 +379,9 @@ export function bindDocuments(s, store, ctx) {
                 ["sale", "Penjualan buah lama"],
               ]
             : [
-                ...(s.warehouseVersion&&!s.stockDemo?[]:[["transfer", "Transfer baru → pindahkan stok"]]),
+                ...(s.warehouseVersion && !s.stockDemo
+                  ? []
+                  : [["transfer", "Transfer baru → pindahkan stok"]]),
                 ["movement", "Transfer buah yang sudah ada"],
                 ["order", "Penjualan POS"],
                 ["sale", "Penjualan buah lama"],
@@ -416,10 +409,7 @@ export function bindDocuments(s, store, ctx) {
           }));
       if (t === "po")
         return (current.documents || [])
-          .filter(
-            (x) =>
-              x.kind === "PO" && x.status === "issued" && x.store_id === st,
-          )
+          .filter((x) => x.kind === "PO" && x.status === "issued" && x.store_id === st)
           .map((x) => ({ id: x.id, name: x.number }));
       if (t === "movement")
         return (current.movements || [])
@@ -544,8 +534,7 @@ export function bindDocuments(s, store, ctx) {
       el("sourceId").required = !d.querySelector("#doc-reference-field").hidden;
       const selected = el("sourceId").value || body.sourceId || "";
       el("sourceId").innerHTML =
-        '<option value="">Pilih referensi</option>' +
-        opts(referenceRows(), selected);
+        '<option value="">Pilih referensi</option>' + opts(referenceRows(), selected);
       for (const name of ["supplierId", "shipping"]) {
         el(name).closest(".field").hidden = !(editable && k !== "DO");
         el(name).required = name === "supplierId" && editable && k !== "DO";
@@ -614,9 +603,7 @@ export function bindDocuments(s, store, ctx) {
         shipping: Number(values.shipping || 0),
         lines: readLines(),
       };
-      const keys = newBody.lines
-        .map((x) => x.productId || x.lotId)
-        .filter(Boolean);
+      const keys = newBody.lines.map((x) => x.productId || x.lotId).filter(Boolean);
       if (
         ["", "po", "transfer"].includes(values.sourceType) &&
         (!keys.length ||
@@ -700,9 +687,7 @@ export function bindDocuments(s, store, ctx) {
           ratio = Math.min(1, 420 / bitmap.width, 220 / bitmap.height);
         canvas.width = Math.max(1, Math.round(bitmap.width * ratio));
         canvas.height = Math.max(1, Math.round(bitmap.height * ratio));
-        canvas
-          .getContext("2d")
-          .drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+        canvas.getContext("2d").drawImage(bitmap, 0, 0, canvas.width, canvas.height);
         bitmap.close();
         logo = canvas.toDataURL("image/webp", 0.85);
         if (logo.length > 100000)

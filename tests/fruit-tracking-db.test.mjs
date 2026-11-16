@@ -1,128 +1,571 @@
-import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import {randomUUID as id} from 'node:crypto';
-import {PGlite} from '@electric-sql/pglite';
-const db=new PGlite();
-const proof='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Zl1sAAAAASUVORK5CYII=';
-try{
- await db.exec("create role anon;create role authenticated;create role service_role;create schema auth;create table auth.users(id uuid primary key,email text);create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;");
- for(const f of ['pos.sql','rollback-027-compat.sql','compress-pos-photos.sql'])await db.exec(fs.readFileSync('database/'+f,'utf8'));
- await db.exec(fs.readFileSync('database/seeds/import-durian-dan-turunan.sql','utf8').replace("null, null, null, null, '', ''","case when r.stock_unit='kg_butir' then 50000 end, case when r.stock_unit='kg_butir' then 100000 end, null, null, '', ''"));
- for(const f of ['link-durian-reject.sql','product-variants.sql','pos-menu-categories.sql','pos-cashier-controls.sql','product-single-variant.sql','reject-flow-063.sql','store-receipt-064.sql','employee-details-070.sql','reports-admin-071.sql','product-buy-piece-077.sql','receipt-shipment-082.sql','cashier-shifts-083.sql','payment-methods-084.sql','crm-loyalty-085.sql','cash-deposits-092.sql','fruit-tracking-101.sql','fruit-stock-barcode-105.sql','fruit-batch-strict-scan-106.sql'])await db.exec(fs.readFileSync('database/'+f,'utf8'));
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import { randomUUID as id } from "node:crypto";
+import { PGlite } from "@electric-sql/pglite";
+const db = new PGlite();
+const proof =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Zl1sAAAAASUVORK5CYII=";
+try {
+  await db.exec(
+    "create role anon;create role authenticated;create role service_role;create schema auth;create table auth.users(id uuid primary key,email text);create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;",
+  );
+  for (const f of ["pos.sql", "rollback-027-compat.sql", "compress-pos-photos.sql"])
+    await db.exec(fs.readFileSync("database/" + f, "utf8"));
+  await db.exec(
+    fs
+      .readFileSync("database/seeds/import-durian-dan-turunan.sql", "utf8")
+      .replace(
+        "null, null, null, null, '', ''",
+        "case when r.stock_unit='kg_butir' then 50000 end, case when r.stock_unit='kg_butir' then 100000 end, null, null, '', ''",
+      ),
+  );
+  for (const f of [
+    "link-durian-reject.sql",
+    "product-variants.sql",
+    "pos-menu-categories.sql",
+    "pos-cashier-controls.sql",
+    "product-single-variant.sql",
+    "reject-flow-063.sql",
+    "store-receipt-064.sql",
+    "employee-details-070.sql",
+    "reports-admin-071.sql",
+    "product-buy-piece-077.sql",
+    "receipt-shipment-082.sql",
+    "cashier-shifts-083.sql",
+    "payment-methods-084.sql",
+    "crm-loyalty-085.sql",
+    "cash-deposits-092.sql",
+    "fruit-tracking-101.sql",
+    "fruit-stock-barcode-105.sql",
+    "fruit-batch-strict-scan-106.sql",
+  ])
+    await db.exec(fs.readFileSync("database/" + f, "utf8"));
 
- const owner=id(),store=id(),foreign=id(),supplier=id(),cashier=id();
- const product=(await db.query("select id from public.md_pos_products where sku='MD-MONTHONG-BUAH'")).rows[0].id;
- await db.query("insert into public.md_pos_stores(id,name) values($1,'Depok'),($2,'Bogor')",[store,foreign]);
- for(const [user,role,st] of [[owner,'owner',store],[cashier,'cashier',foreign]]){
-  await db.query('insert into auth.users values($1,$2)',[user,user+'@test.local']);await db.query('insert into public.md_pos_staff values($1)',[user]);await db.query('insert into public.md_pos_employees(id,user_id,name,role,store_ids) values($1,$1,$2,$2,$3)',[user,role,[st]]);
- }
- const as=who=>db.query("select set_config('request.jwt.claim.sub',$1,false)",[who]);
- const read=async()=>(await db.query('select public.pos_read() s')).rows[0].s;
- const mut=async(action,p,endpoint='pos_mutate_027')=>(await db.query('select public.'+endpoint+'($1,$2::jsonb) s',[action,JSON.stringify(p)])).rows[0].s;
- const receive=async p=>(await db.query('select public.pos_receive_shipment($1::jsonb) s',[JSON.stringify(p)])).rows[0].s;
- const history=async code=>(await db.query('select public.pos_fruit_history($1) s',[code])).rows[0].s;
- await as(owner);let s=await read();
- for(const [key,value] of Object.entries({fruitTrackingVersion:101,cashDepositVersion:92,crmVersion:85,paymentMethodsVersion:84,cashierShiftVersion:83,receiptShipmentVersion:82}))assert.equal(s[key],value);
- const date=s.cashDepositToday;await mut('master',{id:supplier,kind:'suppliers',name:'Supplier'});
- await db.query("update public.md_pos_products set barcode='0001',price_kg=90000,price_piece=100000 where id=$1",[product]);
- const code=n=>'9201071126'+String(n).padStart(6,'0')+'0001000228';
- const row=n=>({id:id(),barcode:code(n),kg:.228,pieces:1,createdAt:new Date().toISOString()});
- const shipment=nums=>({id:id(),storeId:store,supplierId:supplier,date,invoiceNo:'NOTA-101',shippingCost:0,unloadingComplete:true,lines:[{id:id(),productId:product,purchaseCost:10000,weighings:nums.map(row)}]});
- const batch=shipment([68,69,70,71]);s=await receive(batch);const lot=batch.lines[0].id;
- assert.equal(s.fruitUnits.length,4);assert.equal(s.lots.find(l=>l.id===lot).kg,.912);
- assert.equal((await receive(batch)).fruitUnits.length,4);
- await assert.rejects(receive({...batch,invoiceNo:'CHANGED'}),/isi berbeda/);
- await assert.rejects(receive(shipment([68])),/sudah tercatat/);
- await assert.rejects(receive(shipment([72,72])),/sudah tercatat/);
- const collision=shipment([68]);collision.lines[0].weighings[0].barcode=code(68).slice(0,20)+'000229';collision.lines[0].weighings[0].kg=.229;
- await assert.rejects(receive(collision),/sudah tercatat/);
- const wrong=shipment([72]);wrong.lines[0].weighings[0].kg=.229;await assert.rejects(receive(wrong),/tidak boleh diubah/);
- const race=await Promise.allSettled([receive(shipment([72])),receive(shipment([72]))]);assert.equal(race.filter(r=>r.status==='fulfilled').length,1);
- await mut('cashier_shift_open',{id:id(),storeId:store,openingCash:0},'pos_cashier_shift_mutate');
- const order=n=>({id:id(),storeId:store,date,payment:'Tunai',paid:20520,lines:[{productId:product,lotId:lot,barcode:code(n),kg:.228,pieces:1,unit:'KG',qty:.228,price:90000}]});
- const sale=order(68);s=await mut('order_create',sale);assert.equal(s.fruitUnits.find(u=>u.barcode===code(68)).status,'sold');assert.equal(s.orders.find(o=>o.id===sale.id).lines[0].barcode,code(68));
- assert.equal((await mut('order_create',sale)).fruitUnits.length,5);
- await assert.rejects(mut('order_create',order(68)),/berstatus sold/);
- const missing=order(69);delete missing.lines[0].barcode;await assert.rejects(mut('order_create',missing),/Scan barcode/);
- const duplicate=order(69);duplicate.lines.push({...duplicate.lines[0]});await assert.rejects(mut('order_create',duplicate),/sudah ada/);
- const altered=order(69);altered.lines[0].kg=.1;await assert.rejects(mut('order_create',altered,'pos_cashier_mutate'),/Berat dan butir/);
- const vr={id:id(),storeId:store,date,kind:'void',orderId:sale.id,reason:'Uji retur barcode',returnStock:true};await mut('cashier_approval_request',vr);
- s=await mut('order_void',{id:id(),storeId:store,date,orderId:sale.id,approvalId:vr.id,refundConfirmed:true});assert.equal(s.fruitUnits.find(u=>u.barcode===code(68)).status,'available');
- const transfer={id:id(),storeId:store,date,lotId:lot,toStoreId:foreign,kind:'Transfer',kg:.228,pieces:1,barcodes:[code(69)],note:'Transfer uji'};
- s=await mut('movement',transfer);assert.equal(s.fruitUnits.find(u=>u.barcode===code(69)).storeId,foreign);
- await assert.rejects(mut('order_create',order(69)),/outlet barcode tidak cocok/);
- await as(cashier);await assert.rejects(mut('order_create',order(70)),/akses/);await assert.rejects(history(code(70)),/diakses/);await as(owner);
- const mark={id:id(),storeId:store,date,sourceLotId:lot,rejectLotId:id(),kg:.228,pieces:1,barcodes:[code(70)],processNow:false,evidence:{reject:proof},cause:'taste',reason:'Rasa rusak'};
- s=await mut('reject_mark',mark);assert.equal(s.fruitUnits.find(u=>u.barcode===code(70)).status,'reject');
- const loss={id:id(),storeId:store,date,sourceLotId:mark.rejectLotId,qty:.228,pieces:1,barcodes:[code(70)],cause:'discard',evidence:{reject:proof},reason:'Tidak layak'};
- s=await mut('reject_loss',loss);assert.equal(s.fruitUnits.find(u=>u.barcode===code(70)).status,'waste');
- await assert.rejects(mut('reject_void',{id:id(),storeId:store,date,recordId:mark.id,reason:'Urutan salah'}),/Batalkan proses berikutnya/);
- s=await mut('reject_void',{id:id(),storeId:store,date,recordId:loss.id,reason:'Koreksi urutan'});assert.equal(s.fruitUnits.find(u=>u.barcode===code(70)).status,'reject');
- // A reversal restores the state but remains an audit event; the original mark can be reversed next.
- s=await mut('reject_void',{id:id(),storeId:store,date,recordId:mark.id,reason:'Koreksi asal'});assert.equal(s.fruitUnits.find(u=>u.barcode===code(70)).status,'available');
- assert((await history(code(70))).length>=5);
- const outputs=['durpas500','durpas1000','coral'].map(key=>({key,productId:s.products.find(x=>x.durianSourceId===product&&x.durianOutput===key).id,lotId:id(),qty:key==='coral'?.1:0,expiry:''}));
- const process={...mark,id:id(),rejectLotId:id(),barcodes:[code(71)],processNow:true,outputs,evidence:{reject:proof,coral:proof}};
- s=await mut('reject_mark',process);assert.equal(s.fruitUnits.find(u=>u.barcode===code(71)).status,'processed');
- s=await mut('reject_void',{id:id(),storeId:store,date,recordId:process.id,reason:'Koreksi hasil olahan'});assert.equal(s.fruitUnits.find(u=>u.barcode===code(71)).status,'available');
- const sale2=order(68);s=await mut('order_create',sale2,'pos_mutate');assert.equal(s.fruitUnits.find(u=>u.barcode===code(68)).status,'sold');
- const vr2={...vr,id:id(),orderId:sale2.id,returnStock:false};await mut('cashier_approval_request',vr2);
- s=await mut('order_void',{id:id(),storeId:store,date,orderId:sale2.id,approvalId:vr2.id,refundConfirmed:true});assert.equal(s.fruitUnits.find(u=>u.barcode===code(68)).status,'waste');
+  const owner = id(),
+    store = id(),
+    foreign = id(),
+    supplier = id(),
+    cashier = id();
+  const product = (
+    await db.query("select id from public.md_pos_products where sku='MD-MONTHONG-BUAH'")
+  ).rows[0].id;
+  await db.query(
+    "insert into public.md_pos_stores(id,name) values($1,'Depok'),($2,'Bogor')",
+    [store, foreign],
+  );
+  for (const [user, role, st] of [
+    [owner, "owner", store],
+    [cashier, "cashier", foreign],
+  ]) {
+    await db.query("insert into auth.users values($1,$2)", [user, user + "@test.local"]);
+    await db.query("insert into public.md_pos_staff values($1)", [user]);
+    await db.query(
+      "insert into public.md_pos_employees(id,user_id,name,role,store_ids) values($1,$1,$2,$2,$3)",
+      [user, role, [st]],
+    );
+  }
+  const as = (who) =>
+    db.query("select set_config('request.jwt.claim.sub',$1,false)", [who]);
+  const read = async () => (await db.query("select public.pos_read() s")).rows[0].s;
+  const mut = async (action, p, endpoint = "pos_mutate_027") =>
+    (
+      await db.query("select public." + endpoint + "($1,$2::jsonb) s", [
+        action,
+        JSON.stringify(p),
+      ])
+    ).rows[0].s;
+  const receive = async (p) =>
+    (
+      await db.query("select public.pos_receive_shipment($1::jsonb) s", [
+        JSON.stringify(p),
+      ])
+    ).rows[0].s;
+  const history = async (code) =>
+    (await db.query("select public.pos_fruit_history($1) s", [code])).rows[0].s;
+  await as(owner);
+  let s = await read();
+  for (const [key, value] of Object.entries({
+    fruitTrackingVersion: 101,
+    cashDepositVersion: 92,
+    crmVersion: 85,
+    paymentMethodsVersion: 84,
+    cashierShiftVersion: 83,
+    receiptShipmentVersion: 82,
+  }))
+    assert.equal(s[key], value);
+  const date = s.cashDepositToday;
+  await mut("master", { id: supplier, kind: "suppliers", name: "Supplier" });
+  await db.query(
+    "update public.md_pos_products set barcode='0001',price_kg=90000,price_piece=100000 where id=$1",
+    [product],
+  );
+  const code = (n) => "9201071126" + String(n).padStart(6, "0") + "0001000228";
+  const row = (n) => ({
+    id: id(),
+    barcode: code(n),
+    kg: 0.228,
+    pieces: 1,
+    createdAt: new Date().toISOString(),
+  });
+  const shipment = (nums) => ({
+    id: id(),
+    storeId: store,
+    supplierId: supplier,
+    date,
+    invoiceNo: "NOTA-101",
+    shippingCost: 0,
+    unloadingComplete: true,
+    lines: [
+      { id: id(), productId: product, purchaseCost: 10000, weighings: nums.map(row) },
+    ],
+  });
+  const batch = shipment([68, 69, 70, 71]);
+  s = await receive(batch);
+  const lot = batch.lines[0].id;
+  assert.equal(s.fruitUnits.length, 4);
+  assert.equal(s.lots.find((l) => l.id === lot).kg, 0.912);
+  assert.equal((await receive(batch)).fruitUnits.length, 4);
+  await assert.rejects(receive({ ...batch, invoiceNo: "CHANGED" }), /isi berbeda/);
+  await assert.rejects(receive(shipment([68])), /sudah tercatat/);
+  await assert.rejects(receive(shipment([72, 72])), /sudah tercatat/);
+  const collision = shipment([68]);
+  collision.lines[0].weighings[0].barcode = code(68).slice(0, 20) + "000229";
+  collision.lines[0].weighings[0].kg = 0.229;
+  await assert.rejects(receive(collision), /sudah tercatat/);
+  const wrong = shipment([72]);
+  wrong.lines[0].weighings[0].kg = 0.229;
+  await assert.rejects(receive(wrong), /tidak boleh diubah/);
+  const race = await Promise.allSettled([
+    receive(shipment([72])),
+    receive(shipment([72])),
+  ]);
+  assert.equal(race.filter((r) => r.status === "fulfilled").length, 1);
+  await mut(
+    "cashier_shift_open",
+    { id: id(), storeId: store, openingCash: 0 },
+    "pos_cashier_shift_mutate",
+  );
+  const order = (n) => ({
+    id: id(),
+    storeId: store,
+    date,
+    payment: "Tunai",
+    paid: 20520,
+    lines: [
+      {
+        productId: product,
+        lotId: lot,
+        barcode: code(n),
+        kg: 0.228,
+        pieces: 1,
+        unit: "KG",
+        qty: 0.228,
+        price: 90000,
+      },
+    ],
+  });
+  const sale = order(68);
+  s = await mut("order_create", sale);
+  assert.equal(s.fruitUnits.find((u) => u.barcode === code(68)).status, "sold");
+  assert.equal(s.orders.find((o) => o.id === sale.id).lines[0].barcode, code(68));
+  assert.equal((await mut("order_create", sale)).fruitUnits.length, 5);
+  await assert.rejects(mut("order_create", order(68)), /berstatus sold/);
+  const missing = order(69);
+  delete missing.lines[0].barcode;
+  await assert.rejects(mut("order_create", missing), /Scan barcode/);
+  const duplicate = order(69);
+  duplicate.lines.push({ ...duplicate.lines[0] });
+  await assert.rejects(mut("order_create", duplicate), /sudah ada/);
+  const altered = order(69);
+  altered.lines[0].kg = 0.1;
+  await assert.rejects(
+    mut("order_create", altered, "pos_cashier_mutate"),
+    /Berat dan butir/,
+  );
+  const vr = {
+    id: id(),
+    storeId: store,
+    date,
+    kind: "void",
+    orderId: sale.id,
+    reason: "Uji retur barcode",
+    returnStock: true,
+  };
+  await mut("cashier_approval_request", vr);
+  s = await mut("order_void", {
+    id: id(),
+    storeId: store,
+    date,
+    orderId: sale.id,
+    approvalId: vr.id,
+    refundConfirmed: true,
+  });
+  assert.equal(s.fruitUnits.find((u) => u.barcode === code(68)).status, "available");
+  const transfer = {
+    id: id(),
+    storeId: store,
+    date,
+    lotId: lot,
+    toStoreId: foreign,
+    kind: "Transfer",
+    kg: 0.228,
+    pieces: 1,
+    barcodes: [code(69)],
+    note: "Transfer uji",
+  };
+  s = await mut("movement", transfer);
+  assert.equal(s.fruitUnits.find((u) => u.barcode === code(69)).storeId, foreign);
+  await assert.rejects(mut("order_create", order(69)), /outlet barcode tidak cocok/);
+  await as(cashier);
+  await assert.rejects(mut("order_create", order(70)), /akses/);
+  await assert.rejects(history(code(70)), /diakses/);
+  await as(owner);
+  const mark = {
+    id: id(),
+    storeId: store,
+    date,
+    sourceLotId: lot,
+    rejectLotId: id(),
+    kg: 0.228,
+    pieces: 1,
+    barcodes: [code(70)],
+    processNow: false,
+    evidence: { reject: proof },
+    cause: "taste",
+    reason: "Rasa rusak",
+  };
+  s = await mut("reject_mark", mark);
+  assert.equal(s.fruitUnits.find((u) => u.barcode === code(70)).status, "reject");
+  const loss = {
+    id: id(),
+    storeId: store,
+    date,
+    sourceLotId: mark.rejectLotId,
+    qty: 0.228,
+    pieces: 1,
+    barcodes: [code(70)],
+    cause: "discard",
+    evidence: { reject: proof },
+    reason: "Tidak layak",
+  };
+  s = await mut("reject_loss", loss);
+  assert.equal(s.fruitUnits.find((u) => u.barcode === code(70)).status, "waste");
+  await assert.rejects(
+    mut("reject_void", {
+      id: id(),
+      storeId: store,
+      date,
+      recordId: mark.id,
+      reason: "Urutan salah",
+    }),
+    /Batalkan proses berikutnya/,
+  );
+  s = await mut("reject_void", {
+    id: id(),
+    storeId: store,
+    date,
+    recordId: loss.id,
+    reason: "Koreksi urutan",
+  });
+  assert.equal(s.fruitUnits.find((u) => u.barcode === code(70)).status, "reject");
+  // A reversal restores the state but remains an audit event; the original mark can be reversed next.
+  s = await mut("reject_void", {
+    id: id(),
+    storeId: store,
+    date,
+    recordId: mark.id,
+    reason: "Koreksi asal",
+  });
+  assert.equal(s.fruitUnits.find((u) => u.barcode === code(70)).status, "available");
+  assert((await history(code(70))).length >= 5);
+  const outputs = ["durpas500", "durpas1000", "coral"].map((key) => ({
+    key,
+    productId: s.products.find(
+      (x) => x.durianSourceId === product && x.durianOutput === key,
+    ).id,
+    lotId: id(),
+    qty: key === "coral" ? 0.1 : 0,
+    expiry: "",
+  }));
+  const process = {
+    ...mark,
+    id: id(),
+    rejectLotId: id(),
+    barcodes: [code(71)],
+    processNow: true,
+    outputs,
+    evidence: { reject: proof, coral: proof },
+  };
+  s = await mut("reject_mark", process);
+  assert.equal(s.fruitUnits.find((u) => u.barcode === code(71)).status, "processed");
+  s = await mut("reject_void", {
+    id: id(),
+    storeId: store,
+    date,
+    recordId: process.id,
+    reason: "Koreksi hasil olahan",
+  });
+  assert.equal(s.fruitUnits.find((u) => u.barcode === code(71)).status, "available");
+  const sale2 = order(68);
+  s = await mut("order_create", sale2, "pos_mutate");
+  assert.equal(s.fruitUnits.find((u) => u.barcode === code(68)).status, "sold");
+  const vr2 = { ...vr, id: id(), orderId: sale2.id, returnStock: false };
+  await mut("cashier_approval_request", vr2);
+  s = await mut("order_void", {
+    id: id(),
+    storeId: store,
+    date,
+    orderId: sale2.id,
+    approvalId: vr2.id,
+    refundConfirmed: true,
+  });
+  assert.equal(s.fruitUnits.find((u) => u.barcode === code(68)).status, "waste");
 
- // Strict batch ownership: neither unknown nor same-product/other-batch labels
- // can be claimed, including old clients still sending linkBarcodes.
- const legacy=shipment([]);legacy.lines[0].weighings=[{id:id(),kg:6,pieces:3,createdAt:new Date().toISOString()}];
- s=await receive(legacy);const legacyLot=legacy.lines[0].id;
- const label=n=>'9201071126'+String(n).padStart(6,'0')+'0001002000';
- const tracked=shipment([]);tracked.lines[0].weighings=[800,801,802].map(n=>({id:id(),barcode:label(n),kg:2,pieces:1,createdAt:new Date().toISOString()}));
- s=await receive(tracked);const trackedLot=tracked.lines[0].id;
- const trackedTransfer={id:id(),storeId:store,date,lotId:trackedLot,toStoreId:foreign,kind:'Transfer',kg:2,pieces:1,barcodes:[label(800)],fruitStockMode:'barcode',note:'Kirim label batch asli'};
- const snapshot=async()=>(await db.query("select (select count(*) from public.md_pos_fruit_units) labels,(select count(*) from public.md_pos_fruit_events) events,(select jsonb_agg(jsonb_build_object('id',id,'kg',kg,'pieces',pieces) order by id) from public.md_pos_lots) lots")).rows[0];
- const baseline=await snapshot();
- await assert.rejects(mut('movement',{...trackedTransfer,lotId:legacyLot}),/Asal batch/);
- await assert.rejects(mut('movement',{...trackedTransfer,lotId:legacyLot,barcodes:[label(999)]}),/belum tercatat/);
- await assert.rejects(mut('movement',{...trackedTransfer,lotId:legacyLot,barcodes:[label(999)],linkBarcodes:[label(999)]}),/tidak dapat ditautkan/);
- await assert.rejects(mut('movement',{...trackedTransfer,linkBarcodes:[label(800)]}),/tidak dapat ditautkan/);
- await assert.rejects(mut('movement',{...trackedTransfer,linkBarcodes:null}),/tidak valid/);
- await assert.rejects(mut('movement',{...trackedTransfer,barcodes:[]}),/Scan barcode/);
- const omitted={...trackedTransfer};delete omitted.barcodes;
- await assert.rejects(mut('movement',{...omitted,lotId:legacyLot}),/Scan barcode/);
- delete omitted.fruitStockMode;await assert.rejects(mut('movement',omitted),/Scan barcode/);
- await assert.rejects(mut('movement',{...trackedTransfer,barcodes:[label(800),label(800)]}),/terduplikasi/);
- await assert.rejects(mut('movement',{...trackedTransfer,toStoreId:store}),/tujuan|berbeda/);
- await assert.rejects(mut('movement',{...trackedTransfer,kg:1.5}),/Berat dan butir/);
- await assert.rejects(mut('reject_mark',{...mark,id:id(),sourceLotId:legacyLot,kg:2,barcodes:[label(800)]}),/Asal batch/);
- await assert.rejects(mut('reject_loss',{...loss,id:id(),sourceLotId:legacyLot,qty:2,barcodes:[label(999)]}),/belum tercatat/);
- assert.deepEqual(await snapshot(),baseline,'Rejected scans change neither labels nor stock nor audit events');
- await as(cashier);await assert.rejects(mut('movement',trackedTransfer),/akses/);await as(owner);
- s=await mut('movement',trackedTransfer);
- assert.equal(s.fruitStockVersion,106);assert.equal(s.lots.find(l=>l.id===trackedLot).kg,4);assert.equal(s.lots.find(l=>l.id===trackedTransfer.id).kg,2);
- assert.equal(s.lots.find(l=>l.id===trackedTransfer.id).supplierId,supplier);
- assert.equal(s.fruitUnits.find(u=>u.barcode===label(800)).receiptLotId,trackedLot);
- assert.equal((await snapshot()).labels,baseline.labels,'Transfer creates no fruit identities');
- assert.deepEqual((await history(label(800))).map(x=>x.action),['receipt','movement']);
- const once=await snapshot();await mut('movement',trackedTransfer);assert.deepEqual(await snapshot(),once,'Retry never duplicates stock');
- await assert.rejects(mut('movement',{...trackedTransfer,note:'Changed'}),/isi berbeda/);
- await assert.rejects(mut('movement',{...trackedTransfer,id:id()}),/outlet barcode tidak cocok/);
- const raced={...trackedTransfer,id:id(),barcodes:[label(801)],linkBarcodes:[]};
- const race106=await Promise.allSettled([mut('movement',raced),mut('movement',{...raced,id:id()})]);assert.equal(race106.filter(x=>x.status==='fulfilled').length,1);
- const strictReject={...mark,id:id(),sourceLotId:trackedLot,rejectLotId:id(),kg:2,barcodes:[label(802)],fruitStockMode:'barcode'};
- s=await mut('reject_mark',strictReject);assert.equal(s.lots.find(l=>l.id===trackedLot).kg,0);assert.equal(s.fruitUnits.find(u=>u.barcode===label(802)).status,'reject');
- assert.equal(s.fruitUnits.find(u=>u.barcode===label(802)).receiptLotId,trackedLot);
- const strictLoss={...loss,id:id(),sourceLotId:strictReject.rejectLotId,qty:2,barcodes:[label(802)],fruitStockMode:'barcode'};
- s=await mut('reject_loss',strictLoss);assert.equal(s.fruitUnits.find(u=>u.barcode===label(802)).status,'waste');
- s=await mut('reject_void',{id:id(),storeId:store,date,recordId:strictLoss.id,reason:'Koreksi waste'});
- s=await mut('reject_void',{id:id(),storeId:store,date,recordId:strictReject.id,reason:'Koreksi reject'});assert.equal(s.fruitUnits.find(u=>u.barcode===label(802)).lotId,trackedLot);
- assert.equal((await db.query("select count(*)::int n from public.md_pos_fruit_events where action='label_link'")).rows[0].n,0);
- const integrity=await db.query("select count(*)::int n from public.md_pos_lots l join (select lot_id,sum(grams)::numeric/1000 kg,count(*) pieces from public.md_pos_fruit_units where status in ('available','reject') group by lot_id) u on u.lot_id=l.id where u.kg>l.kg or u.pieces>l.pieces");assert.equal(integrity.rows[0].n,0);
+  // Strict batch ownership: neither unknown nor same-product/other-batch labels
+  // can be claimed, including old clients still sending linkBarcodes.
+  const legacy = shipment([]);
+  legacy.lines[0].weighings = [
+    { id: id(), kg: 6, pieces: 3, createdAt: new Date().toISOString() },
+  ];
+  s = await receive(legacy);
+  const legacyLot = legacy.lines[0].id;
+  const label = (n) => "9201071126" + String(n).padStart(6, "0") + "0001002000";
+  const tracked = shipment([]);
+  tracked.lines[0].weighings = [800, 801, 802].map((n) => ({
+    id: id(),
+    barcode: label(n),
+    kg: 2,
+    pieces: 1,
+    createdAt: new Date().toISOString(),
+  }));
+  s = await receive(tracked);
+  const trackedLot = tracked.lines[0].id;
+  const trackedTransfer = {
+    id: id(),
+    storeId: store,
+    date,
+    lotId: trackedLot,
+    toStoreId: foreign,
+    kind: "Transfer",
+    kg: 2,
+    pieces: 1,
+    barcodes: [label(800)],
+    fruitStockMode: "barcode",
+    note: "Kirim label batch asli",
+  };
+  const snapshot = async () =>
+    (
+      await db.query(
+        "select (select count(*) from public.md_pos_fruit_units) labels,(select count(*) from public.md_pos_fruit_events) events,(select jsonb_agg(jsonb_build_object('id',id,'kg',kg,'pieces',pieces) order by id) from public.md_pos_lots) lots",
+      )
+    ).rows[0];
+  const baseline = await snapshot();
+  await assert.rejects(
+    mut("movement", { ...trackedTransfer, lotId: legacyLot }),
+    /Asal batch/,
+  );
+  await assert.rejects(
+    mut("movement", { ...trackedTransfer, lotId: legacyLot, barcodes: [label(999)] }),
+    /belum tercatat/,
+  );
+  await assert.rejects(
+    mut("movement", {
+      ...trackedTransfer,
+      lotId: legacyLot,
+      barcodes: [label(999)],
+      linkBarcodes: [label(999)],
+    }),
+    /tidak dapat ditautkan/,
+  );
+  await assert.rejects(
+    mut("movement", { ...trackedTransfer, linkBarcodes: [label(800)] }),
+    /tidak dapat ditautkan/,
+  );
+  await assert.rejects(
+    mut("movement", { ...trackedTransfer, linkBarcodes: null }),
+    /tidak valid/,
+  );
+  await assert.rejects(
+    mut("movement", { ...trackedTransfer, barcodes: [] }),
+    /Scan barcode/,
+  );
+  const omitted = { ...trackedTransfer };
+  delete omitted.barcodes;
+  await assert.rejects(mut("movement", { ...omitted, lotId: legacyLot }), /Scan barcode/);
+  delete omitted.fruitStockMode;
+  await assert.rejects(mut("movement", omitted), /Scan barcode/);
+  await assert.rejects(
+    mut("movement", { ...trackedTransfer, barcodes: [label(800), label(800)] }),
+    /terduplikasi/,
+  );
+  await assert.rejects(
+    mut("movement", { ...trackedTransfer, toStoreId: store }),
+    /tujuan|berbeda/,
+  );
+  await assert.rejects(
+    mut("movement", { ...trackedTransfer, kg: 1.5 }),
+    /Berat dan butir/,
+  );
+  await assert.rejects(
+    mut("reject_mark", {
+      ...mark,
+      id: id(),
+      sourceLotId: legacyLot,
+      kg: 2,
+      barcodes: [label(800)],
+    }),
+    /Asal batch/,
+  );
+  await assert.rejects(
+    mut("reject_loss", {
+      ...loss,
+      id: id(),
+      sourceLotId: legacyLot,
+      qty: 2,
+      barcodes: [label(999)],
+    }),
+    /belum tercatat/,
+  );
+  assert.deepEqual(
+    await snapshot(),
+    baseline,
+    "Rejected scans change neither labels nor stock nor audit events",
+  );
+  await as(cashier);
+  await assert.rejects(mut("movement", trackedTransfer), /akses/);
+  await as(owner);
+  s = await mut("movement", trackedTransfer);
+  assert.equal(s.fruitStockVersion, 106);
+  assert.equal(s.lots.find((l) => l.id === trackedLot).kg, 4);
+  assert.equal(s.lots.find((l) => l.id === trackedTransfer.id).kg, 2);
+  assert.equal(s.lots.find((l) => l.id === trackedTransfer.id).supplierId, supplier);
+  assert.equal(
+    s.fruitUnits.find((u) => u.barcode === label(800)).receiptLotId,
+    trackedLot,
+  );
+  assert.equal(
+    (await snapshot()).labels,
+    baseline.labels,
+    "Transfer creates no fruit identities",
+  );
+  assert.deepEqual(
+    (await history(label(800))).map((x) => x.action),
+    ["receipt", "movement"],
+  );
+  const once = await snapshot();
+  await mut("movement", trackedTransfer);
+  assert.deepEqual(await snapshot(), once, "Retry never duplicates stock");
+  await assert.rejects(
+    mut("movement", { ...trackedTransfer, note: "Changed" }),
+    /isi berbeda/,
+  );
+  await assert.rejects(
+    mut("movement", { ...trackedTransfer, id: id() }),
+    /outlet barcode tidak cocok/,
+  );
+  const raced = {
+    ...trackedTransfer,
+    id: id(),
+    barcodes: [label(801)],
+    linkBarcodes: [],
+  };
+  const race106 = await Promise.allSettled([
+    mut("movement", raced),
+    mut("movement", { ...raced, id: id() }),
+  ]);
+  assert.equal(race106.filter((x) => x.status === "fulfilled").length, 1);
+  const strictReject = {
+    ...mark,
+    id: id(),
+    sourceLotId: trackedLot,
+    rejectLotId: id(),
+    kg: 2,
+    barcodes: [label(802)],
+    fruitStockMode: "barcode",
+  };
+  s = await mut("reject_mark", strictReject);
+  assert.equal(s.lots.find((l) => l.id === trackedLot).kg, 0);
+  assert.equal(s.fruitUnits.find((u) => u.barcode === label(802)).status, "reject");
+  assert.equal(
+    s.fruitUnits.find((u) => u.barcode === label(802)).receiptLotId,
+    trackedLot,
+  );
+  const strictLoss = {
+    ...loss,
+    id: id(),
+    sourceLotId: strictReject.rejectLotId,
+    qty: 2,
+    barcodes: [label(802)],
+    fruitStockMode: "barcode",
+  };
+  s = await mut("reject_loss", strictLoss);
+  assert.equal(s.fruitUnits.find((u) => u.barcode === label(802)).status, "waste");
+  s = await mut("reject_void", {
+    id: id(),
+    storeId: store,
+    date,
+    recordId: strictLoss.id,
+    reason: "Koreksi waste",
+  });
+  s = await mut("reject_void", {
+    id: id(),
+    storeId: store,
+    date,
+    recordId: strictReject.id,
+    reason: "Koreksi reject",
+  });
+  assert.equal(s.fruitUnits.find((u) => u.barcode === label(802)).lotId, trackedLot);
+  assert.equal(
+    (
+      await db.query(
+        "select count(*)::int n from public.md_pos_fruit_events where action='label_link'",
+      )
+    ).rows[0].n,
+    0,
+  );
+  const integrity = await db.query(
+    "select count(*)::int n from public.md_pos_lots l join (select lot_id,sum(grams)::numeric/1000 kg,count(*) pieces from public.md_pos_fruit_units where status in ('available','reject') group by lot_id) u on u.lot_id=l.id where u.kg>l.kg or u.pieces>l.pieces",
+  );
+  assert.equal(integrity.rows[0].n, 0);
 
- const before=s.fruitUnits;await db.exec(fs.readFileSync('database/fruit-batch-strict-scan-106.sql','utf8'));assert.deepEqual((await read()).fruitUnits,before);
- await db.exec('set role authenticated');await read();
- for(const table of ['md_pos_fruit_units','md_pos_fruit_events','md_pos_fruit_requests'])await assert.rejects(db.query('select * from public.'+table),/permission denied/);
- await assert.rejects(db.query("select public.pos_tracking_mutate_before_105('pos_mutate_027','movement','{}'::jsonb)"),/permission denied/);
- await assert.rejects(db.query('select public.pos_read_before_105()'),/permission denied/);
- await assert.rejects(db.query('select public.pos_read_before_101()'),/permission denied/);
- await assert.rejects(db.query('select public.pos_tracking_parse($1)',[code(68)]),/permission denied/);
- await db.exec('reset role;set role anon');await assert.rejects(history(code(68)),/permission denied/);await db.exec('reset role');
- console.log('PASS tracking SQL: receipt identities, duplicates/retries, rollback, sale/void, transfer, reject/waste reversals, wrapper compatibility, permissions, safe reinstall.');
-}catch(error){console.error(error.message,error.code||'',error.where||'',error.stack);process.exitCode=1;}finally{await db.close();}
+  const before = s.fruitUnits;
+  await db.exec(fs.readFileSync("database/fruit-batch-strict-scan-106.sql", "utf8"));
+  assert.deepEqual((await read()).fruitUnits, before);
+  await db.exec("set role authenticated");
+  await read();
+  for (const table of [
+    "md_pos_fruit_units",
+    "md_pos_fruit_events",
+    "md_pos_fruit_requests",
+  ])
+    await assert.rejects(db.query("select * from public." + table), /permission denied/);
+  await assert.rejects(
+    db.query(
+      "select public.pos_tracking_mutate_before_105('pos_mutate_027','movement','{}'::jsonb)",
+    ),
+    /permission denied/,
+  );
+  await assert.rejects(
+    db.query("select public.pos_read_before_105()"),
+    /permission denied/,
+  );
+  await assert.rejects(
+    db.query("select public.pos_read_before_101()"),
+    /permission denied/,
+  );
+  await assert.rejects(
+    db.query("select public.pos_tracking_parse($1)", [code(68)]),
+    /permission denied/,
+  );
+  await db.exec("reset role;set role anon");
+  await assert.rejects(history(code(68)), /permission denied/);
+  await db.exec("reset role");
+  console.log(
+    "PASS tracking SQL: receipt identities, duplicates/retries, rollback, sale/void, transfer, reject/waste reversals, wrapper compatibility, permissions, safe reinstall.",
+  );
+} catch (error) {
+  console.error(error.message, error.code || "", error.where || "", error.stack);
+  process.exitCode = 1;
+} finally {
+  await db.close();
+}

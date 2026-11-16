@@ -32,17 +32,15 @@ export function createSidebarController(root = document, viewport = window) {
   const mobile = () => !!media?.matches;
   let opener = null;
   function restoreFocus() {
-    const target = opener?.isConnected && !opener.closest("#pos-sidebar")
-      ? opener
-      : root.querySelector("#sidebar-toggle");
+    const target =
+      opener?.isConnected && !opener.closest("#pos-sidebar")
+        ? opener
+        : root.querySelector("#sidebar-toggle");
     target?.focus();
   }
   const write = () => {
     try {
-      storage?.setItem(
-        key,
-        JSON.stringify({ collapsed, groups: closedGroups }),
-      );
+      storage?.setItem(key, JSON.stringify({ collapsed, groups: closedGroups }));
     } catch {}
   };
   const attributes = () =>
@@ -61,20 +59,15 @@ export function createSidebarController(root = document, viewport = window) {
       panel.setAttribute("aria-hidden", String(mobile() && !shown));
       panel.querySelectorAll("[data-nav-group]").forEach((group) => {
         const active = !!group.querySelector("[aria-current=page]");
-        group.open = (!mobile() && collapsed) || active || !closedGroups[group.dataset.navGroup];
+        group.open =
+          (!mobile() && collapsed) || active || !closedGroups[group.dataset.navGroup];
       });
     }
     if (main) main.inert = mobile() && mobileOpen;
-    root.body?.classList.toggle(
-      "sidebar-mobile-open",
-      !!shell && mobile() && mobileOpen,
-    );
+    root.body?.classList.toggle("sidebar-mobile-open", !!shell && mobile() && mobileOpen);
     root.querySelectorAll("[data-sidebar-toggle]").forEach((button) => {
       button.setAttribute("aria-expanded", String(shown));
-      button.setAttribute(
-        "aria-label",
-        shown ? "Tutup sidebar" : "Buka sidebar",
-      );
+      button.setAttribute("aria-label", shown ? "Tutup sidebar" : "Buka sidebar");
       button.title = shown ? "Tutup sidebar" : "Buka sidebar";
     });
   }
@@ -116,9 +109,7 @@ export function createSidebarController(root = document, viewport = window) {
     const panel = root.querySelector("#pos-sidebar");
     if (!panel) return;
     const focusable = [
-      ...panel.querySelectorAll(
-        "button:not(:disabled),select,input,a[href],summary",
-      ),
+      ...panel.querySelectorAll("button:not(:disabled),select,input,a[href],summary"),
     ].filter((node) => !node.hidden && node.getClientRects().length);
     const first = focusable[0],
       last = focusable.at(-1);

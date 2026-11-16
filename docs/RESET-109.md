@@ -6,24 +6,24 @@
 
 Reset mengikuti permintaan: kosongkan data selain master barang, karyawan, dan outlet. Pemeriksaan di dalam transaksi membandingkan seluruh isi 16 tabel yang dipertahankan, termasuk harga, foto, kategori, resep, akses karyawan, profil outlet, dan pengaturannya. Pemeriksaan terpisah setelah COMMIT mengonfirmasi 48 tabel yang direset semuanya kosong.
 
-| Data | Sebelum | Sesudah |
-| --- | ---: | ---: |
-| Master barang, termasuk varian | 108 | 108 |
-| Karyawan | 14 | 14 |
-| Outlet dan gudang | 4 | 4 |
-| Kategori POS | 6 | 6 |
-| Hubungan kategori–barang | 62 | 62 |
-| Master resep | 2 | 2 |
-| Detail bahan resep | 7 | 7 |
-| Supplier | 2 | 0 |
-| Batch buah | 17 | 0 |
-| Batch bahan/produk satuan | 4 | 0 |
-| Barcode buah operasional | 799 | 0 |
-| Pesanan | 13 | 0 |
-| Dokumen administrasi | 3 | 0 |
-| Absensi | 6 | 0 |
-| Member | 2 | 0 |
-| Shift kasir | 8 | 0 |
+| Data                           | Sebelum | Sesudah |
+| ------------------------------ | ------: | ------: |
+| Master barang, termasuk varian |     108 |     108 |
+| Karyawan                       |      14 |      14 |
+| Outlet dan gudang              |       4 |       4 |
+| Kategori POS                   |       6 |       6 |
+| Hubungan kategori–barang       |      62 |      62 |
+| Master resep                   |       2 |       2 |
+| Detail bahan resep             |       7 |       7 |
+| Supplier                       |       2 |       0 |
+| Batch buah                     |      17 |       0 |
+| Batch bahan/produk satuan      |       4 |       0 |
+| Barcode buah operasional       |     799 |       0 |
+| Pesanan                        |      13 |       0 |
+| Dokumen administrasi           |       3 |       0 |
+| Absensi                        |       6 |       0 |
+| Member                         |       2 |       0 |
+| Shift kasir                    |       8 |       0 |
 
 Akun autentikasi tidak disentuh; pemeriksaan sesudah reset menunjukkan 11 akun login. Profil dan dokumen karyawan, penugasan outlet, izin, harga master, barcode master produk, foto produk, logo, alamat, dan tipe outlet/gudang tetap sama. Dua nama PT. Altara yang berbeda lokasi tidak digabung.
 

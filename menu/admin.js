@@ -1,4 +1,5 @@
 "use strict";
+const { MenuLogic } = globalThis;
 const KEY = "maniac-duren-menu-draft-v1";
 const form = document.querySelector("#product-form");
 const status = document.querySelector("#status");
@@ -41,8 +42,7 @@ const say = (message) => {
   status.textContent = message;
 };
 const validImage = (value) =>
-  !value ||
-  /^(https?:\/\/|\/(?!\/)|data:image\/(png|jpeg|webp);base64,)/i.test(value);
+  !value || /^(https?:\/\/|\/(?!\/)|data:image\/(png|jpeg|webp);base64,)/i.test(value);
 function validate(data) {
   if (!Array.isArray(data) || data.length > 200)
     throw new Error("File harus berisi daftar maksimal 200 produk.");
@@ -81,9 +81,7 @@ function validate(data) {
 function save() {
   try {
     localStorage.setItem(KEY, JSON.stringify(snapshot()));
-    say(
-      "Draf tersimpan di browser. Unduh menu.json untuk memperbarui website.",
-    );
+    say("Draf tersimpan di browser. Unduh menu.json untuk memperbarui website.");
   } catch {
     say(
       "Penyimpanan browser penuh/tidak tersedia. Draf hanya ada selama halaman ini terbuka. Unduh menu.json sekarang agar perubahan tidak hilang.",
@@ -121,14 +119,10 @@ function render() {
   document
     .querySelectorAll("[data-menu-type]")
     .forEach((button) =>
-      button.setAttribute(
-        "aria-pressed",
-        String(button.dataset.menuType === activeType),
-      ),
+      button.setAttribute("aria-pressed", String(button.dataset.menuType === activeType)),
     );
   const visible = items.filter((item) => item.menuType === activeType);
-  document.querySelector("#count").textContent =
-    `(${visible.length} / ${items.length})`;
+  document.querySelector("#count").textContent = `(${visible.length} / ${items.length})`;
   if (!visible.length) {
     const p = document.createElement("p");
     p.textContent = `Belum ada menu ${MenuLogic.types[activeType].toLowerCase()}. Tambahkan produk pertama Anda.`;
@@ -200,8 +194,7 @@ form.addEventListener("submit", (event) => {
     );
     entry.id = editing || crypto.randomUUID();
     const cleaned = validate([entry])[0];
-    if (editing)
-      items = items.map((item) => (item.id === editing ? cleaned : item));
+    if (editing) items = items.map((item) => (item.id === editing ? cleaned : item));
     else {
       if (items.length >= 200) throw new Error("Maksimal 200 produk.");
       items.push(cleaned);
@@ -256,8 +249,7 @@ async function published() {
   return loadDocument(await response.json());
 }
 document.querySelector("#reset").onclick = async () => {
-  if (!confirm("Buang draf dan muat ulang menu yang sudah dipublikasikan?"))
-    return;
+  if (!confirm("Buang draf dan muat ulang menu yang sudah dipublikasikan?")) return;
   try {
     items = await published();
     ready = true;

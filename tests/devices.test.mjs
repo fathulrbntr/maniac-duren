@@ -1,102 +1,443 @@
-import assert from 'node:assert/strict';
-import {defaultDeviceSettings,readDeviceSettings,saveDeviceSettings,validateDeviceSettings,deviceSettingsKey} from '../pos/device-settings.mjs';
-import {normalizeBarcode,barcodeProduct} from '../pos/barcode-scanner.mjs';
-import {opsPage,bindOps,clearOrderDraft,hasOrderDraft} from '../pos/operations-ui.mjs';
-import {devicesPage} from '../pos/devices-ui.mjs';
-import {visibleSections} from '../pos/navigation.mjs';
-import {Node,makeModal,FormDataAdapter} from './variant-dom.mjs';
-import {printDocument} from './receipt-print-dom.mjs';
-import {fixture,qty} from './stock-demo-fixture.mjs';
-import {createStockDemo,applyStockDemoAction} from '../pos/stock-demo.mjs';
-const original=Object.fromEntries(['document','window','localStorage','requestAnimationFrame','fetch','FormData'].map(k=>[k,globalThis[k]]));
-const descriptors=Object.fromEntries(['elements','className','focus','scrollIntoView','dispatchEvent','reset'].map(k=>[k,Object.getOwnPropertyDescriptor(Node.prototype,k)]));
-Object.defineProperty(Node.prototype,'elements',{configurable:true,get(){return new Proxy({namedItem:name=>this.querySelector(`[name="${name}"]`)},{get:(t,k)=>k in t?t[k]:this.querySelector(`[name="${k}"]`)});}});
-Object.defineProperty(Node.prototype,'className',{configurable:true,get(){return this.attrs.class||''},set(value){this.attrs.class=value}});
-Node.prototype.focus=function(){this.focused=true;};Node.prototype.scrollIntoView=function(){};
-Node.prototype.dispatchEvent=function(ev){return this['on'+ev.type]?.({target:this,currentTarget:this,preventDefault(){}});};
-Node.prototype.reset=function(){for(const el of this.querySelectorAll('input,select'))el._value=el.attrs.value;};
-const data=new Map();let storageFails=false;
-globalThis.localStorage={getItem:key=>data.get(key)||null,setItem:(key,value)=>{if(storageFails)throw Error('Storage unavailable');data.set(key,value);}};
-globalThis.requestAnimationFrame=fn=>fn();globalThis.window={print(){throw Error('Use the isolated print document');}};
-globalThis.fetch=()=>{throw Error('Device settings must not access server');};globalThis.FormData=FormDataAdapter;
-const root=new Node(),modal=makeModal(),f=fixture();f.water.barcode='0012345';f.small.barcode='001500';f.fruit.barcode='FRUIT001';f.raw.barcode='RAW001';
-let state=createStockDemo(f.state),view='devices';state=applyStockDemoAction(state,'cashier_shift_open',{id:crypto.randomUUID(),storeId:f.store,openingCash:0});const messages=[],actions=[];
-const printing=printDocument({base:{querySelector:q=>root.querySelector(q)||(q==='dialog[open]'&&modal.latest?.hasAttribute('open')?modal.latest:null),querySelectorAll:q=>root.querySelectorAll(q),createElement:tag=>{const n=new Node(tag);if(tag==='template')n.content=n;return n;}},height:()=>480});
-globalThis.document=printing.document;
-const ctx={getState:()=>state,modal:modal.modal,toast:message=>messages.push(message),render,refresh(){throw Error('Devices must not refresh server data');},mutate:async(action,payload)=>{actions.push({action,payload});state=applyStockDemoAction(state,action,payload);return true;}};
-function render(){root.innerHTML=opsPage(view,state,f.store);bindOps(view,state,f.store,ctx);}
-const field=name=>root.querySelector(`[name="${name}"]`);
-async function key(node,key,extra={}){let prevented=false;for(const fn of node.listeners.keydown||[])await fn({key,preventDefault(){prevented=true},...extra});return prevented;}
-async function scan(code){const input=root.querySelector('#order-scan');input.value=code;await key(input,'Enter');}
-try{
- assert.deepEqual(readDeviceSettings(),defaultDeviceSettings());data.set(deviceSettingsKey,'bad-json');assert.deepEqual(readDeviceSettings(),defaultDeviceSettings());data.clear();
- for(const value of [{printer:{paperWidth:42}},{printer:{fontSize:99}},{scanner:{terminator:'Escape'}},{scanner:{prefix:'\n'}},{printer:{autoPrint:'false'}}])assert.throws(()=>validateDeviceSettings(value));
- assert.equal(normalizeBarcode('0012345\r\n'),'0012345');assert.equal(barcodeProduct(state,'0012345').product.id,f.water.id);
- assert.throws(()=>barcodeProduct(state,'RAW001'),/tidak dijual/);assert.throws(()=>barcodeProduct(state,'unknown'),/belum terdaftar/);
- state.products.push({...f.water,id:'duplicate'});assert.throws(()=>barcodeProduct(state,'0012345'),/lebih dari satu/);state.products.pop();
- for(const access of [{sell:true},{master:true},{cashierOwner:true}])assert(visibleSections(access).flatMap(x=>x.pages).includes('devices'));
- assert(!visibleSections({attendance:true}).flatMap(x=>x.pages).includes('devices'));
- assert(!devicesPage({access:{attendance:true},me:{role:'staff'}}).includes('device-settings'));
- render();assert(root.querySelector('#device-settings'));
- field('paperWidth').value='58';field('fontSize').value='12';field('padding').value='2';field('footer').value='Terima kasih <b>bukan HTML</b>';field('autoPrint').checked=false;field('prefix').value='MD:';field('suffix').value='#';field('terminator').value='Tab';
- const snapshot=JSON.stringify(state);
- await root.querySelector('#device-settings').fire('submit');assert.equal(readDeviceSettings().printer.paperWidth,58);assert.equal(readDeviceSettings().printer.autoPrint,false);assert.equal(root.querySelector('#device-settings').dataset.dirty,'false');
- const saved=data.get(deviceSettingsKey);storageFails=true;field('paperWidth').value='80';await root.querySelector('#device-settings').fire('submit');assert.match(root.querySelector('#device-save-status').textContent,/belum tersimpan/);assert.equal(data.get(deviceSettingsKey),saved);storageFails=false;field('paperWidth').value='58';
- const input=root.querySelector('#device-scan-input');input.value='MD:0012345#';assert.equal(await key(input,'Enter'),false);assert.equal(await key(input,'Tab'),true);assert.match(root.querySelector('#device-scan-status').textContent,/Air mineral/);assert.equal(input.value,'');
- input.value='0012345';await key(input,'Tab');assert.match(root.querySelector('#device-scan-status').textContent,/Awalan/);
- input.value='MD:0012345#';field('scannerEnabled').checked=false;await key(input,'Tab');assert.match(root.querySelector('#device-scan-status').textContent,/dinonaktifkan/);field('scannerEnabled').checked=true;
- await root.querySelector('#device-print-test').fire('click');const printed=printing.printed.at(-1);
- assert.match(printed.text,/UJI PRINTER/);assert.match(printed.text,/Terima kasih <b>bukan HTML<\/b>/);assert.equal(printed.frame.contentDocument.body.querySelectorAll('.receipt-footer b').length,0);
- assert.match(printed.css,/size: 58mm 128mm/);assert.match(printed.css,/font: 12px/);assert.match(printed.css,/padding: 2mm 2mm 2mm/);
- assert.equal(JSON.stringify(state),snapshot);assert.equal(actions.length,0);assert(!hasOrderDraft());
- await root.querySelector('#device-reset').fire('click');assert.equal(field('paperWidth').value,'80');assert.equal(readDeviceSettings().printer.paperWidth,58,'Reset requires save');assert.equal(root.querySelector('#device-settings').dataset.dirty,'true');
- // Keep printer settings but clear the scanner framing for live POS integration.
- saveDeviceSettings({...readDeviceSettings(),scanner:defaultDeviceSettings().scanner});
- view='orders';clearOrderDraft();render();
- await scan('FRUIT001');assert(!hasOrderDraft(),'Ordinary fruit barcode opens a manual popup');assert(!root.querySelector('#order-line'));assert(modal.latest.querySelector('[name="kg"]'));assert.equal(modal.latest.querySelector('[name="kg"]').value,'');
- modal.latest.close();const manualDialog=modal.latest;
- await scan('0012345');await scan('0012345');assert(hasOrderDraft());assert.match(root.querySelector('#order-draft').textContent,/2 pcs/);assert.equal(root.querySelector('#order-scan').value,'');assert(root.querySelector('#order-scan').focused);
- await scan('001500');assert.match(root.querySelector('#order-draft').textContent,/Durpas Bawor 500 gr/);assert.equal(modal.latest,manualDialog,'Exact variant barcode bypasses choosing an unrelated variant');
- const before=root.querySelector('#order-draft').textContent;
- await scan('RAW001');assert.match(root.querySelector('#order-scan-status').textContent,/tidak dijual/);assert.equal(root.querySelector('#order-draft').textContent,before);
- const lot=state.unitLots.find(l=>l.productId===f.water.id&&l.storeId===f.store),stock=lot.qty;lot.qty=0;await scan('0012345');assert.equal(root.querySelector('#order-draft').textContent,before);assert.match(root.querySelector('#order-scan-status').textContent,/Belum ditambahkan/);lot.qty=stock;
- const scanInput=root.querySelector('#order-scan');scanInput.value='0012345';await key(scanInput,'Enter',{repeat:true});await key(scanInput,'Enter',{isComposing:true});assert.equal(root.querySelector('#order-draft').textContent,before);
- const blocking=modal.modal('Test modal','');await scan('0012345');assert.equal(root.querySelector('#order-draft').textContent,before);assert.match(root.querySelector('#order-scan-status').textContent,/Tutup pop-up/);blocking.close();
- const printCount=printing.printed.length;
- await root.querySelector('#save-order').fire('click');await modal.latest.querySelector('form').fire('submit');assert.match(modal.latest.textContent,/Konfirmasi pembayaran/);await modal.latest.querySelector('form').fire('submit');
- assert.equal(actions.filter(x=>x.action==='order_create').length,1);assert.equal(printing.printed.length,printCount,'Auto print off is respected after payment');assert.match(modal.latest.textContent,/Pesanan berhasil/);assert.equal(qty(state,f.water,f.store),98);assert(!hasOrderDraft());
- await modal.latest.querySelector('#result-receipt').fire('click');await modal.latest.querySelector('#print-order').fire('click');assert.equal(printing.printed.length,printCount+1);assert.match(printing.printed.at(-1).css,/size: 58mm/);assert.equal(actions.length,1,'Manual reprint must not post another transaction');
- modal.latest.close();
- // Scanned fruit opens date -> supplier -> unit; Numpad Enter adds it to the cart.
- const fruit=state.products.find(p=>p.id===f.fruit.id);fruit.barcode='0001';fruit.priceKg=100000;fruit.pricePiece=180000;
- const fruitLot=state.lots.find(l=>l.productId===fruit.id&&l.storeId===f.store),initialKg=fruitLot.kg,initialPieces=fruitLot.pieces,beforeActions=actions.length;
- view='devices';render();const beforeTest=JSON.stringify(state);
- root.querySelector('#device-scan-input').value='2100010030320';await key(root.querySelector('#device-scan-input'),'Enter');
- assert.match(root.querySelector('#device-scan-status').textContent,/kode 0001 · 3.032 kg/);assert.equal(JSON.stringify(state),beforeTest);assert.equal(actions.length,beforeActions);
- view='orders';render();
- const chooseFruit=async(unit='KG')=>{
-  const d=modal.latest,control=name=>d.querySelector(`[name="${name}"]`);
-  assert(!control('kg'));assert(!control('pieces'));assert(control('lotId').disabled);assert(control('receiptDate').focused);
-  control('receiptDate').value=fruitLot.date.split('-').reverse().join('');await control('receiptDate').fire('input');
-  await key(control('receiptDate'),'Enter',{code:'NumpadEnter'});assert(control('lotId').focused);
-  assert.equal(control('lotId').value,fruitLot.id);await key(control('lotId'),'Enter',{code:'NumpadEnter'});assert(control('unit').focused);
-  if(unit==='BUTIR')await key(control('unit'),'ArrowDown');
-  await key(control('unit'),'Enter',{code:'NumpadEnter'});return d;
- };
- await scan('2100010030320');assert(!hasOrderDraft());assert(!root.querySelector('#order-line'));assert(modal.latest.hasAttribute('open'));
- const pending=modal.latest;await scan('2100010024145');assert.equal(modal.latest,pending);assert.match(root.querySelector('#order-scan-status').textContent,/Tutup pop-up/);
- const first=await chooseFruit();await first.querySelector('form').fire('submit');assert(hasOrderDraft());assert.equal(root.querySelector('#order-draft').querySelectorAll('.order-cart-line').length,1);
- await scan('2100010024145');assert(modal.latest.hasAttribute('open'),'Every scan asks sale unit and origin');await chooseFruit('BUTIR');
- assert.equal(JSON.stringify(state),beforeTest);assert.equal(root.querySelector('#order-draft').querySelectorAll('.order-cart-line').length,2);
- const cartBeforeBadScan=root.querySelector('#order-draft').textContent;await scan('2100010030321');assert.equal(root.querySelector('#order-draft').textContent,cartBeforeBadScan);assert.match(root.querySelector('#order-scan-status').textContent,/digit pemeriksa/);
- await root.querySelector('#save-order').fire('click');await modal.latest.querySelector('form').fire('submit');await modal.latest.querySelector('form').fire('submit');
- assert.equal(actions.length,beforeActions+1);assert.deepEqual(actions.at(-1).payload.lines.map(l=>[l.lotId,l.unit,l.kg,l.pieces,l.qty,l.price]),[[fruitLot.id,'KG',3.032,1,3.032,100000],[fruitLot.id,'BUTIR',2.414,1,1,180000]]);
- const sold=state.lots.find(l=>l.id===fruitLot.id);assert(Math.abs(sold.kg-(initialKg-5.446))<1e-8);assert.equal(sold.pieces,initialPieces-2);assert.equal(state.orders.at(-1).total,483200);assert(!hasOrderDraft());modal.latest.close();render();
- // KG QRIS still uses exact decimal total after the new popup.
- await scan('2100010024145');await chooseFruit('KG');await root.querySelector('#save-order').fire('click');modal.latest.querySelector('[name="payment"]').value='QRIS';await modal.latest.querySelector('[name="payment"]').fire('change');
- modal.latest.querySelector('[name="paymentConfirmed"]').checked=true;assert.equal(modal.latest.querySelector('[name="paid"]').value,'241400');await modal.latest.querySelector('form').fire('submit');await modal.latest.querySelector('form').fire('submit');
- assert.equal(state.orders.at(-1).paid,241400);assert.equal(state.orders.at(-1).payment,'QRIS');modal.latest.close();render();
- const preserved=JSON.stringify(state);await scan('2100010030320');modal.latest.close();assert(!hasOrderDraft());assert.equal(JSON.stringify(state),preserved);assert.equal(actions.length,beforeActions+2);
- saveDeviceSettings({...readDeviceSettings(),scanner:{...defaultDeviceSettings().scanner,enabled:false}});render();assert(root.querySelector('#order-scan').disabled);assert(root.querySelector('#order-scan-add').disabled);
- console.log('PASS device settings and CAS POS: harmless scanner/print tests, local settings, exact variants, framing, fruit modal, date/supplier origin, kg/piece mixed sale, automatic label quantities, exact QRIS, invalid barcode rejection, correct 5.446 kg / 2 fruit deduction, cancel without sale, repeat/IME, auto-print off and manual reprint. No physical hardware/render test.');
-}finally{clearOrderDraft();Object.assign(globalThis,original);for(const [key,value]of Object.entries(descriptors)){if(value)Object.defineProperty(Node.prototype,key,value);else delete Node.prototype[key];}}
+import assert from "node:assert/strict";
+import {
+  defaultDeviceSettings,
+  readDeviceSettings,
+  saveDeviceSettings,
+  validateDeviceSettings,
+  deviceSettingsKey,
+} from "../pos/device-settings.mjs";
+import { normalizeBarcode, barcodeProduct } from "../pos/barcode-scanner.mjs";
+import {
+  opsPage,
+  bindOps,
+  clearOrderDraft,
+  hasOrderDraft,
+} from "../pos/operations-ui.mjs";
+import { devicesPage } from "../pos/devices-ui.mjs";
+import { visibleSections } from "../pos/navigation.mjs";
+import { Node, makeModal, FormDataAdapter } from "./variant-dom.mjs";
+import { printDocument } from "./receipt-print-dom.mjs";
+import { fixture, qty } from "./stock-demo-fixture.mjs";
+import { createStockDemo, applyStockDemoAction } from "../pos/stock-demo.mjs";
+const original = Object.fromEntries(
+  [
+    "document",
+    "window",
+    "localStorage",
+    "requestAnimationFrame",
+    "fetch",
+    "FormData",
+  ].map((k) => [k, globalThis[k]]),
+);
+const descriptors = Object.fromEntries(
+  ["elements", "className", "focus", "scrollIntoView", "dispatchEvent", "reset"].map(
+    (k) => [k, Object.getOwnPropertyDescriptor(Node.prototype, k)],
+  ),
+);
+Object.defineProperty(Node.prototype, "elements", {
+  configurable: true,
+  get() {
+    return new Proxy(
+      { namedItem: (name) => this.querySelector(`[name="${name}"]`) },
+      { get: (t, k) => (k in t ? t[k] : this.querySelector(`[name="${k}"]`)) },
+    );
+  },
+});
+Object.defineProperty(Node.prototype, "className", {
+  configurable: true,
+  get() {
+    return this.attrs.class || "";
+  },
+  set(value) {
+    this.attrs.class = value;
+  },
+});
+Node.prototype.focus = function () {
+  this.focused = true;
+};
+Node.prototype.scrollIntoView = function () {};
+Node.prototype.dispatchEvent = function (ev) {
+  return this["on" + ev.type]?.({
+    target: this,
+    currentTarget: this,
+    preventDefault() {},
+  });
+};
+Node.prototype.reset = function () {
+  for (const el of this.querySelectorAll("input,select")) el._value = el.attrs.value;
+};
+const data = new Map();
+let storageFails = false;
+globalThis.localStorage = {
+  getItem: (key) => data.get(key) || null,
+  setItem: (key, value) => {
+    if (storageFails) throw Error("Storage unavailable");
+    data.set(key, value);
+  },
+};
+globalThis.requestAnimationFrame = (fn) => fn();
+globalThis.window = {
+  print() {
+    throw Error("Use the isolated print document");
+  },
+};
+globalThis.fetch = () => {
+  throw Error("Device settings must not access server");
+};
+globalThis.FormData = FormDataAdapter;
+const root = new Node(),
+  modal = makeModal(),
+  f = fixture();
+f.water.barcode = "0012345";
+f.small.barcode = "001500";
+f.fruit.barcode = "FRUIT001";
+f.raw.barcode = "RAW001";
+let state = createStockDemo(f.state),
+  view = "devices";
+state = applyStockDemoAction(state, "cashier_shift_open", {
+  id: crypto.randomUUID(),
+  storeId: f.store,
+  openingCash: 0,
+});
+const messages = [],
+  actions = [];
+const printing = printDocument({
+  base: {
+    querySelector: (q) =>
+      root.querySelector(q) ||
+      (q === "dialog[open]" && modal.latest?.hasAttribute("open") ? modal.latest : null),
+    querySelectorAll: (q) => root.querySelectorAll(q),
+    createElement: (tag) => {
+      const n = new Node(tag);
+      if (tag === "template") n.content = n;
+      return n;
+    },
+  },
+  height: () => 480,
+});
+globalThis.document = printing.document;
+const ctx = {
+  getState: () => state,
+  modal: modal.modal,
+  toast: (message) => messages.push(message),
+  render,
+  refresh() {
+    throw Error("Devices must not refresh server data");
+  },
+  mutate: async (action, payload) => {
+    actions.push({ action, payload });
+    state = applyStockDemoAction(state, action, payload);
+    return true;
+  },
+};
+function render() {
+  root.innerHTML = opsPage(view, state, f.store);
+  bindOps(view, state, f.store, ctx);
+}
+const field = (name) => root.querySelector(`[name="${name}"]`);
+async function key(node, key, extra = {}) {
+  let prevented = false;
+  for (const fn of node.listeners.keydown || [])
+    await fn({
+      key,
+      preventDefault() {
+        prevented = true;
+      },
+      ...extra,
+    });
+  return prevented;
+}
+async function scan(code) {
+  const input = root.querySelector("#order-scan");
+  input.value = code;
+  await key(input, "Enter");
+}
+try {
+  assert.deepEqual(readDeviceSettings(), defaultDeviceSettings());
+  data.set(deviceSettingsKey, "bad-json");
+  assert.deepEqual(readDeviceSettings(), defaultDeviceSettings());
+  data.clear();
+  for (const value of [
+    { printer: { paperWidth: 42 } },
+    { printer: { fontSize: 99 } },
+    { scanner: { terminator: "Escape" } },
+    { scanner: { prefix: "\n" } },
+    { printer: { autoPrint: "false" } },
+  ])
+    assert.throws(() => validateDeviceSettings(value));
+  assert.equal(normalizeBarcode("0012345\r\n"), "0012345");
+  assert.equal(barcodeProduct(state, "0012345").product.id, f.water.id);
+  assert.throws(() => barcodeProduct(state, "RAW001"), /tidak dijual/);
+  assert.throws(() => barcodeProduct(state, "unknown"), /belum terdaftar/);
+  state.products.push({ ...f.water, id: "duplicate" });
+  assert.throws(() => barcodeProduct(state, "0012345"), /lebih dari satu/);
+  state.products.pop();
+  for (const access of [{ sell: true }, { master: true }, { cashierOwner: true }])
+    assert(
+      visibleSections(access)
+        .flatMap((x) => x.pages)
+        .includes("devices"),
+    );
+  assert(
+    !visibleSections({ attendance: true })
+      .flatMap((x) => x.pages)
+      .includes("devices"),
+  );
+  assert(
+    !devicesPage({ access: { attendance: true }, me: { role: "staff" } }).includes(
+      "device-settings",
+    ),
+  );
+  render();
+  assert(root.querySelector("#device-settings"));
+  field("paperWidth").value = "58";
+  field("fontSize").value = "12";
+  field("padding").value = "2";
+  field("footer").value = "Terima kasih <b>bukan HTML</b>";
+  field("autoPrint").checked = false;
+  field("prefix").value = "MD:";
+  field("suffix").value = "#";
+  field("terminator").value = "Tab";
+  const snapshot = JSON.stringify(state);
+  await root.querySelector("#device-settings").fire("submit");
+  assert.equal(readDeviceSettings().printer.paperWidth, 58);
+  assert.equal(readDeviceSettings().printer.autoPrint, false);
+  assert.equal(root.querySelector("#device-settings").dataset.dirty, "false");
+  const saved = data.get(deviceSettingsKey);
+  storageFails = true;
+  field("paperWidth").value = "80";
+  await root.querySelector("#device-settings").fire("submit");
+  assert.match(root.querySelector("#device-save-status").textContent, /belum tersimpan/);
+  assert.equal(data.get(deviceSettingsKey), saved);
+  storageFails = false;
+  field("paperWidth").value = "58";
+  const input = root.querySelector("#device-scan-input");
+  input.value = "MD:0012345#";
+  assert.equal(await key(input, "Enter"), false);
+  assert.equal(await key(input, "Tab"), true);
+  assert.match(root.querySelector("#device-scan-status").textContent, /Air mineral/);
+  assert.equal(input.value, "");
+  input.value = "0012345";
+  await key(input, "Tab");
+  assert.match(root.querySelector("#device-scan-status").textContent, /Awalan/);
+  input.value = "MD:0012345#";
+  field("scannerEnabled").checked = false;
+  await key(input, "Tab");
+  assert.match(root.querySelector("#device-scan-status").textContent, /dinonaktifkan/);
+  field("scannerEnabled").checked = true;
+  await root.querySelector("#device-print-test").fire("click");
+  const printed = printing.printed.at(-1);
+  assert.match(printed.text, /UJI PRINTER/);
+  assert.match(printed.text, /Terima kasih <b>bukan HTML<\/b>/);
+  assert.equal(
+    printed.frame.contentDocument.body.querySelectorAll(".receipt-footer b").length,
+    0,
+  );
+  assert.match(printed.css, /size: 58mm 128mm/);
+  assert.match(printed.css, /font: 12px/);
+  assert.match(printed.css, /padding: 2mm 2mm 2mm/);
+  assert.equal(JSON.stringify(state), snapshot);
+  assert.equal(actions.length, 0);
+  assert(!hasOrderDraft());
+  await root.querySelector("#device-reset").fire("click");
+  assert.equal(field("paperWidth").value, "80");
+  assert.equal(readDeviceSettings().printer.paperWidth, 58, "Reset requires save");
+  assert.equal(root.querySelector("#device-settings").dataset.dirty, "true");
+  // Keep printer settings but clear the scanner framing for live POS integration.
+  saveDeviceSettings({
+    ...readDeviceSettings(),
+    scanner: defaultDeviceSettings().scanner,
+  });
+  view = "orders";
+  clearOrderDraft();
+  render();
+  await scan("FRUIT001");
+  assert(!hasOrderDraft(), "Ordinary fruit barcode opens a manual popup");
+  assert(!root.querySelector("#order-line"));
+  assert(modal.latest.querySelector('[name="kg"]'));
+  assert.equal(modal.latest.querySelector('[name="kg"]').value, "");
+  modal.latest.close();
+  const manualDialog = modal.latest;
+  await scan("0012345");
+  await scan("0012345");
+  assert(hasOrderDraft());
+  assert.match(root.querySelector("#order-draft").textContent, /2 pcs/);
+  assert.equal(root.querySelector("#order-scan").value, "");
+  assert(root.querySelector("#order-scan").focused);
+  await scan("001500");
+  assert.match(root.querySelector("#order-draft").textContent, /Durpas Bawor 500 gr/);
+  assert.equal(
+    modal.latest,
+    manualDialog,
+    "Exact variant barcode bypasses choosing an unrelated variant",
+  );
+  const before = root.querySelector("#order-draft").textContent;
+  await scan("RAW001");
+  assert.match(root.querySelector("#order-scan-status").textContent, /tidak dijual/);
+  assert.equal(root.querySelector("#order-draft").textContent, before);
+  const lot = state.unitLots.find(
+      (l) => l.productId === f.water.id && l.storeId === f.store,
+    ),
+    stock = lot.qty;
+  lot.qty = 0;
+  await scan("0012345");
+  assert.equal(root.querySelector("#order-draft").textContent, before);
+  assert.match(root.querySelector("#order-scan-status").textContent, /Belum ditambahkan/);
+  lot.qty = stock;
+  const scanInput = root.querySelector("#order-scan");
+  scanInput.value = "0012345";
+  await key(scanInput, "Enter", { repeat: true });
+  await key(scanInput, "Enter", { isComposing: true });
+  assert.equal(root.querySelector("#order-draft").textContent, before);
+  const blocking = modal.modal("Test modal", "");
+  await scan("0012345");
+  assert.equal(root.querySelector("#order-draft").textContent, before);
+  assert.match(root.querySelector("#order-scan-status").textContent, /Tutup pop-up/);
+  blocking.close();
+  const printCount = printing.printed.length;
+  await root.querySelector("#save-order").fire("click");
+  await modal.latest.querySelector("form").fire("submit");
+  assert.match(modal.latest.textContent, /Konfirmasi pembayaran/);
+  await modal.latest.querySelector("form").fire("submit");
+  assert.equal(actions.filter((x) => x.action === "order_create").length, 1);
+  assert.equal(
+    printing.printed.length,
+    printCount,
+    "Auto print off is respected after payment",
+  );
+  assert.match(modal.latest.textContent, /Pesanan berhasil/);
+  assert.equal(qty(state, f.water, f.store), 98);
+  assert(!hasOrderDraft());
+  await modal.latest.querySelector("#result-receipt").fire("click");
+  await modal.latest.querySelector("#print-order").fire("click");
+  assert.equal(printing.printed.length, printCount + 1);
+  assert.match(printing.printed.at(-1).css, /size: 58mm/);
+  assert.equal(actions.length, 1, "Manual reprint must not post another transaction");
+  modal.latest.close();
+  // Scanned fruit opens date -> supplier -> unit; Numpad Enter adds it to the cart.
+  const fruit = state.products.find((p) => p.id === f.fruit.id);
+  fruit.barcode = "0001";
+  fruit.priceKg = 100000;
+  fruit.pricePiece = 180000;
+  const fruitLot = state.lots.find(
+      (l) => l.productId === fruit.id && l.storeId === f.store,
+    ),
+    initialKg = fruitLot.kg,
+    initialPieces = fruitLot.pieces,
+    beforeActions = actions.length;
+  view = "devices";
+  render();
+  const beforeTest = JSON.stringify(state);
+  root.querySelector("#device-scan-input").value = "2100010030320";
+  await key(root.querySelector("#device-scan-input"), "Enter");
+  assert.match(
+    root.querySelector("#device-scan-status").textContent,
+    /kode 0001 · 3.032 kg/,
+  );
+  assert.equal(JSON.stringify(state), beforeTest);
+  assert.equal(actions.length, beforeActions);
+  view = "orders";
+  render();
+  const chooseFruit = async (unit = "KG") => {
+    const d = modal.latest,
+      control = (name) => d.querySelector(`[name="${name}"]`);
+    assert(!control("kg"));
+    assert(!control("pieces"));
+    assert(control("lotId").disabled);
+    assert(control("receiptDate").focused);
+    control("receiptDate").value = fruitLot.date.split("-").reverse().join("");
+    await control("receiptDate").fire("input");
+    await key(control("receiptDate"), "Enter", { code: "NumpadEnter" });
+    assert(control("lotId").focused);
+    assert.equal(control("lotId").value, fruitLot.id);
+    await key(control("lotId"), "Enter", { code: "NumpadEnter" });
+    assert(control("unit").focused);
+    if (unit === "BUTIR") await key(control("unit"), "ArrowDown");
+    await key(control("unit"), "Enter", { code: "NumpadEnter" });
+    return d;
+  };
+  await scan("2100010030320");
+  assert(!hasOrderDraft());
+  assert(!root.querySelector("#order-line"));
+  assert(modal.latest.hasAttribute("open"));
+  const pending = modal.latest;
+  await scan("2100010024145");
+  assert.equal(modal.latest, pending);
+  assert.match(root.querySelector("#order-scan-status").textContent, /Tutup pop-up/);
+  const first = await chooseFruit();
+  await first.querySelector("form").fire("submit");
+  assert(hasOrderDraft());
+  assert.equal(
+    root.querySelector("#order-draft").querySelectorAll(".order-cart-line").length,
+    1,
+  );
+  await scan("2100010024145");
+  assert(modal.latest.hasAttribute("open"), "Every scan asks sale unit and origin");
+  await chooseFruit("BUTIR");
+  assert.equal(JSON.stringify(state), beforeTest);
+  assert.equal(
+    root.querySelector("#order-draft").querySelectorAll(".order-cart-line").length,
+    2,
+  );
+  const cartBeforeBadScan = root.querySelector("#order-draft").textContent;
+  await scan("2100010030321");
+  assert.equal(root.querySelector("#order-draft").textContent, cartBeforeBadScan);
+  assert.match(root.querySelector("#order-scan-status").textContent, /digit pemeriksa/);
+  await root.querySelector("#save-order").fire("click");
+  await modal.latest.querySelector("form").fire("submit");
+  await modal.latest.querySelector("form").fire("submit");
+  assert.equal(actions.length, beforeActions + 1);
+  assert.deepEqual(
+    actions
+      .at(-1)
+      .payload.lines.map((l) => [l.lotId, l.unit, l.kg, l.pieces, l.qty, l.price]),
+    [
+      [fruitLot.id, "KG", 3.032, 1, 3.032, 100000],
+      [fruitLot.id, "BUTIR", 2.414, 1, 1, 180000],
+    ],
+  );
+  const sold = state.lots.find((l) => l.id === fruitLot.id);
+  assert(Math.abs(sold.kg - (initialKg - 5.446)) < 1e-8);
+  assert.equal(sold.pieces, initialPieces - 2);
+  assert.equal(state.orders.at(-1).total, 483200);
+  assert(!hasOrderDraft());
+  modal.latest.close();
+  render();
+  // KG QRIS still uses exact decimal total after the new popup.
+  await scan("2100010024145");
+  await chooseFruit("KG");
+  await root.querySelector("#save-order").fire("click");
+  modal.latest.querySelector('[name="payment"]').value = "QRIS";
+  await modal.latest.querySelector('[name="payment"]').fire("change");
+  modal.latest.querySelector('[name="paymentConfirmed"]').checked = true;
+  assert.equal(modal.latest.querySelector('[name="paid"]').value, "241400");
+  await modal.latest.querySelector("form").fire("submit");
+  await modal.latest.querySelector("form").fire("submit");
+  assert.equal(state.orders.at(-1).paid, 241400);
+  assert.equal(state.orders.at(-1).payment, "QRIS");
+  modal.latest.close();
+  render();
+  const preserved = JSON.stringify(state);
+  await scan("2100010030320");
+  modal.latest.close();
+  assert(!hasOrderDraft());
+  assert.equal(JSON.stringify(state), preserved);
+  assert.equal(actions.length, beforeActions + 2);
+  saveDeviceSettings({
+    ...readDeviceSettings(),
+    scanner: { ...defaultDeviceSettings().scanner, enabled: false },
+  });
+  render();
+  assert(root.querySelector("#order-scan").disabled);
+  assert(root.querySelector("#order-scan-add").disabled);
+  console.log(
+    "PASS device settings and CAS POS: harmless scanner/print tests, local settings, exact variants, framing, fruit modal, date/supplier origin, kg/piece mixed sale, automatic label quantities, exact QRIS, invalid barcode rejection, correct 5.446 kg / 2 fruit deduction, cancel without sale, repeat/IME, auto-print off and manual reprint. No physical hardware/render test.",
+  );
+} finally {
+  clearOrderDraft();
+  Object.assign(globalThis, original);
+  for (const [key, value] of Object.entries(descriptors)) {
+    if (value) Object.defineProperty(Node.prototype, key, value);
+    else delete Node.prototype[key];
+  }
+}

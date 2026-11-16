@@ -12,8 +12,18 @@ const manifest = JSON.parse(
 const removals = [];
 for (const entry of manifest.remove) {
   const file = path.resolve(root, entry.path);
-  if (path.dirname(file) !== path.resolve(root))
-    throw Error("Cleanup is limited to named root files.");
+  const relative = path.relative(root, file);
+  if (!relative || relative.startsWith("..") || path.isAbsolute(relative))
+    throw Error("Cleanup paths must stay inside this project.");
+  // A linked directory must not redirect cleanup into a different checkout.
+  for (
+    let parent = path.dirname(file);
+    parent !== path.resolve(root);
+    parent = path.dirname(parent)
+  ) {
+    if (fs.existsSync(parent) && fs.lstatSync(parent).isSymbolicLink())
+      throw Error("Cleanup cannot follow a linked directory: " + entry.path);
+  }
   if (!fs.existsSync(file)) continue;
   if (!fs.lstatSync(file).isFile())
     throw Error("Not a regular file; no cleanup performed: " + entry.path);
@@ -33,11 +43,7 @@ if (result.status !== 0) process.exit(result.status ?? 1);
 for (const file of removals) {
   if (!check) fs.unlinkSync(file);
   console.log(
-    (check ? "Would remove" : "Removed") +
-      " verified stray file: " +
-      path.basename(file),
+    (check ? "Would remove" : "Removed") + " verified stray file: " + path.basename(file),
   );
 }
-console.log(
-  check ? "Audit cleanup preview complete." : "Audit cleanup complete.",
-);
+console.log(check ? "Audit cleanup preview complete." : "Audit cleanup complete.");

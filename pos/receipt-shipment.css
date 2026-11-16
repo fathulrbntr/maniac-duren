@@ -1,81 +1,318 @@
 /* Receipt 082 follows the shared 081 typography and light/dark palette. */
-.receipt-shipment-dialog { width:min(860px,calc(100vw - 32px));max-width:min(860px,calc(100vw - 32px)); }
-.receipt-shipment-dialog .receipt-section-head,.receipt-product-head { display:flex;align-items:center;justify-content:space-between;gap:12px; }
-.receipt-section-head { margin:16px 0 12px; }
-.receipt-section-head h3 { margin:0;font-size:var(--text-section); }
-.receipt-section-head>span { font-size:var(--text-sm);color:var(--muted);white-space:nowrap; }
-.receipt-lines { display:grid;gap:14px; }
-.receipt-product { min-width:0;padding:18px;border:1px solid var(--line);border-radius:var(--radius-card);background:var(--surface); }
-.receipt-product-head { margin-bottom:14px; }
-.receipt-product-head h4 { margin:0;font-size:var(--text-body); }
-.receipt-product .receipt-remove { color:var(--danger);font-size:var(--text-sm);padding:6px 10px;min-height:36px;background:transparent; }
-.receipt-product .form-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
-.receipt-product .field,.receipt-shipment-dialog input,.receipt-shipment-dialog select { min-width:0;max-width:100%; }
-.receipt-product-actions { margin:16px 0 12px; }
-.receipt-product-actions button { min-height:44px; }
-.receipt-line-summary { font-size:var(--text-sm);line-height:1.5; }
-.receipt-line-summary>b { display:block; }
-.receipt-line-summary p { margin:4px 0 0;color:var(--muted); }
-.receipt-shipment-dialog dl { margin:10px 0 0; }
-.receipt-shipment-dialog dl>div { display:flex;justify-content:space-between;gap:16px;margin:6px 0; }
-.receipt-shipment-dialog dt { color:var(--muted); }
-.receipt-shipment-dialog dd { margin:0;text-align:right;font-weight:var(--weight-semibold);overflow-wrap:anywhere; }
-.receipt-shipment-dialog .receipt-add { width:100%;min-height:46px;margin-top:14px;background:var(--surface-soft);border:1px dashed var(--line); }
-.receipt-shipping { display:block;margin-top:24px; }
-.receipt-total { background:var(--surface-soft);border-color:var(--line); }
-.receipt-grand-total { border-top:1px solid var(--line);padding-top:12px; }
-.receipt-grand-total dt,.receipt-grand-total dd { color:var(--ink);font-size:var(--text-md);font-weight:var(--weight-bold); }
-.receipt-shipment-dialog .modal-actions { flex-wrap:wrap; }
-@media(max-width:600px) {
- .receipt-product { padding:14px; }
- .receipt-product .form-grid { grid-template-columns:1fr; }
- .receipt-shipment-dialog .modal-actions>button { width:100%; }
+.receipt-shipment-dialog {
+  width: min(860px, calc(100vw - 32px));
+  max-width: min(860px, calc(100vw - 32px));
+}
+.receipt-shipment-dialog .receipt-section-head,
+.receipt-product-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.receipt-section-head {
+  margin: 16px 0 12px;
+}
+.receipt-section-head h3 {
+  margin: 0;
+  font-size: var(--text-section);
+}
+.receipt-section-head > span {
+  font-size: var(--text-sm);
+  color: var(--muted);
+  white-space: nowrap;
+}
+.receipt-lines {
+  display: grid;
+  gap: 14px;
+}
+.receipt-product {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+.receipt-product-head {
+  margin-bottom: 14px;
+}
+.receipt-product-head h4 {
+  margin: 0;
+  font-size: var(--text-body);
+}
+.receipt-product .receipt-remove {
+  color: var(--danger);
+  font-size: var(--text-sm);
+  padding: 6px 10px;
+  min-height: 36px;
+  background: transparent;
+}
+.receipt-product .form-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.receipt-product .field,
+.receipt-shipment-dialog input,
+.receipt-shipment-dialog select {
+  min-width: 0;
+  max-width: 100%;
+}
+.receipt-product-actions {
+  margin: 16px 0 12px;
+}
+.receipt-product-actions button {
+  min-height: 44px;
+}
+.receipt-line-summary {
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+.receipt-line-summary > b {
+  display: block;
+}
+.receipt-line-summary p {
+  margin: 4px 0 0;
+  color: var(--muted);
+}
+.receipt-shipment-dialog dl {
+  margin: 10px 0 0;
+}
+.receipt-shipment-dialog dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 6px 0;
+}
+.receipt-shipment-dialog dt {
+  color: var(--muted);
+}
+.receipt-shipment-dialog dd {
+  margin: 0;
+  text-align: right;
+  font-weight: var(--weight-semibold);
+  overflow-wrap: anywhere;
+}
+.receipt-shipment-dialog .receipt-add {
+  width: 100%;
+  min-height: 46px;
+  margin-top: 14px;
+  background: var(--surface-soft);
+  border: 1px dashed var(--line);
+}
+.receipt-shipping {
+  display: block;
+  margin-top: 24px;
+}
+.receipt-total {
+  background: var(--surface-soft);
+  border-color: var(--line);
+}
+.receipt-grand-total {
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+.receipt-grand-total dt,
+.receipt-grand-total dd {
+  color: var(--ink);
+  font-size: var(--text-md);
+  font-weight: var(--weight-bold);
+}
+.receipt-shipment-dialog .modal-actions {
+  flex-wrap: wrap;
+}
+@media (max-width: 600px) {
+  .receipt-product {
+    padding: 14px;
+  }
+  .receipt-product .form-grid {
+    grid-template-columns: 1fr;
+  }
+  .receipt-shipment-dialog .modal-actions > button {
+    width: 100%;
+  }
 }
 
-.receipt-shipment-dialog .form-section-heading:not(:first-child) { border-top:1px solid var(--line); padding-top:24px; }
-.receipt-shipment-dialog .receipt-total { padding:16px; border:1px solid var(--line); border-radius:12px; }
-.receipt-product-actions button { width:100%; background:var(--surface-soft); }
-.weigh-entry { margin-bottom:16px; }
-.weighing-dialog .form-grid { margin-bottom:16px; }
+.receipt-shipment-dialog .form-section-heading:not(:first-child) {
+  border-top: 1px solid var(--line);
+  padding-top: 24px;
+}
+.receipt-shipment-dialog .receipt-total {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.receipt-product-actions button {
+  width: 100%;
+  background: var(--surface-soft);
+}
+.weigh-entry {
+  margin-bottom: 16px;
+}
+.weighing-dialog .form-grid {
+  margin-bottom: 16px;
+}
 
 /* Barcode scale capture shares the existing receipt draft and totals. */
-.weigh-scan { padding:16px; margin:16px 0; border:1px solid var(--line); border-radius:12px; background:var(--surface-soft); }
-.weigh-scan-controls { display:flex; gap:8px; margin-top:8px; }
-.weigh-scan-controls input { flex:1; min-width:0; }
-.weigh-scan-controls button { flex-shrink:0; min-height:44px; }
-.weigh-scan-status { font-size:var(--text-sm); color:var(--action-bg); margin-bottom:0; }
-.weigh-scan-status[data-error=true] { color:var(--danger); }
-.weigh-manual { margin:16px 0; }
-.weigh-manual summary { cursor:pointer; padding:10px 0; }
-.weigh-manual .weigh-entry { padding-top:12px; }
-.weighing-dialog .weigh-barcode,.modal .weigh-barcode { display:block; overflow-wrap:anywhere; font-size:var(--text-xs); color:var(--muted); }
-@media(max-width:600px) {
- .weigh-scan-controls { flex-direction:column; }
- .weigh-scan-controls button { width:100%; }
+.weigh-scan {
+  padding: 16px;
+  margin: 16px 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-soft);
+}
+.weigh-scan-controls {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+.weigh-scan-controls input {
+  flex: 1;
+  min-width: 0;
+}
+.weigh-scan-controls button {
+  flex-shrink: 0;
+  min-height: 44px;
+}
+.weigh-scan-status {
+  font-size: var(--text-sm);
+  color: var(--action-bg);
+  margin-bottom: 0;
+}
+.weigh-scan-status[data-error="true"] {
+  color: var(--danger);
+}
+.weigh-manual {
+  margin: 16px 0;
+}
+.weigh-manual summary {
+  cursor: pointer;
+  padding: 10px 0;
+}
+.weigh-manual .weigh-entry {
+  padding-top: 12px;
+}
+.weighing-dialog .weigh-barcode,
+.modal .weigh-barcode {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+@media (max-width: 600px) {
+  .weigh-scan-controls {
+    flex-direction: column;
+  }
+  .weigh-scan-controls button {
+    width: 100%;
+  }
 }
 
 /* Barcode logs share the receipt weighing dialog and draft/finish flow. */
-.fruit-scan-selection{margin:16px 0;padding:16px;border:1px solid var(--line);border-radius:12px;background:var(--surface-soft)}
-.fruit-scan-selection[hidden]{display:none}
-.fruit-scan-overview{display:flex;align-items:center;justify-content:space-between;gap:16px}
-.fruit-scan-overview strong{font-size:14px}
-.fruit-scan-overview p{margin:6px 0 0;font-size:13px;font-variant-numeric:tabular-nums}
-.fruit-scan-overview button{flex-shrink:0}
-.fruit-scan-selection .form-help{margin:10px 0 0}
-.fruit-stock-scan-dialog [data-fruit-scan-list]{max-height:36vh;overflow:auto}
-.fruit-stock-scan-dialog .table-wrap table{width:100%;min-width:0;table-layout:fixed;font-variant-numeric:tabular-nums}
-.fruit-stock-scan-dialog td:first-child{min-width:0}
-.fruit-stock-scan-dialog td code,.fruit-stock-scan-dialog td small{display:block;margin-top:4px}
-.fruit-stock-scan-dialog code{font-size:12px;overflow-wrap:anywhere;word-break:break-all}
-.fruit-stock-scan-dialog th,.fruit-stock-scan-dialog td{padding:10px 8px}
-.fruit-stock-scan-dialog [data-fruit-scan-status]{font-size:13px;line-height:1.5}
-.fruit-stock-scan-dialog [data-fruit-scan-status][data-error="true"]{color:var(--danger,#ba2828)}
-.fruit-scan-batch{font-size:13px;line-height:1.6;overflow-wrap:anywhere}
-.fruit-scan-total{font-weight:700;font-variant-numeric:tabular-nums}
-.fruit-transfer-modal input[readonly],.reject-modal input[readonly]{background:var(--surface-soft);font-variant-numeric:tabular-nums}
-@media(max-width:520px){.fruit-scan-overview{align-items:stretch;flex-direction:column}.fruit-stock-scan-dialog th,.fruit-stock-scan-dialog td{padding:8px 4px;font-size:12px}.fruit-stock-scan-dialog td:first-child{width:40%}.fruit-stock-scan-dialog code{font-size:11px}}
+.fruit-scan-selection {
+  margin: 16px 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-soft);
+}
+.fruit-scan-selection[hidden] {
+  display: none;
+}
+.fruit-scan-overview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.fruit-scan-overview strong {
+  font-size: 14px;
+}
+.fruit-scan-overview p {
+  margin: 6px 0 0;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.fruit-scan-overview button {
+  flex-shrink: 0;
+}
+.fruit-scan-selection .form-help {
+  margin: 10px 0 0;
+}
+.fruit-stock-scan-dialog [data-fruit-scan-list] {
+  max-height: 36vh;
+  overflow: auto;
+}
+.fruit-stock-scan-dialog .table-wrap table {
+  width: 100%;
+  min-width: 0;
+  table-layout: fixed;
+  font-variant-numeric: tabular-nums;
+}
+.fruit-stock-scan-dialog td:first-child {
+  min-width: 0;
+}
+.fruit-stock-scan-dialog td code,
+.fruit-stock-scan-dialog td small {
+  display: block;
+  margin-top: 4px;
+}
+.fruit-stock-scan-dialog code {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
+.fruit-stock-scan-dialog th,
+.fruit-stock-scan-dialog td {
+  padding: 10px 8px;
+}
+.fruit-stock-scan-dialog [data-fruit-scan-status] {
+  font-size: 13px;
+  line-height: 1.5;
+}
+.fruit-stock-scan-dialog [data-fruit-scan-status][data-error="true"] {
+  color: var(--danger, #ba2828);
+}
+.fruit-scan-batch {
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.fruit-scan-total {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.fruit-transfer-modal input[readonly],
+.reject-modal input[readonly] {
+  background: var(--surface-soft);
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 520px) {
+  .fruit-scan-overview {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .fruit-stock-scan-dialog th,
+  .fruit-stock-scan-dialog td {
+    padding: 8px 4px;
+    font-size: 12px;
+  }
+  .fruit-stock-scan-dialog td:first-child {
+    width: 40%;
+  }
+  .fruit-stock-scan-dialog code {
+    font-size: 11px;
+  }
+}
 
-.fruit-stock-scan-dialog th:first-child{width:46%}
-.fruit-stock-scan-dialog th:last-child{width:25%}
-.fruit-stock-scan-dialog td{white-space:normal}
-.fruit-stock-scan-dialog td button{margin:0;padding:6px 8px}
+.fruit-stock-scan-dialog th:first-child {
+  width: 46%;
+}
+.fruit-stock-scan-dialog th:last-child {
+  width: 25%;
+}
+.fruit-stock-scan-dialog td {
+  white-space: normal;
+}
+.fruit-stock-scan-dialog td button {
+  margin: 0;
+  padding: 6px 8px;
+}

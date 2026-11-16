@@ -4,8 +4,7 @@ import { quantity } from "./production.mjs";
 import { wasteOutputs, wasteOutputProducts } from "./waste-products.mjs";
 export { wasteOutputs } from "./waste-products.mjs";
 const round = (n) => Math.round(n * 1e6) / 1e6;
-const today = () =>
-  new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Jakarta" });
+const today = () => new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Jakarta" });
 const validDate = (d) => {
   if (
     !/^\d{4}-\d{2}-\d{2}$/.test(d) ||
@@ -18,14 +17,12 @@ export function wastePlan(s, p) {
   if (!s.stores.some((x) => x.id === p.storeId)) throw Error("Pilih store");
   validDate(p.date);
   validDate(p.receivedDate);
-  if (!p.processedBy?.trim() || p.processedBy.trim().length > 100) throw Error("Nama pengolah wajib, maksimal 100 karakter");
+  if (!p.processedBy?.trim() || p.processedBy.trim().length > 100)
+    throw Error("Nama pengolah wajib, maksimal 100 karakter");
   if (p.date > today() || p.date < p.receivedDate)
     throw Error("Tanggal waste harus sejak barang masuk sampai hari ini");
   const lot = s.lots.find(
-    (x) =>
-      x.id === p.sourceLotId &&
-      x.storeId === p.storeId &&
-      x.date === p.receivedDate,
+    (x) => x.id === p.sourceLotId && x.storeId === p.storeId && x.date === p.receivedDate,
   );
   const product = s.products.find((x) => x.id === lot?.productId);
   if (!lot || !product || !isLegacyStock(product))
@@ -62,15 +59,14 @@ export function wastePlan(s, p) {
       seen.has(output.id)
     )
       throw Error(
-        "Pilih produk hasil berbeda dengan satuan " +
-          spec.unit +
-          " untuk " +
-          spec.label,
+        "Pilih produk hasil berbeda dengan satuan " + spec.unit + " untuk " + spec.label,
       );
     const linked = linkedOutputs.find((x) => x.key === spec.key);
     if (linked.error) throw Error(linked.error);
     if (output.id !== linked.product.id)
-      throw Error(`Produk hasil berbeda dari turunan ${product.name}. Gunakan ${linked.product.name}.`);
+      throw Error(
+        `Produk hasil berbeda dari turunan ${product.name}. Gunakan ${linked.product.name}.`,
+      );
     if (
       !line.lotId ||
       lotIds.has(line.lotId) ||
@@ -79,8 +75,7 @@ export function wastePlan(s, p) {
       throw Error("ID batch hasil tidak valid");
     if (line.expiry) {
       validDate(line.expiry);
-      if (line.expiry < p.date)
-        throw Error("Kedaluwarsa hasil sebelum tanggal waste");
+      if (line.expiry < p.date) throw Error("Kedaluwarsa hasil sebelum tanggal waste");
     }
     seen.add(output.id);
     lotIds.add(line.lotId);
@@ -111,7 +106,12 @@ export function wastePlan(s, p) {
     outputKg,
     lossKg: round(kg - outputKg),
     outputs,
-    evidence: Object.fromEntries(["reject", "processed", "durpas500", "durpas1000", "coral"].map((key) => [key, photoValue(p.evidence?.[key])])),
+    evidence: Object.fromEntries(
+      ["reject", "processed", "durpas500", "durpas1000", "coral"].map((key) => [
+        key,
+        photoValue(p.evidence?.[key]),
+      ]),
+    ),
     processedBy: p.processedBy.trim(),
     reason: p.reason.trim(),
   };
@@ -164,8 +164,7 @@ export function wasteAction(s, action, p) {
     }
     const source = s.lots.find((x) => x.id === run.sourceLotId);
     if (!source) throw Error("Batch asal tidak ditemukan");
-    for (const line of run.outputs)
-      s.unitLots.find((x) => x.id === line.lotId).qty = 0;
+    for (const line of run.outputs) s.unitLots.find((x) => x.id === line.lotId).qty = 0;
     source.kg = round(source.kg + run.kg);
     source.pieces += run.pieces;
     run.voided = true;

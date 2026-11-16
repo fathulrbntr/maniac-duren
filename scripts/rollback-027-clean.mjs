@@ -1,15 +1,26 @@
-import {existsSync,readFileSync,lstatSync,mkdirSync,renameSync,rmdirSync} from 'node:fs';
-import {dirname,resolve,join} from 'node:path';
-import {fileURLToPath} from 'node:url';
-const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
+import {
+  existsSync,
+  readFileSync,
+  lstatSync,
+  mkdirSync,
+  renameSync,
+  rmdirSync,
+} from "node:fs";
+import { dirname, resolve, join } from "node:path";
+import { fileURLToPath } from "node:url";
+const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 // Patch 072+ uses files that the historical rollback used to remove.
-if (readFileSync(join(root,'pos/index.html'),'utf8').includes('pwa.mjs')) {
- throw Error('Rollback 027 tidak cocok dengan proyek aktif ini. Tidak ada file dipindahkan. Gunakan riwayat Git untuk rollback terencana.');
+if (readFileSync(join(root, "pos/index.html"), "utf8").includes("pwa.mjs")) {
+  throw Error(
+    "Rollback 027 tidak cocok dengan proyek aktif ini. Tidak ada file dipindahkan. Gunakan riwayat Git untuk rollback terencana.",
+  );
 }
-if (!readFileSync(join(root,'pos/app.js'),'utf8').includes('/rest/v1/rpc/pos_mutate_027')) {
- throw Error('Timpa seluruh isi ZIP rollback 027 terlebih dahulu.');
+if (
+  !readFileSync(join(root, "pos/app.js"), "utf8").includes("/rest/v1/rpc/pos_mutate_027")
+) {
+  throw Error("Timpa seluruh isi ZIP rollback 027 terlebih dahulu.");
 }
-const paths=[
+const paths = [
   "PATCH-028.md",
   "database/audit-data.sql",
   "database/clear-operations.sql",
@@ -49,24 +60,34 @@ const paths=[
   "tests/offline-database.test.mjs",
   "tests/offline.test.mjs",
   "tests/page-cache.test.mjs",
-  "tests/service-reset.test.mjs"
+  "tests/service-reset.test.mjs",
 ];
-const existing=paths.filter(name=>existsSync(join(root,name)));
-for(const name of existing) if(!lstatSync(join(root,name)).isFile()) throw Error('Bukan file biasa: '+name);
-if(process.argv.includes('--check')) {
- console.log(existing.length+' file sisa patch setelah 027 akan dipindahkan ke backup/rollback-027/.');
- console.log(existing.join('\n'));
+const existing = paths.filter((name) => existsSync(join(root, name)));
+for (const name of existing)
+  if (!lstatSync(join(root, name)).isFile()) throw Error("Bukan file biasa: " + name);
+if (process.argv.includes("--check")) {
+  console.log(
+    existing.length +
+      " file sisa patch setelah 027 akan dipindahkan ke backup/rollback-027/.",
+  );
+  console.log(existing.join("\n"));
 } else {
- const run=new Date().toISOString().replace(/[:.]/g,'-');
- const backup=join(root,'backup','rollback-027',run);
- for(const name of existing) {
-  const destination=join(backup,name);
-  mkdirSync(dirname(destination),{recursive:true});
-  renameSync(join(root,name),destination);
- }
- for(const name of ['pos/icons','shared']) {
-  try {rmdirSync(join(root,name));}catch(error){if(!['ENOENT','ENOTEMPTY'].includes(error.code))throw error;}
- }
- console.log(existing.length+' file sisa patch dipindahkan ke backup/rollback-027/.');
- console.log('Selesai. Folder .git, konfigurasi .env, data browser dan database tidak diubah.');
+  const run = new Date().toISOString().replace(/[:.]/g, "-");
+  const backup = join(root, "backup", "rollback-027", run);
+  for (const name of existing) {
+    const destination = join(backup, name);
+    mkdirSync(dirname(destination), { recursive: true });
+    renameSync(join(root, name), destination);
+  }
+  for (const name of ["pos/icons", "shared"]) {
+    try {
+      rmdirSync(join(root, name));
+    } catch (error) {
+      if (!["ENOENT", "ENOTEMPTY"].includes(error.code)) throw error;
+    }
+  }
+  console.log(existing.length + " file sisa patch dipindahkan ke backup/rollback-027/.");
+  console.log(
+    "Selesai. Folder .git, konfigurasi .env, data browser dan database tidak diubah.",
+  );
 }

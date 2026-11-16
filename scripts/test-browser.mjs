@@ -17,6 +17,7 @@ const files = [
   "batch-profit-browser.mjs",
   "ui-audit-browser.mjs",
   "public-browser.mjs",
+  "warehouse-browser.mjs",
 ];
 for (const file of files) {
   console.log("\nRunning " + file);

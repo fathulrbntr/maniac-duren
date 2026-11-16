@@ -26,10 +26,7 @@ assert.equal(pendingRetry().payload.lines[0].kg, 2);
 payload.lines[0].kg = 2;
 settleRetry("sale", true);
 assert.equal(prepareRetry("sale", { ...payload, id: "two" }).id, "one");
-assert.throws(
-  () => prepareRetry("sale", { ...payload, paid: 200000 }),
-  /belum pasti/,
-);
+assert.throws(() => prepareRetry("sale", { ...payload, paid: 200000 }), /belum pasti/);
 setRetryScope("staff-B");
 assert.equal(pendingRetry(), null);
 setRetryScope("staff-A");
@@ -48,7 +45,10 @@ for (const [action, table] of [
   ["unit_receipt", "unitLots"],
   ["produce", "productions"],
   ["waste_process", "wasteRuns"],
-  ...["reject_mark","reject_process","reject_coral","reject_loss"].map(a=>[a,"rejectRecords"]),
+  ...["reject_mark", "reject_process", "reject_coral", "reject_loss"].map((a) => [
+    a,
+    "rejectRecords",
+  ]),
 ]) {
   prepareRetry(action, { id: "first", qty: 1 });
   settleRetry(action, true);
@@ -58,8 +58,22 @@ for (const [action, table] of [
   settleRetry(action, false);
   assert.equal(pendingRetry(), null);
 }
-prepareRetry("order_void", {id:"void-retry", orderId:"order"});settleRetry("order_void",true);assert(reconcileRetry({events:[],orders:[{id:"order",void_meta:{eventId:"void-retry"}}]}));
-prepareRetry("reject_void", {id:"reject-undo",recordId:"mark"});settleRetry("reject_void",true);assert(reconcileRetry({events:[],rejectRecords:[{id:"mark",voided:true,voidEventId:"reject-undo"}]}));
+prepareRetry("order_void", { id: "void-retry", orderId: "order" });
+settleRetry("order_void", true);
+assert(
+  reconcileRetry({
+    events: [],
+    orders: [{ id: "order", void_meta: { eventId: "void-retry" } }],
+  }),
+);
+prepareRetry("reject_void", { id: "reject-undo", recordId: "mark" });
+settleRetry("reject_void", true);
+assert(
+  reconcileRetry({
+    events: [],
+    rejectRecords: [{ id: "mark", voided: true, voidEventId: "reject-undo" }],
+  }),
+);
 const state = demoState(),
   source = state.lots.find((l) => l.kg > 2 && l.pieces > 1),
   to = state.stores.find((s) => s.id !== source.storeId);
@@ -80,7 +94,16 @@ console.log(
   "PASS: uncertain retry, stable IDs, session/account isolation, reconciliation, definitive failure, transfer availability date.",
 );
 
-setRetryScope('store-profile');
-prepareRetry('store_save',{id:'edit-store',storeId:'depok',name:'Outlet Depok',address:'Depok',phone:'0812'});
-assert(reconcileRetry({stores:[{id:'depok',profileVersion:'edit-store'}],events:[]}),'Reconcile profile save even without trace permission');
-assert.equal(pendingRetry(),null);
+setRetryScope("store-profile");
+prepareRetry("store_save", {
+  id: "edit-store",
+  storeId: "depok",
+  name: "Outlet Depok",
+  address: "Depok",
+  phone: "0812",
+});
+assert(
+  reconcileRetry({ stores: [{ id: "depok", profileVersion: "edit-store" }], events: [] }),
+  "Reconcile profile save even without trace permission",
+);
+assert.equal(pendingRetry(), null);

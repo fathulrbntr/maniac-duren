@@ -1,42 +1,86 @@
-import {workspaceGroups} from './workspaces.mjs';
+import { workspaceGroups } from "./workspaces.mjs";
 // Sidebar grouping only. Existing page IDs, permissions and transaction flow are unchanged.
 export const sections = [
-  { id: 'utama', label: 'Ringkasan', pages: ['dashboard'] },
-  { id: 'inventory', label: '01 · Gudang & Penerimaan', pages: ['stock', 'products', 'suppliers'] },
-  { id: 'pelayanan', label: '02 · Pelayanan & Kasir', pages: ['shifts', 'orders'] },
-  { id: 'kitchen', label: '03 · Kitchen', pages: ['kitchen', 'production', 'recipes'] },
-  { id: 'laporan', label: '04 · Laporan & Administrasi', pages: ['reports', 'documents'] },
-  { id: 'potong', label: 'Tukang Potong', pages: ['waste'] },
-  { id: 'manajemen', label: 'Pengelolaan', pages: ['crm', 'discounts', 'employees', 'stores'] },
-  { id: 'pengaturan', label: 'Pengaturan', pages: ['payments', 'devices'] },
-  { id: 'bantuan', label: 'Karyawan & Panduan', pages: ['attendance', 'guide'] },
+  { id: "utama", label: "Ringkasan", pages: ["dashboard"] },
+  {
+    id: "inventory",
+    label: "01 · Gudang & Penerimaan",
+    pages: ["stock", "products", "suppliers"],
+  },
+  { id: "pelayanan", label: "02 · Pelayanan & Kasir", pages: ["shifts", "orders"] },
+  { id: "kitchen", label: "03 · Kitchen", pages: ["kitchen", "production", "recipes"] },
+  {
+    id: "laporan",
+    label: "04 · Laporan & Administrasi",
+    pages: ["reports", "documents"],
+  },
+  { id: "potong", label: "Tukang Potong", pages: ["waste"] },
+  {
+    id: "manajemen",
+    label: "Pengelolaan",
+    pages: ["crm", "discounts", "employees", "stores"],
+  },
+  { id: "pengaturan", label: "Pengaturan", pages: ["payments", "devices"] },
+  { id: "bantuan", label: "Karyawan & Panduan", pages: ["attendance", "guide"] },
 ];
 export function visibleSections(access) {
-  if(access?.workspace)return workspaceGroups(access);
-  const allowed = access ? {
-    crm: access.crmAdmin, payments: access.cashierOwner, devices: access.cashierOwner || access.sell || access.master, discounts: access.cashierOwner, salesreport: access.reports, orders: access.sell, kitchen: access.kitchen || access.sell,
-    shifts: access.sell || access.reports || access.finance, dashboard: access.reports, stock: access.stock || access.produce,
-    production: access.produce, waste: access.waste, losses: access.waste,
-    batches: access.trace || access.finance || access.waste, reports: access.reports || access.finance || access.trace || access.waste, documents: access.finance || access.stock, finance: access.finance, trace: access.trace,
-    employees: access.employees, attendance: access.attendance, products: access.master,
-    recipes: access.master, stores: access.master, suppliers: access.master, guide: true,
-  } : null;
-  return sections.map(section => ({ ...section, pages: section.pages.filter(key => !allowed || allowed[key]) })).filter(section => section.pages.length);
+  if (access?.workspace) return workspaceGroups(access);
+  const allowed = access
+    ? {
+        crm: access.crmAdmin,
+        payments: access.cashierOwner,
+        devices: access.cashierOwner || access.sell || access.master,
+        discounts: access.cashierOwner,
+        salesreport: access.reports,
+        orders: access.sell,
+        kitchen: access.kitchen || access.sell,
+        shifts: access.sell || access.reports || access.finance,
+        dashboard: access.reports,
+        stock: access.stock || access.produce,
+        production: access.produce,
+        waste: access.waste,
+        losses: access.waste,
+        batches: access.trace || access.finance || access.waste,
+        reports: access.reports || access.finance || access.trace || access.waste,
+        documents: access.finance || access.stock,
+        finance: access.finance,
+        trace: access.trace,
+        employees: access.employees,
+        attendance: access.attendance,
+        products: access.master,
+        recipes: access.master,
+        stores: access.master,
+        suppliers: access.master,
+        guide: true,
+      }
+    : null;
+  return sections
+    .map((section) => ({
+      ...section,
+      pages: section.pages.filter((key) => !allowed || allowed[key]),
+    }))
+    .filter((section) => section.pages.length);
 }
 export function navigation(title, view, icon, access, closedGroups = {}) {
-  return visibleSections(access).map(section => {
-    const open = section.pages.includes(view) || !closedGroups[section.id];
-    return `<details class="nav-section" data-nav-group="${section.id}" ${open ? 'open' : ''}><summary class="nav-heading"><span>${section.label}</span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m7 5 5 5-5 5"/></svg></summary><div class="nav-items">${section.pages.map(key => `<button type="button" data-view="${key}" title="${title[key]}" aria-label="${title[key]}" class="nav-item ${view === key ? 'active' : ''}" ${view === key ? 'aria-current="page"' : ''}>${icon(key)}<span>${title[key]}</span></button>`).join('')}</div></details>`;
-  }).join('');
+  return visibleSections(access)
+    .map((section) => {
+      const open = section.pages.includes(view) || !closedGroups[section.id];
+      return `<details class="nav-section" data-nav-group="${section.id}" ${open ? "open" : ""}><summary class="nav-heading"><span>${section.label}</span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m7 5 5 5-5 5"/></svg></summary><div class="nav-items">${section.pages.map((key) => `<button type="button" data-view="${key}" title="${title[key]}" aria-label="${title[key]}" class="nav-item ${view === key ? "active" : ""}" ${view === key ? 'aria-current="page"' : ""}>${icon(key)}<span>${title[key]}</span></button>`).join("")}</div></details>`;
+    })
+    .join("");
 }
 export function mayLeave(busy) {
   if (busy) return false;
   const dirty = document.querySelector('main form[data-dirty="true"]');
-  return !dirty || confirm('Isian belum disimpan. Tinggalkan halaman ini?');
+  return !dirty || confirm("Isian belum disimpan. Tinggalkan halaman ini?");
 }
 export function trackForms() {
-  document.querySelectorAll('main form:not(#filters):not(#catalog-filter):not([data-shift-filters])').forEach(form => {
-    form.addEventListener('input', () => (form.dataset.dirty = 'true'));
-    form.addEventListener('change', () => (form.dataset.dirty = 'true'));
-  });
+  document
+    .querySelectorAll(
+      "main form:not(#filters):not(#catalog-filter):not([data-shift-filters])",
+    )
+    .forEach((form) => {
+      form.addEventListener("input", () => (form.dataset.dirty = "true"));
+      form.addEventListener("change", () => (form.dataset.dirty = "true"));
+    });
 }

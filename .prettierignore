@@ -1,0 +1,10 @@
+node_modules/
+test-results/
+playwright-report/
+pos/vendor/
+maniac-foto-*/
+menu/menu.json
+package-lock.json
+database/
+supabase/
+docs/archive/

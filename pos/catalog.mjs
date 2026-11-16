@@ -31,21 +31,13 @@ export function normalizeProduct(p) {
   const x = productDefaults(p);
   x.name = String(x.name ?? "").trim();
   x.sku = String(x.sku ?? "").trim();
-  if (!x.name || x.name.length > 100)
-    throw Error("Nama wajib, maksimal 100 karakter");
-  if (!x.sku || x.sku.length > 40)
-    throw Error("SKU wajib, maksimal 40 karakter");
-  if (
-    !Object.hasOwn(itemTypes, x.itemType) ||
-    !Object.hasOwn(stockUnits, x.stockUnit)
-  )
+  if (!x.name || x.name.length > 100) throw Error("Nama wajib, maksimal 100 karakter");
+  if (!x.sku || x.sku.length > 40) throw Error("SKU wajib, maksimal 40 karakter");
+  if (!Object.hasOwn(itemTypes, x.itemType) || !Object.hasOwn(stockUnits, x.stockUnit))
     throw Error("Jenis item atau satuan tidak valid");
   if (isMaterial(x)) x.category = null;
   else if (!categories.includes(x.category)) throw Error("Pilih kategori jual");
-  if (
-    x.stockUnit === "kg_butir" &&
-    (x.itemType !== "direct" || x.category !== "Buah")
-  )
+  if (x.stockUnit === "kg_butir" && (x.itemType !== "direct" || x.category !== "Buah"))
     throw Error(`Kg + butir khusus ${itemTypes.direct} kategori Buah`);
   if (x.itemType === "recipe" && x.stockUnit !== "porsi")
     throw Error(`${itemTypes.recipe} memakai satuan porsi`);
@@ -53,8 +45,7 @@ export function normalizeProduct(p) {
     throw Error(`Satuan porsi khusus ${itemTypes.recipe}`);
   const price = (v, label) => {
     const n = Number(v);
-    if (!Number.isFinite(n) || n <= 0)
-      throw Error(label + " harus lebih dari 0");
+    if (!Number.isFinite(n) || n <= 0) throw Error(label + " harus lebih dari 0");
     return n;
   };
   x.priceKg = isLegacyStock(x) ? price(x.priceKg, "Harga/kg") : null;
@@ -85,8 +76,7 @@ export function saveProduct(s, p, editing = false) {
   if (x.stockUnit !== "kg_butir") x.buyPricePiece = null;
   if (
     s.products.some(
-      (other) =>
-        other.id !== p.id && other.sku.toLowerCase() === x.sku.toLowerCase(),
+      (other) => other.id !== p.id && other.sku.toLowerCase() === x.sku.toLowerCase(),
     )
   )
     throw Error("SKU sudah digunakan");
@@ -95,9 +85,7 @@ export function saveProduct(s, p, editing = false) {
     const used =
       (s.unitLots || []).some((l) => l.productId === p.id) ||
       (s.recipes || []).some(
-        (r) =>
-          r.outputId === p.id ||
-          r.ingredients.some((l) => l.productId === p.id),
+        (r) => r.outputId === p.id || r.ingredients.some((l) => l.productId === p.id),
       ) ||
       s.lots.some((l) => l.productId === p.id) ||
       s.sales.some((sale) => sale.lines.some((l) => l.productId === p.id));

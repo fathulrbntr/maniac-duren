@@ -1,4 +1,4 @@
-import { compressPhoto } from './photo-compression.mjs';
+import { compressPhoto } from "./photo-compression.mjs";
 export const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
 export function photoValue(value = "") {
   const photo = String(value || "");
@@ -6,8 +6,7 @@ export function photoValue(value = "") {
   const match = photo.match(
     /^data:image\/(?:jpeg|png|webp);base64,([A-Za-z0-9+/]+={0,2})$/,
   );
-  if (!match || match[1].length % 4 !== 0)
-    throw Error("Foto harus JPG, PNG, atau WebP");
+  if (!match || match[1].length % 4 !== 0) throw Error("Foto harus JPG, PNG, atau WebP");
   const bytes =
     (match[1].length * 3) / 4 -
     (match[1].endsWith("==") ? 2 : match[1].endsWith("=") ? 1 : 0);
@@ -18,31 +17,28 @@ export function productDetails(p) {
   const variant = String(p.variant || "").trim(),
     barcode = String(p.barcode || "").trim();
   if (variant.length > 100 || barcode.length > 80)
-    throw Error(
-      "Variant maksimal 100 karakter dan barcode maksimal 80 karakter",
-    );
-  const buyPrice =
-    p.buyPrice == null || p.buyPrice === "" ? null : Number(p.buyPrice);
+    throw Error("Variant maksimal 100 karakter dan barcode maksimal 80 karakter");
+  const buyPrice = p.buyPrice == null || p.buyPrice === "" ? null : Number(p.buyPrice);
   if (
     buyPrice !== null &&
     (!Number.isFinite(buyPrice) || buyPrice < 0 || buyPrice > 1e12)
   )
     throw Error("Harga beli harus 0–1 triliun");
   const extra = {};
-  if (Object.hasOwn(p, 'buyPricePiece')) {
+  if (Object.hasOwn(p, "buyPricePiece")) {
     const raw = p.buyPricePiece;
-    if (raw != null && typeof raw !== 'string' && typeof raw !== 'number')
-      throw Error('Harga beli per butir harus berupa angka');
-    const piece = raw == null || String(raw).trim() === '' ? null : Number(raw);
+    if (raw != null && typeof raw !== "string" && typeof raw !== "number")
+      throw Error("Harga beli per butir harus berupa angka");
+    const piece = raw == null || String(raw).trim() === "" ? null : Number(raw);
     if (piece !== null && (!Number.isFinite(piece) || piece < 0 || piece > 1e12))
-      throw Error('Harga beli per butir harus 0–1 triliun');
-    if (piece !== null && p.stockUnit !== 'kg_butir')
-      throw Error('Harga beli per butir khusus barang kg + butir');
+      throw Error("Harga beli per butir harus 0–1 triliun");
+    if (piece !== null && p.stockUnit !== "kg_butir")
+      throw Error("Harga beli per butir khusus barang kg + butir");
     extra.buyPricePiece = piece;
   }
   return { variant, barcode, buyPrice, ...extra, photo: photoValue(p.photo) };
 }
-export async function preparePhoto(file, kind = 'product') {
+export async function preparePhoto(file, kind = "product") {
   const result = await compressPhoto(file, kind);
   return { ...result, photo: photoValue(result.photo) };
 }

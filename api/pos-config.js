@@ -6,8 +6,8 @@ module.exports = (req, res) => {
   if (!publicKey) {
     try {
       publicKey =
-        JSON.parse(Buffer.from(key.split(".")[1], "base64url").toString())
-          .role === "anon";
+        JSON.parse(Buffer.from(key.split(".")[1], "base64url").toString()).role ===
+        "anon";
     } catch {
       publicKey = false;
     }

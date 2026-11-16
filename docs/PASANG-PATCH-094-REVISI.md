@@ -6,17 +6,17 @@ Paket ini menggantikan patch 094 sebelumnya yang belum dipasang. Dasar revisi ad
 
 Hanya pengelompokan dan urutan menu sidebar yang berubah. Setiap tombol tetap membuka halaman yang sama, dengan hak akses yang sama seperti versi 093.
 
-| Kelompok sidebar | Menu yang sudah ada |
-| --- | --- |
-| Ringkasan | Dashboard |
-| Pelayanan & Kasir | Shift Kasir → Kasir / POS |
-| Tukang Potong | Reject & Waste |
-| Kitchen | Kitchen Display → Produksi & Persiapan → Master Resep |
-| Gudang & Stok | Stok & Penerimaan → Master Barang → Supplier |
-| Administrasi | Laporan → Admin Dokumen |
-| Pengelolaan | Member & Poin → Diskon & Persetujuan → Karyawan & Akses → Outlet |
-| Pengaturan | Metode Pembayaran → Printer & Scanner |
-| Karyawan & Panduan | Absensi → Panduan |
+| Kelompok sidebar   | Menu yang sudah ada                                              |
+| ------------------ | ---------------------------------------------------------------- |
+| Ringkasan          | Dashboard                                                        |
+| Pelayanan & Kasir  | Shift Kasir → Kasir / POS                                        |
+| Tukang Potong      | Reject & Waste                                                   |
+| Kitchen            | Kitchen Display → Produksi & Persiapan → Master Resep            |
+| Gudang & Stok      | Stok & Penerimaan → Master Barang → Supplier                     |
+| Administrasi       | Laporan → Admin Dokumen                                          |
+| Pengelolaan        | Member & Poin → Diskon & Persetujuan → Karyawan & Akses → Outlet |
+| Pengaturan         | Metode Pembayaran → Printer & Scanner                            |
+| Karyawan & Panduan | Absensi → Panduan                                                |
 
 Menu hanya muncul bila akun memang memiliki akses sebelumnya. Pengelompokan tidak memberikan akses baru kepada karyawan.
 

@@ -14,28 +14,28 @@ Pilih toko aktif dan pastikan akun memiliki hak akses yang sesuai. Menu yang ter
 
 ## Fungsi menu
 
-| Kelompok | Menu | Fungsi |
-|---|---|---|
-| Utama | Dashboard | Ringkasan kinerja dan pintasan |
-| Utama | Kasir | Keranjang, member, pembayaran, struk |
-| Utama | Shift kasir | Buka/tutup dan rekonsiliasi shift |
-| Utama | Dapur | Menangani antrean pesanan |
-| Inventory | Product | Master, varian, harga, foto, dan pengaturan produk |
-| Inventory | Stok | Penerimaan, saldo, dan riwayat stok |
-| Inventory | Reject | Catat reject, olahan, waste, dan riwayat batch |
-| Produksi | Resep | Kebutuhan bahan dan hasil resep |
-| Produksi | Produksi | Pemakaian bahan dan hasil aktual |
-| Laporan & Administrasi | Laporan | Penjualan, biaya, stok, batch, dan ekspor |
-| Laporan & Administrasi | Admin Dokumen | PO, pembelian, invoice, surat jalan, kop surat |
-| Manajemen | CRM | Member, persetujuan komunikasi, dan aturan poin |
-| Manajemen | Diskon | Pengaturan diskon dan kontrol persetujuan |
-| Manajemen | Karyawan | Akun, peran, akses toko, serta profil |
-| Manajemen | Absensi | Kehadiran dan jadwal kerja |
-| Manajemen | Toko | Profil toko dan identitas struk |
-| Manajemen | Supplier | Master supplier |
-| Pengaturan | Pembayaran | Metode yang aktif per toko |
-| Pengaturan | Perangkat | Printer, timbangan, dan perangkat kasir |
-| Bantuan | Panduan | Petunjuk dalam aplikasi |
+| Kelompok               | Menu          | Fungsi                                             |
+| ---------------------- | ------------- | -------------------------------------------------- |
+| Utama                  | Dashboard     | Ringkasan kinerja dan pintasan                     |
+| Utama                  | Kasir         | Keranjang, member, pembayaran, struk               |
+| Utama                  | Shift kasir   | Buka/tutup dan rekonsiliasi shift                  |
+| Utama                  | Dapur         | Menangani antrean pesanan                          |
+| Inventory              | Product       | Master, varian, harga, foto, dan pengaturan produk |
+| Inventory              | Stok          | Penerimaan, saldo, dan riwayat stok                |
+| Inventory              | Reject        | Catat reject, olahan, waste, dan riwayat batch     |
+| Produksi               | Resep         | Kebutuhan bahan dan hasil resep                    |
+| Produksi               | Produksi      | Pemakaian bahan dan hasil aktual                   |
+| Laporan & Administrasi | Laporan       | Penjualan, biaya, stok, batch, dan ekspor          |
+| Laporan & Administrasi | Admin Dokumen | PO, pembelian, invoice, surat jalan, kop surat     |
+| Manajemen              | CRM           | Member, persetujuan komunikasi, dan aturan poin    |
+| Manajemen              | Diskon        | Pengaturan diskon dan kontrol persetujuan          |
+| Manajemen              | Karyawan      | Akun, peran, akses toko, serta profil              |
+| Manajemen              | Absensi       | Kehadiran dan jadwal kerja                         |
+| Manajemen              | Toko          | Profil toko dan identitas struk                    |
+| Manajemen              | Supplier      | Master supplier                                    |
+| Pengaturan             | Pembayaran    | Metode yang aktif per toko                         |
+| Pengaturan             | Perangkat     | Printer, timbangan, dan perangkat kasir            |
+| Bantuan                | Panduan       | Petunjuk dalam aplikasi                            |
 
 ## Menjaga pencatatan tetap konsisten
 

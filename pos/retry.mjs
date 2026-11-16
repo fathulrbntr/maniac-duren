@@ -1,4 +1,4 @@
-import {supplyActions} from './warehouse-flow.mjs';
+import { supplyActions } from "./warehouse-flow.mjs";
 // Keep the same operation ID after an uncertain network result, including page reloads.
 let KEY = "maniac-pos-pending-operation-v1";
 let pending;
@@ -6,30 +6,72 @@ export function setRetryScope(scope) {
   KEY = "maniac-pos-pending-operation-v1:" + scope;
   try {
     pending = JSON.parse(sessionStorage.getItem(KEY) || "null");
+    // Rebuild older signatures without changing the saved operation or its ID.
+    if (pending?.payload && typeof pending.action === "string")
+      pending.key = signature(pending.action, pending.payload);
   } catch {
     pending = null;
   }
 }
 const tracked = new Set([
   ...supplyActions,
-  "cash_deposit_save", "cash_deposit_void",
-  "crm_member_save", "crm_rule_save",
-  "payment_settings_save", "cashier_shift_open", "cashier_shift_close",
-  "document_save", "document_issue", "document_cancel", "letterhead_save", "expense_save", "expense_void",
+  "cash_deposit_save",
+  "cash_deposit_void",
+  "crm_member_save",
+  "crm_rule_save",
+  "payment_settings_save",
+  "cashier_shift_open",
+  "cashier_shift_close",
+  "document_save",
+  "document_issue",
+  "document_cancel",
+  "letterhead_save",
+  "expense_save",
+  "expense_void",
   "store_save",
-  "reject_mark", "reject_process", "reject_coral", "reject_loss", "reject_void",
-  "order_void", "discount_save", "cashier_approval_request", "cashier_approval_decide",
-  "product_variants_save", "pos_category_save",
-  "order_direct", "order_complete", "order_create", "order_start", "order_ready", "order_pay", "order_cancel", "sort", "inventory_loss", "recover", "employee_save", "attendance_in", "attendance_out", "work_hours_save",
+  "reject_mark",
+  "reject_process",
+  "reject_coral",
+  "reject_loss",
+  "reject_void",
+  "order_void",
+  "discount_save",
+  "cashier_approval_request",
+  "cashier_approval_decide",
+  "product_variants_save",
+  "pos_category_save",
+  "order_direct",
+  "order_complete",
+  "order_create",
+  "order_start",
+  "order_ready",
+  "order_pay",
+  "order_cancel",
+  "sort",
+  "inventory_loss",
+  "recover",
+  "employee_save",
+  "attendance_in",
+  "attendance_out",
+  "work_hours_save",
   "sale",
-  "receipt", "receipt_batch",
+  "receipt",
+  "receipt_batch",
   "movement",
   "unit_receipt",
   "produce",
   "waste_process",
 ]);
 const signature = (action, payload) =>
-  JSON.stringify({ action, ...payload, id: undefined });
+  JSON.stringify({ action, payload: { ...payload, id: undefined } }, (_key, value) =>
+    value && typeof value === "object" && !Array.isArray(value)
+      ? Object.fromEntries(
+          Object.keys(value)
+            .sort()
+            .map((key) => [key, value[key]]),
+        )
+      : value,
+  );
 function persist() {
   try {
     if (pending) sessionStorage.setItem(KEY, JSON.stringify(pending));
@@ -65,27 +107,59 @@ export function settleRetry(action, uncertain = false) {
 }
 export function reconcileRetry(state) {
   if (!pending) return false;
-  if (pending.action === "receipt_batch" && pending.payload.lines?.length && pending.payload.lines.every(line => (state.lots || []).some(lot => lot.id === line.id && lot.shipmentId === pending.id))) {
-    pending = null; persist(); return true;
+  if (
+    pending.action === "receipt_batch" &&
+    pending.payload.lines?.length &&
+    pending.payload.lines.every((line) =>
+      (state.lots || []).some(
+        (lot) => lot.id === line.id && lot.shipmentId === pending.id,
+      ),
+    )
+  ) {
+    pending = null;
+    persist();
+    return true;
   }
-  const rows = supplyActions.has(pending.action)?state.supplyEvents||[]:
-    {
-      cash_deposit_save: state.cashDepositEvents, cash_deposit_void: state.cashDepositEvents,
-      document_save: state.adminEvents, document_issue: state.adminEvents, document_cancel: state.adminEvents, letterhead_save: state.adminEvents, expense_save: state.adminEvents, expense_void: state.adminEvents,
-      crm_member_save: state.crmEvents, crm_rule_save: state.crmEvents,
-      payment_settings_save: state.paymentSettingEvents || state.events,
-      cashier_shift_open: state.cashierShiftEvents, cashier_shift_close: state.cashierShiftEvents,
-      order_create: state.orders,
-      sale: state.sales,
-      receipt: state.lots,
-      movement: state.movements,
-      unit_receipt: state.unitLots,
-      produce: state.productions,
-      waste_process: state.wasteRuns,
-      reject_mark: state.rejectRecords, reject_process: state.rejectRecords, reject_coral: state.rejectRecords, reject_loss: state.rejectRecords,
-      cashier_approval_request: state.cashierApprovals,
-    }[pending.action] || state.events || [];
-  if ((pending.action==='store_save'&&(state.stores||[]).some(s=>s.profileVersion===pending.id)) || rows.some((row) => row.id === pending.id) || (pending.action==='reject_void'&&(state.rejectRecords||[]).some(r=>r.voidEventId===pending.id)) || (['order_void','order_cancel'].includes(pending.action)&&(state.orders||[]).some(o=>o.void_meta?.eventId===pending.id))) {
+  const rows = supplyActions.has(pending.action)
+    ? state.supplyEvents || []
+    : {
+        cash_deposit_save: state.cashDepositEvents,
+        cash_deposit_void: state.cashDepositEvents,
+        document_save: state.adminEvents,
+        document_issue: state.adminEvents,
+        document_cancel: state.adminEvents,
+        letterhead_save: state.adminEvents,
+        expense_save: state.adminEvents,
+        expense_void: state.adminEvents,
+        crm_member_save: state.crmEvents,
+        crm_rule_save: state.crmEvents,
+        payment_settings_save: state.paymentSettingEvents || state.events,
+        cashier_shift_open: state.cashierShiftEvents,
+        cashier_shift_close: state.cashierShiftEvents,
+        order_create: state.orders,
+        sale: state.sales,
+        receipt: state.lots,
+        movement: state.movements,
+        unit_receipt: state.unitLots,
+        produce: state.productions,
+        waste_process: state.wasteRuns,
+        reject_mark: state.rejectRecords,
+        reject_process: state.rejectRecords,
+        reject_coral: state.rejectRecords,
+        reject_loss: state.rejectRecords,
+        cashier_approval_request: state.cashierApprovals,
+      }[pending.action] ||
+      state.events ||
+      [];
+  if (
+    (pending.action === "store_save" &&
+      (state.stores || []).some((s) => s.profileVersion === pending.id)) ||
+    rows.some((row) => row.id === pending.id) ||
+    (pending.action === "reject_void" &&
+      (state.rejectRecords || []).some((r) => r.voidEventId === pending.id)) ||
+    (["order_void", "order_cancel"].includes(pending.action) &&
+      (state.orders || []).some((o) => o.void_meta?.eventId === pending.id))
+  ) {
     pending = null;
     persist();
     return true;

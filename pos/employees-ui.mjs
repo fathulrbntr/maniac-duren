@@ -1,112 +1,625 @@
-import { compressPhoto } from './photo-compression.mjs';
-import {escape as e,id,today} from './core.mjs';
-const roles={staff:'Staff',owner:'Owner',manager:'Manager Toko',admin:'Admin Back Office',waitress:'Waitress',cutter:'Tukang Potong',cashier:'Kasir',kitchen:'Kitchen',warehouse:'Gudang'};
-const perms={stock:'Stok',produce:'Produksi',waste:'Waste',sell:'Kasir',kitchen:'Kitchen',reports:'Laporan',finance:'Finance',trace:'Jejak stok',master:'Master data',attendance:'Absensi',cancel:'Pembatalan'};
-const field=(label,html)=>`<label class="field">${label}${html}</label>`;
-const detailGroups=[
- {title:'Kontak darurat',fields:[
-  ['Nama kontak darurat','emergencyContactName','emergency_contact_name','text',100],
-  ['Nomor telepon darurat','emergencyContactPhone','emergency_contact_phone','tel',40]
- ]},
- {title:'Rekening bank',fields:[
-  ['Nama bank','bankName','bank_name','text',100],
-  ['Nama pemilik rekening','bankAccountName','bank_account_name','text',100],
-  ['Nomor rekening','bankAccountNumber','bank_account_number','text',34]
- ]}
+import { compressPhoto } from "./photo-compression.mjs";
+import { escape as e, id, today } from "./core.mjs";
+const roles = {
+  staff: "Staff",
+  owner: "Owner",
+  manager: "Manager Toko",
+  admin: "Admin Back Office",
+  waitress: "Waitress",
+  cutter: "Tukang Potong",
+  cashier: "Kasir",
+  kitchen: "Kitchen",
+  warehouse: "Gudang",
+};
+const perms = {
+  stock: "Stok",
+  produce: "Produksi",
+  waste: "Waste",
+  sell: "Kasir",
+  kitchen: "Kitchen",
+  reports: "Laporan",
+  finance: "Finance",
+  trace: "Jejak stok",
+  master: "Master data",
+  attendance: "Absensi",
+  cancel: "Pembatalan",
+};
+const field = (label, html) => `<label class="field">${label}${html}</label>`;
+const detailGroups = [
+  {
+    title: "Kontak darurat",
+    fields: [
+      [
+        "Nama kontak darurat",
+        "emergencyContactName",
+        "emergency_contact_name",
+        "text",
+        100,
+      ],
+      [
+        "Nomor telepon darurat",
+        "emergencyContactPhone",
+        "emergency_contact_phone",
+        "tel",
+        40,
+      ],
+    ],
+  },
+  {
+    title: "Rekening bank",
+    fields: [
+      ["Nama bank", "bankName", "bank_name", "text", 100],
+      ["Nama pemilik rekening", "bankAccountName", "bank_account_name", "text", 100],
+      ["Nomor rekening", "bankAccountNumber", "bank_account_number", "text", 34],
+    ],
+  },
 ];
-function employeeDetailsForm(x,ready){
- const notice=ready?'':'<div class="notice">Input kontak darurat dan rekening belum aktif. Jalankan database/employee-details-070.sql di Supabase, lalu klik Perbarui.</div>';
- return notice+detailGroups.map(group=>`<fieldset class="employee-detail-fields" ${ready?'':'disabled'}><legend>${group.title}</legend><div class="form-grid">${group.fields.map(([label,key,column,type,max])=>field(label,`<input name="${key}" type="${type}" value="${e(x[column]||'')}" maxlength="${max}" autocomplete="off" ${key==='bankAccountNumber'?'inputmode="numeric" pattern="[0-9]*" title="Isi angka saja, termasuk angka nol di depan"':''}>`)).join('')}</div></fieldset>`).join('');
+function employeeDetailsForm(x, ready) {
+  const notice = ready
+    ? ""
+    : '<div class="notice">Input kontak darurat dan rekening belum aktif. Jalankan database/employee-details-070.sql di Supabase, lalu klik Perbarui.</div>';
+  return (
+    notice +
+    detailGroups
+      .map(
+        (group) =>
+          `<fieldset class="employee-detail-fields" ${ready ? "" : "disabled"}><legend>${group.title}</legend><div class="form-grid">${group.fields.map(([label, key, column, type, max]) => field(label, `<input name="${key}" type="${type}" value="${e(x[column] || "")}" maxlength="${max}" autocomplete="off" ${key === "bankAccountNumber" ? 'inputmode="numeric" pattern="[0-9]*" title="Isi angka saja, termasuk angka nol di depan"' : ""}>`)).join("")}</div></fieldset>`,
+      )
+      .join("")
+  );
 }
-function employeeDetailsInfo(x){return detailGroups.map(group=>`<h3>${group.title}</h3><dl class="employee-info">${group.fields.map(([label,,column])=>`<div><dt>${label}</dt><dd>${e(x[column]||'Belum diisi')}</dd></div>`).join('')}</dl>`).join('');}
-const time=x=>x?new Date(x).toLocaleTimeString('en-GB',{timeZone:'Asia/Jakarta',hour12:false}):'—';
-const localDay=x=>new Date(x).toLocaleDateString('en-CA',{timeZone:'Asia/Jakarta'});
-export function periodDates(period,day=today()) {const end=new Date(day+'T12:00:00Z'),start=new Date(end);if(period==='week')start.setUTCDate(start.getUTCDate()-(start.getUTCDay()+6)%7);else start.setUTCDate(1);const dates=[];for(let d=new Date(start);d<=end;d.setUTCDate(d.getUTCDate()+1))dates.push(d.toISOString().slice(0,10));return dates.reverse();}
-export function attendanceNote(row){if(!row)return {tone:'neutral',text:'Belum ada absen'};if(!row.scheduled_start)return {tone:'neutral',text:'Jadwal belum diatur'};const late=time(row.clock_in)>row.scheduled_start;return late?{tone:'late',text:'Masuk terlambat'}:row.clock_out&&time(row.clock_out)<row.scheduled_end?{tone:'early',text:'Masuk tepat waktu · pulang lebih awal'}:{tone:'good',text:row.clock_out?'Absen sesuai jadwal':'Masuk tepat waktu · belum check-out'};}
-const badge=r=>{const n=attendanceNote(r);return `<span class="attendance-note ${n.tone}">${n.text}</span>`;};
-const period=()=>'<select data-period aria-label="Periode rekap"><option value="month">Bulan ini</option><option value="week">Minggu ini</option></select>';
-function recap(s,employee,range,store){return `<div class="table-wrap"><table><thead><tr><th>Tanggal</th><th>Cabang / jadwal</th><th>Check-in pertama</th><th>Check-out terakhir</th><th>Notes</th></tr></thead><tbody>${periodDates(range).map(day=>{const r=(s.attendance||[]).find(a=>a.employee_id===employee&&(a.work_date||localDay(a.clock_in))===day&&(!store||a.store_id===store));return `<tr><td>${day}</td><td>${e(s.stores.find(t=>t.id===r?.store_id)?.name||'—')}<small>${r?.scheduled_start?`${r.scheduled_start.slice(0,5)} – ${r.scheduled_end.slice(0,5)}`:'—'}</small></td><td>${time(r?.clock_in)}</td><td>${time(r?.clock_out)}</td><td>${badge(r)}</td></tr>`;}).join('')}</tbody></table></div>`;}
-export function employeesPage(view,s,store){const rows=s.employees||[],mine=(s.attendance||[]).find(a=>a.employee_id===s.me?.id&&(a.work_date||localDay(a.clock_in))===today()),hours=s.workHours?.find(h=>h.store_id===store);const warning=s.employeeVersion>=16?'':'<div class="notice">Jalankan SQL update 016 sebelum menyimpan perubahan karyawan atau absensi.</div>';
-if(view==='attendance')return `<div class="team-workspace">${warning}<div class="team-heading"><div><h2>Absensi</h2><p>Satu catatan per hari · waktu server WIB</p></div><button data-refresh>Perbarui</button></div><div class="attendance-layout"><section class="team-panel"><span class="team-eyebrow">ABSENSI HARI INI · ${today()}</span><h3>${e(s.me?.name||'Karyawan')}</h3><div class="attendance-times"><div><small>Check-in pertama</small><strong>${time(mine?.clock_in)}</strong></div><div><small>Check-out terakhir</small><strong>${time(mine?.clock_out)}</strong></div></div>${badge(mine)}<div class="team-actions"><button class="primary" data-attend="attendance_in" ${mine?'disabled':''}>${mine?'Sudah check-in':'Check-in'}</button><button data-attend="attendance_out" ${mine?'':'disabled'}>${mine?.clock_out?'Perbarui check-out':'Check-out'}</button></div><p>Check-in pertama dipertahankan. Check-out berikutnya memperbarui waktu terakhir pada catatan yang sama.</p></section><section class="team-panel"><span class="team-eyebrow">JAM KERJA CABANG</span><h3>${e(s.stores.find(x=>x.id===store)?.name)}</h3>${s.me?.role==='owner'?`<form id="work-hours"><div class="form-grid">${field('Jam masuk (WIB)',`<input type="time" name="startTime" value="${hours?.start_time?.slice(0,5)||''}" required>`)}${field('Jam pulang (WIB)',`<input type="time" name="endTime" value="${hours?.end_time?.slice(0,5)||''}" required>`)}</div><button class="primary" type="submit">Simpan jam kerja</button></form>`:`<h3>${hours?`${hours.start_time.slice(0,5)} – ${hours.end_time.slice(0,5)} WIB`:'Belum diatur owner'}</h3>`}<p>Perubahan berlaku pada check-in berikutnya. Jadwal yang sudah tercatat tetap tersimpan.</p></section></div><section class="team-panel"><div class="team-heading"><h3>Rekap absensi saya</h3>${period()}</div><div data-recap>${recap(s,s.me?.id,'month')}</div></section></div>`;
-return `<div class="team-workspace">${warning}<div class="team-heading"><div><h2>Karyawan</h2><p>Kelola tim, informasi pribadi, dan kehadiran.</p></div><div class="team-actions"><button data-refresh>Perbarui</button><button class="primary" data-employee-new>+ Tambah karyawan</button></div></div><div class="team-stats">${[['Total karyawan',rows.length],['Aktif',rows.filter(x=>x.active).length],['Nonaktif',rows.filter(x=>!x.active).length]].map(([label,n])=>`<div><span>${label}</span><strong>${n}</strong></div>`).join('')}</div><div class="team-heading"><input type="search" data-team-search placeholder="Cari nama, email, atau nomor telepon" aria-label="Cari karyawan"><select data-team-status aria-label="Status karyawan"><option value="all">Semua status</option><option value="active">Aktif</option><option value="inactive">Nonaktif</option></select></div><div class="team-grid">${rows.map(x=>`<article class="employee-card employee-card-v22" data-employee-card="${e(x.id)}" tabindex="0" aria-label="Edit karyawan ${e(x.name)}"><div class="employee-card-copy"><h3><span>${e(x.name)}</span></h3><p class="employee-username">${e(x.username||'Username belum diisi')}</p><p class="employee-role">${e(roles[x.role]||'Staff')}</p></div><div class="employee-card-photo">${x.profile_photo?`<img src="${e(x.profile_photo)}" alt="Foto ${e(x.name)}" loading="lazy">`:`<span class="employee-photo-placeholder" aria-label="Foto belum diunggah">${e(x.name.trim().split(/\s+/).slice(0,2).map(n=>n[0]).join('').toUpperCase())}</span>`}</div><div class="employee-card-footer"><span class="employee-status ${x.active?'is-active':'is-inactive'}">${x.active?'Aktif':'Nonaktif'}</span><details class="employee-more"><summary aria-label="Aksi ${e(x.name)}" title="Detail dan akun">•••</summary><div><button data-detail="${e(x.id)}">Detail & rekap</button>${!x.user_id?`<button data-account="${e(x.id)}">Buat akun</button>`:`<button data-password="${e(x.id)}">Ubah password</button>`}</div></details></div></article>`).join('')}</div><p data-team-empty class="empty" hidden>Tidak ada karyawan yang cocok.</p><div class="team-heading team-pagination"><span data-team-count></span><div class="team-actions"><button data-prev>Sebelumnya</button><button data-next>Berikutnya</button></div></div></div>`;}
-async function photoData(file, kind){return (await compressPhoto(file, kind)).photo;}
+function employeeDetailsInfo(x) {
+  return detailGroups
+    .map(
+      (group) =>
+        `<h3>${group.title}</h3><dl class="employee-info">${group.fields.map(([label, , column]) => `<div><dt>${label}</dt><dd>${e(x[column] || "Belum diisi")}</dd></div>`).join("")}</dl>`,
+    )
+    .join("");
+}
+const time = (x) =>
+  x
+    ? new Date(x).toLocaleTimeString("en-GB", { timeZone: "Asia/Jakarta", hour12: false })
+    : "—";
+const localDay = (x) =>
+  new Date(x).toLocaleDateString("en-CA", { timeZone: "Asia/Jakarta" });
+export function periodDates(period, day = today()) {
+  const end = new Date(day + "T12:00:00Z"),
+    start = new Date(end);
+  if (period === "week")
+    start.setUTCDate(start.getUTCDate() - ((start.getUTCDay() + 6) % 7));
+  else start.setUTCDate(1);
+  const dates = [];
+  for (let d = new Date(start); d <= end; d.setUTCDate(d.getUTCDate() + 1))
+    dates.push(d.toISOString().slice(0, 10));
+  return dates.reverse();
+}
+export function attendanceNote(row) {
+  if (!row) return { tone: "neutral", text: "Belum ada absen" };
+  if (!row.scheduled_start) return { tone: "neutral", text: "Jadwal belum diatur" };
+  const late = time(row.clock_in) > row.scheduled_start;
+  return late
+    ? { tone: "late", text: "Masuk terlambat" }
+    : row.clock_out && time(row.clock_out) < row.scheduled_end
+      ? { tone: "early", text: "Masuk tepat waktu · pulang lebih awal" }
+      : {
+          tone: "good",
+          text: row.clock_out
+            ? "Absen sesuai jadwal"
+            : "Masuk tepat waktu · belum check-out",
+        };
+}
+const badge = (r) => {
+  const n = attendanceNote(r);
+  return `<span class="attendance-note ${n.tone}">${n.text}</span>`;
+};
+const period = () =>
+  '<select data-period aria-label="Periode rekap"><option value="month">Bulan ini</option><option value="week">Minggu ini</option></select>';
+function recap(s, employee, range, store) {
+  return `<div class="table-wrap"><table><thead><tr><th>Tanggal</th><th>Cabang / jadwal</th><th>Check-in pertama</th><th>Check-out terakhir</th><th>Notes</th></tr></thead><tbody>${periodDates(
+    range,
+  )
+    .map((day) => {
+      const r = (s.attendance || []).find(
+        (a) =>
+          a.employee_id === employee &&
+          (a.work_date || localDay(a.clock_in)) === day &&
+          (!store || a.store_id === store),
+      );
+      return `<tr><td>${day}</td><td>${e(s.stores.find((t) => t.id === r?.store_id)?.name || "—")}<small>${r?.scheduled_start ? `${r.scheduled_start.slice(0, 5)} – ${r.scheduled_end.slice(0, 5)}` : "—"}</small></td><td>${time(r?.clock_in)}</td><td>${time(r?.clock_out)}</td><td>${badge(r)}</td></tr>`;
+    })
+    .join("")}</tbody></table></div>`;
+}
+export function employeesPage(view, s, store) {
+  const rows = s.employees || [],
+    mine = (s.attendance || []).find(
+      (a) =>
+        a.employee_id === s.me?.id && (a.work_date || localDay(a.clock_in)) === today(),
+    ),
+    hours = s.workHours?.find((h) => h.store_id === store);
+  const warning =
+    s.employeeVersion >= 16
+      ? ""
+      : '<div class="notice">Jalankan SQL update 016 sebelum menyimpan perubahan karyawan atau absensi.</div>';
+  if (view === "attendance")
+    return `<div class="team-workspace">${warning}<div class="team-heading"><div><h2>Absensi</h2><p>Satu catatan per hari · waktu server WIB</p></div><button data-refresh>Perbarui</button></div><div class="attendance-layout"><section class="team-panel"><span class="team-eyebrow">ABSENSI HARI INI · ${today()}</span><h3>${e(s.me?.name || "Karyawan")}</h3><div class="attendance-times"><div><small>Check-in pertama</small><strong>${time(mine?.clock_in)}</strong></div><div><small>Check-out terakhir</small><strong>${time(mine?.clock_out)}</strong></div></div>${badge(mine)}<div class="team-actions"><button class="primary" data-attend="attendance_in" ${mine ? "disabled" : ""}>${mine ? "Sudah check-in" : "Check-in"}</button><button data-attend="attendance_out" ${mine ? "" : "disabled"}>${mine?.clock_out ? "Perbarui check-out" : "Check-out"}</button></div><p>Check-in pertama dipertahankan. Check-out berikutnya memperbarui waktu terakhir pada catatan yang sama.</p></section><section class="team-panel"><span class="team-eyebrow">JAM KERJA CABANG</span><h3>${e(s.stores.find((x) => x.id === store)?.name)}</h3>${s.me?.role === "owner" ? `<form id="work-hours"><div class="form-grid">${field("Jam masuk (WIB)", `<input type="time" name="startTime" value="${hours?.start_time?.slice(0, 5) || ""}" required>`)}${field("Jam pulang (WIB)", `<input type="time" name="endTime" value="${hours?.end_time?.slice(0, 5) || ""}" required>`)}</div><button class="primary" type="submit">Simpan jam kerja</button></form>` : `<h3>${hours ? `${hours.start_time.slice(0, 5)} – ${hours.end_time.slice(0, 5)} WIB` : "Belum diatur owner"}</h3>`}<p>Perubahan berlaku pada check-in berikutnya. Jadwal yang sudah tercatat tetap tersimpan.</p></section></div><section class="team-panel"><div class="team-heading"><h3>Rekap absensi saya</h3>${period()}</div><div data-recap>${recap(s, s.me?.id, "month")}</div></section></div>`;
+  return `<div class="team-workspace">${warning}<div class="team-heading"><div><h2>Karyawan</h2><p>Kelola tim, informasi pribadi, dan kehadiran.</p></div><div class="team-actions"><button data-refresh>Perbarui</button><button class="primary" data-employee-new>+ Tambah karyawan</button></div></div><div class="team-stats">${[
+    ["Total karyawan", rows.length],
+    ["Aktif", rows.filter((x) => x.active).length],
+    ["Nonaktif", rows.filter((x) => !x.active).length],
+  ]
+    .map(([label, n]) => `<div><span>${label}</span><strong>${n}</strong></div>`)
+    .join(
+      "",
+    )}</div><div class="team-heading"><input type="search" data-team-search placeholder="Cari nama, email, atau nomor telepon" aria-label="Cari karyawan"><select data-team-status aria-label="Status karyawan"><option value="all">Semua status</option><option value="active">Aktif</option><option value="inactive">Nonaktif</option></select></div><div class="team-grid">${rows
+    .map(
+      (x) =>
+        `<article class="employee-card employee-card-v22" data-employee-card="${e(x.id)}" tabindex="0" aria-label="Edit karyawan ${e(x.name)}"><div class="employee-card-copy"><h3><span>${e(x.name)}</span></h3><p class="employee-username">${e(x.username || "Username belum diisi")}</p><p class="employee-role">${e(roles[x.role] || "Staff")}</p></div><div class="employee-card-photo">${
+          x.profile_photo
+            ? `<img src="${e(x.profile_photo)}" alt="Foto ${e(x.name)}" loading="lazy">`
+            : `<span class="employee-photo-placeholder" aria-label="Foto belum diunggah">${e(
+                x.name
+                  .trim()
+                  .split(/\s+/)
+                  .slice(0, 2)
+                  .map((n) => n[0])
+                  .join("")
+                  .toUpperCase(),
+              )}</span>`
+        }</div><div class="employee-card-footer"><span class="employee-status ${x.active ? "is-active" : "is-inactive"}">${x.active ? "Aktif" : "Nonaktif"}</span><details class="employee-more"><summary aria-label="Aksi ${e(x.name)}" title="Detail dan akun">•••</summary><div><button data-detail="${e(x.id)}">Detail & rekap</button>${!x.user_id ? `<button data-account="${e(x.id)}">Buat akun</button>` : `<button data-password="${e(x.id)}">Ubah password</button>`}</div></details></div></article>`,
+    )
+    .join(
+      "",
+    )}</div><p data-team-empty class="empty" hidden>Tidak ada karyawan yang cocok.</p><div class="team-heading team-pagination"><span data-team-count></span><div class="team-actions"><button data-prev>Sebelumnya</button><button data-next>Berikutnya</button></div></div></div>`;
+}
+async function photoData(file, kind) {
+  return (await compressPhoto(file, kind)).photo;
+}
 let employeeCardObserver;
-function fitEmployeeNames(){
- employeeCardObserver?.disconnect();
- const cards=[...document.querySelectorAll('[data-employee-card]')];
- const fit=card=>{
-  const name=card.querySelector('.employee-card-copy h3');if(!name||!card.isConnected||card.hidden)return;
-  name.style.removeProperty('font-size');
-  let size=parseFloat(document.defaultView.getComputedStyle(name).fontSize);
-  const text=name.querySelector('span');
-  const overflows=()=>text&&(text.getBoundingClientRect().height>name.clientHeight-4||text.scrollWidth>name.clientWidth-4);
-  while(size>8&&overflows()){size=Math.max(8,size-1);name.style.fontSize=size+'px';}
- };
- if(typeof ResizeObserver!=='undefined'){
-  employeeCardObserver=new ResizeObserver(entries=>entries.forEach(({target})=>fit(target)));
-  cards.forEach(card=>employeeCardObserver.observe(card));
- }
- cards.forEach(fit);
- document.fonts?.ready.then(()=>cards.forEach(fit));
+function fitEmployeeNames() {
+  employeeCardObserver?.disconnect();
+  const cards = [...document.querySelectorAll("[data-employee-card]")];
+  const fit = (card) => {
+    const name = card.querySelector(".employee-card-copy h3");
+    if (!name || !card.isConnected || card.hidden) return;
+    name.style.removeProperty("font-size");
+    let size = parseFloat(document.defaultView.getComputedStyle(name).fontSize);
+    const text = name.querySelector("span");
+    const overflows = () =>
+      text &&
+      (text.getBoundingClientRect().height > name.clientHeight - 4 ||
+        text.scrollWidth > name.clientWidth - 4);
+    while (size > 8 && overflows()) {
+      size = Math.max(8, size - 1);
+      name.style.fontSize = size + "px";
+    }
+  };
+  if (typeof ResizeObserver !== "undefined") {
+    employeeCardObserver = new ResizeObserver((entries) =>
+      entries.forEach(({ target }) => fit(target)),
+    );
+    cards.forEach((card) => employeeCardObserver.observe(card));
+  }
+  cards.forEach(fit);
+  document.fonts?.ready.then(() => cards.forEach(fit));
 }
-export function bindEmployees(view,s,store,ctx){const save=async(action,p)=>{if(!(s.employeeVersion>=16)){ctx.toast('Jalankan SQL update 016 lalu perbarui halaman.');return false;}return ctx.mutate(action,{storeId:store,...p});};
-document.querySelector('[data-refresh]').onclick=async()=>{try{await ctx.refresh();ctx.render();}catch(err){ctx.toast(err.message);}};
-function submit(d,action,transform,afterSave){
- const requestId=id(),f=d.querySelector('form');let busy=false,saved=false;
- f.onsubmit=async ev=>{
-  ev.preventDefault();if(busy)return;
-  const error=d.querySelector('#form-error');if(error)error.textContent='';
-  if(!f.reportValidity())return;
-  busy=true;const button=f.querySelector('[type=submit]');button.disabled=true;
-  try{
-   if(!saved){const payload=await transform(f);if(!await save(action,{id:requestId,...payload}))return;saved=true;}
-   if(afterSave){
-    // Once the employee record is committed, retry only account creation.
-    [...f.elements].filter(el=>!['initialPassword'].includes(el.name)&&el.type!=='submit'&&el.type!=='button').forEach(el=>el.disabled=true);
-    await afterSave(f);
-   }
-   d.dataset.dirty='false';d.close();ctx.render();
-  }catch(err){
-   const message=(saved?'Data karyawan sudah tersimpan. ':'')+err.message;
-   if(error)error.textContent=message;ctx.toast(message);
-   if(saved&&afterSave)button.textContent='Coba lagi';
-  }finally{busy=false;button.disabled=false;}
- };
-}
+export function bindEmployees(view, s, store, ctx) {
+  const save = async (action, p) => {
+    if (!(s.employeeVersion >= 16)) {
+      ctx.toast("Jalankan SQL update 016 lalu perbarui halaman.");
+      return false;
+    }
+    return ctx.mutate(action, { storeId: store, ...p });
+  };
+  document.querySelector("[data-refresh]").onclick = async () => {
+    try {
+      await ctx.refresh();
+      ctx.render();
+    } catch (err) {
+      ctx.toast(err.message);
+    }
+  };
+  function submit(d, action, transform, afterSave) {
+    const requestId = id(),
+      f = d.querySelector("form");
+    let busy = false,
+      saved = false;
+    f.onsubmit = async (ev) => {
+      ev.preventDefault();
+      if (busy) return;
+      const error = d.querySelector("#form-error");
+      if (error) error.textContent = "";
+      if (!f.reportValidity()) return;
+      busy = true;
+      const button = f.querySelector("[type=submit]");
+      button.disabled = true;
+      try {
+        if (!saved) {
+          const payload = await transform(f);
+          if (!(await save(action, { id: requestId, ...payload }))) return;
+          saved = true;
+        }
+        if (afterSave) {
+          // Once the employee record is committed, retry only account creation.
+          [...f.elements]
+            .filter(
+              (el) =>
+                !["initialPassword"].includes(el.name) &&
+                el.type !== "submit" &&
+                el.type !== "button",
+            )
+            .forEach((el) => (el.disabled = true));
+          await afterSave(f);
+        }
+        d.dataset.dirty = "false";
+        d.close();
+        ctx.render();
+      } catch (err) {
+        const message = (saved ? "Data karyawan sudah tersimpan. " : "") + err.message;
+        if (error) error.textContent = message;
+        ctx.toast(message);
+        if (saved && afterSave) button.textContent = "Coba lagi";
+      } finally {
+        busy = false;
+        button.disabled = false;
+      }
+    };
+  }
 
-function edit(key){const x=s.employees?.find(x=>x.id===key)||{id:id(),name:'',role:'staff',active:true,store_ids:[store],permissions:[]};let photo,profile,photoPending=false,profilePending=false,accountCreated=false;const d=ctx.modal(key?'Edit karyawan':'Tambah karyawan',`<div class="form-grid">${[['Username','username','text',x.username],['Nama','name','text',x.name],['Tanggal lahir','birthDate','date',x.birth_date],['Email','email','email',x.email],['Nomor telepon','phone','tel',x.phone]].map(([label,k,type,value])=>field(label,`<input name="${k}" type="${type}" value="${e(value||'')}" ${k==='name'?'required maxlength="100"':k==='birthDate'?`max="${today()}"`:k==='email'&&x.user_id?'readonly title="Email akun yang terhubung"':k==='username'?'minlength="3" maxlength="40" pattern="[A-Za-z0-9._\\-]+"':'maxlength="150"'}>`)).join('')}${field('Role',`<select name="role">${Object.entries(roles).map(([k,n])=>`<option value="${k}" ${k===x.role?'selected':''}>${n}</option>`).join('')}</select>`)}${field('Status',`<select name="active"><option value="true" ${x.active?'selected':''}>Aktif</option><option value="false" ${!x.active?'selected':''}>Nonaktif</option></select>`)}</div>${employeeDetailsForm(x,s.employeeDetailsVersion>=70)}${!x.user_id?`<h3>Akun login</h3>${field('Password awal', '<input name="initialPassword" type="password" minlength="6" maxlength="128" autocomplete="new-password" placeholder="Minimal 6 karakter"><button type="button" data-toggle-initial-password aria-pressed="false">Tampilkan password</button>')}<p>Isi password untuk sekaligus membuat akun login. Email wajib diisi dan status harus Aktif. Kosongkan password jika hanya ingin menyimpan data karyawan.</p>`:''}<p>Role awal Staff memiliki akses absensi. Owner dapat mengatur role dan akses tambahan.</p><h3>Foto profil</h3><input type="file" data-profile accept="image/jpeg,image/png,image/webp"><img class="ktp-preview" data-profile-preview ${x.profile_photo?`src="${e(x.profile_photo)}"`:"hidden"} alt="Preview foto profil"><button type="button" data-remove-profile>Hapus foto profil</button><h3>Foto KTP</h3><p>${x.has_ktp?'Foto tersimpan. Pilih file untuk mengganti.':'Belum ada foto.'} Hanya owner dapat membuka foto KTP.</p><input type="file" data-photo accept="image/jpeg,image/png,image/webp" aria-label="Foto KTP"><img class="ktp-preview" data-photo-preview hidden alt="Preview foto KTP"><button type="button" data-remove-photo>Hapus foto KTP</button><div data-owner-access-note hidden><b>Owner mendapatkan akses penuh ke semua fitur dan semua toko.</b></div><div data-employee-access><h3>Cabang yang boleh diakses</h3><div class="check-grid">${s.stores.map(t=>`<label><input type="checkbox" name="storeIds" value="${e(t.id)}" ${x.store_ids.includes(t.id)?'checked':''}> ${e(t.name)}</label>`).join('')}</div><h3>Tambahan hak akses</h3>${s.warehouseVersion?'<p>Harga dan keuangan pusat khusus Admin Back Office / Owner. Penerimaan, waitress, dan potong mengikuti role.</p>':''}<div class="check-grid">${Object.entries(perms).filter(([k])=>!s.warehouseVersion||!['finance','master'].includes(k)).map(([k,n])=>`<label><input type="checkbox" name="permissions" value="${k}" ${x.permissions.includes(k)?'checked':''}> ${n}</label>`).join('')}</div></div>`);d.classList.add('employee-dialog');const preview=d.querySelector('[data-photo-preview]'),profilePreview=d.querySelector('[data-profile-preview]');
- const emergencyPhone=d.querySelector('[name=emergencyContactPhone]');
- const validateEmergencyPhone=()=>{const value=emergencyPhone.value.trim(),digits=value.replace(/[^0-9]/g,'');emergencyPhone.setCustomValidity(!value||(/^[+0-9 ().-]+$/.test(value)&&digits.length>=8&&digits.length<=15)?'':'Nomor darurat harus 8–15 digit.');};
- emergencyPhone.addEventListener('input',validateEmergencyPhone);validateEmergencyPhone();
- const roleInput=d.querySelector('[name=role]');
- const updateRoleAccess=()=>{
-  const owner=roleInput.value==='owner';
-  d.querySelector('[data-employee-access]').hidden=owner;
-  d.querySelector('[data-owner-access-note]').hidden=!owner;
-  d.querySelectorAll('[name=permissions],[name=storeIds]').forEach(input=>input.disabled=owner);
- };
- roleInput.addEventListener('change',updateRoleAccess);updateRoleAccess();
- const passwordInput=d.querySelector('[name=initialPassword]');
- const requireEmail=()=>{d.querySelector('[name=email]').required=!!passwordInput?.value;};
- passwordInput?.addEventListener('input',requireEmail);
- d.querySelector('[data-toggle-initial-password]')?.addEventListener('click',ev=>{const visible=passwordInput.type==='password';passwordInput.type=visible?'text':'password';ev.currentTarget.textContent=visible?'Sembunyikan password':'Tampilkan password';ev.currentTarget.setAttribute('aria-pressed',String(visible));});
+  function edit(key) {
+    const x = s.employees?.find((x) => x.id === key) || {
+      id: id(),
+      name: "",
+      role: "staff",
+      active: true,
+      store_ids: [store],
+      permissions: [],
+    };
+    let photo,
+      profile,
+      photoPending = false,
+      profilePending = false,
+      accountCreated = false;
+    const d = ctx.modal(
+      key ? "Edit karyawan" : "Tambah karyawan",
+      `<div class="form-grid">${[
+        ["Username", "username", "text", x.username],
+        ["Nama", "name", "text", x.name],
+        ["Tanggal lahir", "birthDate", "date", x.birth_date],
+        ["Email", "email", "email", x.email],
+        ["Nomor telepon", "phone", "tel", x.phone],
+      ]
+        .map(([label, k, type, value]) =>
+          field(
+            label,
+            `<input name="${k}" type="${type}" value="${e(value || "")}" ${k === "name" ? 'required maxlength="100"' : k === "birthDate" ? `max="${today()}"` : k === "email" && x.user_id ? 'readonly title="Email akun yang terhubung"' : k === "username" ? 'minlength="3" maxlength="40" pattern="[A-Za-z0-9._\\-]+"' : 'maxlength="150"'}>`,
+          ),
+        )
+        .join("")}${field(
+        "Role",
+        `<select name="role">${Object.entries(roles)
+          .map(
+            ([k, n]) =>
+              `<option value="${k}" ${k === x.role ? "selected" : ""}>${n}</option>`,
+          )
+          .join("")}</select>`,
+      )}${field("Status", `<select name="active"><option value="true" ${x.active ? "selected" : ""}>Aktif</option><option value="false" ${!x.active ? "selected" : ""}>Nonaktif</option></select>`)}</div>${employeeDetailsForm(x, s.employeeDetailsVersion >= 70)}${!x.user_id ? `<h3>Akun login</h3>${field("Password awal", '<input name="initialPassword" type="password" minlength="6" maxlength="128" autocomplete="new-password" placeholder="Minimal 6 karakter"><button type="button" data-toggle-initial-password aria-pressed="false">Tampilkan password</button>')}<p>Isi password untuk sekaligus membuat akun login. Email wajib diisi dan status harus Aktif. Kosongkan password jika hanya ingin menyimpan data karyawan.</p>` : ""}<p>Role awal Staff memiliki akses absensi. Owner dapat mengatur role dan akses tambahan.</p><h3>Foto profil</h3><input type="file" data-profile accept="image/jpeg,image/png,image/webp"><img class="ktp-preview" data-profile-preview ${x.profile_photo ? `src="${e(x.profile_photo)}"` : "hidden"} alt="Preview foto profil"><button type="button" data-remove-profile>Hapus foto profil</button><h3>Foto KTP</h3><p>${x.has_ktp ? "Foto tersimpan. Pilih file untuk mengganti." : "Belum ada foto."} Hanya owner dapat membuka foto KTP.</p><input type="file" data-photo accept="image/jpeg,image/png,image/webp" aria-label="Foto KTP"><img class="ktp-preview" data-photo-preview hidden alt="Preview foto KTP"><button type="button" data-remove-photo>Hapus foto KTP</button><div data-owner-access-note hidden><b>Owner mendapatkan akses penuh ke semua fitur dan semua toko.</b></div><div data-employee-access><h3>Cabang yang boleh diakses</h3><div class="check-grid">${s.stores.map((t) => `<label><input type="checkbox" name="storeIds" value="${e(t.id)}" ${x.store_ids.includes(t.id) ? "checked" : ""}> ${e(t.name)}</label>`).join("")}</div><h3>Tambahan hak akses</h3>${s.warehouseVersion ? "<p>Harga dan keuangan pusat khusus Admin Back Office / Owner. Penerimaan, waitress, dan potong mengikuti role.</p>" : ""}<div class="check-grid">${Object.entries(
+        perms,
+      )
+        .filter(([k]) => !s.warehouseVersion || !["finance", "master"].includes(k))
+        .map(
+          ([k, n]) =>
+            `<label><input type="checkbox" name="permissions" value="${k}" ${x.permissions.includes(k) ? "checked" : ""}> ${n}</label>`,
+        )
+        .join("")}</div></div>`,
+    );
+    d.classList.add("employee-dialog");
+    const preview = d.querySelector("[data-photo-preview]"),
+      profilePreview = d.querySelector("[data-profile-preview]");
+    const emergencyPhone = d.querySelector("[name=emergencyContactPhone]");
+    const validateEmergencyPhone = () => {
+      const value = emergencyPhone.value.trim(),
+        digits = value.replace(/[^0-9]/g, "");
+      emergencyPhone.setCustomValidity(
+        !value ||
+          (/^[+0-9 ().-]+$/.test(value) && digits.length >= 8 && digits.length <= 15)
+          ? ""
+          : "Nomor darurat harus 8–15 digit.",
+      );
+    };
+    emergencyPhone.addEventListener("input", validateEmergencyPhone);
+    validateEmergencyPhone();
+    const roleInput = d.querySelector("[name=role]");
+    const updateRoleAccess = () => {
+      const owner = roleInput.value === "owner";
+      d.querySelector("[data-employee-access]").hidden = owner;
+      d.querySelector("[data-owner-access-note]").hidden = !owner;
+      d.querySelectorAll("[name=permissions],[name=storeIds]").forEach(
+        (input) => (input.disabled = owner),
+      );
+    };
+    roleInput.addEventListener("change", updateRoleAccess);
+    updateRoleAccess();
+    const passwordInput = d.querySelector("[name=initialPassword]");
+    const requireEmail = () => {
+      d.querySelector("[name=email]").required = !!passwordInput?.value;
+    };
+    passwordInput?.addEventListener("input", requireEmail);
+    d.querySelector("[data-toggle-initial-password]")?.addEventListener("click", (ev) => {
+      const visible = passwordInput.type === "password";
+      passwordInput.type = visible ? "text" : "password";
+      ev.currentTarget.textContent = visible
+        ? "Sembunyikan password"
+        : "Tampilkan password";
+      ev.currentTarget.setAttribute("aria-pressed", String(visible));
+    });
 
- d.querySelector('[data-remove-profile]').onclick=()=>{profile='';profilePreview.hidden=true;d.querySelector('[data-profile]').value='';d.dataset.dirty='true';};
- d.querySelector('[data-profile]').onchange=async ev=>{const file=ev.target.files[0];if(!file)return;profilePending=true;try{profile=await photoData(file,'profile');profilePreview.src=profile;profilePreview.hidden=false;}catch(err){ev.target.value='';ctx.toast(err.message);}finally{profilePending=false;}};d.querySelector('[data-photo]').onchange=async ev=>{const file=ev.target.files[0];if(!file)return;photoPending=true;try{photo=await photoData(file,'ktp');preview.src=photo;preview.hidden=false;}catch(err){ev.target.value='';ctx.toast(err.message);}finally{photoPending=false;}};d.querySelector('[data-remove-photo]').onclick=()=>{photo='';preview.hidden=true;d.querySelector('[data-photo]').value='';d.dataset.dirty='true';};submit(d,'employee_save',f=>{if(photoPending||profilePending)throw Error('Tunggu foto selesai diproses.');const fd=new FormData(f);const {initialPassword,...values}=Object.fromEntries(fd);
- if(initialPassword){if(initialPassword.length<6||initialPassword.length>128)throw Error('Password harus 6–128 karakter.');if(!String(fd.get('email')||'').trim())throw Error('Isi email untuk membuat akun login.');if(fd.get('active')!=='true')throw Error('Status harus Aktif untuk membuat akun login.');}
- return {...values,name:String(values.name||'').trim(),email:String(values.email||'').trim(),employeeId:x.id,active:fd.get('active')==='true',storeIds:fd.get('role')==='owner'?[]:fd.getAll('storeIds'),permissions:fd.get('role')==='owner'?[]:fd.getAll('permissions'),...(photo===undefined?{}:{ktpPhoto:photo}),...(profile===undefined?{}:{profilePhoto:profile})};},async f=>{
- const password=f.elements.initialPassword?.value;
- if(!password){ctx.toast('Data karyawan berhasil disimpan.');return;}
- if(!accountCreated){await ctx.createAccount(x.id,password);accountCreated=true;}
- await ctx.refresh();ctx.toast('Data karyawan dan akun login berhasil dibuat.');
- });}
-document.querySelector('[data-employee-new]')?.addEventListener('click',()=>edit());document.querySelectorAll('[data-employee-card]').forEach(card=>{
- card.addEventListener('click',ev=>{if(ev.target.closest('button,details,a,input,select'))return;edit(card.dataset.employeeCard);});
- card.addEventListener('keydown',ev=>{if(ev.target!==card||!['Enter',' '].includes(ev.key))return;ev.preventDefault();edit(card.dataset.employeeCard);});
-});
-document.querySelectorAll('[data-detail]').forEach(b=>b.onclick=()=>{const x=s.employees.find(x=>x.id===b.dataset.detail);const d=ctx.modal('Detail karyawan',`<div class="employee-detail-head">${x.profile_photo?`<img class="employee-avatar employee-photo" src="${e(x.profile_photo)}" alt="Foto ${e(x.name)}">`:`<span class="employee-avatar">${e(x.name.slice(0,1))}</span>`}<div><h3>${e(x.name)}</h3><p>${e(roles[x.role]||'Staff')}</p></div></div><dl class="employee-info">${[['Username',x.username],['Nama',x.name],['Tanggal lahir',x.birth_date],['Email',x.email],['Nomor telepon',x.phone]].map(([k,v])=>`<div><dt>${k}</dt><dd>${e(v||'Belum diisi')}</dd></div>`).join('')}</dl>${employeeDetailsInfo(x)}<h3>Foto KTP</h3><div data-document>${x.has_ktp?'<button type="button" data-open-document>Lihat foto KTP</button>':'Belum diunggah'}</div><div class="team-heading"><h3>Rekap absensi</h3>${period()}</div><div data-recap>${recap(s,x.id,'month')}</div>`);d.classList.add('employee-dialog','employee-recap-dialog');d.querySelector('[type=submit]').hidden=true;d.querySelector('[data-period]').onchange=ev=>{d.querySelector('[data-recap]').innerHTML=recap(s,x.id,ev.target.value);d.dataset.dirty='false';};d.querySelector('[data-open-document]')?.addEventListener('click',async ev=>{ev.target.disabled=true;try{const doc=await ctx.employeeDocument(x.id);d.querySelector('[data-document]').innerHTML=doc.ktpPhoto?`<img class="ktp-preview" src="${e(doc.ktpPhoto)}" alt="Foto KTP ${e(x.name)}">`:'Belum diunggah';}catch(err){ctx.toast(err.message);ev.target.disabled=false;}});});
-document.querySelectorAll('[data-password]').forEach(b=>b.onclick=()=>{const x=s.employees.find(x=>x.id===b.dataset.password),d=ctx.modal('Ubah password '+e(x.name),field('Password baru','<input name="password" type="password" minlength="6" maxlength="128" autocomplete="new-password" placeholder="Minimal 6 karakter" required>'));d.classList.add('employee-password-dialog');d.querySelector('form').onsubmit=async ev=>{ev.preventDefault();const q=d.querySelector('[type=submit]');q.disabled=true;try{await ctx.createAccount(x.id,new FormData(ev.target).get('password'),'reset');d.close();ctx.toast('Password berhasil diubah');}catch(err){ctx.toast(err.message)}finally{q.disabled=false}};});
-document.querySelectorAll('[data-account]').forEach(b=>b.onclick=()=>{const x=s.employees.find(x=>x.id===b.dataset.account),d=ctx.modal('Buat akun '+e(x.name),`<p>${e(x.email||'Isi email pada data karyawan terlebih dahulu.')}</p>${field('Password awal', '<input name="password" type="password" minlength="6" maxlength="128" autocomplete="new-password" required>')}`);d.querySelector('form').onsubmit=async ev=>{ev.preventDefault();const button=d.querySelector('[type=submit]');button.disabled=true;try{await ctx.createAccount(x.id,new FormData(ev.target).get('password'));d.close();await ctx.refresh();ctx.render();}catch(err){ctx.toast(err.message);}finally{button.disabled=false;}};});
-if(view==='employees'){let page=0;const draw=()=>{const q=document.querySelector('[data-team-search]').value.toLowerCase(),status=document.querySelector('[data-team-status]').value;const matches=(s.employees||[]).filter(x=>[x.name,x.username,x.email,x.phone].join(' ').toLowerCase().includes(q)&&(status==='all'||x.active===(status==='active')));const pages=Math.max(1,Math.ceil(matches.length/9));page=Math.min(page,pages-1);const ids=new Set(matches.slice(page*9,page*9+9).map(x=>x.id));document.querySelectorAll('[data-employee-card]').forEach(c=>c.hidden=!ids.has(c.dataset.employeeCard));document.querySelector('[data-team-count]').textContent=`${matches.length} karyawan · Halaman ${page+1} / ${pages}`;document.querySelector('[data-prev]').disabled=page===0;document.querySelector('[data-next]').disabled=page===pages-1;document.querySelector('[data-team-empty]').hidden=matches.length>0;fitEmployeeNames();};for(const selector of ['[data-team-search]','[data-team-status]'])document.querySelector(selector).addEventListener('input',()=>{page=0;draw();});document.querySelector('[data-prev]').onclick=()=>{page--;draw();};document.querySelector('[data-next]').onclick=()=>{page++;draw();};draw();}
-if(view==='attendance'){document.querySelector('[data-period]').onchange=ev=>document.querySelector('[data-recap]').innerHTML=recap(s,s.me?.id,ev.target.value);document.querySelectorAll('[data-attend]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{if(await save(b.dataset.attend,{id:id()}))ctx.render();}finally{if(b.isConnected)b.disabled=false;}});const f=document.querySelector('#work-hours');if(f){let requestId=id();f.onsubmit=async ev=>{ev.preventDefault();const values=Object.fromEntries(new FormData(f));if(values.endTime<=values.startTime)return ctx.toast('Jam pulang harus setelah jam masuk pada hari yang sama.');const button=f.querySelector('button');button.disabled=true;try{if(await save('work_hours_save',{id:requestId,...values})){requestId=id();ctx.render();ctx.toast('Jam kerja tersimpan.');}}finally{if(button.isConnected)button.disabled=false;}};}}
+    d.querySelector("[data-remove-profile]").onclick = () => {
+      profile = "";
+      profilePreview.hidden = true;
+      d.querySelector("[data-profile]").value = "";
+      d.dataset.dirty = "true";
+    };
+    d.querySelector("[data-profile]").onchange = async (ev) => {
+      const file = ev.target.files[0];
+      if (!file) return;
+      profilePending = true;
+      try {
+        profile = await photoData(file, "profile");
+        profilePreview.src = profile;
+        profilePreview.hidden = false;
+      } catch (err) {
+        ev.target.value = "";
+        ctx.toast(err.message);
+      } finally {
+        profilePending = false;
+      }
+    };
+    d.querySelector("[data-photo]").onchange = async (ev) => {
+      const file = ev.target.files[0];
+      if (!file) return;
+      photoPending = true;
+      try {
+        photo = await photoData(file, "ktp");
+        preview.src = photo;
+        preview.hidden = false;
+      } catch (err) {
+        ev.target.value = "";
+        ctx.toast(err.message);
+      } finally {
+        photoPending = false;
+      }
+    };
+    d.querySelector("[data-remove-photo]").onclick = () => {
+      photo = "";
+      preview.hidden = true;
+      d.querySelector("[data-photo]").value = "";
+      d.dataset.dirty = "true";
+    };
+    submit(
+      d,
+      "employee_save",
+      (f) => {
+        if (photoPending || profilePending) throw Error("Tunggu foto selesai diproses.");
+        const fd = new FormData(f);
+        const { initialPassword, ...values } = Object.fromEntries(fd);
+        if (initialPassword) {
+          if (initialPassword.length < 6 || initialPassword.length > 128)
+            throw Error("Password harus 6–128 karakter.");
+          if (!String(fd.get("email") || "").trim())
+            throw Error("Isi email untuk membuat akun login.");
+          if (fd.get("active") !== "true")
+            throw Error("Status harus Aktif untuk membuat akun login.");
+        }
+        return {
+          ...values,
+          name: String(values.name || "").trim(),
+          email: String(values.email || "").trim(),
+          employeeId: x.id,
+          active: fd.get("active") === "true",
+          storeIds: fd.get("role") === "owner" ? [] : fd.getAll("storeIds"),
+          permissions: fd.get("role") === "owner" ? [] : fd.getAll("permissions"),
+          ...(photo === undefined ? {} : { ktpPhoto: photo }),
+          ...(profile === undefined ? {} : { profilePhoto: profile }),
+        };
+      },
+      async (f) => {
+        const password = f.elements.initialPassword?.value;
+        if (!password) {
+          ctx.toast("Data karyawan berhasil disimpan.");
+          return;
+        }
+        if (!accountCreated) {
+          await ctx.createAccount(x.id, password);
+          accountCreated = true;
+        }
+        await ctx.refresh();
+        ctx.toast("Data karyawan dan akun login berhasil dibuat.");
+      },
+    );
+  }
+  document.querySelector("[data-employee-new]")?.addEventListener("click", () => edit());
+  document.querySelectorAll("[data-employee-card]").forEach((card) => {
+    card.addEventListener("click", (ev) => {
+      if (ev.target.closest("button,details,a,input,select")) return;
+      edit(card.dataset.employeeCard);
+    });
+    card.addEventListener("keydown", (ev) => {
+      if (ev.target !== card || !["Enter", " "].includes(ev.key)) return;
+      ev.preventDefault();
+      edit(card.dataset.employeeCard);
+    });
+  });
+  document.querySelectorAll("[data-detail]").forEach(
+    (b) =>
+      (b.onclick = () => {
+        const x = s.employees.find((x) => x.id === b.dataset.detail);
+        const d = ctx.modal(
+          "Detail karyawan",
+          `<div class="employee-detail-head">${x.profile_photo ? `<img class="employee-avatar employee-photo" src="${e(x.profile_photo)}" alt="Foto ${e(x.name)}">` : `<span class="employee-avatar">${e(x.name.slice(0, 1))}</span>`}<div><h3>${e(x.name)}</h3><p>${e(roles[x.role] || "Staff")}</p></div></div><dl class="employee-info">${[
+            ["Username", x.username],
+            ["Nama", x.name],
+            ["Tanggal lahir", x.birth_date],
+            ["Email", x.email],
+            ["Nomor telepon", x.phone],
+          ]
+            .map(([k, v]) => `<div><dt>${k}</dt><dd>${e(v || "Belum diisi")}</dd></div>`)
+            .join(
+              "",
+            )}</dl>${employeeDetailsInfo(x)}<h3>Foto KTP</h3><div data-document>${x.has_ktp ? '<button type="button" data-open-document>Lihat foto KTP</button>' : "Belum diunggah"}</div><div class="team-heading"><h3>Rekap absensi</h3>${period()}</div><div data-recap>${recap(s, x.id, "month")}</div>`,
+        );
+        d.classList.add("employee-dialog", "employee-recap-dialog");
+        d.querySelector("[type=submit]").hidden = true;
+        d.querySelector("[data-period]").onchange = (ev) => {
+          d.querySelector("[data-recap]").innerHTML = recap(s, x.id, ev.target.value);
+          d.dataset.dirty = "false";
+        };
+        d.querySelector("[data-open-document]")?.addEventListener("click", async (ev) => {
+          ev.target.disabled = true;
+          try {
+            const doc = await ctx.employeeDocument(x.id);
+            d.querySelector("[data-document]").innerHTML = doc.ktpPhoto
+              ? `<img class="ktp-preview" src="${e(doc.ktpPhoto)}" alt="Foto KTP ${e(x.name)}">`
+              : "Belum diunggah";
+          } catch (err) {
+            ctx.toast(err.message);
+            ev.target.disabled = false;
+          }
+        });
+      }),
+  );
+  document.querySelectorAll("[data-password]").forEach(
+    (b) =>
+      (b.onclick = () => {
+        const x = s.employees.find((x) => x.id === b.dataset.password),
+          d = ctx.modal(
+            "Ubah password " + e(x.name),
+            field(
+              "Password baru",
+              '<input name="password" type="password" minlength="6" maxlength="128" autocomplete="new-password" placeholder="Minimal 6 karakter" required>',
+            ),
+          );
+        d.classList.add("employee-password-dialog");
+        d.querySelector("form").onsubmit = async (ev) => {
+          ev.preventDefault();
+          const q = d.querySelector("[type=submit]");
+          q.disabled = true;
+          try {
+            await ctx.createAccount(
+              x.id,
+              new FormData(ev.target).get("password"),
+              "reset",
+            );
+            d.close();
+            ctx.toast("Password berhasil diubah");
+          } catch (err) {
+            ctx.toast(err.message);
+          } finally {
+            q.disabled = false;
+          }
+        };
+      }),
+  );
+  document.querySelectorAll("[data-account]").forEach(
+    (b) =>
+      (b.onclick = () => {
+        const x = s.employees.find((x) => x.id === b.dataset.account),
+          d = ctx.modal(
+            "Buat akun " + e(x.name),
+            `<p>${e(x.email || "Isi email pada data karyawan terlebih dahulu.")}</p>${field("Password awal", '<input name="password" type="password" minlength="6" maxlength="128" autocomplete="new-password" required>')}`,
+          );
+        d.querySelector("form").onsubmit = async (ev) => {
+          ev.preventDefault();
+          const button = d.querySelector("[type=submit]");
+          button.disabled = true;
+          try {
+            await ctx.createAccount(x.id, new FormData(ev.target).get("password"));
+            d.close();
+            await ctx.refresh();
+            ctx.render();
+          } catch (err) {
+            ctx.toast(err.message);
+          } finally {
+            button.disabled = false;
+          }
+        };
+      }),
+  );
+  if (view === "employees") {
+    let page = 0;
+    const draw = () => {
+      const q = document.querySelector("[data-team-search]").value.toLowerCase(),
+        status = document.querySelector("[data-team-status]").value;
+      const matches = (s.employees || []).filter(
+        (x) =>
+          [x.name, x.username, x.email, x.phone].join(" ").toLowerCase().includes(q) &&
+          (status === "all" || x.active === (status === "active")),
+      );
+      const pages = Math.max(1, Math.ceil(matches.length / 9));
+      page = Math.min(page, pages - 1);
+      const ids = new Set(matches.slice(page * 9, page * 9 + 9).map((x) => x.id));
+      document
+        .querySelectorAll("[data-employee-card]")
+        .forEach((c) => (c.hidden = !ids.has(c.dataset.employeeCard)));
+      document.querySelector("[data-team-count]").textContent =
+        `${matches.length} karyawan · Halaman ${page + 1} / ${pages}`;
+      document.querySelector("[data-prev]").disabled = page === 0;
+      document.querySelector("[data-next]").disabled = page === pages - 1;
+      document.querySelector("[data-team-empty]").hidden = matches.length > 0;
+      fitEmployeeNames();
+    };
+    for (const selector of ["[data-team-search]", "[data-team-status]"])
+      document.querySelector(selector).addEventListener("input", () => {
+        page = 0;
+        draw();
+      });
+    document.querySelector("[data-prev]").onclick = () => {
+      page--;
+      draw();
+    };
+    document.querySelector("[data-next]").onclick = () => {
+      page++;
+      draw();
+    };
+    draw();
+  }
+  if (view === "attendance") {
+    document.querySelector("[data-period]").onchange = (ev) =>
+      (document.querySelector("[data-recap]").innerHTML = recap(
+        s,
+        s.me?.id,
+        ev.target.value,
+      ));
+    document.querySelectorAll("[data-attend]").forEach(
+      (b) =>
+        (b.onclick = async () => {
+          b.disabled = true;
+          try {
+            if (await save(b.dataset.attend, { id: id() })) ctx.render();
+          } finally {
+            if (b.isConnected) b.disabled = false;
+          }
+        }),
+    );
+    const f = document.querySelector("#work-hours");
+    if (f) {
+      let requestId = id();
+      f.onsubmit = async (ev) => {
+        ev.preventDefault();
+        const values = Object.fromEntries(new FormData(f));
+        if (values.endTime <= values.startTime)
+          return ctx.toast("Jam pulang harus setelah jam masuk pada hari yang sama.");
+        const button = f.querySelector("button");
+        button.disabled = true;
+        try {
+          if (await save("work_hours_save", { id: requestId, ...values })) {
+            requestId = id();
+            ctx.render();
+            ctx.toast("Jam kerja tersimpan.");
+          }
+        } finally {
+          if (button.isConnected) button.disabled = false;
+        }
+      };
+    }
+  }
 }

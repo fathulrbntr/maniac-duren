@@ -45,18 +45,28 @@ try {
       await page.waitForLoadState("load");
       assert((await page.locator("body").innerText()).length > 20);
       assert(
-        await page.evaluate(
-          () => document.documentElement.scrollWidth <= innerWidth + 1,
-        ),
+        await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
         url + " overflows " + width,
       );
       if (url === "/") {
         if (width <= 600) {
-          const clipped = await page.locator(".hero-copy, .hero-visual, .hero-durian, .hero-price, .hero-sticker").evaluateAll(nodes => nodes.filter(node => {
-            const r = node.getBoundingClientRect(); return r.left < -1 || r.right > innerWidth + 1;
-          }).map(node => node.className));
+          const clipped = await page
+            .locator(".hero-copy, .hero-visual, .hero-durian, .hero-price, .hero-sticker")
+            .evaluateAll((nodes) =>
+              nodes
+                .filter((node) => {
+                  const r = node.getBoundingClientRect();
+                  return r.left < -1 || r.right > innerWidth + 1;
+                })
+                .map((node) => node.className),
+            );
           assert.deepEqual(clipped, [], "Mobile hero content must remain fully visible");
-          assert(await page.locator(".hero-actions .button").first().evaluate(node => node.getBoundingClientRect().height >= 44));
+          assert(
+            await page
+              .locator(".hero-actions .button")
+              .first()
+              .evaluate((node) => node.getBoundingClientRect().height >= 44),
+          );
         }
         const gallery = page.locator(".gallery-swiper");
         await gallery.scrollIntoViewIfNeeded();
@@ -66,10 +76,15 @@ try {
         });
         assert.equal(await gallery.locator("img").count(), 1);
         assert.equal(await gallery.locator(".swiper-pagination").isVisible(), false);
-        await gallery.screenshot({path: `test-results/public-gallery-${width}.png`});
-        assert.equal(await gallery.locator(".swiper-slide").evaluate(el => getComputedStyle(el).opacity), "1");
-        await page.evaluate(() => scrollTo({top:0,behavior:"instant"}));
-        await page.screenshot({path: `test-results/public-home-${width}.png`});
+        await gallery.screenshot({ path: `test-results/public-gallery-${width}.png` });
+        assert.equal(
+          await gallery
+            .locator(".swiper-slide")
+            .evaluate((el) => getComputedStyle(el).opacity),
+          "1",
+        );
+        await page.evaluate(() => scrollTo({ top: 0, behavior: "instant" }));
+        await page.screenshot({ path: `test-results/public-home-${width}.png` });
       }
     }
   }

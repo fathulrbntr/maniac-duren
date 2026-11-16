@@ -23,10 +23,10 @@ for (const mode of ["fresh", "upgrade"]) {
     await db.exec(
       `create role anon;create role authenticated;create role service_role;create schema auth;create table auth.users(id uuid primary key,email text);create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;`,
     );
-    for (const file of mode === "fresh"
-      ? ["pos.sql"]
-      : sections)
-      await db.exec(fs.readFileSync(new URL(file, root), "utf8").split("-- Upgrade setelah 008.")[0]);
+    for (const file of mode === "fresh" ? ["pos.sql"] : sections)
+      await db.exec(
+        fs.readFileSync(new URL(file, root), "utf8").split("-- Upgrade setelah 008.")[0],
+      );
     await assert.rejects(db.query("select public.pos_read()"), /akses POS/);
     const user = id(),
       store = id(),
@@ -34,14 +34,9 @@ for (const mode of ["fresh", "upgrade"]) {
       supplier = id(),
       durian = id(),
       lot = id();
-    await db.query("insert into auth.users values ($1,$2)", [
-      user,
-      "local@example.test",
-    ]);
+    await db.query("insert into auth.users values ($1,$2)", [user, "local@example.test"]);
     await db.query("insert into public.md_pos_staff values ($1)", [user]);
-    await db.query("select set_config('request.jwt.claim.sub',$1,false)", [
-      user,
-    ]);
+    await db.query("select set_config('request.jwt.claim.sub',$1,false)", [user]);
     const read = async () =>
       (await db.query("select public.pos_read() as state")).rows[0].state;
     const mutate = async (action, payload) =>
@@ -159,7 +154,13 @@ for (const mode of ["fresh", "upgrade"]) {
       pieces: 4,
       reason: "Sortasi",
       processedBy: "Tester",
-      evidence: { reject: photo, processed: photo, durpas500:photo, durpas1000:photo, coral:photo },
+      evidence: {
+        reject: photo,
+        processed: photo,
+        durpas500: photo,
+        durpas1000: photo,
+        coral: photo,
+      },
       outputs: [
         { key: "durpas500", productId: half, qty: 4, lotId: id() },
         { key: "durpas1000", productId: one, qty: 2, lotId: id() },
@@ -173,11 +174,8 @@ for (const mode of ["fresh", "upgrade"]) {
     assert.equal(w.hasEvidence, true);
     assert.equal(w.evidence, undefined);
     assert.equal(
-      (
-        await db.query("select public.pos_waste_evidence($1) as proof", [
-          waste.id,
-        ])
-      ).rows[0].proof.reject,
+      (await db.query("select public.pos_waste_evidence($1) as proof", [waste.id]))
+        .rows[0].proof.reject,
       photo,
     );
     s = await mutate("waste_void", {
@@ -188,11 +186,8 @@ for (const mode of ["fresh", "upgrade"]) {
     assert.equal(s.lots.find((x) => x.id === lot).kg, 90);
     assert.equal(s.wasteRuns.find((x) => x.id === waste.id).voided, true);
     assert.equal(
-      (
-        await db.query("select public.pos_waste_evidence($1) as proof", [
-          waste.id,
-        ])
-      ).rows[0].proof.processed,
+      (await db.query("select public.pos_waste_evidence($1) as proof", [waste.id]))
+        .rows[0].proof.processed,
       photo,
     );
     const flour = id(),

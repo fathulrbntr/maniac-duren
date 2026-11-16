@@ -62,10 +62,7 @@ assert.throws(
   () => applyAction(s, "product_delete", { id: "flour", confirmed: true }),
   /sudah digunakan/,
 );
-assert.throws(
-  () => applyAction(s, "product_delete", { id: "flour" }),
-  /Konfirmasi/,
-);
+assert.throws(() => applyAction(s, "product_delete", { id: "flour" }), /Konfirmasi/);
 s = applyAction(s, "product_save", { ...raw, id: "unused", sku: "UNUSED" });
 s = applyAction(s, "product_delete", { id: "unused", confirmed: true });
 assert(!s.products.some((p) => p.id === "unused"));
@@ -150,8 +147,7 @@ assert.throws(
   /bulat/,
 );
 assert.throws(
-  () =>
-    applyAction(s, "product_save", { ...raw, editing: true, stockUnit: "ml" }),
+  () => applyAction(s, "product_save", { ...raw, editing: true, stockUnit: "ml" }),
   /terkunci/,
 );
 console.log(

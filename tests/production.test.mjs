@@ -1,11 +1,7 @@
 import assert from "node:assert/strict";
 import { applyAction, demoState, saleRows, summarize } from "../pos/core.mjs";
 import { stockQty, quantity } from "../pos/production.mjs";
-import {
-  recipesPage,
-  productionPage,
-  unitStockPanel,
-} from "../pos/production-ui.mjs";
+import { recipesPage, productionPage, unitStockPanel } from "../pos/production-ui.mjs";
 let s = demoState();
 const original = structuredClone(s);
 const run = (action, p) => {
@@ -121,11 +117,7 @@ const dessert = {
   actualQty: 10,
 };
 assert.throws(() => run("produce", dessert), /Stok tidak cukup/);
-assert.deepEqual(
-  s,
-  before,
-  "no partial input deduction on later ingredient shortage",
-);
+assert.deepEqual(s, before, "no partial input deduction on later ingredient shortage");
 run("produce", {
   id: "prod-cream",
   recipeId: "recipe-cream",
@@ -183,15 +175,8 @@ assert.throws(
   /terkunci/,
 );
 run("recipe_save", { ...cendol, version: 1, yieldQty: 900 });
-assert.equal(
-  s.productions[0].expectedQty,
-  2000,
-  "history uses original recipe snapshot",
-);
-assert.throws(
-  () => run("produce", { ...produce, id: "stale" }),
-  /Resep berubah/,
-);
+assert.equal(s.productions[0].expectedQty, 2000, "history uses original recipe snapshot");
+assert.throws(() => run("produce", { ...produce, id: "stale" }), /Resep berubah/);
 assert.throws(() =>
   run("recipe_save", {
     ...cendol,

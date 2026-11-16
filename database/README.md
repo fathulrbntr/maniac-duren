@@ -1,6 +1,6 @@
 # Struktur dan urutan SQL Maniac Duren
 
-**Audit 089 tidak menambah migrasi SQL dan tidak memerlukan reset database.** `pos.sql` adalah fondasi historis, bukan instalasi lengkap fitur POS terbaru. `npm run db:build` hanya membangun ulang fondasi dari bagian yang terdaftar dalam `scripts/build-database.mjs`; `npm run check` memastikan hasilnya tidak menyimpang.
+**Audit 110 tidak menambah migrasi SQL dan tidak memerlukan reset database.** `pos.sql` adalah fondasi historis, bukan instalasi lengkap fitur POS terbaru. `npm run db:build` hanya membangun ulang fondasi dari bagian yang terdaftar dalam `scripts/build-database.mjs`; `npm run check` memastikan hasilnya tidak menyimpang.
 
 ## Database aktif
 
@@ -44,3 +44,19 @@ Patch 092 dipasang setelah rantai fitur sampai 085. Dashboard 091 dan dock 090 t
 `npm run test:db` menjalankan pengujian PGlite terisolasi. `tests/crm-db.test.mjs` memasang rantai fitur lengkap lalu memeriksa bahwa profil toko, karyawan, dokumen, biaya produk, shift, pembayaran, dan CRM tetap terbaca bersama. Pengujiannya mencakup transaksi member, invoice tanpa penjualan ganda, poin, retry, diskon, refund, hak akses, serta grant RPC. Tes fitur lain memeriksa penerimaan, stok, resep, produksi, reject, laporan, dan kompatibilitas versi lama.
 
 Fixture autentikasi lokal tidak menggantikan pemeriksaan konfigurasi Supabase, JWT, hosting, dan data akun produksi.
+
+## Fitur setelah 092
+
+| Urutan | Sumber | Peran |
+|---|---|---|
+| 101 | `fruit-tracking-101.sql` | Identitas barcode per buah dan jejak batch |
+| 102 | `fruit-barcode-mapping-102.sql` | Alat pemetaan barcode; bukan installer wajib otomatis |
+| 103 | `../supabase/migrations/20261108022503_wireless_customer_display.sql` | Pairing tablet dan payload layar pelanggan |
+| 105 | `fruit-stock-barcode-105.sql` | Transfer/reject berdasarkan buah berbarcode |
+| 106 | `fruit-batch-strict-scan-106.sql` | Barcode wajib sesuai batch asal |
+| 107 | `warehouse-flow-107.sql` | Gudang, outlet, surat jalan, penerimaan, peran divisi |
+| 109 | `reset-operasional-109.sql` | Alat penghapusan operasional, **bukan langkah instalasi** |
+
+Patch 108 hanya mengubah tampilan lokasi. Rantai fondasi sampai 107 dan wireless 103 diuji bersama secara lokal. Berkas 105/106 di `database/` memiliki salinan dengan identitas migrasi CLI di `supabase/migrations/`; keduanya dipertahankan dan diperiksa identik oleh `npm run check`. Menghapus riwayat migrasi dapat mengganggu database yang telah memakai CLI.
+
+`.vercelignore` mengecualikan **kedua** folder SQL. Gunakan salah satu jalur pemasangan yang sesuai riwayat database; jangan menjalankan ulang kedua salinan atau patch lama untuk merapikan kode.

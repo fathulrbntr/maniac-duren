@@ -1,83 +1,421 @@
-import {attachFruitScanSelection} from './fruit-scan-selection.mjs';
-import {escape as e,num,money,today,id} from './core.mjs';
-import {bindEvidence} from './waste-evidence.mjs';
-import {wasteOutputProducts} from './waste-products.mjs';
-import {rejectLots,rejectCauses,lossCauses,rejectKinds,fleshProduct} from './reject-flow.mjs';
-const field=(label,body)=>`<label class="field">${label}${body}</label>`;
-const input=(name,extra='')=>`<input name="${name}" type="number" min="0.000001" step="0.000001" required ${extra}>`;
-const proof=(key,label)=>field(label,`<input type="file" accept="image/jpeg,image/png,image/webp" data-proof-file="${key}"><small data-proof-status="${key}">Foto dikompresi sebelum disimpan</small>`);
-const lookup=(s,key,value)=>s[key]?.find(x=>x.id===value)?.name||'—';
-const lotLabel=(s,l)=>`${lookup(s,'products',l.productId)} · ${lookup(s,'suppliers',l.supplierId)} · ${l.date} · ${l.id.slice(0,8)} · ${num(l.kg??l.qty)} ${l.kg!==undefined?'kg / '+l.pieces+' butir':l.unit}`;
-const options=rows=>rows.map(([value,label])=>`<option value="${e(value)}">${e(label)}</option>`).join('');
-const can=(s,p)=>!s.access||s.access[p];
-const action=(op,label,lot='',disabled=false)=>`<button type="button" data-reject-op="${op}" data-lot="${e(lot)}" ${disabled?'disabled':''}>${label}</button>`;
-const rows=s=>[...(s.rejectRecords||[]),...(s.wasteRuns||[]).filter(w=>!(s.rejectRecords||[]).some(r=>r.id===w.id)).map(w=>({...w,kind:'legacy'}))].sort((a,b)=>(b.createdAt||b.date).localeCompare(a.createdAt||a.date)||b.id.localeCompare(a.id));
-export function wastePage(s,store){
- const ready=s.rejectFlowVersion>=63,waiting=rejectLots(s,store,'process');
- return `<section class="reject-workspace"><div class="intro"><div><h2>Reject & Waste</h2><p class="muted">Pisahkan buah reject, catat hasil aktual, dan telusuri batch asal.</p></div><button id="waste-refresh">Perbarui stok</button></div>${!ready?'<p class="notice">Pembaruan database Reject & Waste 063 belum terpasang. Riwayat tetap dapat dibaca.</p>':''}<div class="reject-actions">${action('mark','Catat reject','',!ready)}${action('process','Olah reject','',!ready)}${action('coral','Olah Coral','',!ready)}${action('loss','Catat waste','',!ready)}<button type="button" data-view="batches">Laporan batch</button></div><div class="summary-grid"><div class="summary-card"><span>Reject menunggu diolah</span><b>${num(waiting.reduce((n,l)=>n+l.kg,0))} kg</b></div><div class="summary-card"><span>Buah reject</span><b>${waiting.reduce((n,l)=>n+l.pieces,0)} butir</b></div><div class="summary-card"><span>Batch reject aktif</span><b>${waiting.length}</b></div></div><section class="panel"><h3>Menunggu diolah</h3><p class="muted">Stok ini sudah terpisah dari stok siap jual di kasir.</p><div class="table-wrap"><table><thead><tr><th>Buah / batch</th><th>Supplier / masuk</th><th>Sisa reject</th><th>Tindakan</th></tr></thead><tbody>${waiting.map(l=>`<tr><td><b>${e(lookup(s,'products',l.productId))}</b><small>${e(l.id.slice(0,8))}</small></td><td>${e(lookup(s,'suppliers',l.supplierId))}<small>${e(l.date)}</small></td><td>${num(l.kg)} kg / ${l.pieces} butir</td><td><div class="reject-row-actions">${action('process','Olah',l.id,!ready)}${action('loss','Buang seluruhnya',l.id,!ready)}</div></td></tr>`).join('')||'<tr><td colspan="4" class="empty">Tidak ada reject yang menunggu diolah.</td></tr>'}</tbody></table></div></section><section class="panel"><h3>Riwayat outlet</h3><div class="toolbar"><input id="reject-history-search" type="search" placeholder="Cari produk, supplier, alasan…" aria-label="Cari riwayat reject"><select id="reject-history-kind" aria-label="Jenis pencatatan"><option value="">Semua proses</option>${options(Object.entries({...rejectKinds,legacy:'Olahan lama'}))}</select><select id="reject-history-state" aria-label="Status pencatatan"><option value="">Semua status</option><option value="active">Aktif</option><option value="void">Dibatalkan</option></select></div><div id="reject-history"></div><div class="reject-pagination"><button id="reject-history-prev" type="button">Sebelumnya</button><span id="reject-history-count"></span><button id="reject-history-next" type="button">Berikutnya</button></div></section></section>`;
+import { attachFruitScanSelection } from "./fruit-scan-selection.mjs";
+import { escape as e, num, money, today, id } from "./core.mjs";
+import { bindEvidence } from "./waste-evidence.mjs";
+import { wasteOutputProducts } from "./waste-products.mjs";
+import {
+  rejectLots,
+  rejectCauses,
+  lossCauses,
+  rejectKinds,
+  fleshProduct,
+} from "./reject-flow.mjs";
+const field = (label, body) => `<label class="field">${label}${body}</label>`;
+const input = (name, extra = "") =>
+  `<input name="${name}" type="number" min="0.000001" step="0.000001" required ${extra}>`;
+const proof = (key, label) =>
+  field(
+    label,
+    `<input type="file" accept="image/jpeg,image/png,image/webp" data-proof-file="${key}"><small data-proof-status="${key}">Foto dikompresi sebelum disimpan</small>`,
+  );
+const lookup = (s, key, value) => s[key]?.find((x) => x.id === value)?.name || "—";
+const lotLabel = (s, l) =>
+  `${lookup(s, "products", l.productId)} · ${lookup(s, "suppliers", l.supplierId)} · ${l.date} · ${l.id.slice(0, 8)} · ${num(l.kg ?? l.qty)} ${l.kg !== undefined ? "kg / " + l.pieces + " butir" : l.unit}`;
+const options = (rows) =>
+  rows
+    .map(([value, label]) => `<option value="${e(value)}">${e(label)}</option>`)
+    .join("");
+const can = (s, p) => !s.access || s.access[p];
+const action = (op, label, lot = "", disabled = false) =>
+  `<button type="button" data-reject-op="${op}" data-lot="${e(lot)}" ${disabled ? "disabled" : ""}>${label}</button>`;
+const rows = (s) =>
+  [
+    ...(s.rejectRecords || []),
+    ...(s.wasteRuns || [])
+      .filter((w) => !(s.rejectRecords || []).some((r) => r.id === w.id))
+      .map((w) => ({ ...w, kind: "legacy" })),
+  ].sort(
+    (a, b) =>
+      (b.createdAt || b.date).localeCompare(a.createdAt || a.date) ||
+      b.id.localeCompare(a.id),
+  );
+export function wastePage(s, store) {
+  const ready = s.rejectFlowVersion >= 63,
+    waiting = rejectLots(s, store, "process");
+  return `<section class="reject-workspace"><div class="intro"><div><h2>Reject & Waste</h2><p class="muted">Pisahkan buah reject, catat hasil aktual, dan telusuri batch asal.</p></div><button id="waste-refresh">Perbarui stok</button></div>${!ready ? '<p class="notice">Pembaruan database Reject & Waste 063 belum terpasang. Riwayat tetap dapat dibaca.</p>' : ""}<div class="reject-actions">${action("mark", "Catat reject", "", !ready)}${action("process", "Olah reject", "", !ready)}${action("coral", "Olah Coral", "", !ready)}${action("loss", "Catat waste", "", !ready)}<button type="button" data-view="batches">Laporan batch</button></div><div class="summary-grid"><div class="summary-card"><span>Reject menunggu diolah</span><b>${num(waiting.reduce((n, l) => n + l.kg, 0))} kg</b></div><div class="summary-card"><span>Buah reject</span><b>${waiting.reduce((n, l) => n + l.pieces, 0)} butir</b></div><div class="summary-card"><span>Batch reject aktif</span><b>${waiting.length}</b></div></div><section class="panel"><h3>Menunggu diolah</h3><p class="muted">Stok ini sudah terpisah dari stok siap jual di kasir.</p><div class="table-wrap"><table><thead><tr><th>Buah / batch</th><th>Supplier / masuk</th><th>Sisa reject</th><th>Tindakan</th></tr></thead><tbody>${waiting.map((l) => `<tr><td><b>${e(lookup(s, "products", l.productId))}</b><small>${e(l.id.slice(0, 8))}</small></td><td>${e(lookup(s, "suppliers", l.supplierId))}<small>${e(l.date)}</small></td><td>${num(l.kg)} kg / ${l.pieces} butir</td><td><div class="reject-row-actions">${action("process", "Olah", l.id, !ready)}${action("loss", "Buang seluruhnya", l.id, !ready)}</div></td></tr>`).join("") || '<tr><td colspan="4" class="empty">Tidak ada reject yang menunggu diolah.</td></tr>'}</tbody></table></div></section><section class="panel"><h3>Riwayat outlet</h3><div class="toolbar"><input id="reject-history-search" type="search" placeholder="Cari produk, supplier, alasan…" aria-label="Cari riwayat reject"><select id="reject-history-kind" aria-label="Jenis pencatatan"><option value="">Semua proses</option>${options(Object.entries({ ...rejectKinds, legacy: "Olahan lama" }))}</select><select id="reject-history-state" aria-label="Status pencatatan"><option value="">Semua status</option><option value="active">Aktif</option><option value="void">Dibatalkan</option></select></div><div id="reject-history"></div><div class="reject-pagination"><button id="reject-history-prev" type="button">Sebelumnya</button><span id="reject-history-count"></span><button id="reject-history-next" type="button">Berikutnya</button></div></section></section>`;
 }
-export function openRejectDialog(kind,s,store,ctx,selected=''){
- if(!can(s,'waste')||s.rejectFlowVersion<63){ctx.toast('Hak akses atau pembaruan database belum tersedia');return;}
- const available=rejectLots(s,store,kind);if(!available.length){ctx.toast(kind==='coral'?'Belum ada Coral layak pakai.':'Tidak ada stok untuk tindakan ini.');return;}
- const request=id(),outputIds=Object.fromEntries(['durpas500','durpas1000','coral'].map(k=>[k,id()])),rejectLotId=id(),outputLotId=id();
- const title={mark:'Catat buah reject',process:'Olah buah reject',coral:'Olah Coral menjadi daging',loss:'Catat waste / barang dibuang'}[kind];
- const quantities=kind==='loss'?field('Jumlah hilang',input('qty'))+`<div data-fruit-pieces>${field('Butir hilang', '<input name="pieces" type="number" min="0" step="1" value="0" required>')}</div>`:field(kind==='coral'?'Coral digunakan termasuk biji (kg)':kind==='mark'?'Buah reject (kg)':'Buah yang diolah (kg)',input('kg'))+(kind==='coral'?field('Daging bersih dihasilkan (kg)',input('netKg')):field('Jumlah buah (butir)','<input name="pieces" type="number" min="1" step="1" required>'));
- const outputs=`<fieldset data-reject-outputs class="reject-output-fieldset" ${kind==='mark'?'hidden disabled':''}><legend>Hasil olahan aktual</legend><p class="muted">Durpas dalam kemasan, Coral termasuk biji dalam kg. Isi 0 untuk hasil yang tidak dibuat.</p><div class="reject-output-grid">${[['durpas500','Durpas 500 gr'],['durpas1000','Durpas 1 kg'],['coral','Coral']].map(([key,label])=>`<div class="reject-output-card"><b>${label}</b><p data-output-name="${key}">Pilih buah asal</p>${field(key==='coral'?'Berat (kg)':'Kemasan (pcs)',`<input name="${key}_qty" type="number" min="0" step="${key==='coral'?'0.000001':'1'}" value="0" required>`)}${proof(key,'Foto hasil · wajib jika ada')}</div>`).join('')}</div>${field('Kedaluwarsa hasil (opsional)',`<input name="expiry" type="date" min="${today()}">`)}</fieldset>`;
- const body=`<p class="muted">Outlet ${e(lookup(s,'stores',store))} · ${today()} · Petugas ${e(s.me?.name||'Akun login')}</p>${field('Pilih stok / batch',`<select name="sourceLotId" required>${options(available.map(l=>[l.id,lotLabel(s,l)]))}</select>`)}<div class="form-grid">${quantities}</div>${kind==='mark'||kind==='loss'?field('Penyebab',`<select name="cause">${options(Object.entries(kind==='mark'?rejectCauses:lossCauses))}</select>`):''}${kind==='mark'?'<label class="reject-check"><input name="processNow" type="checkbox">Catat & langsung olah sekarang</label>':''}${kind==='mark'||kind==='loss'?proof('reject',kind==='mark'?'Foto buah reject':'Foto bukti waste'):kind==='process'?`<p class="muted">Foto reject mengikuti pencatatan awal. Untuk batch reject lama, unggah foto di bawah.</p>${proof('reject','Foto reject tambahan (opsional jika sudah ada)')}`:''}${['mark','process'].includes(kind)?outputs:''}${kind==='coral'?`<p data-flesh-name></p><div class="form-grid">${proof('coral','Foto Coral sebelum diolah')}${proof('daging','Foto daging bersih')}</div>${field('Kedaluwarsa hasil (opsional)',`<input name="expiry" type="date" min="${today()}">`)}`:''}${field('Alasan / catatan','<input name="reason" required minlength="3" maxlength="300" placeholder="Jelaskan kondisi barang atau proses">')}<div class="callout" data-reject-preview aria-live="polite"></div>`;
- const d=ctx.modal(title,body,'Selesaikan pencatatan');d.classList.add('reject-modal');
- const f=d.querySelector('form'),c=name=>f.elements.namedItem(name),evidence=bindEvidence(f,[]);let chosen='',saving=false,completed=false;
- if(selected&&available.some(l=>l.id===selected))c('sourceLotId').value=selected;
- function preview(){
-  const source=available.find(l=>l.id===c('sourceLotId').value),product=s.products.find(p=>p.id===source?.productId);if(!source)return;
-  if(chosen&&chosen!==source.id){for(const name of ['kg','netKg','qty','pieces'])if(c(name))c(name).value=name==='pieces'&&kind==='loss'?'0':'';for(const key of Object.keys(outputIds))if(c(key+'_qty'))c(key+'_qty').value='0';evidence.reset();}
-  chosen=source.id;
-  const processing=kind==='process'||kind==='mark'&&c('processNow').checked;
-  if(['mark','process'].includes(kind)){
-   const area=d.querySelector('[data-reject-outputs]');area.hidden=!processing;area.disabled=!processing;
-   for(const output of wasteOutputProducts(s,product.id))d.querySelector(`[data-output-name="${output.key}"]`).textContent=output.product?.name||output.error;
+export function openRejectDialog(kind, s, store, ctx, selected = "") {
+  if (!can(s, "waste") || s.rejectFlowVersion < 63) {
+    ctx.toast("Hak akses atau pembaruan database belum tersedia");
+    return;
   }
-  let message=`Tersedia: ${num(source.kg??source.qty)} ${source.kg!==undefined?'kg / '+source.pieces+' butir':source.unit}.`;
-  if(processing){const kg=Number(c('kg').value||0),out=Number(c('durpas500_qty').value||0)*.5+Number(c('durpas1000_qty').value||0)+Number(c('coral_qty').value||0);message+=` Hasil ${num(out)} kg · kulit dan sisa proses ${num(kg-out)} kg${kg>0?' · hasil bersih '+num(out/kg*100)+'%':''}.`;}
-  else if(kind==='mark')message+=' Buah dipindahkan ke reject dan tidak lagi tersedia di kasir.';
-  else if(kind==='coral'){const kg=Number(c('kg').value||0),net=Number(c('netKg').value||0);d.querySelector('[data-flesh-name]').textContent='Hasil otomatis: '+(fleshProduct(s,product)?.name||'Master daging belum dihubungkan');message+=` Biji dan sisa proses ${num(kg-net)} kg${kg>0?' · hasil bersih '+num(net/kg*100)+'%':''}.`;}
-  else{const fruit=source.kg!==undefined;d.querySelector('[data-fruit-pieces]').hidden=!fruit;c('pieces').disabled=!fruit;c('qty').step=!fruit&&['pcs','porsi'].includes(source.unit)?'1':'0.000001';const shrink=c('cause').querySelector('[value="shrinkage"]');const tracking=fruit;if(shrink)shrink.disabled=!fruit||tracking;if(tracking&&c('cause').value==='shrinkage')c('cause').value='discard';if(!fruit&&c('cause').value==='shrinkage')c('cause').value='spoiled';if(c('cause').value==='shrinkage'){c('pieces').value='0';c('pieces').readOnly=true;}else c('pieces').readOnly=!!tracking;message+=' Stok berkurang tanpa menghasilkan produk.';}
-  d.querySelector('[data-reject-preview]').textContent=message;
- }
- preview();if(kind==='process'&&selected){const l=available.find(l=>l.id===selected);c('kg').value=l.kg;c('pieces').value=l.pieces;preview();}if(kind==='loss'&&selected){const l=available.find(l=>l.id===selected);c('qty').value=l.kg??l.qty;c('pieces').value=l.pieces||0;c('cause').value='discard';preview();}
- const selection=kind==='coral'?null:attachFruitScanSelection(d,{state:s,store,weightName:kind==='loss'?'qty':'kg',states:kind==='mark'?['available']:kind==='process'?['reject']:['available','reject']});
- f.addEventListener('input',preview);f.addEventListener('change',preview);
- f.onsubmit=async ev=>{
-  ev.preventDefault();if(saving||completed)return;const error=d.querySelector('#form-error');error.textContent='';if(evidence.busy()){error.textContent='Tunggu foto selesai diproses';return;}
-  let scanned;try{scanned=selection?.payload()||{};}catch(err){error.textContent=err.message;return;}
-  const values=Object.fromEntries(new FormData(f)),source=available.find(l=>l.id===values.sourceLotId);if(!source)return;
-  const processNow=kind==='mark'&&c('processNow').checked;
-  const p={...values,id:request,storeId:store,date:today(),rejectLotId,outputLotId,processNow,evidence:evidence.values(),...scanned};
-  if(kind==='process'||processNow){p.outputs=wasteOutputProducts(s,source.productId).map(o=>({key:o.key,productId:o.product?.id||'',qty:Number(c(o.key+'_qty').value),lotId:outputIds[o.key],expiry:values.expiry||''}));if(p.outputs.every(o=>o.qty===0)&&!confirm('Semua hasil 0. Catat buah ini sebagai waste total?'))return;}
-  if(scanned.barcodes?.length&&!confirm(`Selesaikan pencatatan ${scanned.pieces} butir (${num(scanned.kg)} kg) dari batch ini? Stok dan status buah akan diperbarui.`))return;
-  saving=true;const submit=d.querySelector('[type="submit"]');submit.disabled=true;
-  try{if(await ctx.mutate('reject_'+kind,p)){completed=true;d.close();ctx.render();ctx.toast('Pencatatan tersimpan; stok dan jejak batch diperbarui.');}}
-  catch(err){error.textContent=err.message;}finally{saving=false;if(!completed)submit.disabled=false;}
- };
- selection?.focus();return d;
+  const available = rejectLots(s, store, kind);
+  if (!available.length) {
+    ctx.toast(
+      kind === "coral"
+        ? "Belum ada Coral layak pakai."
+        : "Tidak ada stok untuk tindakan ini.",
+    );
+    return;
+  }
+  const request = id(),
+    outputIds = Object.fromEntries(
+      ["durpas500", "durpas1000", "coral"].map((k) => [k, id()]),
+    ),
+    rejectLotId = id(),
+    outputLotId = id();
+  const title = {
+    mark: "Catat buah reject",
+    process: "Olah buah reject",
+    coral: "Olah Coral menjadi daging",
+    loss: "Catat waste / barang dibuang",
+  }[kind];
+  const quantities =
+    kind === "loss"
+      ? field("Jumlah hilang", input("qty")) +
+        `<div data-fruit-pieces>${field("Butir hilang", '<input name="pieces" type="number" min="0" step="1" value="0" required>')}</div>`
+      : field(
+          kind === "coral"
+            ? "Coral digunakan termasuk biji (kg)"
+            : kind === "mark"
+              ? "Buah reject (kg)"
+              : "Buah yang diolah (kg)",
+          input("kg"),
+        ) +
+        (kind === "coral"
+          ? field("Daging bersih dihasilkan (kg)", input("netKg"))
+          : field(
+              "Jumlah buah (butir)",
+              '<input name="pieces" type="number" min="1" step="1" required>',
+            ));
+  const outputs = `<fieldset data-reject-outputs class="reject-output-fieldset" ${kind === "mark" ? "hidden disabled" : ""}><legend>Hasil olahan aktual</legend><p class="muted">Durpas dalam kemasan, Coral termasuk biji dalam kg. Isi 0 untuk hasil yang tidak dibuat.</p><div class="reject-output-grid">${[
+    ["durpas500", "Durpas 500 gr"],
+    ["durpas1000", "Durpas 1 kg"],
+    ["coral", "Coral"],
+  ]
+    .map(
+      ([key, label]) =>
+        `<div class="reject-output-card"><b>${label}</b><p data-output-name="${key}">Pilih buah asal</p>${field(key === "coral" ? "Berat (kg)" : "Kemasan (pcs)", `<input name="${key}_qty" type="number" min="0" step="${key === "coral" ? "0.000001" : "1"}" value="0" required>`)}${proof(key, "Foto hasil · wajib jika ada")}</div>`,
+    )
+    .join(
+      "",
+    )}</div>${field("Kedaluwarsa hasil (opsional)", `<input name="expiry" type="date" min="${today()}">`)}</fieldset>`;
+  const body = `<p class="muted">Outlet ${e(lookup(s, "stores", store))} · ${today()} · Petugas ${e(s.me?.name || "Akun login")}</p>${field("Pilih stok / batch", `<select name="sourceLotId" required>${options(available.map((l) => [l.id, lotLabel(s, l)]))}</select>`)}<div class="form-grid">${quantities}</div>${kind === "mark" || kind === "loss" ? field("Penyebab", `<select name="cause">${options(Object.entries(kind === "mark" ? rejectCauses : lossCauses))}</select>`) : ""}${kind === "mark" ? '<label class="reject-check"><input name="processNow" type="checkbox">Catat & langsung olah sekarang</label>' : ""}${kind === "mark" || kind === "loss" ? proof("reject", kind === "mark" ? "Foto buah reject" : "Foto bukti waste") : kind === "process" ? `<p class="muted">Foto reject mengikuti pencatatan awal. Untuk batch reject lama, unggah foto di bawah.</p>${proof("reject", "Foto reject tambahan (opsional jika sudah ada)")}` : ""}${["mark", "process"].includes(kind) ? outputs : ""}${kind === "coral" ? `<p data-flesh-name></p><div class="form-grid">${proof("coral", "Foto Coral sebelum diolah")}${proof("daging", "Foto daging bersih")}</div>${field("Kedaluwarsa hasil (opsional)", `<input name="expiry" type="date" min="${today()}">`)}` : ""}${field("Alasan / catatan", '<input name="reason" required minlength="3" maxlength="300" placeholder="Jelaskan kondisi barang atau proses">')}<div class="callout" data-reject-preview aria-live="polite"></div>`;
+  const d = ctx.modal(title, body, "Selesaikan pencatatan");
+  d.classList.add("reject-modal");
+  const f = d.querySelector("form"),
+    c = (name) => f.elements.namedItem(name),
+    evidence = bindEvidence(f, []);
+  let chosen = "",
+    saving = false,
+    completed = false;
+  if (selected && available.some((l) => l.id === selected))
+    c("sourceLotId").value = selected;
+  function preview() {
+    const source = available.find((l) => l.id === c("sourceLotId").value),
+      product = s.products.find((p) => p.id === source?.productId);
+    if (!source) return;
+    if (chosen && chosen !== source.id) {
+      for (const name of ["kg", "netKg", "qty", "pieces"])
+        if (c(name)) c(name).value = name === "pieces" && kind === "loss" ? "0" : "";
+      for (const key of Object.keys(outputIds))
+        if (c(key + "_qty")) c(key + "_qty").value = "0";
+      evidence.reset();
+    }
+    chosen = source.id;
+    const processing = kind === "process" || (kind === "mark" && c("processNow").checked);
+    if (["mark", "process"].includes(kind)) {
+      const area = d.querySelector("[data-reject-outputs]");
+      area.hidden = !processing;
+      area.disabled = !processing;
+      for (const output of wasteOutputProducts(s, product.id))
+        d.querySelector(`[data-output-name="${output.key}"]`).textContent =
+          output.product?.name || output.error;
+    }
+    let message = `Tersedia: ${num(source.kg ?? source.qty)} ${source.kg !== undefined ? "kg / " + source.pieces + " butir" : source.unit}.`;
+    if (processing) {
+      const kg = Number(c("kg").value || 0),
+        out =
+          Number(c("durpas500_qty").value || 0) * 0.5 +
+          Number(c("durpas1000_qty").value || 0) +
+          Number(c("coral_qty").value || 0);
+      message += ` Hasil ${num(out)} kg · kulit dan sisa proses ${num(kg - out)} kg${kg > 0 ? " · hasil bersih " + num((out / kg) * 100) + "%" : ""}.`;
+    } else if (kind === "mark")
+      message += " Buah dipindahkan ke reject dan tidak lagi tersedia di kasir.";
+    else if (kind === "coral") {
+      const kg = Number(c("kg").value || 0),
+        net = Number(c("netKg").value || 0);
+      d.querySelector("[data-flesh-name]").textContent =
+        "Hasil otomatis: " +
+        (fleshProduct(s, product)?.name || "Master daging belum dihubungkan");
+      message += ` Biji dan sisa proses ${num(kg - net)} kg${kg > 0 ? " · hasil bersih " + num((net / kg) * 100) + "%" : ""}.`;
+    } else {
+      const fruit = source.kg !== undefined;
+      d.querySelector("[data-fruit-pieces]").hidden = !fruit;
+      c("pieces").disabled = !fruit;
+      c("qty").step = !fruit && ["pcs", "porsi"].includes(source.unit) ? "1" : "0.000001";
+      const shrink = c("cause").querySelector('[value="shrinkage"]');
+      const tracking = fruit;
+      if (shrink) shrink.disabled = !fruit || tracking;
+      if (tracking && c("cause").value === "shrinkage") c("cause").value = "discard";
+      if (!fruit && c("cause").value === "shrinkage") c("cause").value = "spoiled";
+      if (c("cause").value === "shrinkage") {
+        c("pieces").value = "0";
+        c("pieces").readOnly = true;
+      } else c("pieces").readOnly = !!tracking;
+      message += " Stok berkurang tanpa menghasilkan produk.";
+    }
+    d.querySelector("[data-reject-preview]").textContent = message;
+  }
+  preview();
+  if (kind === "process" && selected) {
+    const l = available.find((l) => l.id === selected);
+    c("kg").value = l.kg;
+    c("pieces").value = l.pieces;
+    preview();
+  }
+  if (kind === "loss" && selected) {
+    const l = available.find((l) => l.id === selected);
+    c("qty").value = l.kg ?? l.qty;
+    c("pieces").value = l.pieces || 0;
+    c("cause").value = "discard";
+    preview();
+  }
+  const selection =
+    kind === "coral"
+      ? null
+      : attachFruitScanSelection(d, {
+          state: s,
+          store,
+          weightName: kind === "loss" ? "qty" : "kg",
+          states:
+            kind === "mark"
+              ? ["available"]
+              : kind === "process"
+                ? ["reject"]
+                : ["available", "reject"],
+        });
+  f.addEventListener("input", preview);
+  f.addEventListener("change", preview);
+  f.onsubmit = async (ev) => {
+    ev.preventDefault();
+    if (saving || completed) return;
+    const error = d.querySelector("#form-error");
+    error.textContent = "";
+    if (evidence.busy()) {
+      error.textContent = "Tunggu foto selesai diproses";
+      return;
+    }
+    let scanned;
+    try {
+      scanned = selection?.payload() || {};
+    } catch (err) {
+      error.textContent = err.message;
+      return;
+    }
+    const values = Object.fromEntries(new FormData(f)),
+      source = available.find((l) => l.id === values.sourceLotId);
+    if (!source) return;
+    const processNow = kind === "mark" && c("processNow").checked;
+    const p = {
+      ...values,
+      id: request,
+      storeId: store,
+      date: today(),
+      rejectLotId,
+      outputLotId,
+      processNow,
+      evidence: evidence.values(),
+      ...scanned,
+    };
+    if (kind === "process" || processNow) {
+      p.outputs = wasteOutputProducts(s, source.productId).map((o) => ({
+        key: o.key,
+        productId: o.product?.id || "",
+        qty: Number(c(o.key + "_qty").value),
+        lotId: outputIds[o.key],
+        expiry: values.expiry || "",
+      }));
+      if (
+        p.outputs.every((o) => o.qty === 0) &&
+        !confirm("Semua hasil 0. Catat buah ini sebagai waste total?")
+      )
+        return;
+    }
+    if (
+      scanned.barcodes?.length &&
+      !confirm(
+        `Selesaikan pencatatan ${scanned.pieces} butir (${num(scanned.kg)} kg) dari batch ini? Stok dan status buah akan diperbarui.`,
+      )
+    )
+      return;
+    saving = true;
+    const submit = d.querySelector('[type="submit"]');
+    submit.disabled = true;
+    try {
+      if (await ctx.mutate("reject_" + kind, p)) {
+        completed = true;
+        d.close();
+        ctx.render();
+        ctx.toast("Pencatatan tersimpan; stok dan jejak batch diperbarui.");
+      }
+    } catch (err) {
+      error.textContent = err.message;
+    } finally {
+      saving = false;
+      if (!completed) submit.disabled = false;
+    }
+  };
+  selection?.focus();
+  return d;
 }
-export function bindWaste(view,s,store,ctx){
- if(!['waste','losses'].includes(view))return;
- document.querySelectorAll('[data-reject-op]').forEach(b=>b.onclick=()=>openRejectDialog(b.dataset.rejectOp,ctx.getState?.()||s,store,ctx,b.dataset.lot));
- document.querySelector('#waste-refresh').onclick=async()=>{try{await ctx.refresh();ctx.render();}catch(err){ctx.toast(err.message);}};
- let page=0;const history=rows(s).filter(r=>r.storeId===store),target=document.querySelector('#reject-history');
- function draw(){
-  const q=document.querySelector('#reject-history-search').value.toLowerCase().trim(),kind=document.querySelector('#reject-history-kind').value,status=document.querySelector('#reject-history-state').value;
-  const filtered=history.filter(r=>(!kind||r.kind===kind)&&(!status||(status==='void')===r.voided)&&(!q||[r.sourceName,r.reason,lookup(s,'suppliers',r.supplierId)].join(' ').toLowerCase().includes(q)));
-  page=Math.min(page,Math.max(0,Math.ceil(filtered.length/30)-1));
-  target.innerHTML=`<div class="table-wrap"><table><thead><tr><th>Tanggal / proses</th><th>Asal / petugas</th><th>Jumlah / hasil</th><th>Status</th><th>Detail</th></tr></thead><tbody>${filtered.slice(page*30,page*30+30).map(r=>`<tr><td>${e(r.date)}<small>${e(rejectKinds[r.kind]||'Olahan lama')}</small></td><td>${e(r.sourceName)}<small>${e(lookup(s,'suppliers',r.supplierId))} · ${e(r.processedBy||'—')}</small></td><td>${num(r.kg??r.qty)} ${e(r.unit||'kg')}${r.pieces?' / '+r.pieces+' butir':''}${r.outputKg!=null?`<small>Hasil ${num(r.outputKg)} kg · susut ${num(r.lossKg)} kg</small>`:''}</td><td>${r.voided?'Dibatalkan':r.kind==='mark'?(s.lots.find(l=>l.id===r.rejectLotId)?.kg>0?'Menunggu / diproses sebagian':'Sudah ditangani'):'Tercatat'}</td><td><button type="button" data-reject-detail="${e(r.id)}">Lihat</button></td></tr>`).join('')||'<tr><td colspan="5" class="empty">Belum ada riwayat yang sesuai.</td></tr>'}</tbody></table></div>`;
-  document.querySelector('#reject-history-count').textContent=`${filtered.length} pencatatan · halaman ${page+1}`;document.querySelector('#reject-history-prev').disabled=page===0;document.querySelector('#reject-history-next').disabled=(page+1)*30>=filtered.length;
-  target.querySelectorAll('[data-reject-detail]').forEach(b=>b.onclick=()=>details(history.find(r=>r.id===b.dataset.rejectDetail)));
- }
- function details(r){
-  const d=ctx.modal(rejectKinds[r.kind]||'Riwayat olahan lama',`<p><b>${e(r.sourceName)}</b> · ${e(lookup(s,'suppliers',r.supplierId))}</p><p>Masuk ${e(r.receivedDate)} · proses ${e(r.date)} · ${e(r.processedBy||'—')}</p><p>${e(r.reason)}</p><p>Input ${num(r.kg??r.qty)} ${e(r.unit||'kg')}${r.pieces?' / '+r.pieces+' butir':''}</p>${r.outputs?.length?`<ul>${r.outputs.map(o=>`<li>${e(o.name)}: ${num(o.qty)} ${e(o.unit)}</li>`).join('')}</ul>`:''}${r.lossKg!=null?`<p>${r.stage===2?'Biji dan sisa proses':'Kulit dan sisa proses'}: ${num(r.lossKg)} kg · hasil bersih ${num(r.kg>0?r.outputKg/r.kg*100:0)}%</p>`:''}${can(s,'finance')?`<p>Modal input: ${r.inputCost==null?'Belum diketahui':money(r.inputCost)}</p>`:''}${r.voided?`<p>Dibatalkan: ${e(r.voidReason)}</p>`:''}<button type="button" data-reject-proof>Lihat foto bukti</button><div data-reject-photos class="reject-photos"></div>${!r.voided&&can(s,'cancel')?'<button type="button" class="danger" data-reject-void>Batalkan pencatatan</button>':''}`,'Tutup');d.classList.add('reject-modal');d.querySelector('form').onsubmit=ev=>{ev.preventDefault();d.close();};
-  d.querySelector('[data-reject-proof]').onclick=async ev=>{const b=ev.currentTarget;b.disabled=true;try{const proof= r.evidence||await (r.kind==='legacy'?ctx.loadEvidence(r.id):ctx.loadRejectEvidence(r.id));d.querySelector('[data-reject-photos]').innerHTML=Object.entries(proof||{}).filter(([,v])=>v).map(([k,v])=>`<figure><figcaption>${e({reject:'Buah / waste',durpas500:'Durpas 500 gr',durpas1000:'Durpas 1 kg',coral:'Coral',daging:'Daging',processed:'Hasil olahan'}[k]||k)}</figcaption><img src="${e(v)}" alt="Bukti ${e(k)}" loading="lazy"></figure>`).join('')||'<p>Tidak ada foto.</p>'; }catch(err){ctx.toast(err.message);b.disabled=false;}};
-  const undo=d.querySelector('[data-reject-void]');if(undo)undo.onclick=()=>{d.close();const form=ctx.modal('Batalkan pencatatan',`<p>Stok akan dikembalikan. Hasil harus masih utuh; batalkan proses turunannya lebih dahulu jika sudah dipakai.</p>${field('Alasan pembatalan','<input name="reason" minlength="3" maxlength="300" required>')}`,'Batalkan pencatatan');let saving=false,done=false;const request=id();form.querySelector('form').onsubmit=async ev=>{ev.preventDefault();if(saving||done)return;saving=true;try{const p={id:request,storeId:store,date:today(),reason:form.querySelector('[name="reason"]').value,...(r.kind==='legacy'?{wasteId:r.id}:{recordId:r.id})};if(await ctx.mutate(r.kind==='legacy'?'waste_void':'reject_void',p)){done=true;form.close();ctx.render();}}catch(err){form.querySelector('#form-error').textContent=err.message;}finally{saving=false;}};};
- }
- for(const name of ['search','kind','state'])document.querySelector('#reject-history-'+name).addEventListener(name==='search'?'input':'change',()=>{page=0;draw();});
- document.querySelector('#reject-history-prev').onclick=()=>{page--;draw();};document.querySelector('#reject-history-next').onclick=()=>{page++;draw();};draw();
+export function bindWaste(view, s, store, ctx) {
+  if (!["waste", "losses"].includes(view)) return;
+  document
+    .querySelectorAll("[data-reject-op]")
+    .forEach(
+      (b) =>
+        (b.onclick = () =>
+          openRejectDialog(
+            b.dataset.rejectOp,
+            ctx.getState?.() || s,
+            store,
+            ctx,
+            b.dataset.lot,
+          )),
+    );
+  document.querySelector("#waste-refresh").onclick = async () => {
+    try {
+      await ctx.refresh();
+      ctx.render();
+    } catch (err) {
+      ctx.toast(err.message);
+    }
+  };
+  let page = 0;
+  const history = rows(s).filter((r) => r.storeId === store),
+    target = document.querySelector("#reject-history");
+  function draw() {
+    const q = document.querySelector("#reject-history-search").value.toLowerCase().trim(),
+      kind = document.querySelector("#reject-history-kind").value,
+      status = document.querySelector("#reject-history-state").value;
+    const filtered = history.filter(
+      (r) =>
+        (!kind || r.kind === kind) &&
+        (!status || (status === "void") === r.voided) &&
+        (!q ||
+          [r.sourceName, r.reason, lookup(s, "suppliers", r.supplierId)]
+            .join(" ")
+            .toLowerCase()
+            .includes(q)),
+    );
+    page = Math.min(page, Math.max(0, Math.ceil(filtered.length / 30) - 1));
+    target.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Tanggal / proses</th><th>Asal / petugas</th><th>Jumlah / hasil</th><th>Status</th><th>Detail</th></tr></thead><tbody>${
+      filtered
+        .slice(page * 30, page * 30 + 30)
+        .map(
+          (r) =>
+            `<tr><td>${e(r.date)}<small>${e(rejectKinds[r.kind] || "Olahan lama")}</small></td><td>${e(r.sourceName)}<small>${e(lookup(s, "suppliers", r.supplierId))} · ${e(r.processedBy || "—")}</small></td><td>${num(r.kg ?? r.qty)} ${e(r.unit || "kg")}${r.pieces ? " / " + r.pieces + " butir" : ""}${r.outputKg != null ? `<small>Hasil ${num(r.outputKg)} kg · susut ${num(r.lossKg)} kg</small>` : ""}</td><td>${r.voided ? "Dibatalkan" : r.kind === "mark" ? (s.lots.find((l) => l.id === r.rejectLotId)?.kg > 0 ? "Menunggu / diproses sebagian" : "Sudah ditangani") : "Tercatat"}</td><td><button type="button" data-reject-detail="${e(r.id)}">Lihat</button></td></tr>`,
+        )
+        .join("") ||
+      '<tr><td colspan="5" class="empty">Belum ada riwayat yang sesuai.</td></tr>'
+    }</tbody></table></div>`;
+    document.querySelector("#reject-history-count").textContent =
+      `${filtered.length} pencatatan · halaman ${page + 1}`;
+    document.querySelector("#reject-history-prev").disabled = page === 0;
+    document.querySelector("#reject-history-next").disabled =
+      (page + 1) * 30 >= filtered.length;
+    target
+      .querySelectorAll("[data-reject-detail]")
+      .forEach(
+        (b) =>
+          (b.onclick = () =>
+            details(history.find((r) => r.id === b.dataset.rejectDetail))),
+      );
+  }
+  function details(r) {
+    const d = ctx.modal(
+      rejectKinds[r.kind] || "Riwayat olahan lama",
+      `<p><b>${e(r.sourceName)}</b> · ${e(lookup(s, "suppliers", r.supplierId))}</p><p>Masuk ${e(r.receivedDate)} · proses ${e(r.date)} · ${e(r.processedBy || "—")}</p><p>${e(r.reason)}</p><p>Input ${num(r.kg ?? r.qty)} ${e(r.unit || "kg")}${r.pieces ? " / " + r.pieces + " butir" : ""}</p>${r.outputs?.length ? `<ul>${r.outputs.map((o) => `<li>${e(o.name)}: ${num(o.qty)} ${e(o.unit)}</li>`).join("")}</ul>` : ""}${r.lossKg != null ? `<p>${r.stage === 2 ? "Biji dan sisa proses" : "Kulit dan sisa proses"}: ${num(r.lossKg)} kg · hasil bersih ${num(r.kg > 0 ? (r.outputKg / r.kg) * 100 : 0)}%</p>` : ""}${can(s, "finance") ? `<p>Modal input: ${r.inputCost == null ? "Belum diketahui" : money(r.inputCost)}</p>` : ""}${r.voided ? `<p>Dibatalkan: ${e(r.voidReason)}</p>` : ""}<button type="button" data-reject-proof>Lihat foto bukti</button><div data-reject-photos class="reject-photos"></div>${!r.voided && can(s, "cancel") ? '<button type="button" class="danger" data-reject-void>Batalkan pencatatan</button>' : ""}`,
+      "Tutup",
+    );
+    d.classList.add("reject-modal");
+    d.querySelector("form").onsubmit = (ev) => {
+      ev.preventDefault();
+      d.close();
+    };
+    d.querySelector("[data-reject-proof]").onclick = async (ev) => {
+      const b = ev.currentTarget;
+      b.disabled = true;
+      try {
+        const proof =
+          r.evidence ||
+          (await (r.kind === "legacy"
+            ? ctx.loadEvidence(r.id)
+            : ctx.loadRejectEvidence(r.id)));
+        d.querySelector("[data-reject-photos]").innerHTML =
+          Object.entries(proof || {})
+            .filter(([, v]) => v)
+            .map(
+              ([k, v]) =>
+                `<figure><figcaption>${e({ reject: "Buah / waste", durpas500: "Durpas 500 gr", durpas1000: "Durpas 1 kg", coral: "Coral", daging: "Daging", processed: "Hasil olahan" }[k] || k)}</figcaption><img src="${e(v)}" alt="Bukti ${e(k)}" loading="lazy"></figure>`,
+            )
+            .join("") || "<p>Tidak ada foto.</p>";
+      } catch (err) {
+        ctx.toast(err.message);
+        b.disabled = false;
+      }
+    };
+    const undo = d.querySelector("[data-reject-void]");
+    if (undo)
+      undo.onclick = () => {
+        d.close();
+        const form = ctx.modal(
+          "Batalkan pencatatan",
+          `<p>Stok akan dikembalikan. Hasil harus masih utuh; batalkan proses turunannya lebih dahulu jika sudah dipakai.</p>${field("Alasan pembatalan", '<input name="reason" minlength="3" maxlength="300" required>')}`,
+          "Batalkan pencatatan",
+        );
+        let saving = false,
+          done = false;
+        const request = id();
+        form.querySelector("form").onsubmit = async (ev) => {
+          ev.preventDefault();
+          if (saving || done) return;
+          saving = true;
+          try {
+            const p = {
+              id: request,
+              storeId: store,
+              date: today(),
+              reason: form.querySelector('[name="reason"]').value,
+              ...(r.kind === "legacy" ? { wasteId: r.id } : { recordId: r.id }),
+            };
+            if (await ctx.mutate(r.kind === "legacy" ? "waste_void" : "reject_void", p)) {
+              done = true;
+              form.close();
+              ctx.render();
+            }
+          } catch (err) {
+            form.querySelector("#form-error").textContent = err.message;
+          } finally {
+            saving = false;
+          }
+        };
+      };
+  }
+  for (const name of ["search", "kind", "state"])
+    document
+      .querySelector("#reject-history-" + name)
+      .addEventListener(name === "search" ? "input" : "change", () => {
+        page = 0;
+        draw();
+      });
+  document.querySelector("#reject-history-prev").onclick = () => {
+    page--;
+    draw();
+  };
+  document.querySelector("#reject-history-next").onclick = () => {
+    page++;
+    draw();
+  };
+  draw();
 }

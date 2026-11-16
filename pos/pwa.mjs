@@ -4,7 +4,7 @@ let deferredPrompt = null;
 let started = false;
 let installed = false;
 let prompting = false;
-let errorMessage = '';
+let errorMessage = "";
 let standalone;
 
 function isInstalled() {
@@ -16,32 +16,33 @@ export function installButton() {
 }
 
 export function bindInstall() {
-  if (typeof document === 'undefined') return;
+  if (typeof document === "undefined") return;
   const ready = !!deferredPrompt && !isInstalled();
-  document.querySelectorAll('[data-pos-install-control]').forEach(control => {
+  document.querySelectorAll("[data-pos-install-control]").forEach((control) => {
     control.hidden = isInstalled() || (!ready && !errorMessage);
-    const button = control.querySelector('[data-pos-install]');
+    const button = control.querySelector("[data-pos-install]");
     button.hidden = !ready;
     button.disabled = prompting;
-    const status = control.querySelector('[data-pos-install-status]');
+    const status = control.querySelector("[data-pos-install-status]");
     status.textContent = errorMessage;
     status.hidden = !errorMessage;
   });
 }
 
 async function promptInstall(event) {
-  if (!event.target.closest?.('[data-pos-install]')) return;
+  if (!event.target.closest?.("[data-pos-install]")) return;
   if (!deferredPrompt || prompting || isInstalled()) return;
   const prompt = deferredPrompt;
   prompting = true;
-  errorMessage = '';
+  errorMessage = "";
   bindInstall();
   try {
     // Invoke during the user's click, before yielding, to preserve user activation.
     await prompt.prompt();
     await prompt.userChoice;
   } catch {
-    if (!isInstalled()) errorMessage = 'Belum berhasil dipasang. Coba melalui menu browser → Install.';
+    if (!isInstalled())
+      errorMessage = "Belum berhasil dipasang. Coba melalui menu browser → Install.";
   } finally {
     // Each event can be used once; wait for a fresh event after dismissal.
     if (deferredPrompt === prompt) deferredPrompt = null;
@@ -51,24 +52,25 @@ async function promptInstall(event) {
 }
 
 export function startPWA() {
-  if (started || typeof window === 'undefined' || typeof document === 'undefined') return false;
+  if (started || typeof window === "undefined" || typeof document === "undefined")
+    return false;
   started = true;
-  standalone = window.matchMedia?.('(display-mode: standalone)');
-  standalone?.addEventListener?.('change', bindInstall);
-  window.addEventListener('beforeinstallprompt', event => {
+  standalone = window.matchMedia?.("(display-mode: standalone)");
+  standalone?.addEventListener?.("change", bindInstall);
+  window.addEventListener("beforeinstallprompt", (event) => {
     if (isInstalled()) return;
     event.preventDefault();
     deferredPrompt = event;
-    errorMessage = '';
+    errorMessage = "";
     bindInstall();
   });
-  window.addEventListener('appinstalled', () => {
+  window.addEventListener("appinstalled", () => {
     installed = true;
     deferredPrompt = null;
-    errorMessage = '';
+    errorMessage = "";
     bindInstall();
   });
-  document.addEventListener('click', promptInstall);
+  document.addEventListener("click", promptInstall);
   bindInstall();
   return true;
 }

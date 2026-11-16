@@ -1,7 +1,9 @@
 // Retire the old asset cache. POS now uses normal HTTP loading and session memory.
 // Keep the existing worker URL so installed browsers can receive this cleanup.
-import fs from 'node:fs';
-fs.writeFileSync('pos/sw.js',`// POS web mode: retirement worker, no fetch interception or offline asset cache.
+import fs from "node:fs";
+fs.writeFileSync(
+  "pos/sw.js",
+  `// POS web mode: retirement worker, no fetch interception or offline asset cache.
 self.addEventListener('install',event=>event.waitUntil(self.skipWaiting()));
 self.addEventListener('activate',event=>event.waitUntil((async()=>{
  try{
@@ -12,5 +14,6 @@ self.addEventListener('activate',event=>event.waitUntil((async()=>{
  }
 })()));
 // Do not navigate clients: an open terminal may have an unsaved form or payment.
-`);
-console.log('Generated POS retirement worker: normal web mode, no PWA cache.');
+`,
+);
+console.log("Generated POS retirement worker: normal web mode, no PWA cache.");

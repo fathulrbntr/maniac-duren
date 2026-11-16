@@ -1,47 +1,40 @@
 # Maniac Duren
 
-Website pelanggan (`/`), katalog menu (`/menu/`), dan POS (`/pos/`). Audit 089 merapikan kode, tampilan, pemeriksaan otomatis, dan dokumentasi di atas sumber ZIP yang diberikan.
+Website pelanggan (`/`), katalog (`/menu/`), dan POS (`/pos/`). Versi audit 111, 16 November 2026, melanjutkan kode audit 110 dalam ZIP yang diberikan.
 
 ## Mulai dari sini
 
-| Kebutuhan | Buka |
-|---|---|
-| Memasang patch audit dan perintah Git | [Panduan patch 089](docs/PASANG-PATCH-089.md) |
-| Mencari file untuk mengubah fitur | [Peta struktur proyek](docs/STRUKTUR-PROYEK.md) |
-| Memahami alur operasional | [Alur pengguna](docs/ALUR-PENGGUNA.md) |
-| Melihat temuan dan batas pengujian | [Hasil audit](docs/HASIL-AUDIT.md) |
-| Memeriksa urutan fitur SQL | [Panduan database](database/README.md) |
-| Mencari petunjuk patch terdahulu | [Arsip](docs/archive/) |
+| Kebutuhan                                   | Panduan                                                         |
+| ------------------------------------------- | --------------------------------------------------------------- |
+| Memasang hasil audit ke proyek lama         | [PASANG-AUDIT-111.md](docs/PASANG-AUDIT-111.md)                 |
+| Hasil audit, perubahan, dan batas pengujian | [HASIL-AUDIT.md](docs/HASIL-AUDIT.md)                           |
+| Peta kode dan folder                        | [STRUKTUR-PROYEK.md](docs/STRUKTUR-PROYEK.md)                   |
+| Aturan coding untuk pembaruan berikutnya    | [AGENTS.md](AGENTS.md), [PENGEMBANGAN.md](docs/PENGEMBANGAN.md) |
+| Urutan database                             | [README database](database/README.md)                           |
+| Instruksi patch terdahulu                   | [Arsip](docs/archive/)                                          |
 
-## Struktur utama
+## Pemeriksaan lokal
 
-- `index.html`, `style.css`, `script.js`, `assets/`: halaman publik.
-- `menu/`: katalog pelanggan, editor lokal, dan data menu.
-- `pos/`: aplikasi POS dengan modul ES berdasarkan fitur.
-- `api/`: endpoint server Vercel untuk konfigurasi, login, dan akun karyawan.
-- `database/`: SQL dasar, patch fitur, dan pemeriksaan data.
-- `tests/`, `scripts/`, `docs/`: pengujian, alat pengelolaan, dan panduan.
-
-Tidak ada build frontend. Konfigurasi server Vercel memakai `POS_SUPABASE_URL`, `POS_SUPABASE_PUBLISHABLE_KEY`, dan `POS_SUPABASE_SERVICE_ROLE_KEY`. Kunci service role hanya berada di server; jangan masukkan ke kode browser. Editor menu tidak menyinkronkan data POS secara otomatis.
-
-## Pengujian lokal
-
-Diuji dengan Node.js 24.22.1. Instal dependensi dengan lockfile:
+Gunakan Node.js 24 LTS atau Node.js >=22.13.0. Versi dependensi dikunci di `package-lock.json`.
 
 ```bash
 npm ci
-npm run check
-npm test
+npm run verify
+```
+
+`verify` menjalankan pemeriksaan sintaks/aset, ESLint, format, unit test, simulasi UI, dan database PGlite. Semua memakai data fixture lokal. Untuk memeriksa perubahan format, gunakan `npm run format:check`; untuk merapikan, `npm run format`.
+
+```bash
 npx playwright install chromium
 npm run test:browser
 ```
 
-`npm test` menjalankan semua berkas `*.test.mjs`, termasuk SQL lokal. `npm run test:unit` dan `npm run test:db` menjalankan subset. `npm run test:browser` menyiapkan fixture sendiri lalu memeriksa alur dan tampilan melalui Chromium. Browser yang sudah terpasang dapat dipilih lewat `BROWSER_EXECUTABLE`. Hasil sementara disimpan di `test-results/`, yang tidak masuk Git/deployment.
+Browser suite mencakup halaman publik, kasir, laporan, dokumen, CRM, penerimaan, karyawan, tema/responsivitas, serta alur gudang. Gunakan `BROWSER_EXECUTABLE` bila memakai Chromium yang sudah terpasang. Hasil sementara berada di `test-results/` dan tidak ikut deployment. Kegagalan peluncuran browser berarti suite browser belum diuji, bukan lulus.
 
-Pengujian memakai PGlite dan respons jaringan lokal, tanpa kredensial produksi. Tidak menguji printer/timbangan fisik atau koneksi layanan eksternal.
+## Konfigurasi
 
-## Mengelola berkas
+Tidak ada build frontend. Vercel menggunakan `POS_SUPABASE_URL`, `POS_SUPABASE_PUBLISHABLE_KEY`, dan `POS_SUPABASE_SERVICE_ROLE_KEY`. Service role hanya dipakai endpoint server. Audit ini tidak memerlukan SQL baru atau reset database.
 
-`npm run project:tidy:check` menampilkan petunjuk lama yang akan diarsipkan. `npm run project:tidy` memindahkannya ke `docs/archive/`; jika isi tujuan berbeda, operasi dihentikan. Kode, SQL, dan foto tidak dihapus oleh perintah ini.
+Foto katalog publik berada di `menu/images/`, dengan referensi di `menu/menu.json`. Editor menu menyimpan draf di browser dan mengekspor JSON; tidak otomatis menyinkronkan master POS.
 
-`npm run db:build` hanya membangun SQL fondasi historis. `database/pos.sql` belum mencakup seluruh patch fitur terbaru. Audit 089 tidak memerlukan SQL baru; jangan mengulang SQL dasar, reset, atau rollback pada database aktif untuk memasang audit ini.
+`npm run db:build` hanya membangun fondasi historis SQL. Ikuti panduan database untuk memahami patch lanjutan. Jangan menjalankan fondasi atau script reset untuk memasang audit ini.

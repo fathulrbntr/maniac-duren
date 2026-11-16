@@ -1,2 +1,2 @@
 // Compatibility entry point for the current responsive browser audit.
-import './ui-audit-browser.mjs';
+import "./ui-audit-browser.mjs";

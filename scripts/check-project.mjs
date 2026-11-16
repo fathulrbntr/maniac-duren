@@ -3,19 +3,18 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { moduleSpecifiers } from "./lib/architecture.mjs";
 const root = fileURLToPath(new URL("../", import.meta.url));
+await import("./check-architecture.mjs");
+if (process.exitCode) process.exit(process.exitCode);
 const failures = [],
   sources = [];
 const walk = (directory) => {
   for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
     if (
-      [
-        ".git",
-        "node_modules",
-        "backup",
-        "test-results",
-        "playwright-report",
-      ].includes(entry.name) ||
+      [".git", "node_modules", "backup", "test-results", "playwright-report"].includes(
+        entry.name,
+      ) ||
       entry.name.startsWith("maniac-foto-")
     )
       continue;
@@ -35,53 +34,91 @@ for (const file of sources) {
     });
     if (result.status !== 0) failures.push(relative + ": " + result.stderr);
   }
-  for (const match of source.matchAll(
-    /(?:from\s*|import\s*\()\s*['"](\.{1,2}\/[^'"]+)['"]/g,
-  )) {
-    const specifier = match[1],
-      target = path.resolve(path.dirname(file), specifier.split("?")[0]);
-    if (!fs.existsSync(target))
-      failures.push(relative + ": missing " + specifier);
+  // Parse JavaScript imports; text fixtures and comments are not dependencies.
+  // Inline module imports in HTML are checked by check-architecture.mjs.
+  const specifiers = /\.(js|mjs|cjs)$/.test(file) ? moduleSpecifiers(source) : [];
+  for (const specifier of specifiers.filter((s) => /^\.{1,2}\//.test(s))) {
+    const target = path.resolve(path.dirname(file), specifier.split(/[?#]/)[0]);
+    if (!fs.existsSync(target)) failures.push(relative + ": missing " + specifier);
     if (relative.startsWith("pos" + path.sep)) {
       if (!identities.has(target)) identities.set(target, new Set());
-      identities
-        .get(target)
-        .add(specifier.includes("?") ? specifier.split("?")[1] : "");
+      identities.get(target).add(specifier.includes("?") ? specifier.split("?")[1] : "");
     }
   }
   if (file.endsWith(".html"))
     for (const match of source.matchAll(/(?:src|href)=["']([^"']+)["']/g)) {
       const ref = match[1];
-      if (/^(?:[a-z][a-z\d+.-]*:|\/\/|#)/i.test(ref) || ref.includes("${"))
-        continue;
+      if (/^(?:[a-z][a-z\d+.-]*:|\/\/|#)/i.test(ref) || ref.includes("${")) continue;
       const target = path.resolve(
         ref.startsWith("/") ? root : path.dirname(file),
         ref.replace(/^\//, "").split(/[?#]/)[0],
       );
-      if (!fs.existsSync(target))
-        failures.push(relative + ": missing asset " + ref);
+      if (!fs.existsSync(target)) failures.push(relative + ": missing asset " + ref);
     }
 }
 for (const [file, versions] of identities)
   if (versions.size > 1)
-    failures.push(
-      path.relative(root, file) + ": multiple module URL identities",
-    );
+    failures.push(path.relative(root, file) + ": multiple module URL identities");
 const { sections } = await import("../pos/navigation.mjs");
 const pages = sections.flatMap((s) => s.pages);
-if (new Set(pages).size !== pages.length)
-  failures.push("Duplicate sidebar page");
+if (new Set(pages).size !== pages.length) failures.push("Duplicate sidebar page");
 const html = fs.readFileSync(path.join(root, "pos/index.html"), "utf8");
-const styles = [...html.matchAll(/<link rel="stylesheet" href="([^"?]+)/g)].map(
+const styles = [...html.matchAll(/<link\s+rel="stylesheet"\s+href="([^"?]+)/g)].map(
   (m) => m[1],
 );
-if (new Set(styles).size !== styles.length)
-  failures.push("Duplicate stylesheet");
-const build = spawnSync(
-  process.execPath,
-  ["scripts/build-database.mjs", "--check"],
-  { cwd: root, encoding: "utf8" },
-);
+if (new Set(styles).size !== styles.length) failures.push("Duplicate stylesheet");
+if (!styles.length) failures.push("POS stylesheets were not detected");
+
+// CSS and menu photos are independent assets, not embedded in menu.json.
+for (const file of sources.filter((name) => name.endsWith(".css"))) {
+  const source = fs.readFileSync(file, "utf8");
+  for (const match of source.matchAll(/url\(\s*["']?([^"')\s]+)["']?\s*\)/g)) {
+    const ref = match[1];
+    if (/^(?:[a-z][a-z\d+.-]*:|\/\/|#)/i.test(ref)) continue;
+    const target = path.resolve(
+      ref.startsWith("/") ? root : path.dirname(file),
+      ref.replace(/^\//, "").split(/[?#]/)[0],
+    );
+    if (!fs.existsSync(target))
+      failures.push(path.relative(root, file) + ": missing CSS asset " + ref);
+  }
+}
+const menu = JSON.parse(fs.readFileSync(path.join(root, "menu/menu.json"), "utf8"));
+for (const product of Array.isArray(menu) ? menu : menu.products) {
+  if (
+    product.image?.startsWith("/") &&
+    !product.image.startsWith("//") &&
+    !fs.existsSync(path.join(root, product.image))
+  )
+    failures.push("Missing menu photo: " + product.image);
+}
+const ignored = fs.readFileSync(path.join(root, ".vercelignore"), "utf8").split(/\r?\n/);
+for (const folder of [
+  "database/",
+  "supabase/",
+  "tests/",
+  "scripts/",
+  "docs/",
+  "test-results/",
+  "maniac-foto-*/",
+])
+  if (!ignored.includes(folder)) failures.push("Missing deployment exclusion: " + folder);
+// These copies have existing CLI migration identities; never silently fork their SQL.
+for (const [source, migration] of [
+  ["fruit-stock-barcode-105.sql", "20261108132813_fruit_stock_barcode.sql"],
+  ["fruit-batch-strict-scan-106.sql", "20261108140738_fruit_batch_strict_scan.sql"],
+]) {
+  if (
+    !fs
+      .readFileSync(path.join(root, "database", source))
+      .equals(fs.readFileSync(path.join(root, "supabase/migrations", migration)))
+  )
+    failures.push("SQL copy differs from CLI migration: " + source);
+}
+const build = spawnSync(process.execPath, ["scripts/build-database.mjs", "--check"], {
+  cwd: root,
+  encoding: "utf8",
+});
 if (build.status !== 0) failures.push(build.stderr || build.stdout);
 if (failures.length) {
   console.error(failures.join("\n"));

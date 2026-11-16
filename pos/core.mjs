@@ -22,17 +22,15 @@ export function parseAdditionExpression(value, label, integer = false) {
     if (!Number.isFinite(n) || n <= 0) throw Error(`${label} harus lebih dari 0`);
     return sum + n;
   }, 0);
-  if (!Number.isFinite(total) || total <= 0 || total > 9000000000) throw Error(`${label} terlalu besar`);
+  if (!Number.isFinite(total) || total <= 0 || total > 9000000000)
+    throw Error(`${label} terlalu besar`);
   if (integer && !Number.isInteger(total)) throw Error(`${label} harus bilangan bulat`);
   return total;
 }
 export const escape = (s) =>
   String(s ?? "").replace(
     /[&<>"']/g,
-    (c) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
-        c
-      ],
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c],
   );
 export const emptyState = () => ({
   stores: [],
@@ -64,11 +62,7 @@ export function applyAction(input, action, payload) {
   const s = structuredClone(input),
     p = structuredClone(payload);
   if (!p.id) throw Error("ID wajib");
-  if (
-    ["recipe_save", "unit_receipt", "produce", "production_void"].includes(
-      action,
-    )
-  ) {
+  if (["recipe_save", "unit_receipt", "produce", "production_void"].includes(action)) {
     productionAction(s, action, p);
     return s;
   }
@@ -114,12 +108,9 @@ export function applyAction(input, action, payload) {
       ["supplierId", "suppliers"],
       ["productId", "products"],
     ])
-      if (!s[b].some((x) => x.id === p[a]))
-        throw Error("Master belum terdaftar");
+      if (!s[b].some((x) => x.id === p[a])) throw Error("Master belum terdaftar");
     if (!isLegacyStock(s.products.find((x) => x.id === p.productId)))
-      throw Error(
-        "Operasional item ini belum aktif; saat ini hanya master produk",
-      );
+      throw Error("Operasional item ini belum aktif; saat ini hanya master produk");
     const kg = positive(p.kg, "Berat"),
       pieces = positive(p.pieces, "Butir");
     if (!Number.isInteger(pieces)) throw Error("Butir harus bilangan bulat");
@@ -141,14 +132,12 @@ export function applyAction(input, action, payload) {
   if (action === "sale") {
     if (s.sales.some((x) => x.id === p.id)) return s;
     validDate(p.date);
-    if (!Array.isArray(p.lines) || !p.lines.length)
-      throw Error("Keranjang kosong");
+    if (!Array.isArray(p.lines) || !p.lines.length) throw Error("Keranjang kosong");
     if (!["Tunai", "QRIS", "Transfer"].includes(p.payment))
       throw Error("Pembayaran tidak valid");
     const lines = p.lines.map((line) => {
       const l = s.lots.find((x) => x.id === line.lotId);
-      if (!l || l.storeId !== p.storeId)
-        throw Error("Barang bukan milik store ini");
+      if (!l || l.storeId !== p.storeId) throw Error("Barang bukan milik store ini");
       if (!isLegacyStock(s.products.find((x) => x.id === l.productId)))
         throw Error("Operasional item ini belum aktif");
       if (p.date < l.date) throw Error("Penjualan sebelum barang masuk");
@@ -156,8 +145,7 @@ export function applyAction(input, action, payload) {
         pieces = positive(line.pieces, "Butir"),
         price = positive(line.price, "Harga");
       if (!Number.isInteger(pieces)) throw Error("Butir harus bilangan bulat");
-      if (!["KG", "BUTIR"].includes(line.unit))
-        throw Error("Satuan jual tidak valid");
+      if (!["KG", "BUTIR"].includes(line.unit)) throw Error("Satuan jual tidak valid");
       if (kg > l.kg + 1e-9 || pieces > l.pieces)
         throw Error("Stok tidak cukup. Muat ulang stok.");
       l.kg = Math.max(0, l.kg - kg);
@@ -221,10 +209,7 @@ export function applyAction(input, action, payload) {
     l.kg = Math.max(0, l.kg - kg);
     l.pieces -= pieces;
     if (p.kind === "Transfer") {
-      if (
-        p.toStoreId === l.storeId ||
-        !s.stores.some((x) => x.id === p.toStoreId)
-      )
+      if (p.toStoreId === l.storeId || !s.stores.some((x) => x.id === p.toStoreId))
         throw Error("Pilih store tujuan berbeda");
       s.lots.push({
         ...l,
@@ -361,7 +346,15 @@ export function demoState() {
       pieces: 18,
     },
   ])
-    s = applyAction(s, "receipt", { ...l, date: l.id === "lot-e" ? new Date(Date.now()-86400000).toLocaleDateString("en-CA", {timeZone:"Asia/Jakarta"}) : d });
+    s = applyAction(s, "receipt", {
+      ...l,
+      date:
+        l.id === "lot-e"
+          ? new Date(Date.now() - 86400000).toLocaleDateString("en-CA", {
+              timeZone: "Asia/Jakarta",
+            })
+          : d,
+    });
   for (const [i, l] of [
     { lotId: "lot-a", kg: 2.5, pieces: 1, unit: "KG", price: 85000 },
     { lotId: "lot-b", kg: 4.8, pieces: 2, unit: "BUTIR", price: 150000 },
@@ -379,8 +372,7 @@ export function demoState() {
 }
 
 function masterDetails(p) {
-  const fields =
-    p.kind === "stores" ? { location: 300 } : { phone: 40, address: 300 };
+  const fields = p.kind === "stores" ? { location: 300 } : { phone: 40, address: 300 };
   return Object.fromEntries(
     Object.entries(fields).map(([key, max]) => {
       const value = String(p[key] ?? "").trim();

@@ -1,5 +1,6 @@
 backup/
 database/
+supabase/
 tests/
 scripts/
 docs/
@@ -9,6 +10,9 @@ node_modules/
 **/*.md
 package.json
 package-lock.json
+eslint.config.mjs
+.prettierignore
+.prettierrc.json
 UPDATE.txt
 
 # Local backups, instructions and private project metadata

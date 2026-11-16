@@ -9,7 +9,9 @@ export const proofLabels = {
   daging: "Bukti Daging Durian",
 };
 export function evidenceValues(value = {}) {
-  return Object.fromEntries(Object.keys(proofLabels).map((key) => [key, photoValue(value?.[key])]));
+  return Object.fromEntries(
+    Object.keys(proofLabels).map((key) => [key, photoValue(value?.[key])]),
+  );
 }
 export function bindEvidence(form, keys = ["reject", "processed"]) {
   const inputs = [...form.querySelectorAll("[data-proof-file]")];
@@ -17,47 +19,59 @@ export function bindEvidence(form, keys = ["reject", "processed"]) {
   const evidence = Object.fromEntries(keys.map((key) => [key, ""])),
     versions = Object.fromEntries(keys.map((key) => [key, 0])),
     pending = new Set();
-  const initialStatus = Object.fromEntries(inputs.map((input) => {
-    const key = input.dataset.proofFile;
-    return [key, form.querySelector(`[data-proof-status="${key}"]`).textContent];
-  }));
-  inputs.forEach((input) => (input.onchange = async (ev) => {
-    const file = ev.target.files[0];
-    if (!file) return;
-    const key = input.dataset.proofFile,
-      version = ++versions[key],
-      ticket = {};
-    pending.add(ticket);
-    const status = form.querySelector(`[data-proof-status="${key}"]`);
-    status.textContent = "Memproses foto…";
-    try {
-      const result = await preparePhoto(file, "evidence");
-      if (version === versions[key]) {
-        evidence[key] = result.photo;
-        status.textContent = "Foto siap disimpan · " + Math.ceil(result.bytes / 1024) + " KB";
-      }
-    } catch (err) {
-      if (version === versions[key]) status.textContent = err.message;
-    } finally {
-      pending.delete(ticket);
-      if (version === versions[key]) ev.target.value = "";
-    }
-  }));
+  const initialStatus = Object.fromEntries(
+    inputs.map((input) => {
+      const key = input.dataset.proofFile;
+      return [key, form.querySelector(`[data-proof-status="${key}"]`).textContent];
+    }),
+  );
+  inputs.forEach(
+    (input) =>
+      (input.onchange = async (ev) => {
+        const file = ev.target.files[0];
+        if (!file) return;
+        const key = input.dataset.proofFile,
+          version = ++versions[key],
+          ticket = {};
+        pending.add(ticket);
+        const status = form.querySelector(`[data-proof-status="${key}"]`);
+        status.textContent = "Memproses foto…";
+        try {
+          const result = await preparePhoto(file, "evidence");
+          if (version === versions[key]) {
+            evidence[key] = result.photo;
+            status.textContent =
+              "Foto siap disimpan · " + Math.ceil(result.bytes / 1024) + " KB";
+          }
+        } catch (err) {
+          if (version === versions[key]) status.textContent = err.message;
+        } finally {
+          pending.delete(ticket);
+          if (version === versions[key]) ev.target.value = "";
+        }
+      }),
+  );
   return {
     values: () => evidenceValues(evidence),
     busy: () => pending.size > 0,
     reset: () => {
-      for (const key of keys) { versions[key]++; evidence[key] = ""; }
+      for (const key of keys) {
+        versions[key]++;
+        evidence[key] = "";
+      }
       for (const input of inputs) {
         input.value = "";
         const key = input.dataset.proofFile;
-        form.querySelector(`[data-proof-status="${key}"]`).textContent = initialStatus[key];
+        form.querySelector(`[data-proof-status="${key}"]`).textContent =
+          initialStatus[key];
       }
     },
   };
 }
 export function evidenceButton(run, key = "") {
-  const exists = key ? run.evidence?.[key] || (run.hasEvidence && key === "reject") : run.hasEvidence || Object.values(run.evidence || {}).some(Boolean);
+  const exists = key
+    ? run.evidence?.[key] || (run.hasEvidence && key === "reject")
+    : run.hasEvidence || Object.values(run.evidence || {}).some(Boolean);
   return exists
     ? `<button type="button" class="small" data-waste-evidence="${e(run.id)}" data-waste-evidence-key="${e(key)}">Lihat bukti</button>`
     : "";
@@ -66,9 +80,7 @@ export function bindEvidenceHistory(state, ctx) {
   document.querySelectorAll("[data-waste-evidence]").forEach(
     (b) =>
       (b.onclick = async () => {
-        const run = (state.wasteRuns || []).find(
-          (x) => x.id === b.dataset.wasteEvidence,
-        );
+        const run = (state.wasteRuns || []).find((x) => x.id === b.dataset.wasteEvidence);
         if (!run) return;
         if (!run.evidence && ctx.loadEvidence) {
           b.disabled = true;

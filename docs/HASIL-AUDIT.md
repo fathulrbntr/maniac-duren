@@ -1,51 +1,138 @@
-# Hasil audit 089 — 2 November 2026
+# Hasil audit 111 — 16 November 2026
 
-Acuan: ZIP proyek Maniac Duren yang diberikan. Audit meliputi halaman publik, menu pelanggan, aplikasi POS, alur sesi/demo, impor modul, CSS, API, SQL lokal, pengujian, dan organisasi file. Perubahan dibuat pada salinan kerja; belum ada commit, push, deployment, atau query ke database produksi.
+## Tindak lanjut: sidebar sesudah perubahan viewport
 
-## Temuan yang diperbaiki
+Log Windows terbaru kembali meluluskan 14 tahap awal browser suite. Tes gudang
+kini melewati pergantian akun dan penerimaan, lalu berhenti saat membuka menu
+harga setelah viewport mobile dikembalikan ke desktop. Helper membaca status
+ARIA mobile ketika CSS desktop sudah menyembunyikan tombol toggle karena
+sidebar terbuka. Helper kini menggunakan keterlihatan picker lokasi sebagai
+acuan. Simulasi controller dengan callback media tertunda gagal pada helper lama
+dan lulus pada helper baru. Rincian ada di
+[PERBAIKAN-TES-GUDANG-111.md](PERBAIKAN-TES-GUDANG-111.md).
 
-| Temuan | Perbaikan dan dampak |
-|---|---|
-| Modul yang sama diimpor dengan versi URL berbeda oleh beberapa fitur | Impor relatif diseragamkan tanpa query versi. State modul, event listener, dan cache modul tidak terpecah menurut URL lama/baru. Header POS tetap memakai revalidasi cache. |
-| Logout dapat terjadi saat JSON respons besar masih diproses | Identitas sesi diperiksa kembali setelah pembacaan JSON. Respons sesi lama tidak memulihkan workspace yang sudah logout. |
-| Pembacaan dokumen live terlambat saat berpindah mode | `adminRpc` menolak hasil ketika sesi atau mode berubah. Uji regresi mencakup balapan respons dengan perpindahan demo. |
-| Banner shift berada sebelum header utama | Banner dipindah ke konten workspace agar mengikuti lebar dan jarak halaman. |
-| Form pembayaran panjang membuat tombol bayar jauh di bawah | Ringkasan desktop memiliki area isi yang dapat digulir dan footer pembayaran tetap terlihat; layar kecil memakai susunan satu kolom. |
-| CSS input generik menimpa kontrol pencarian khusus | Spesifisitas aturan bersama diturunkan dengan `:where`, menghilangkan tampilan input bertumpuk dan menjaga aturan fitur. |
-| Berpindah menu mempertahankan posisi gulir halaman sebelumnya | Navigasi mengembalikan posisi halaman ke atas. |
-| Preferensi grup Pengaturan tidak ikut dipulihkan | Daftar grup sidebar disamakan dengan grup yang tersedia. |
-| Contoh dokumen demo bisa dicoba tanpa shift aktif lalu gagal | Tombol dinonaktifkan sampai kasir demo dibuka; tersedia petunjuk menuju Kasir. |
-| Salah ketik pada tipe produk | Label `Pruduct Olahan` diperbaiki menjadi `Product Olahan`. |
-| Hero halaman publik memotong ilustrasi dan harga pada HP | Layout layar kecil diubah menjadi satu kolom; ilustrasi, harga, dan tombol tetap terlihat, dengan target tombol minimal 44 px. |
-| Galeri publik memanggil 14 foto yang tidak ada | Referensi rusak dibuang. Foto yang tersedia tetap ditampilkan dengan tata letak satu foto tanpa navigasi carousel kosong. |
-| Script pembersihan lama dapat menghapus kode/SQL yang masih berguna | Diganti pengarsipan terarah, pemeriksaan benturan isi, preview, serta penghapusan satu file statistik Git yang diverifikasi hash. |
-| Script rollback lama masih bisa dipakai pada aplikasi terbaru | Ditambah penolakan sebelum mutasi file jika aplikasi PWA saat ini terdeteksi. |
-| Panduan aktif bercampur dengan 46 petunjuk historis | Petunjuk lama dipindah ke `docs/archive/`; README, alur pengguna, peta fitur/file, dan pemasangan audit diperbarui. |
-| README menyebut `pos.sql` sebagai installer fitur terbaru dan menautkan file yang hilang | Kontrak fondasi dan urutan patch SQL dijelaskan sesuai implementasi; tautan aktif diperbaiki. |
-| Tes default hanya mencakup sebagian fitur dan fixture lama tidak mengikuti aturan shift | Runner mencakup seluruh `*.test.mjs`, fixture diperbarui, suite browser disusun, dan dependensi IndexedDB simulasi dilengkapi. |
-| Impor/asset yang hilang mudah luput dari pemeriksaan | `npm run check` memeriksa sintaks, tujuan impor/aset HTML, identitas modul, navigasi/CSS ganda, dan build SQL dasar. |
-| File cadangan dan metadata kerja berpotensi ikut deployment | `.vercelignore` mengecualikan cadangan foto, metadata Git, environment lokal, log, hasil uji, dan panduan teks. |
-| Kode penghubung utama sulit dipindai | Format `app.js` dan beberapa modul inti dirapikan, tanpa memindahkan URL aplikasi; peta file mengarahkan pencarian berdasarkan fitur. |
+## Tindak lanjut: pergantian akun pada tes gudang
 
-## Verifikasi
+Log Windows terbaru mengonfirmasi `verify` lulus dengan 179 tes dan 14 dari 15
+tahap browser suite lulus, termasuk CRM, UI audit, dan website publik. Tahap
+terakhir, gudang, berhenti saat beralih dari akun gudang ke kasir. Tes memeriksa
+tombol logout segera setelah `goto`, sebelum pemulihan sesi selesai, sehingga
+melewati logout dan menunggu form login yang tidak muncul.
 
-- `npm run check`: lulus untuk 233 file sumber.
-- `npm test`: 127 lulus, 0 gagal, 0 dilewati.
-- `npm run test:browser`: seluruh 13 suite browser lulus, dengan fixture SQL disiapkan oleh runner.
-- Matriks responsif POS: 20 menu × 4 ukuran layar × 2 tema, atau 160 kombinasi.
-- Perubahan patch lolos pemeriksaan whitespace Git; staging diverifikasi menggunakan index sementara, tanpa mengubah staging asli.
+Tes kini menunggu form login atau shell aplikasi tampil sebelum menentukan
+langkah pergantian akun. Navigasi gudang juga menunggu sidebar siap setelah
+reload dan memeriksa status grup menu sebelum membukanya. Rincian:
+[PERBAIKAN-TES-GUDANG-111.md](PERBAIKAN-TES-GUDANG-111.md).
+Verifikasi lokal sesudah perubahan lulus: 179 tes, 0 gagal. Peluncuran tes
+browser gudang lokal tetap terblokir oleh pembatasan Chromium lingkungan audit.
 
-Tes database berjalan di PGlite lokal dengan fixture autentikasi. Rantai fitur lengkap sampai CRM 085 dipasang bersama; uji memeriksa profil toko, detail karyawan, dokumen, harga beli, shift, pembayaran, serta poin tetap tersedia. Membuat invoice dari transaksi member tidak menjual ulang atau menambah poin kedua kali. Uji fitur juga mencakup FIFO, stok, produksi, reject, penerimaan, biaya, retry, refund, dan pembatasan akses.
+## Tindak lanjut: panel member pada tes CRM
 
-Tes browser memakai halaman/modul asli dengan respons jaringan lokal. Pemeriksaan POS meliputi 20 menu, lebar 1600/1024/390/360 px, dua tema, modal, reload sesi, kesalahan runtime, asset lokal, serta identitas modul. Tabel lebar boleh memiliki scroll internal; halaman utama tidak boleh melebar keluar viewport. Halaman publik, menu, dan editor diperiksa pada lebar 1440/390/360 px dengan widget eksternal tidak tersedia.
+Log terbaru pengguna mengonfirmasi enam tahap pertama browser suite lulus,
+termasuk kedua tes shift kasir dan tes metode pembayaran. Tes CRM berikutnya
+menunggu input member di dalam panel checkout yang masih tertutup. Helper
+`tests/helpers/browser-checkout.mjs` membuka panel melalui tombol summary;
+tes CRM memakainya saat transaksi pertama, pencarian setelah pembayaran, dan
+login kasir. `npm run verify` sesudah perubahan lulus dengan 179 tes, 0 gagal;
+Chromium tetap terblokir saat peluncuran di lingkungan audit. Rincian:
+[PERBAIKAN-TES-CRM-111.md](PERBAIKAN-TES-CRM-111.md).
 
-Sebagian tes historis tetap dipertahankan sebagai tes kompatibilitas, dengan prasyarat SQL yang sesuai versinya. Perbaikan fixture tidak mengaktifkan kembali fitur offline/halaman cache lama di aplikasi aktif.
+## Tindak lanjut: selector sidebar dan dock
 
-## Batas hasil dan catatan lanjutan
+Log pengguna mengonfirmasi tiga tes laporan awal sudah lulus setelah perbaikan
+sidebar. Tahap berikutnya berhenti di tes shift kasir karena
+`nav [data-view=orders]` cocok dengan tombol sidebar dan dock. Sebanyak 24 selector
+pada tujuh file tes diarahkan khusus ke `#pos-navigation`. Dua tes regresi baru
+memeriksa bahwa kedua navigasi boleh berbagi tujuan, tetapi locator untuk aksi
+tunggal harus unik. Pemeriksaan ulang `npm run verify` lulus dengan 179 tes, 0 gagal. Rincian pemasangan: [PERBAIKAN-TES-NAVIGASI-111.md](PERBAIKAN-TES-NAVIGASI-111.md).
 
-- Tidak ada bukti bahwa seluruh skenario produksi bebas bug. Data akun, konfigurasi Supabase/Vercel, koneksi jaringan nyata, layanan WhatsApp/TikTok/peta, printer, dan timbangan fisik belum diuji.
-- Hanya satu foto galeri tersedia dalam ZIP. Foto 02–15 dapat ditambahkan kembali setelah file asli tersedia; audit tidak menggantinya dengan gambar rekaan.
-- SQL operasional tidak diubah. `pos.sql` tetap fondasi historis. Seed durian lama memiliki harga buah kosong yang perlu diisi dengan harga nyata sebelum digunakan untuk instalasi baru; pengujian memakai harga contoh terisolasi.
-- Editor menu pelanggan masih berbasis draft lokal/ekspor JSON dan belum sinkron otomatis dengan POS.
-- Audit ini tidak membongkar semua modul lama menjadi struktur direktori baru. Lokasi URL dipertahankan; pengarsipan, format kode, dan peta fitur membuat perubahan berikutnya lebih mudah ditelusuri.
-- Berkas cetak otomatis Windows yang sudah berubah di ZIP sumber dipertahankan persis dan tidak dimasukkan sebagai perubahan audit.
+## Tindak lanjut: timeout tes sidebar
+
+Log pengujian pengguna menemukan tes laporan menunggu `#active-store` terlihat
+ketika sidebar masih tertutup. Tes kini membuka sidebar melalui tombol UI terlebih
+dahulu. Perbaikan yang sama diterapkan ke tes gudang dan pergantian outlet pada
+tes pembayaran. Tidak ada perubahan kode aplikasi atau CSS. Rincian dan perintah
+PowerShell terbaru: [PERBAIKAN-TES-SIDEBAR-111.md](PERBAIKAN-TES-SIDEBAR-111.md).
+
+Source: ZIP `maniac-duren(1).zip` yang diberikan, sudah berisi audit 110.
+Pemeriksaan dilakukan pada salinan lokal. Tidak ada commit, push, deployment,
+reset, migrasi SQL baru, atau perubahan pada database produksi.
+
+## Hasil utama
+
+Dua bug perilaku berhasil direproduksi dan diperbaiki: refresh token akun lama
+mengganggu sesi akun baru, serta kirim ulang data identik yang ditolak karena
+urutan properti JSON berbeda. Pengujian otomatis ditambah untuk mencegah
+keduanya muncul kembali.
+
+| Temuan                                                                                                   | Perbaikan                                                                                                 | Bukti                                                                                                                        |
+| -------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Promise refresh token dibagi tanpa pembatas sesi; login baru dapat menerima error milik login sebelumnya | Setiap refresh dimiliki `sessionId`; penyelesaian lama tidak menghapus refresh baru                       | Tes baru gagal sebelum perbaikan dan lulus sesudahnya; dua pemanggil sesi baru berbagi satu refresh                          |
+| Signature retry memakai urutan key objek dari `JSON.stringify`                                           | Urutkan key objek secara rekursif; urutan array, isi, aksi, dan ID asli tetap dijaga                      | Payload sama dengan urutan key berbeda diterima; perubahan toko/aksi/isi ditolak; pending audit lama tetap terbaca           |
+| Tes gudang memakai `/usr/bin/chromium` sebagai default                                                   | Gunakan browser bawaan Playwright, dengan override environment opsional                                   | Jalur Linux dihapus; eksekusi Windows belum tersedia di lingkungan audit                                                     |
+| Lockfile memuat 19 entri extraneous dari direktori sementara audit terdahulu                             | Buang metadata tersebut dan sinkronkan manifest/lockfile; parser Espree dipin sebagai dependensi langsung | Instalasi bersih dari lockfile berhasil, pemeriksaan portabilitas lulus                                                      |
+| Pemeriksa import berbasis regex menganggap kode contoh dalam string fixture sebagai import aktif         | Parse import/export JavaScript melalui AST                                                                | Kasus import asli, komentar, dan string contoh diuji; fixture baru tidak menimbulkan false positive                          |
+| Import modul input uang di HTML editor menu memakai URL versi berbeda                                    | Samakan URL dengan pemakai lain                                                                           | Pemeriksaan identitas URL lintas HTML/JS lulus; ini pencegahan drift, bukan bukti dua instance sudah aktif pada satu halaman |
+
+## Penataan untuk pembaruan berikutnya
+
+- `AGENTS.md` menetapkan aturan kerja, kepemilikan file, kontrak transaksi, dan
+  pengujian yang harus diikuti pengembang/asisten coding.
+- `docs/PENGEMBANGAN.md` memetakan tempat perubahan dan langkah menelusuri
+  form → mutasi → RPC → SQL → tes.
+- `scripts/check-architecture.mjs` memeriksa kontrak import/export, import
+  side-effect dan dinamis literal, dependensi melingkar, URL modul, nama file
+  berbeda kapitalisasi, batas browser/server/fixture, dan lockfile portabel.
+- Logika pemeriksa dipisahkan ke `scripts/lib/architecture.mjs`, dengan tes
+  struktur valid dan struktur yang sengaja rusak.
+- `npm run check` dan `npm run verify` otomatis mencakup pemeriksaan baru.
+  ESLint juga menolak deklarasi/import/cabang duplikat.
+- Root README dan peta struktur menunjuk audit terbaru. Hasil audit 110 disimpan
+  di `docs/archive/HASIL-AUDIT-110.md`.
+- Tidak ditemukan siklus pada graph modul browser yang dianalisis. Tidak dilakukan
+  pemindahan massal modul lama karena lokasi file menjadi URL runtime.
+
+## Validasi
+
+| Pemeriksaan                        | Hasil                                                                          |
+| ---------------------------------- | ------------------------------------------------------------------------------ |
+| Baseline source unggahan           | 170 tes lulus                                                                  |
+| Instalasi baru di folder kosong    | `npm ci --ignore-scripts --no-audit --no-fund` berhasil; 86 package terpasang  |
+| Dependensi untuk pengujian akhir   | Menggunakan instalasi baru tersebut, bukan `node_modules` bawaan ZIP           |
+| Struktur/sintaks/aset/build SQL    | Lulus                                                                          |
+| ESLint                             | Lulus, 0 error/warning                                                         |
+| Prettier                           | Lulus                                                                          |
+| Unit, simulasi DOM, dan SQL PGlite | **179 lulus, 0 gagal, 0 skipped**                                              |
+| Audit registry npm                 | 0 kerentanan dilaporkan pada saat pemeriksaan                                  |
+| Preview cleanup audit              | 0 file historis perlu dipindah pada source unggahan                            |
+| Browser Playwright                 | Terblokir saat peluncuran Chromium: `socket() failed: Operation not permitted` |
+
+Pengujian mencakup kasir, shift, metode pembayaran, stok/batch/barcode, gudang,
+transfer, kitchen, reject, laporan, CRM, sesi, retry, mode demo, dan endpoint
+fixture. Tes SQL tidak menggunakan proyek Supabase produksi.
+
+Berkas database, migrasi Supabase, dan aset gambar diperiksa dengan SHA-256 dan
+identik dengan source unggahan. Aturan bisnis, harga, dan isi master tidak diubah.
+
+## Batas dan risiko yang masih perlu diperiksa
+
+- Playwright berhenti pada peluncuran browser pertama. Kelulusan tes DOM/SQL
+  bukan pengganti verifikasi visual. Jalankan `npm run test:browser` di komputer
+  Anda setelah memasang Chromium Playwright.
+- Belum menguji akun/data/configuration hosting produksi, Windows secara langsung,
+  printer, scanner/timbangan, dan tablet fisik.
+- Parser statis hanya dapat memeriksa URL import literal. URL dinamis, seluruh
+  cascade CSS, dan ketepatan aturan bisnis tetap memerlukan tes perilaku.
+- Audit dependensi yang bersih bukan jaminan seluruh aplikasi bebas bug. Source
+  ini menambahkan pencegahan bentrok yang terukur, bukan jaminan mutlak.
+
+## Isi paket
+
+ZIP lengkap berisi source dan aset yang diperlukan, panduan, script, dan tes.
+`.git`, `node_modules`, file environment, hasil tes sementara, dan cadangan foto
+`maniac-foto-*` tidak disertakan. Berkas pada ZIP sumber asli tidak dihapus.
+
+Daftar perubahan relatif terhadap ZIP unggahan tersedia di
+`docs/audit/changes-111.json`. Manifest staging tetap kumulatif dari audit 110
+agar perubahan audit sebelumnya yang belum di-commit ikut dapat ditinjau.
+Petunjuk pemasangan: `docs/PASANG-AUDIT-111.md`.

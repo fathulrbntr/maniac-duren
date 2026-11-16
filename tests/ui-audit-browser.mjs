@@ -135,10 +135,7 @@ try {
     await page.locator("main").waitFor();
   };
   for (const theme of ["light", "dark"]) {
-    if (
-      (await page.evaluate(() => document.documentElement.dataset.theme)) !==
-      theme
-    )
+    if ((await page.evaluate(() => document.documentElement.dataset.theme)) !== theme)
       await page.locator("[data-theme-toggle]").click();
     for (const width of [1600, 1024, 390, 360]) {
       await page.setViewportSize({ width, height: 1000 });
@@ -157,9 +154,7 @@ try {
         );
         if (
           [1600, 390].includes(width) &&
-          ["dashboard", "products", "orders", "reports", "documents"].includes(
-            view,
-          )
+          ["dashboard", "products", "orders", "reports", "documents"].includes(view)
         )
           await page.screenshot({
             path: path.join(output, `${view}-${theme}-${width}.png`),
@@ -205,10 +200,7 @@ try {
   assert.deepEqual(duplicates, []);
   assert.deepEqual(errors, []);
   assert.deepEqual(missing, []);
-  fs.writeFileSync(
-    path.join(output, "layouts.json"),
-    JSON.stringify(layouts, null, 2),
-  );
+  fs.writeFileSync(path.join(output, "layouts.json"), JSON.stringify(layouts, null, 2));
   console.log(
     `PASS UI audit: ${views.length} menus × 4 widths × 2 themes, product/receipt dialogs, session reload and unique module URLs.`,
   );

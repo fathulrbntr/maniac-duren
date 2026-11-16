@@ -28,11 +28,10 @@ test("Audit cleanup archives guides, preserves modified files and is repeatable"
     fs.writeFileSync(path.join(root, "stray.txt"), "user changed this");
     fs.writeFileSync(path.join(root, "keep.sql"), "valuable data");
     const run = (...args) =>
-      spawnSync(
-        process.execPath,
-        ["scripts/apply-audit-cleanup.mjs", ...args],
-        { cwd: root, encoding: "utf8" },
-      );
+      spawnSync(process.execPath, ["scripts/apply-audit-cleanup.mjs", ...args], {
+        cwd: root,
+        encoding: "utf8",
+      });
     assert.notEqual(run().status, 0);
     assert(
       fs.existsSync(path.join(root, "PATCH-OLD.txt")),
@@ -46,19 +45,13 @@ test("Audit cleanup archives guides, preserves modified files and is repeatable"
     assert.equal(run("--check").status, 0);
     assert(fs.existsSync(path.join(root, "stray.txt")));
     fs.mkdirSync(path.join(root, "docs/archive"), { recursive: true });
-    fs.writeFileSync(
-      path.join(root, "docs/archive/PATCH-OLD.txt"),
-      "different guide",
-    );
+    fs.writeFileSync(path.join(root, "docs/archive/PATCH-OLD.txt"), "different guide");
     assert.notEqual(run().status, 0);
     assert(
       fs.existsSync(path.join(root, "stray.txt")),
       "archive conflict must not remove files",
     );
-    fs.writeFileSync(
-      path.join(root, "docs/archive/PATCH-OLD.txt"),
-      "historical guide",
-    );
+    fs.writeFileSync(path.join(root, "docs/archive/PATCH-OLD.txt"), "historical guide");
     assert.equal(run().status, 0);
     assert.equal(run().status, 0);
     assert(!fs.existsSync(path.join(root, "PATCH-OLD.txt")));
@@ -67,10 +60,7 @@ test("Audit cleanup archives guides, preserves modified files and is repeatable"
       fs.readFileSync(path.join(root, "docs/archive/PATCH-OLD.txt"), "utf8"),
       "historical guide",
     );
-    assert.equal(
-      fs.readFileSync(path.join(root, "keep.sql"), "utf8"),
-      "valuable data",
-    );
+    assert.equal(fs.readFileSync(path.join(root, "keep.sql"), "utf8"), "valuable data");
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

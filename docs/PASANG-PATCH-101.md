@@ -22,12 +22,12 @@ git push origin main
 
 Pada **Monthong** (atau varian Monthong yang benar):
 
-| Kolom | Isi |
-| --- | --- |
-| Barcode | `0001` |
-| Satuan stok | Kg + butir |
-| Harga jual/kg | Samakan dengan timbangan, misalnya Rp90.000 |
-| Harga jual/butir | Isi jika penjualan per butir digunakan |
+| Kolom            | Isi                                         |
+| ---------------- | ------------------------------------------- |
+| Barcode          | `0001`                                      |
+| Satuan stok      | Kg + butir                                  |
+| Harga jual/kg    | Samakan dengan timbangan, misalnya Rp90.000 |
+| Harga jual/butir | Isi jika penjualan per butir digunakan      |
 
 Kode `0001` harus sesuai Item Code di timbangan dan hanya digunakan oleh satu produk/varian. Simpan sebagai teks agar nol di awal tetap ada. Jangan memasukkan keseluruhan barcode 26 digit ke Master Barang. Produk lain memakai Item Code miliknya sendiri.
 
@@ -48,14 +48,14 @@ Contoh dari hasil scan:
 
 `92010711260000680001000228`
 
-| Posisi digit | Nilai contoh | Arti |
-| --- | --- | --- |
-| 1–2 | `92` | Awalan tracking |
-| 3–4 | `01` | ID timbangan |
-| 5–10 | `071126` | Tanggal label DDMMYY: 7 November 2026 |
-| 11–16 | `000068` | Nomor urut cetak |
-| 17–20 | `0001` | Item Code produk |
-| 21–26 | `000228` | Berat 228 gram / 0,228 kg |
+| Posisi digit | Nilai contoh | Arti                                  |
+| ------------ | ------------ | ------------------------------------- |
+| 1–2          | `92`         | Awalan tracking                       |
+| 3–4          | `01`         | ID timbangan                          |
+| 5–10         | `071126`     | Tanggal label DDMMYY: 7 November 2026 |
+| 11–16        | `000068`     | Nomor urut cetak                      |
+| 17–20        | `0001`       | Item Code produk                      |
+| 21–26        | `000228`     | Berat 228 gram / 0,228 kg             |
 
 Format tetap Code128, 26 digit, tanpa menambah digit pemeriksa ke teks scan. Harga diambil dari Master Barang POS; label ini memuat berat, bukan harga. Tanggal label berbeda fungsi dari tanggal penerimaan supplier: asal batch mengikuti penerimaan yang tersimpan.
 

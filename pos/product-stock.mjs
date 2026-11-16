@@ -1,9 +1,7 @@
 const round = (n) => Math.round(n * 1e6) / 1e6;
 export function productStock(s, productId, storeId, dual) {
   const lots = (dual ? s.lots : s.unitLots) || [];
-  const rows = lots.filter(
-    (l) => l.productId === productId && l.storeId === storeId,
-  );
+  const rows = lots.filter((l) => l.productId === productId && l.storeId === storeId);
   return dual
     ? {
         kg: round(rows.reduce((n, l) => n + l.kg, 0)),
@@ -35,12 +33,20 @@ export function deleteProduct(s, p) {
 // Detach only grouping metadata; the remaining SKU keeps its full identity and history.
 export function collapseSingleVariants(products, groupId) {
   const groups = new Map();
-  for (const p of products) if (p.variantGroupId && (!groupId || p.variantGroupId === groupId)) {
-    const group = groups.get(p.variantGroupId) || [];
-    group.push(p);groups.set(p.variantGroupId, group);
-  }
-  for (const group of groups.values()) if (group.length === 1)
-    Object.assign(group[0], {variantGroupId:null, variantGroupName:null, variantOptions:[], variant:''});
+  for (const p of products)
+    if (p.variantGroupId && (!groupId || p.variantGroupId === groupId)) {
+      const group = groups.get(p.variantGroupId) || [];
+      group.push(p);
+      groups.set(p.variantGroupId, group);
+    }
+  for (const group of groups.values())
+    if (group.length === 1)
+      Object.assign(group[0], {
+        variantGroupId: null,
+        variantGroupName: null,
+        variantOptions: [],
+        variant: "",
+      });
 }
 export function adjustProductStock(s, p) {
   if (!p.stock) return;
@@ -64,17 +70,14 @@ export function adjustProductStock(s, p) {
       n < 0 ||
       n > 1e9 ||
       Math.abs(n - round(n)) > 1e-9 ||
-      ((key === "pieces" ||
-        (!dual && ["pcs", "porsi"].includes(product.stockUnit))) &&
+      ((key === "pieces" || (!dual && ["pcs", "porsi"].includes(product.stockUnit))) &&
         !Number.isInteger(n))
     )
       throw Error(
         "Stok harus nonnegatif, maksimal 6 desimal; pcs/porsi/butir harus bulat",
       );
     if (before[key] !== Number(a.expected[key]))
-      throw Error(
-        "Stok berubah. Tutup form dan muat ulang sebelum menyesuaikan",
-      );
+      throw Error("Stok berubah. Tutup form dan muat ulang sebelum menyesuaikan");
     target[key] = n;
   }
   if (keys.every((k) => before[k] === target[k])) return;

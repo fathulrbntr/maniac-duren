@@ -1,4 +1,4 @@
-import {Node,makeModal} from './variant-dom.mjs';
+import { Node, makeModal } from "./variant-dom.mjs";
 import assert from "node:assert/strict";
 import { emptyState, applyAction, today } from "../pos/core.mjs";
 import { wastePage, bindWaste } from "../pos/waste-ui.mjs";
@@ -53,8 +53,15 @@ for (const [id, storeId, supplierId, date] of [
     kg: 100,
     pieces: 40,
   });
-for (const [id, key] of [["half", "durpas500"], ["one", "durpas1000"], ["coral", "coral"]])
-  Object.assign(s.products.find((p) => p.id === id), { durianSourceId: "durian", durianOutput: key });
+for (const [id, key] of [
+  ["half", "durpas500"],
+  ["one", "durpas1000"],
+  ["coral", "coral"],
+])
+  Object.assign(
+    s.products.find((p) => p.id === id),
+    { durianSourceId: "durian", durianOutput: key },
+  );
 const photo = "data:image/png;base64,iVBORw0KGgo=";
 const p = {
   id: "w1",
@@ -93,15 +100,35 @@ assert.equal(
   }).wasteRuns[0].evidence.processed,
   photo,
 );
-function history(state,store){const root=new Node(),m=makeModal(),before=globalThis.document;root.innerHTML=wastePage(state,store);globalThis.document={querySelector:q=>root.querySelector(q),querySelectorAll:q=>root.querySelectorAll(q)};try{bindWaste('waste',state,store,{modal:m.modal,toast(){},refresh(){},render(){}});root.querySelector('[data-reject-detail]')?.onclick();return {text:root.textContent,detail:m.latest?.textContent||''};}finally{globalThis.document=before;}}
-assert(history(withEvidence,'a').detail.includes('Lihat foto bukti'));
+function history(state, store) {
+  const root = new Node(),
+    m = makeModal(),
+    before = globalThis.document;
+  root.innerHTML = wastePage(state, store);
+  globalThis.document = {
+    querySelector: (q) => root.querySelector(q),
+    querySelectorAll: (q) => root.querySelectorAll(q),
+  };
+  try {
+    bindWaste("waste", state, store, {
+      modal: m.modal,
+      toast() {},
+      refresh() {},
+      render() {},
+    });
+    root.querySelector("[data-reject-detail]")?.onclick();
+    return { text: root.textContent, detail: m.latest?.textContent || "" };
+  } finally {
+    globalThis.document = before;
+  }
+}
+assert(history(withEvidence, "a").detail.includes("Lihat foto bukti"));
 assert.throws(
   () =>
     applyAction(before, "waste_process", {
       ...p,
       evidence: {
-        reject:
-          "data:image/png;base64," + Buffer.alloc(2097153).toString("base64"),
+        reject: "data:image/png;base64," + Buffer.alloc(2097153).toString("base64"),
       },
     }),
   /2 MB/,
@@ -128,10 +155,7 @@ for (const patch of [
   { reason: "" },
 ])
   assert.throws(() => applyAction(before, "waste_process", { ...p, ...patch }));
-assert.throws(
-  () => applyAction(before, "waste_process", { ...p, kg: 5 }),
-  /melebihi/,
-);
+assert.throws(() => applyAction(before, "waste_process", { ...p, kg: 5 }), /melebihi/);
 assert.throws(
   () =>
     applyAction(before, "waste_process", {
@@ -144,9 +168,7 @@ assert.throws(
   () =>
     applyAction(before, "waste_process", {
       ...p,
-      outputs: p.outputs.map((o, i) =>
-        i === 1 ? { ...o, productId: "half" } : o,
-      ),
+      outputs: p.outputs.map((o, i) => (i === 1 ? { ...o, productId: "half" } : o)),
     }),
   /berbeda/,
 );

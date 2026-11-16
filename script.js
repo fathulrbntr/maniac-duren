@@ -9,7 +9,7 @@ const SELECTORS = {
   navMenu: ".nav-menu",
   navLinks: ".nav-menu a",
   branchTabs: ".branch-tab",
-  gallery: ".gallery-swiper"
+  gallery: ".gallery-swiper",
 };
 
 /* =========================
@@ -53,27 +53,27 @@ const branches = {
     name: "Maniac Duren Cikarang",
     address: "Cikarang, Kabupaten Bekasi, Jawa Barat",
     map: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3965.64899299478!2d107.17485607570174!3d-6.309759893679511!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e699b004552c909%3A0xd66bfe9f65d9050f!2sManiacduren_cikarang!5e0!3m2!1sid!2sid!4v1788804084667!5m2!1sid!2sid",
-    link: "https://maps.app.goo.gl/g43DRz5TfeLvbmvRA"
+    link: "https://maps.app.goo.gl/g43DRz5TfeLvbmvRA",
   },
   lippo: {
     name: "Maniac Duren Lippo Cikarang",
     address: "Cikarang, Kabupaten Bekasi, Jawa Barat",
     map: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3965.4465132177124!2d107.14625387570193!3d-6.33616179365353!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e699b77cf6eb591%3A0x38797d3c3e8beebd!2sManiac%20Duren%20Lippo%20CIkarang!5e0!3m2!1sid!2sid!4v1788805757174!5m2!1sid!2sid",
-    link: "https://maps.app.goo.gl/yGsXWvqrb73hcGEt7"
+    link: "https://maps.app.goo.gl/yGsXWvqrb73hcGEt7",
   },
   bekasi: {
     name: "Maniac Duren Harapan Indah",
     address: "Pusaka Rakyat, Kabupaten Bekasi, Jawa Barat",
     map: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3966.718277440453!2d106.97462667570083!3d-6.168466693818844!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e698b23f292285d%3A0xe12431e0ac1c573b!2sManiac%20duren%20nusantara!5e0!3m2!1sid!2sid!4v1788805889670!5m2!1sid!2sid",
-    link: "https://maps.app.goo.gl/kuHqcwivMLR8pVXz8"
+    link: "https://maps.app.goo.gl/kuHqcwivMLR8pVXz8",
   },
   neo: {
     name: "Depot Durian Neo Patio",
     address: "Cikarang, Kabupaten Bekasi, Jawa Barat",
     map: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3965.3801705476203!2d107.14861859999999!3d-6.344788599999999!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e699bd5094cc5e7%3A0xe35180e85a9c3f3c!2sDepot%20Durian!5e0!3m2!1sid!2sid!4v1788806485087!5m2!1sid!2sid",
     // TODO: ganti dengan link share Google Maps Neo Patio yang final.
-    link: "https://maps.app.goo.gl/Soo5z6fRLaRieT8Q7"
-  }
+    link: "https://maps.app.goo.gl/Soo5z6fRLaRieT8Q7",
+  },
 };
 
 const branchElements = {
@@ -81,7 +81,7 @@ const branchElements = {
   name: document.getElementById("branch-name"),
   address: document.getElementById("branch-address"),
   map: document.getElementById("branch-map"),
-  mapsButton: document.getElementById("maps-button")
+  mapsButton: document.getElementById("maps-button"),
 };
 
 function updateBranch(branchKey) {
@@ -102,7 +102,6 @@ branchElements.tabs.forEach((tab) => {
   tab.addEventListener("click", () => updateBranch(tab.dataset.branch));
 });
 
-
 /* =========================
    TIKTOK VIDEOS
    Cukup ganti 3 link di bawah ini.
@@ -111,7 +110,7 @@ branchElements.tabs.forEach((tab) => {
 const tiktokVideos = [
   "https://www.tiktok.com/@maniacduren.lc/video/7679397078224620821?is_from_webapp=1&sender_device=pc&web_id=7681541648455714311",
   "https://www.tiktok.com/@maniacduren.lc/video/7679680672352505095?is_from_webapp=1&sender_device=pc&web_id=7681541648455714311",
-  "https://www.tiktok.com/@maniacduren.lc/video/7682364639514004743?is_from_webapp=1&sender_device=pc&web_id=7681541648455714311"
+  "https://www.tiktok.com/@maniacduren.lc/video/7682364639514004743?is_from_webapp=1&sender_device=pc&web_id=7681541648455714311",
 ];
 
 function getTikTokVideoId(url) {
@@ -131,7 +130,8 @@ function renderTikTokVideos() {
   feed.innerHTML = "";
 
   if (!validVideos.length) {
-    feed.innerHTML = '<p class="tiktok-empty">Masukkan link video TikTok di <code>tiktokVideos</code> pada script.js.</p>';
+    feed.innerHTML =
+      '<p class="tiktok-empty">Masukkan link video TikTok di <code>tiktokVideos</code> pada script.js.</p>';
     return;
   }
 
@@ -174,7 +174,7 @@ const galleryCount = galleryElement?.querySelectorAll(".swiper-slide").length ||
 galleryElement?.classList.toggle("gallery-single", galleryCount === 1);
 
 if (galleryCount > 1 && typeof Swiper !== "undefined") {
-  gallerySwiper = new Swiper(galleryElement, {
+  gallerySwiper = new window.Swiper(galleryElement, {
     effect: "coverflow",
     centeredSlides: true,
     grabCursor: true,
@@ -196,12 +196,12 @@ if (galleryCount > 1 && typeof Swiper !== "undefined") {
       stretch: 0,
       depth: 135,
       modifier: 1,
-      slideShadows: true
+      slideShadows: true,
     },
 
     pagination: {
       el: ".gallery-swiper .swiper-pagination",
-      clickable: true
+      clickable: true,
     },
 
     breakpoints: {
@@ -213,8 +213,8 @@ if (galleryCount > 1 && typeof Swiper !== "undefined") {
           stretch: 0,
           depth: 95,
           modifier: 1,
-          slideShadows: true
-        }
+          slideShadows: true,
+        },
       },
       601: {
         slidesPerView: 2.15,
@@ -224,8 +224,8 @@ if (galleryCount > 1 && typeof Swiper !== "undefined") {
           stretch: 0,
           depth: 115,
           modifier: 1,
-          slideShadows: true
-        }
+          slideShadows: true,
+        },
       },
       901: {
         // Satu foto aktif + satu foto di kiri + satu foto di kanan.
@@ -236,10 +236,10 @@ if (galleryCount > 1 && typeof Swiper !== "undefined") {
           stretch: 0,
           depth: 135,
           modifier: 1,
-          slideShadows: true
-        }
-      }
-    }
+          slideShadows: true,
+        },
+      },
+    },
   });
 
   window.addEventListener("resize", () => {

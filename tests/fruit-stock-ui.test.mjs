@@ -1,54 +1,218 @@
-import assert from 'node:assert/strict';
-import {id} from '../pos/core.mjs';
-import {openFruitTransfer} from '../pos/fruit-transfer-ui.mjs';
-import {attachFruitScanSelection} from '../pos/fruit-scan-selection.mjs';
-import {checkFruitStockSelection,stockScanCandidate} from '../pos/fruit-stock.mjs';
-import {createStockDemo,applyStockDemoAction} from '../pos/stock-demo.mjs';
-import {fixture} from './stock-demo-fixture.mjs';
-import {Node,makeModal,FormDataAdapter} from './variant-dom.mjs';
-const f=fixture();f.fruit.barcode='0001';f.state.access.stock=true;f.state.access.waste=true;
-let s=createStockDemo(f.state);const root=s.lots.find(l=>l.storeId===f.store&&l.productId===f.fruit.id);Object.assign(root,{kg:6,pieces:3,receivedKg:6,receivedPieces:3,unitCost:50000,costFinalized:true});
-const other={...root,id:id(),kg:2,pieces:1};s.lots.push(other);
-const code=n=>'9201071126'+String(n).padStart(6,'0')+'0001002000';
-for(const n of [500,501,502,503]){const lot=n===503?other:root;s.fruitUnits.push({barcode:code(n),grams:2000,productId:f.fruit.id,lotId:lot.id,receiptLotId:lot.id,storeId:f.store,status:'available',lastEvent:lot.id});}
-const before={document:globalThis.document,FormData:globalThis.FormData,confirm:globalThis.confirm};
-globalThis.document={body:new Node('body'),createElement:t=>new Node(t)};globalThis.FormData=FormDataAdapter;globalThis.confirm=()=>true;
-const modal=makeModal(),posts=[];
-const ctx={modal:modal.modal,toast(){},render(){},async mutate(action,p){s=applyStockDemoAction(s,action,p);posts.push({action,p});return true;}};
-const c=(d,name)=>d.querySelector(`[name="${name}"]`),scan=async(d,barcode)=>{d.querySelector('[data-fruit-scan]').value=barcode;await d.querySelector('form').fire('submit');};
-const open=async d=>{await d.querySelector('[data-fruit-scan-open]').fire('click');return document.body.children.at(-1);};
-const close=async d=>{d.querySelector('[data-fruit-scan]').value='';await d.querySelector('[data-fruit-scan-close]').fire('click');};
-try{
- const d=openFruitTransfer(s,f.store,ctx);
- assert.equal(d.querySelectorAll('.form-section-heading').length,3);
- assert.equal(Node.activeElement,d.querySelector('[data-fruit-scan-open]'));
- assert.equal(c(d,'toStoreId').options.length,1);assert(c(d,'kg').readOnly);assert(c(d,'pieces').readOnly);
- c(d,'note').value='Kirim batch asli';await d.querySelector('form').fire('submit');assert.match(d.querySelector('#form-error').textContent,/Scan minimal/);assert.equal(posts.length,0);
- let w=await open(d);
- await scan(w,code(999));assert.match(w.querySelector('[data-fruit-scan-status]').textContent,/belum tercatat/);assert.equal(c(d,'kg').value,'');
- await scan(w,code(503));assert.match(w.querySelector('[data-fruit-scan-status]').textContent,/bukan milik batch/);assert.equal(c(d,'lotId').value,root.id,'Even first scan never changes selected batch');
- await scan(w,code(500));assert.equal(c(d,'kg').value,'2');assert.equal(c(d,'pieces').value,'1');
- await scan(w,code(500));assert.match(w.querySelector('[data-fruit-scan-status]').textContent,/sudah dicatat/);assert.equal(c(d,'pieces').value,'1');
- await scan(w,code(501));assert.match(w.querySelector('tbody tr').textContent,/Buah 2/);assert.equal(c(d,'kg').value,'4');
- await d.querySelector('form').fire('submit');assert.match(d.querySelector('#form-error').textContent,/Selesai mencatat/);assert.equal(posts.length,0);
- await w.querySelector('[data-remove-fruit]').fire('click');assert.equal(c(d,'kg').value,'2');
- await close(w);assert(w.closed);assert.equal(posts.length,0,'Finishing scan only updates draft');assert.equal(s.lots.find(l=>l.id===root.id).kg,6);
- globalThis.confirm=()=>false;c(d,'lotId').value=other.id;await c(d,'lotId').fire('change');assert.equal(c(d,'lotId').value,root.id);assert.equal(c(d,'kg').value,'2');
- await d.querySelector('form').fire('submit');assert.equal(posts.length,0,'Cancelling final confirmation preserves stock');
- globalThis.confirm=()=>true;await d.querySelector('form').fire('submit');assert(d.closed);assert.equal(posts.length,1);await d.querySelector('form').fire('submit');assert.equal(posts.length,1);
- assert(!('linkBarcodes' in posts[0].p));assert.equal(s.lots.find(l=>l.id===root.id).kg,4);
- const target=s.lots.find(l=>l.id===posts[0].p.id),unit=s.fruitUnits.find(u=>u.barcode===code(500));
- assert.equal(target.sourceLotId,root.id);assert.equal(target.supplierId,root.supplierId);assert.equal(target.unitCost,50000);assert.equal(unit.receiptLotId,root.id);assert.equal(unit.storeId,f.otherStore);assert.equal(s.fruitEvents.length,1);assert.equal(s.fruitEvents[0].action,'movement');
- const back=openFruitTransfer(s,f.otherStore,ctx);c(back,'lotId').value=target.id;await c(back,'lotId').fire('change');w=await open(back);await scan(w,code(500));await close(w);c(back,'note').value='Kembali';await back.querySelector('form').fire('submit');assert(back.closed);
- const reject=modal.modal('Reject',`<label class="field">Batch<select name="sourceLotId"><option value="${root.id}">Batch A</option><option value="${other.id}">Batch B</option></select></label><input name="kg"><input name="pieces">`);
- const selection=attachFruitScanSelection(reject,{state:s,store:f.store,states:['available']});w=await open(reject);await scan(w,code(503));assert.match(w.querySelector('[data-fruit-scan-status]').textContent,/bukan milik batch/);await scan(w,code(501));await close(w);assert.equal(selection.payload().kg,2);
- c(reject,'sourceLotId').value=other.id;await c(reject,'sourceLotId').fire('change');assert.throws(()=>selection.payload(),/Scan minimal/);assert.equal(c(reject,'kg').value,'');
- const stale={...s,fruitUnits:[{...unit,storeId:f.store,lotId:root.id,status:'sold'}]};assert.throws(()=>stockScanCandidate(stale,code(500),f.store,root.id,['available']),/Terjual/);
- assert.throws(()=>stockScanCandidate(s,code(500),f.otherStore,target.id,['available']),/outlet lain/);
- assert.throws(()=>stockScanCandidate(s,'8991234567890',f.store,root.id,['available']),/26 digit/);
- const fresh=stockScanCandidate(s,code(502),f.store,root.id,['available']);assert.throws(()=>checkFruitStockSelection(s,root.id,[fresh,fresh]),/sudah ada/);
- assert.throws(()=>checkFruitStockSelection(s,root.id,[{...fresh,grams:5000}]),/harus sesuai/);
- assert.throws(()=>applyStockDemoAction(s,'movement',{...posts[0].p,id:id(),lotId:root.id,barcodes:[code(999)],linkBarcodes:[code(999)]}),/tidak dapat ditautkan/);
- assert.throws(()=>applyStockDemoAction(s,'movement',{...posts[0].p,id:id(),lotId:root.id,barcodes:[code(503)]}),/bukan milik batch/);
- console.log('PASS strict stock UI: unknown/other-batch rejection, no auto-switch, newest-first receipt-style draft log, remove, discard confirmation, final confirmation, lineage, demo parity and duplicate submit.');
-}finally{Object.assign(globalThis,before);}
+import assert from "node:assert/strict";
+import { id } from "../pos/core.mjs";
+import { openFruitTransfer } from "../pos/fruit-transfer-ui.mjs";
+import { attachFruitScanSelection } from "../pos/fruit-scan-selection.mjs";
+import { checkFruitStockSelection, stockScanCandidate } from "../pos/fruit-stock.mjs";
+import { createStockDemo, applyStockDemoAction } from "../pos/stock-demo.mjs";
+import { fixture } from "./stock-demo-fixture.mjs";
+import { Node, makeModal, FormDataAdapter } from "./variant-dom.mjs";
+const f = fixture();
+f.fruit.barcode = "0001";
+f.state.access.stock = true;
+f.state.access.waste = true;
+let s = createStockDemo(f.state);
+const root = s.lots.find((l) => l.storeId === f.store && l.productId === f.fruit.id);
+Object.assign(root, {
+  kg: 6,
+  pieces: 3,
+  receivedKg: 6,
+  receivedPieces: 3,
+  unitCost: 50000,
+  costFinalized: true,
+});
+const other = { ...root, id: id(), kg: 2, pieces: 1 };
+s.lots.push(other);
+const code = (n) => "9201071126" + String(n).padStart(6, "0") + "0001002000";
+for (const n of [500, 501, 502, 503]) {
+  const lot = n === 503 ? other : root;
+  s.fruitUnits.push({
+    barcode: code(n),
+    grams: 2000,
+    productId: f.fruit.id,
+    lotId: lot.id,
+    receiptLotId: lot.id,
+    storeId: f.store,
+    status: "available",
+    lastEvent: lot.id,
+  });
+}
+const before = {
+  document: globalThis.document,
+  FormData: globalThis.FormData,
+  confirm: globalThis.confirm,
+};
+globalThis.document = { body: new Node("body"), createElement: (t) => new Node(t) };
+globalThis.FormData = FormDataAdapter;
+globalThis.confirm = () => true;
+const modal = makeModal(),
+  posts = [];
+const ctx = {
+  modal: modal.modal,
+  toast() {},
+  render() {},
+  async mutate(action, p) {
+    s = applyStockDemoAction(s, action, p);
+    posts.push({ action, p });
+    return true;
+  },
+};
+const c = (d, name) => d.querySelector(`[name="${name}"]`),
+  scan = async (d, barcode) => {
+    d.querySelector("[data-fruit-scan]").value = barcode;
+    await d.querySelector("form").fire("submit");
+  };
+const open = async (d) => {
+  await d.querySelector("[data-fruit-scan-open]").fire("click");
+  return document.body.children.at(-1);
+};
+const close = async (d) => {
+  d.querySelector("[data-fruit-scan]").value = "";
+  await d.querySelector("[data-fruit-scan-close]").fire("click");
+};
+try {
+  const d = openFruitTransfer(s, f.store, ctx);
+  assert.equal(d.querySelectorAll(".form-section-heading").length, 3);
+  assert.equal(Node.activeElement, d.querySelector("[data-fruit-scan-open]"));
+  assert.equal(c(d, "toStoreId").options.length, 1);
+  assert(c(d, "kg").readOnly);
+  assert(c(d, "pieces").readOnly);
+  c(d, "note").value = "Kirim batch asli";
+  await d.querySelector("form").fire("submit");
+  assert.match(d.querySelector("#form-error").textContent, /Scan minimal/);
+  assert.equal(posts.length, 0);
+  let w = await open(d);
+  await scan(w, code(999));
+  assert.match(w.querySelector("[data-fruit-scan-status]").textContent, /belum tercatat/);
+  assert.equal(c(d, "kg").value, "");
+  await scan(w, code(503));
+  assert.match(
+    w.querySelector("[data-fruit-scan-status]").textContent,
+    /bukan milik batch/,
+  );
+  assert.equal(
+    c(d, "lotId").value,
+    root.id,
+    "Even first scan never changes selected batch",
+  );
+  await scan(w, code(500));
+  assert.equal(c(d, "kg").value, "2");
+  assert.equal(c(d, "pieces").value, "1");
+  await scan(w, code(500));
+  assert.match(w.querySelector("[data-fruit-scan-status]").textContent, /sudah dicatat/);
+  assert.equal(c(d, "pieces").value, "1");
+  await scan(w, code(501));
+  assert.match(w.querySelector("tbody tr").textContent, /Buah 2/);
+  assert.equal(c(d, "kg").value, "4");
+  await d.querySelector("form").fire("submit");
+  assert.match(d.querySelector("#form-error").textContent, /Selesai mencatat/);
+  assert.equal(posts.length, 0);
+  await w.querySelector("[data-remove-fruit]").fire("click");
+  assert.equal(c(d, "kg").value, "2");
+  await close(w);
+  assert(w.closed);
+  assert.equal(posts.length, 0, "Finishing scan only updates draft");
+  assert.equal(s.lots.find((l) => l.id === root.id).kg, 6);
+  globalThis.confirm = () => false;
+  c(d, "lotId").value = other.id;
+  await c(d, "lotId").fire("change");
+  assert.equal(c(d, "lotId").value, root.id);
+  assert.equal(c(d, "kg").value, "2");
+  await d.querySelector("form").fire("submit");
+  assert.equal(posts.length, 0, "Cancelling final confirmation preserves stock");
+  globalThis.confirm = () => true;
+  await d.querySelector("form").fire("submit");
+  assert(d.closed);
+  assert.equal(posts.length, 1);
+  await d.querySelector("form").fire("submit");
+  assert.equal(posts.length, 1);
+  assert(!("linkBarcodes" in posts[0].p));
+  assert.equal(s.lots.find((l) => l.id === root.id).kg, 4);
+  const target = s.lots.find((l) => l.id === posts[0].p.id),
+    unit = s.fruitUnits.find((u) => u.barcode === code(500));
+  assert.equal(target.sourceLotId, root.id);
+  assert.equal(target.supplierId, root.supplierId);
+  assert.equal(target.unitCost, 50000);
+  assert.equal(unit.receiptLotId, root.id);
+  assert.equal(unit.storeId, f.otherStore);
+  assert.equal(s.fruitEvents.length, 1);
+  assert.equal(s.fruitEvents[0].action, "movement");
+  const back = openFruitTransfer(s, f.otherStore, ctx);
+  c(back, "lotId").value = target.id;
+  await c(back, "lotId").fire("change");
+  w = await open(back);
+  await scan(w, code(500));
+  await close(w);
+  c(back, "note").value = "Kembali";
+  await back.querySelector("form").fire("submit");
+  assert(back.closed);
+  const reject = modal.modal(
+    "Reject",
+    `<label class="field">Batch<select name="sourceLotId"><option value="${root.id}">Batch A</option><option value="${other.id}">Batch B</option></select></label><input name="kg"><input name="pieces">`,
+  );
+  const selection = attachFruitScanSelection(reject, {
+    state: s,
+    store: f.store,
+    states: ["available"],
+  });
+  w = await open(reject);
+  await scan(w, code(503));
+  assert.match(
+    w.querySelector("[data-fruit-scan-status]").textContent,
+    /bukan milik batch/,
+  );
+  await scan(w, code(501));
+  await close(w);
+  assert.equal(selection.payload().kg, 2);
+  c(reject, "sourceLotId").value = other.id;
+  await c(reject, "sourceLotId").fire("change");
+  assert.throws(() => selection.payload(), /Scan minimal/);
+  assert.equal(c(reject, "kg").value, "");
+  const stale = {
+    ...s,
+    fruitUnits: [{ ...unit, storeId: f.store, lotId: root.id, status: "sold" }],
+  };
+  assert.throws(
+    () => stockScanCandidate(stale, code(500), f.store, root.id, ["available"]),
+    /Terjual/,
+  );
+  assert.throws(
+    () => stockScanCandidate(s, code(500), f.otherStore, target.id, ["available"]),
+    /outlet lain/,
+  );
+  assert.throws(
+    () => stockScanCandidate(s, "8991234567890", f.store, root.id, ["available"]),
+    /26 digit/,
+  );
+  const fresh = stockScanCandidate(s, code(502), f.store, root.id, ["available"]);
+  assert.throws(() => checkFruitStockSelection(s, root.id, [fresh, fresh]), /sudah ada/);
+  assert.throws(
+    () => checkFruitStockSelection(s, root.id, [{ ...fresh, grams: 5000 }]),
+    /harus sesuai/,
+  );
+  assert.throws(
+    () =>
+      applyStockDemoAction(s, "movement", {
+        ...posts[0].p,
+        id: id(),
+        lotId: root.id,
+        barcodes: [code(999)],
+        linkBarcodes: [code(999)],
+      }),
+    /tidak dapat ditautkan/,
+  );
+  assert.throws(
+    () =>
+      applyStockDemoAction(s, "movement", {
+        ...posts[0].p,
+        id: id(),
+        lotId: root.id,
+        barcodes: [code(503)],
+      }),
+    /bukan milik batch/,
+  );
+  console.log(
+    "PASS strict stock UI: unknown/other-batch rejection, no auto-switch, newest-first receipt-style draft log, remove, discard confirmation, final confirmation, lineage, demo parity and duplicate submit.",
+  );
+} finally {
+  Object.assign(globalThis, before);
+}

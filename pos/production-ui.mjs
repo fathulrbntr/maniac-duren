@@ -10,7 +10,8 @@ import {
   productionPreview,
   stockQty,
 } from "./production.mjs";
-const inputCost = () => '<input name="totalCost" type="number" min="0" step="any" required placeholder="Harga beli + ongkos masuk">';
+const inputCost = () =>
+  '<input name="totalCost" type="number" min="0" step="any" required placeholder="Harga beli + ongkos masuk">';
 const field = (label, body) => `<label class="field">${label}${body}</label>`;
 const opts = (items, selected) =>
   items
@@ -38,11 +39,23 @@ const recipeState = (s, r) => {
 };
 export function recipesPage(s, store) {
   const recipes = s.recipes || [];
-  return `<div class="intro recipe-workspace"><div><div class="eyebrow">MASTER DATA GLOBAL</div><h2>Master Resep</h2><p class="muted">Resep berlaku untuk semua store. Stok baru diperiksa saat produksi di store tujuan.</p></div><div class="intro-actions"><button data-view="stock">Lihat stok</button><button data-view="production">Produksi bahan</button><button class="primary" id="new-recipe">Tambah resep</button></div></div><div class="summary-grid"><div class="summary-card"><span>Total resep global</span><b>${recipes.length}</b></div><div class="summary-card"><span>Cakupan</span><b class="positive">Semua store</b></div><div class="summary-card"><span>Status</span><b>Aktif</b></div></div><section class="panel"><div class="toolbar"><input id="recipe-search" placeholder="Cari nama resep atau hasil..." autocomplete="off"><select id="recipe-status"><option value="all">Semua resep</option></select></div><div class="recipe-grid" id="recipe-cards">${recipes.map((r) => { const out = item(s, r.outputId), state = recipeState(s, r); return `<article class="recipe-card" data-recipe-card data-recipe-search="${e(`${r.name} ${out?.name || ""}`.toLowerCase())}" data-recipe-status="global"><div class="card-heading"><div><h3>${e(r.name)}</h3><small>Versi ${e(r.version)} · Berlaku semua store</small></div><span class="status-pill status-success">Global</span></div><div class="recipe-output"><span>Hasil per batch</span><b>${num(r.yieldQty)} ${e(unitLabel[out?.stockUnit] || out?.stockUnit || "")}</b><small>${e(out?.name || "Item tidak ditemukan")}</small></div><div class="recipe-ingredients">${ingredientsText(state.needs)}</div><p class="muted">Ketersediaan bahan ditentukan di halaman Produksi berdasarkan store aktif.</p><button class="small" data-edit-recipe="${e(r.id)}">Edit resep</button></article>`; }).join("") || '<div class="empty">Belum ada resep. Daftarkan bahan dan hasil produksi di Master data.</div>'}</div></section>`;
+  return `<div class="intro recipe-workspace"><div><div class="eyebrow">MASTER DATA GLOBAL</div><h2>Master Resep</h2><p class="muted">Resep berlaku untuk semua store. Stok baru diperiksa saat produksi di store tujuan.</p></div><div class="intro-actions"><button data-view="stock">Lihat stok</button><button data-view="production">Produksi bahan</button><button class="primary" id="new-recipe">Tambah resep</button></div></div><div class="summary-grid"><div class="summary-card"><span>Total resep global</span><b>${recipes.length}</b></div><div class="summary-card"><span>Cakupan</span><b class="positive">Semua store</b></div><div class="summary-card"><span>Status</span><b>Aktif</b></div></div><section class="panel"><div class="toolbar"><input id="recipe-search" placeholder="Cari nama resep atau hasil..." autocomplete="off"><select id="recipe-status"><option value="all">Semua resep</option></select></div><div class="recipe-grid" id="recipe-cards">${
+    recipes
+      .map((r) => {
+        const out = item(s, r.outputId),
+          state = recipeState(s, r);
+        return `<article class="recipe-card" data-recipe-card data-recipe-search="${e(`${r.name} ${out?.name || ""}`.toLowerCase())}" data-recipe-status="global"><div class="card-heading"><div><h3>${e(r.name)}</h3><small>Versi ${e(r.version)} · Berlaku semua store</small></div><span class="status-pill status-success">Global</span></div><div class="recipe-output"><span>Hasil per batch</span><b>${num(r.yieldQty)} ${e(unitLabel[out?.stockUnit] || out?.stockUnit || "")}</b><small>${e(out?.name || "Item tidak ditemukan")}</small></div><div class="recipe-ingredients">${ingredientsText(state.needs)}</div><p class="muted">Ketersediaan bahan ditentukan di halaman Produksi berdasarkan store aktif.</p><button class="small" data-edit-recipe="${e(r.id)}">Edit resep</button></article>`;
+      })
+      .join("") ||
+    '<div class="empty">Belum ada resep. Daftarkan bahan dan hasil produksi di Master data.</div>'
+  }</div></section>`;
 }
 export function productionPage(s, store) {
-  const rows = (s.productions || []).filter((r) => r.storeId === store).slice().reverse();
-  return `<div class="intro production-workspace"><div><div class="eyebrow">STOK BAHAN</div><h2>Produksi dari resep</h2><p class="muted">Potong bahan dan masukkan hasil produksi ke stok dalam satu transaksi. Daging dari Coral dicatat melalui Reject & Waste.</p></div><div class="intro-actions"><button data-view="recipes">Master resep</button><button data-view="stock">Lihat stok</button><button id="refresh-production">Perbarui stok</button></div></div><div class="summary-grid"><div class="summary-card"><span>Total produksi</span><b>${rows.length}</b></div><div class="summary-card"><span>Produksi aktif</span><b class="positive">${rows.filter((r) => !r.voided).length}</b></div><div class="summary-card"><span>Dibatalkan</span><b>${rows.filter((r) => r.voided).length}</b></div></div><section class="production-layout"><section class="panel"><div class="section-heading"><div><h3>Catat produksi</h3><p class="muted">Stok bahan diperiksa otomatis sebelum disimpan.</p></div></div><form id="production-form"><div class="form-grid">${field("Resep", `<select name="recipeId" required><option value="">Pilih resep</option>${opts((s.recipes || []).filter(r=>!(item(s,r.outputId)?.durianOutput==='daging'&&r.ingredients.some(i=>item(s,i.productId)?.durianOutput==='coral'))))}</select>`)}${field("Tanggal produksi", `<input name="date" type="date" value="${today()}" required>`)}${field("Berapa kali resep dibuat?", '<input name="batches" type="number" min="1" max="10000" step="1" value="1" required>')}${field("Hasil aktual (sesuai satuan resep)", '<input name="actualQty" type="number" min="0.000001" step="any" required>')}${field("Kedaluwarsa hasil (opsional)", '<input name="expiry" type="date">')}${field("Catatan", '<input name="note" maxlength="300" placeholder="Contoh: produksi pagi">')}</div><div id="production-preview" aria-live="polite"><p class="muted">Pilih resep untuk melihat kebutuhan bahan.</p></div><p class="error" id="production-error"></p><button type="submit" class="primary" ${store ? "" : "disabled"}>Simpan produksi & potong bahan</button></form></section><aside class="panel production-guide"><h3>Alur stok</h3><div class="flow-step"><b>1</b><span>Pilih resep dan jumlah batch.</span></div><div class="flow-step"><b>2</b><span>Sistem cek stok bahan layak pakai.</span></div><div class="flow-step"><b>3</b><span>Simpan: bahan berkurang, hasil masuk stok.</span></div><button data-view="stock">Tambah stok bahan</button></aside></section><section class="panel"><div class="section-heading"><div><h3>Riwayat produksi store ini</h3><p class="muted">Klik batal hanya untuk salah pencatatan sebelum hasil dipakai.</p></div><div class="toolbar compact"><input id="production-search" placeholder="Cari resep atau tanggal..." autocomplete="off"><select id="production-status"><option value="all">Semua status</option><option value="active">Aktif</option><option value="voided">Dibatalkan</option></select></div></div><div class="production-history" id="production-history">${rows.map((r) => `<article class="production-card" data-production-card data-production-search="${e(`${r.date} ${r.recipeName} ${r.outputName}`.toLowerCase())}" data-production-status="${r.voided ? "voided" : "active"}"><div class="card-heading"><div><h3>${e(r.recipeName)}</h3><small>${e(r.date)} · ${e(r.id.slice(0, 8))} · v${e(r.recipeVersion)} · ${num(r.batches)} batch</small></div><span class="status-pill ${r.voided ? "status-danger" : "status-success"}">${r.voided ? "Dibatalkan" : "Aktif"}</span></div><div class="production-result"><b>${num(r.actualQty)} ${e(unitLabel[r.unit])}</b><span>${e(r.outputName)}</span><small>Target ${num(r.expectedQty)}</small></div><div class="recipe-ingredients">${ingredientsText(r.ingredients)}</div>${r.voided ? `<p class="muted">${e(r.voidReason || "Tanpa alasan")}</p>` : `<button class="small danger" data-void-production="${e(r.id)}">Batalkan pencatatan</button>`}</article>`).join("") || '<div class="empty">Belum ada produksi di store ini.</div>'}</div></section>`;
+  const rows = (s.productions || [])
+    .filter((r) => r.storeId === store)
+    .slice()
+    .reverse();
+  return `<div class="intro production-workspace"><div><div class="eyebrow">STOK BAHAN</div><h2>Produksi dari resep</h2><p class="muted">Potong bahan dan masukkan hasil produksi ke stok dalam satu transaksi. Daging dari Coral dicatat melalui Reject & Waste.</p></div><div class="intro-actions"><button data-view="recipes">Master resep</button><button data-view="stock">Lihat stok</button><button id="refresh-production">Perbarui stok</button></div></div><div class="summary-grid"><div class="summary-card"><span>Total produksi</span><b>${rows.length}</b></div><div class="summary-card"><span>Produksi aktif</span><b class="positive">${rows.filter((r) => !r.voided).length}</b></div><div class="summary-card"><span>Dibatalkan</span><b>${rows.filter((r) => r.voided).length}</b></div></div><section class="production-layout"><section class="panel"><div class="section-heading"><div><h3>Catat produksi</h3><p class="muted">Stok bahan diperiksa otomatis sebelum disimpan.</p></div></div><form id="production-form"><div class="form-grid">${field("Resep", `<select name="recipeId" required><option value="">Pilih resep</option>${opts((s.recipes || []).filter((r) => !(item(s, r.outputId)?.durianOutput === "daging" && r.ingredients.some((i) => item(s, i.productId)?.durianOutput === "coral"))))}</select>`)}${field("Tanggal produksi", `<input name="date" type="date" value="${today()}" required>`)}${field("Berapa kali resep dibuat?", '<input name="batches" type="number" min="1" max="10000" step="1" value="1" required>')}${field("Hasil aktual (sesuai satuan resep)", '<input name="actualQty" type="number" min="0.000001" step="any" required>')}${field("Kedaluwarsa hasil (opsional)", '<input name="expiry" type="date">')}${field("Catatan", '<input name="note" maxlength="300" placeholder="Contoh: produksi pagi">')}</div><div id="production-preview" aria-live="polite"><p class="muted">Pilih resep untuk melihat kebutuhan bahan.</p></div><p class="error" id="production-error"></p><button type="submit" class="primary" ${store ? "" : "disabled"}>Simpan produksi & potong bahan</button></form></section><aside class="panel production-guide"><h3>Alur stok</h3><div class="flow-step"><b>1</b><span>Pilih resep dan jumlah batch.</span></div><div class="flow-step"><b>2</b><span>Sistem cek stok bahan layak pakai.</span></div><div class="flow-step"><b>3</b><span>Simpan: bahan berkurang, hasil masuk stok.</span></div><button data-view="stock">Tambah stok bahan</button></aside></section><section class="panel"><div class="section-heading"><div><h3>Riwayat produksi store ini</h3><p class="muted">Klik batal hanya untuk salah pencatatan sebelum hasil dipakai.</p></div><div class="toolbar compact"><input id="production-search" placeholder="Cari resep atau tanggal..." autocomplete="off"><select id="production-status"><option value="all">Semua status</option><option value="active">Aktif</option><option value="voided">Dibatalkan</option></select></div></div><div class="production-history" id="production-history">${rows.map((r) => `<article class="production-card" data-production-card data-production-search="${e(`${r.date} ${r.recipeName} ${r.outputName}`.toLowerCase())}" data-production-status="${r.voided ? "voided" : "active"}"><div class="card-heading"><div><h3>${e(r.recipeName)}</h3><small>${e(r.date)} · ${e(r.id.slice(0, 8))} · v${e(r.recipeVersion)} · ${num(r.batches)} batch</small></div><span class="status-pill ${r.voided ? "status-danger" : "status-success"}">${r.voided ? "Dibatalkan" : "Aktif"}</span></div><div class="production-result"><b>${num(r.actualQty)} ${e(unitLabel[r.unit])}</b><span>${e(r.outputName)}</span><small>Target ${num(r.expectedQty)}</small></div><div class="recipe-ingredients">${ingredientsText(r.ingredients)}</div>${r.voided ? `<p class="muted">${e(r.voidReason || "Tanpa alasan")}</p>` : `<button class="small danger" data-void-production="${e(r.id)}">Batalkan pencatatan</button>`}</article>`).join("") || '<div class="empty">Belum ada produksi di store ini.</div>'}</div></section>`;
 }
 export function unitStockPanel(s, store) {
   const lots = (s.unitLots || []).filter((l) => l.storeId === store);
@@ -65,12 +78,8 @@ export function unitStockPanel(s, store) {
     .join("")}</tbody></table></div></details></section>`;
 }
 export function recipeDialog(s, ctx, existing) {
-  const outputs = s.products.filter(
-      (p) => scalar(p) && outputTypes.includes(p.itemType),
-    ),
-    inputs = s.products.filter(
-      (p) => scalar(p) && inputTypes.includes(p.itemType),
-    );
+  const outputs = s.products.filter((p) => scalar(p) && outputTypes.includes(p.itemType)),
+    inputs = s.products.filter((p) => scalar(p) && inputTypes.includes(p.itemType));
   if (!outputs.length || !inputs.length)
     return ctx.toast(
       "Daftarkan bahan dan item hasil produksi di Master data terlebih dahulu",
@@ -179,9 +188,7 @@ export function receiptDialog(s, store, ctx) {
   const refresh = () => {
     const purchase = c("kind").value === "purchase";
     c("productId").innerHTML = opts(
-      products.filter(
-        (p) => !purchase || ["raw", "direct"].includes(p.itemType),
-      ),
+      products.filter((p) => !purchase || ["raw", "direct"].includes(p.itemType)),
     );
     c("supplierId").required = purchase;
     c("supplierId").disabled = !purchase;
@@ -213,10 +220,14 @@ export function bindProduction(view, s, store, ctx) {
     ?.addEventListener("click", () => receiptDialog(s, store, ctx));
   if (view === "recipes") {
     const filterRecipes = () => {
-      const q = (document.querySelector("#recipe-search")?.value || "").toLowerCase().trim();
+      const q = (document.querySelector("#recipe-search")?.value || "")
+        .toLowerCase()
+        .trim();
       const status = document.querySelector("#recipe-status")?.value || "all";
       document.querySelectorAll("[data-recipe-card]").forEach((card) => {
-        card.hidden = (q && !card.dataset.recipeSearch.includes(q)) || (status !== "all" && card.dataset.recipeStatus !== status);
+        card.hidden =
+          (q && !card.dataset.recipeSearch.includes(q)) ||
+          (status !== "all" && card.dataset.recipeStatus !== status);
       });
     };
     document.querySelector("#recipe-search")?.addEventListener("input", filterRecipes);
@@ -234,14 +245,22 @@ export function bindProduction(view, s, store, ctx) {
   }
   if (view !== "production") return;
   const filterProduction = () => {
-    const q = (document.querySelector("#production-search")?.value || "").toLowerCase().trim();
+    const q = (document.querySelector("#production-search")?.value || "")
+      .toLowerCase()
+      .trim();
     const status = document.querySelector("#production-status")?.value || "all";
     document.querySelectorAll("[data-production-card]").forEach((card) => {
-      card.hidden = (q && !card.dataset.productionSearch.includes(q)) || (status !== "all" && card.dataset.productionStatus !== status);
+      card.hidden =
+        (q && !card.dataset.productionSearch.includes(q)) ||
+        (status !== "all" && card.dataset.productionStatus !== status);
     });
   };
-  document.querySelector("#production-search")?.addEventListener("input", filterProduction);
-  document.querySelector("#production-status")?.addEventListener("change", filterProduction);
+  document
+    .querySelector("#production-search")
+    ?.addEventListener("input", filterProduction);
+  document
+    .querySelector("#production-status")
+    ?.addEventListener("change", filterProduction);
   document.querySelector("#refresh-production").onclick = async () => {
     if (!mayLeave(false)) return;
     try {
@@ -257,9 +276,7 @@ export function bindProduction(view, s, store, ctx) {
     requestId = id();
   function preview(resetActual = false) {
     try {
-      const recipe = (s.recipes || []).find(
-        (r) => r.id === c("recipeId").value,
-      );
+      const recipe = (s.recipes || []).find((r) => r.id === c("recipeId").value);
       if (!recipe) throw Error("Pilih resep terlebih dahulu");
       const plan = productionPreview(
         s,

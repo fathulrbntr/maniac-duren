@@ -3,6 +3,70 @@
     {
       "path": "hier shifts, transaction log and cashier names on receipts\uf022",
       "sha256": "7f8d1abd2967436f7ac61add76914713a38da3748ea71c810adb60efc1259564"
+    },
+    {
+      "path": "hasil-test.txt",
+      "sha256": "2c47fdb1221fd9a4ec4e53750844f7ab6457e7d0ac880c531220b0b59fb60ce2"
+    },
+    {
+      "path": "pos/amounts.mjs",
+      "sha256": "7d7cfaf0c6ca50c18d939d7a3e9426a96bf043cf0c78c40339a5e42f9b3c2387"
+    },
+    {
+      "path": "pos/batch-tracking.mjs",
+      "sha256": "48484b3254bdceb28c1e4d7c20876d8fbb84ffca2efca1744395c64808613692"
+    },
+    {
+      "path": "pos/batch-ui.mjs",
+      "sha256": "634aba4ed09fd60e41481e1e70b17ba96d2b4b5388e370e321a9ff78f151523d"
+    },
+    {
+      "path": "pos/offline.mjs",
+      "sha256": "6dc3f181536150e2a06f49deb0ddedc4a92727dc175e9395c0c85cf29db12e8c"
+    },
+    {
+      "path": "pos/page-cache.mjs",
+      "sha256": "99993f6e811140e2168d4bb434df96ba92526a22ce4c79f2e87b41e1fd07b937"
+    },
+    {
+      "path": "pos/logo.png",
+      "sha256": "3949437b320ca1c61809676aadbcfaf97f39348301bc5f0a7557fa2bbc47d30f"
+    },
+    {
+      "path": "docs/hasil-check-103.txt",
+      "sha256": "d3830d93878a7286e85b4f56332d36aee5da07686705274577febb4dd6f0cf5a"
+    },
+    {
+      "path": "docs/hasil-check-104.txt",
+      "sha256": "4ffaf82e5b1a4ed27a17f5981c220f23454880e7bec7fcf1380d94edcf4c8382"
+    },
+    {
+      "path": "docs/hasil-check-102.txt",
+      "sha256": "62eb55ceace36605d363efec5cd27e38f43cc2f701a87e555b5744584544bbe7"
+    },
+    {
+      "path": "docs/hasil-test-wireless-103.txt",
+      "sha256": "8568e97e9b3310abe899d5d12deda5bb94e9d706aa6933242f9f52b241d9b352"
+    },
+    {
+      "path": "docs/hasil-test-102.txt",
+      "sha256": "bcf26b91e7017c240f3a565b64ca153e50d636a4b30fb2ce209958f8f75e5dd2"
+    },
+    {
+      "path": "docs/hasil-test-103.txt",
+      "sha256": "2ce93b1936e5ffff508e133d63b85bedf726d99712516af6ca1f5003f48ba0ee"
+    },
+    {
+      "path": "docs/hasil-test-104.txt",
+      "sha256": "076442398c6952336b1bdebabad7ef6c9fc1d0dba6ff96a49ee1fb140571d648"
+    },
+    {
+      "path": "docs/dependency-audit-102.json",
+      "sha256": "7a8a61181e49392ce84cd60c51e6c3b7cca5a6f6f36bbb4628c3b1d48ced14cc"
+    },
+    {
+      "path": "docs/barcode-sebelum-sesudah-102.json",
+      "sha256": "ce2a36d16a61bfce95039f8a5ad81f783e08d89acd868b3ed602845ed2e7c8e4"
     }
   ]
 }

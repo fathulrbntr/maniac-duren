@@ -16,9 +16,12 @@ export function wasteOutputProducts(state, sourceId) {
     else if (matches.length !== 1)
       error = `${spec.label} untuk ${source.name} ${matches.length ? "memiliki hubungan ganda" : "belum dihubungkan"}. Periksa master turunan durian.`;
     const product = matches.length === 1 ? matches[0] : null;
-    if (!error && (product.stockUnit !== spec.unit ||
+    if (
+      !error &&
+      (product.stockUnit !== spec.unit ||
         !["finished", "direct"].includes(product.itemType) ||
-        product.category !== "Olahan Duren"))
+        product.category !== "Olahan Duren")
+    )
       error = `Jenis atau satuan ${spec.label} untuk ${source.name} tidak sesuai.`;
     return { ...spec, product: error ? null : product, error };
   });

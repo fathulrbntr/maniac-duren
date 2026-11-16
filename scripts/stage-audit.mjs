@@ -18,13 +18,6 @@ const paths = [...manifest.changed, ...manifest.removed].filter(
   (file) => fs.existsSync(path.join(root, file)) || tracked.has(file),
 );
 for (let i = 0; i < paths.length; i += 25)
-  git([
-    "add",
-    "-A",
-    "--",
-    ...paths.slice(i, i + 25).map((file) => ":(literal)" + file),
-  ]);
-console.log(
-  "Staged " + paths.length + " audit paths. Review before committing:",
-);
+  git(["add", "-A", "--", ...paths.slice(i, i + 25).map((file) => ":(literal)" + file)]);
+console.log("Staged " + paths.length + " audit paths. Review before committing:");
 console.log(git(["diff", "--cached", "--stat"]));

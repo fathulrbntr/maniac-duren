@@ -28,8 +28,7 @@ export function quantity(value, unit) {
 const plus = (a, b) => (Math.round(a * SCALE) + Math.round(b * SCALE)) / SCALE;
 const product = (s, id) => {
   const p = s.products.find((x) => x.id === id);
-  if (!scalar(p))
-    throw Error("Pilih item bersatuan kg, gram, ml, pcs atau porsi");
+  if (!scalar(p)) throw Error("Pilih item bersatuan kg, gram, ml, pcs atau porsi");
   return p;
 };
 const date = (d) => {
@@ -53,28 +52,19 @@ export function stockQty(s, productId, storeId, asOf) {
 }
 export function recipeValues(s, p) {
   const name = String(p.name || "").trim();
-  if (!name || name.length > 100)
-    throw Error("Nama resep wajib, maksimal 100 karakter");
+  if (!name || name.length > 100) throw Error("Nama resep wajib, maksimal 100 karakter");
   const output = product(s, p.outputId);
   if (!outputTypes.includes(output.itemType))
     throw Error(
       `Hasil resep harus ${itemTypes.prep}, ${itemTypes.finished}, atau ${itemTypes.recipe}`,
     );
   const yieldQty = quantity(p.yieldQty, output.stockUnit);
-  if (
-    !Array.isArray(p.ingredients) ||
-    !p.ingredients.length ||
-    p.ingredients.length > 50
-  )
+  if (!Array.isArray(p.ingredients) || !p.ingredients.length || p.ingredients.length > 50)
     throw Error("Isi 1–50 bahan resep");
   const seen = new Set();
   const ingredients = p.ingredients.map((line) => {
     const item = product(s, line.productId);
-    if (
-      !inputTypes.includes(item.itemType) ||
-      item.id === output.id ||
-      seen.has(item.id)
-    )
+    if (!inputTypes.includes(item.itemType) || item.id === output.id || seen.has(item.id))
       throw Error("Bahan tidak valid, sama dengan hasil, atau terduplikasi");
     seen.add(item.id);
     return {
@@ -134,8 +124,7 @@ export function productionAction(s, action, p) {
       date(p.expiry);
       if (p.expiry < p.date) throw Error("Kedaluwarsa sebelum tanggal masuk");
     }
-    if (!s.stores.some((x) => x.id === p.storeId))
-      throw Error("Store tidak ditemukan");
+    if (!s.stores.some((x) => x.id === p.storeId)) throw Error("Store tidak ditemukan");
     if (!["purchase", "opening"].includes(p.kind))
       throw Error("Jenis penerimaan tidak valid");
     if (
@@ -146,8 +135,7 @@ export function productionAction(s, action, p) {
       throw Error(
         `Pembelian hanya untuk ${itemTypes.raw} / ${itemTypes.direct} dan wajib supplier`,
       );
-    if (p.kind === "opening" && !p.note?.trim())
-      throw Error("Catatan stok awal wajib");
+    if (p.kind === "opening" && !p.note?.trim()) throw Error("Catatan stok awal wajib");
     const qty = quantity(p.qty, item.stockUnit);
     s.unitLots.push({
       id: p.id,
@@ -166,8 +154,7 @@ export function productionAction(s, action, p) {
   }
   if (action === "produce") {
     if (s.productions.some((x) => x.id === p.id)) return;
-    if (!s.stores.some((x) => x.id === p.storeId))
-      throw Error("Store tidak ditemukan");
+    if (!s.stores.some((x) => x.id === p.storeId)) throw Error("Store tidak ditemukan");
     date(p.date);
     const recipe = s.recipes.find((x) => x.id === p.recipeId);
     if (!recipe || recipe.version !== p.recipeVersion)
@@ -176,13 +163,11 @@ export function productionAction(s, action, p) {
       actualQty = quantity(p.actualQty, plan.outputUnit);
     if (p.expiry) {
       date(p.expiry);
-      if (p.expiry < p.date)
-        throw Error("Kedaluwarsa sebelum tanggal produksi");
+      if (p.expiry < p.date) throw Error("Kedaluwarsa sebelum tanggal produksi");
     }
     const used = [];
     for (const line of plan.ingredients) {
-      if (line.available < line.qty)
-        throw Error("Stok tidak cukup: " + line.name);
+      if (line.available < line.qty) throw Error("Stok tidak cukup: " + line.name);
       let remaining = line.qty;
       for (const lot of s.unitLots
         .filter(
@@ -193,9 +178,7 @@ export function productionAction(s, action, p) {
             (!l.expiry || l.expiry >= p.date) &&
             l.qty > 0,
         )
-        .sort(
-          (a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id),
-        )) {
+        .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))) {
         const taken = Math.min(lot.qty, remaining);
         if (!taken) continue;
         lot.qty = plus(lot.qty, -taken);

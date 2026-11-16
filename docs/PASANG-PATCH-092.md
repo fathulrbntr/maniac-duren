@@ -39,10 +39,10 @@ git push origin main
 
 ## Arti saldo dashboard
 
-| Angka | Perhitungan |
-| --- | --- |
+| Angka              | Perhitungan                                                                            |
+| ------------------ | -------------------------------------------------------------------------------------- |
 | Cash belum disetor | Total penjualan tunai lunas aktif setelah diskon/refund − setoran aktif yang tercatat. |
-| Cash sudah disetor | Jumlah seluruh setoran aktif yang tercatat, berdasarkan struk yang diunggah. |
+| Cash sudah disetor | Jumlah seluruh setoran aktif yang tercatat, berdasarkan struk yang diunggah.           |
 
 Saldo bersifat **akumulatif per outlet** dan tidak dibatasi tanggal filter penjualan. Pilihan semua toko menjumlahkan outlet yang dapat diakses; pilih satu outlet untuk mencatat setoran. Saldo dihitung ulang setelah transaksi/refund/setoran atau saat data diperbarui. Halaman pada perangkat lain perlu diperbarui untuk melihat perubahan terbaru.
 

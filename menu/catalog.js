@@ -1,4 +1,5 @@
 "use strict";
+const { MenuLogic } = globalThis;
 (async () => {
   const catalog = document.querySelector("#catalog"),
     status = document.querySelector("#cart-status"),
@@ -71,8 +72,7 @@
       detailClosing = false;
     };
     const ended = (event) => {
-      if (event.target === detail && event.animationName === "sheet-out")
-        finish();
+      if (event.target === detail && event.animationName === "sheet-out") finish();
     };
     const timer = setTimeout(
       finish,
@@ -84,8 +84,7 @@
     if (detailClosing) return;
     detailProduct = product;
     detail.querySelector("#detail-title").textContent = product.name;
-    detail.querySelector(".sheet-description").textContent =
-      product.description || "";
+    detail.querySelector(".sheet-description").textContent = product.description || "";
     detail.querySelector(".sheet-price").textContent =
       product.price === null
         ? "Stok Habis"
@@ -180,8 +179,7 @@
     }
   });
   dialog.addEventListener("close", () => {
-    if (!cart.length)
-      document.querySelector(".add-button:not(:disabled)")?.focus();
+    if (!cart.length) document.querySelector(".add-button:not(:disabled)")?.focus();
   });
   function quantity(product, context) {
     const line = cart.find((x) => x.id === product.id),
@@ -248,11 +246,7 @@
       return;
     }
     if (line) {
-      const note = el(
-        "button",
-        "note-button",
-        line.note ? "Edit catatan" : "＋ Catatan",
-      );
+      const note = el("button", "note-button", line.note ? "Edit catatan" : "＋ Catatan");
       note.type = "button";
       note.onclick = () => {
         openCart();
@@ -283,9 +277,7 @@
     const list = document.querySelector("#cart-items");
     list.replaceChildren();
     if (!count)
-      list.append(
-        el("p", "", "Keranjang masih kosong. Tambahkan menu favoritmu."),
-      );
+      list.append(el("p", "", "Keranjang masih kosong. Tambahkan menu favoritmu."));
     cart.forEach((line) => {
       const product = products.find((p) => p.id === line.id),
         row = el("article", "cart-row"),
@@ -382,25 +374,18 @@
       );
       if (product.price !== null)
         info.append(
-          el(
-            "p",
-            "menu-price",
-            `${MenuLogic.money(product.price)} / ${product.unit}`,
-          ),
+          el("p", "menu-price", `${MenuLogic.money(product.price)} / ${product.unit}`),
         );
       const visual = el("div", "product-image");
       if (
         typeof product.image === "string" &&
-        /^(https?:\/\/|\/(?!\/)|data:image\/(png|jpeg|webp);base64,)/i.test(
-          product.image,
-        )
+        /^(https?:\/\/|\/(?!\/)|data:image\/(png|jpeg|webp);base64,)/i.test(product.image)
       ) {
         const img = el("img", "");
         img.src = product.image;
         img.alt = product.name;
         img.loading = "lazy";
-        img.onerror = () =>
-          visual.replaceChildren(el("span", "", product.name));
+        img.onerror = () => visual.replaceChildren(el("span", "", product.name));
         visual.append(img);
       } else visual.textContent = product.name;
       const detailButton = el("button", "product-detail-trigger");
@@ -413,13 +398,9 @@
       groups.get(group).append(card);
       cards.set(product.id, card);
     });
-    if (!products.length)
-      catalog.append(el("p", "", "Menu sedang diperbarui."));
+    if (!products.length) catalog.append(el("p", "", "Menu sedang diperbarui."));
     try {
-      cart = MenuLogic.reconcile(
-        JSON.parse(localStorage.getItem(key) || "[]"),
-        products,
-      );
+      cart = MenuLogic.reconcile(JSON.parse(localStorage.getItem(key) || "[]"), products);
     } catch {
       cart = [];
     }
@@ -443,11 +424,7 @@
     }
   } catch {
     catalog.replaceChildren(
-      el(
-        "p",
-        "",
-        "Menu belum dapat dimuat. Muat ulang halaman untuk mencoba kembali.",
-      ),
+      el("p", "", "Menu belum dapat dimuat. Muat ulang halaman untuk mencoba kembali."),
     );
     checkout.disabled = true;
   } finally {

@@ -1,5 +1,9 @@
 "use strict";
 (() => {
+  const form = document.querySelector("#product-form");
+  const say = (text) => {
+    document.querySelector("#status").textContent = text;
+  };
   const input = document.querySelector("#photo");
   const dialog = document.querySelector("#photo-editor");
   const canvas = document.querySelector("#photo-crop-canvas");
@@ -39,14 +43,8 @@
   function draw() {
     if (!picture) return;
     const r = cropRect();
-    canvas.width = Math.max(
-      1,
-      Math.round(800 * Math.min(1, r.width / r.height)),
-    );
-    canvas.height = Math.max(
-      1,
-      Math.round(800 * Math.min(1, r.height / r.width)),
-    );
+    canvas.width = Math.max(1, Math.round(800 * Math.min(1, r.width / r.height)));
+    canvas.height = Math.max(1, Math.round(800 * Math.min(1, r.height / r.width)));
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
@@ -116,12 +114,10 @@
       picture = image;
       reset();
       apply.disabled = false;
-      message.textContent =
-        "Pratinjau menunjukkan hasil potongan. File asli tetap utuh.";
+      message.textContent = "Pratinjau menunjukkan hasil potongan. File asli tetap utuh.";
     } catch {
       if (ticket === generation)
-        message.textContent =
-          "Gambar gagal dibaca. Tutup dan pilih file gambar lain.";
+        message.textContent = "Gambar gagal dibaca. Tutup dan pilih file gambar lain.";
     }
   });
   canvas.addEventListener("pointerdown", (event) => {
@@ -146,16 +142,11 @@
     const clamp = (n) => Math.min(1, Math.max(-1, n));
     if (dx > 0)
       horizontal.value = String(
-        clamp(
-          drag.h - (2 * (event.clientX - drag.x) * r.width) / bounds.width / dx,
-        ),
+        clamp(drag.h - (2 * (event.clientX - drag.x) * r.width) / bounds.width / dx),
       );
     if (dy > 0)
       vertical.value = String(
-        clamp(
-          drag.v -
-            (2 * (event.clientY - drag.y) * r.height) / bounds.height / dy,
-        ),
+        clamp(drag.v - (2 * (event.clientY - drag.y) * r.height) / bounds.height / dy),
       );
     draw();
   });
@@ -196,9 +187,7 @@
         if (blob && blob.size <= 2000000) break;
       }
       if (!blob || blob.size > 2000000)
-        throw Error(
-          "Hasil gambar terlalu besar. Pilih potongan atau gambar lain.",
-        );
+        throw Error("Hasil gambar terlalu besar. Pilih potongan atau gambar lain.");
       const data = await new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result);
@@ -207,15 +196,14 @@
       });
       if (ticket !== generation || !dialog.open) return;
       form.elements.image.value = data;
-      preview();
+      form.elements.image.dispatchEvent(new Event("input", { bubbles: true }));
       dialog.close();
       say(
         "Foto sudah disesuaikan. Klik Tambah menu atau Simpan perubahan untuk menyimpan produk.",
       );
     } catch (error) {
       if (ticket === generation)
-        message.textContent =
-          error.message || "Foto gagal diproses. Silakan coba lagi.";
+        message.textContent = error.message || "Foto gagal diproses. Silakan coba lagi.";
     } finally {
       if (ticket === generation) {
         apply.disabled = false;
