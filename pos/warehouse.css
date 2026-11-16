@@ -467,3 +467,67 @@
 .supply-modal [data-outbound-detail] .toolbar {
   flex-wrap: wrap;
 }
+
+/* Invoice grouping, date/payment filters and receivables summary (115). */
+.outbound-filters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+  align-items: end;
+  gap: 12px;
+}
+.outbound-filters .field {
+  margin: 0;
+  min-width: 0;
+}
+.outbound-filters input,
+.outbound-filters select {
+  width: 100%;
+  min-width: 0;
+}
+.outbound-summary {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.outbound-summary .supply-stat {
+  grid-template-columns: minmax(0, 1fr);
+}
+.outbound-summary strong {
+  overflow-wrap: anywhere;
+}
+.outbound-table-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.outbound-table-heading h3 {
+  margin: 0;
+}
+.outbound-table-panel {
+  min-width: 0;
+}
+.outbound-table-panel .table-wrap {
+  max-width: 100%;
+  overflow: auto;
+}
+.outbound-table-panel table {
+  min-width: 900px;
+}
+.outbound-payment {
+  font-weight: 600;
+}
+.outbound-payment.paid {
+  color: var(--success, #42752f);
+}
+.outbound-filter-panel [hidden] {
+  display: none;
+}
+@media (max-width: 1000px) {
+  .outbound-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .outbound-filters,
+  .outbound-summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -92,3 +92,16 @@ untuk fitur baru yang memerlukan beberapa file, bukan tempat menyalin modul lama
 - `tests/warehouse-workflow-{db,ui}.test.mjs` menguji aturan server/model/handler.
   `tests/warehouse-workflow-browser.mjs` menguji aplikasi asli dengan SQL fixture.
 - Baca `docs/PATCH-114-PENERIMAAN-WHOLESALE.md` untuk alur dan pemasangan PowerShell.
+
+## Tabel dan ringkasan invoice 115
+
+- `pos/warehouse-workflow.mjs`: pengelompokan invoice, tanggal WIB, rentang periode,
+  status pembayaran, ringkasan nominal, serta filter per akun/ruang kerja/lokasi.
+- `pos/outbound-ui.mjs`: tiga tabel, filter, ringkasan, dan delegasi tombol detail.
+  `pos/warehouse-ui.mjs` tetap menjadi penghubung ke binder fitur yang sama.
+- `pos/warehouse.css`: tata letak filter, ringkasan, dan tabel responsif.
+- `tests/outbound-invoices.test.mjs`: aturan perhitungan dan interaksi DOM.
+  `tests/outbound-invoices-browser.mjs`: aplikasi asli, reload, tema, dan lebar layar.
+  Fixture bersama berada di `tests/helpers/outbound-invoices-fixture.mjs`.
+- Patch ini memakai data dan otorisasi patch 114; tidak menambah jalur mutasi atau
+  migrasi SQL. Panduan pemasangan dan commit/push: `docs/PATCH-115-INVOICE-FILTER.md`.

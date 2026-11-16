@@ -1,6 +1,6 @@
 import { workflowReady, backOffice } from "./warehouse-workflow.mjs";
 import { receivingPage, openReceivingSession } from "./receiving-session-ui.mjs";
-import { outboundPage, openOutbound, openOutboundForm } from "./outbound-ui.mjs";
+import { outboundPage, bindOutboundPage, openOutboundForm } from "./outbound-ui.mjs";
 import { escape as e, id, today, num, money } from "./core.mjs";
 import {
   warehouseEnabled,
@@ -695,12 +695,7 @@ export function bindSupply(s, store, view, ctx) {
         (b.onclick = () =>
           openReceivingSession(ctx.getState(), b.dataset.sessionOpen, ctx)),
     );
-  document
-    .querySelectorAll("[data-outbound-open]")
-    .forEach(
-      (b) =>
-        (b.onclick = () => openOutbound(ctx.getState(), b.dataset.outboundOpen, ctx)),
-    );
+  bindOutboundPage(s, store, ctx);
   document
     .querySelector("[data-outbound-new]")
     ?.addEventListener("click", () => openOutboundForm(ctx.getState(), store, ctx));

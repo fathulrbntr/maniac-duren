@@ -19,6 +19,7 @@ const files = [
   "public-browser.mjs",
   "warehouse-browser.mjs",
   "warehouse-workflow-browser.mjs",
+  "outbound-invoices-browser.mjs",
 ];
 for (const file of files) {
   console.log("\nRunning " + file);

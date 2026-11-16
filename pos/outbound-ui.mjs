@@ -4,6 +4,12 @@ import {
   outboundStatuses,
   outboundBalance,
   saveWorkflow,
+  invoicePeriods,
+  invoiceDate,
+  invoicePaymentStatus,
+  outboundInvoiceView,
+  loadInvoiceFilters,
+  saveInvoiceFilters,
 } from "./warehouse-workflow.mjs";
 import {
   field,
@@ -14,24 +20,148 @@ import {
   submitSession,
   bindRecovery,
 } from "./supply-session-ui.mjs";
-export function outboundPage(s, store, space) {
-  const bo = backOffice(s, space),
-    orders = (s.outboundOrders || []).filter((o) => bo || o.sourceId === store);
-  return `<section class="supply-workspace"><div class="supply-hero"><div><span class="supply-eyebrow">DISTRIBUSI GUDANG</span><h2>Transfer toko & invoice wholesale</h2><p>${bo ? "Buat dokumen dan harga khusus, tunggu scan gudang, lalu terbitkan." : "Scan barang sesuai dokumen Back Office. Setiap barcode hanya boleh masuk satu pengiriman aktif."}</p></div><div class="toolbar"><button type="button" data-supply-refresh>Perbarui</button>${bo ? '<button type="button" class="primary" data-outbound-new>+ Transaksi baru</button>' : ""}</div></div><section class="panel">${table(
+function invoiceScope(s, store, space) {
+  const bo = backOffice(s, space);
+  return {
+    bo,
+    orders: (s.outboundOrders || []).filter((o) => bo || o.sourceId === store),
+  };
+}
+function invoiceTable(s, rows, bo, group) {
+  return table(
     [
       "Dokumen",
+      group === "issued" ? "Tanggal terbit (WIB)" : "Tanggal dibuat (WIB)",
       "Jenis / tujuan",
       "Barang",
       "Pengiriman",
-      ...(bo ? ["Pembayaran"] : []),
+      ...(bo ? [group === "cancelled" ? "Nilai dokumen" : "Pembayaran"] : []),
+      ...(group === "cancelled" ? ["Alasan pembatalan"] : []),
       "Aksi",
     ],
-    orders.map((o) => {
-      const balance = outboundBalance(o),
-        transfer = s.transfers?.find((t) => t.id === o.id);
-      return `<tr><td><b>${e(o.invoiceNo || "Belum terbit")}</b><small>${e(o.deliveryNo || o.id.slice(0, 8))}</small></td><td>${o.kind === "transfer" ? "Transfer toko" : "Wholesale"}<small>${e(o.kind === "transfer" ? name(s, "locations", o.targetId) : o.buyer?.name)}</small></td><td>${o.items.length} butir / ${num(o.items.reduce((v, i) => v + i.grams, 0) / 1000)} kg</td><td>${e(transfer?.status === "received" ? "Diterima toko" : outboundStatuses[o.status])}</td>${bo ? `<td>${o.total == null ? "Menunggu scan" : money(balance.total)}<small>${e(balance.label)}</small>${o.invoiceNo ? `<small>Sisa ${money(balance.remaining)}</small>` : ""}</td>` : ""}<td><button type="button" data-outbound-open="${e(o.id)}">Buka</button></td></tr>`;
+    rows.map((o) => {
+      const transfer = s.transfers?.find((t) => t.id === o.id),
+        balance = bo ? outboundBalance(o) : null;
+      const cancelled = group === "cancelled",
+        payment = invoicePaymentStatus(o);
+      const status = cancelled
+        ? "Dibatalkan"
+        : transfer?.status === "received"
+          ? "Diterima toko"
+          : outboundStatuses[o.status] || o.status;
+      return `<tr data-outbound-row="${e(o.id)}"><td><b>${e(o.invoiceNo || (cancelled ? "Dokumen dibatalkan" : "Belum terbit"))}</b><small>${e(o.deliveryNo || o.id.slice(0, 8))}</small></td><td>${e(invoiceDate(group === "issued" ? o.issuedAt : o.createdAt) || "Belum tersedia")}</td><td>${o.kind === "transfer" ? "Transfer toko" : "Wholesale"}<small>${e(o.kind === "transfer" ? name(s, "locations", o.targetId) : o.buyer?.name)}</small></td><td>${num(o.items.length)} butir / ${num(o.items.reduce((v, i) => v + i.grams, 0) / 1000)} kg</td><td>${e(status)}</td>${bo ? `<td>${o.total == null ? "Menunggu scan" : money(balance.total)}${cancelled ? "<small>Tidak masuk tagihan aktif</small>" : o.invoiceNo ? `<small class="outbound-payment ${e(payment)}">${e({ paid: "Lunas", partial: "Dibayar sebagian", unpaid: "Belum dibayar", unknown: "Nilai belum tersedia" }[payment])}</small>${payment !== "unknown" ? `<small>Sudah dibayar ${money(balance.paid)}</small><small>Sisa ${money(balance.remaining)}</small>` : ""}` : "<small>Belum terbit</small>"}</td>` : ""}${cancelled ? `<td>${e(o.cancelReason || transfer?.cancelReason || "—")}</td>` : ""}<td><button type="button" data-outbound-open="${e(o.id)}">Buka</button></td></tr>`;
     }),
-  )}</section></section>`;
+  );
+}
+function invoiceSummary(view) {
+  const ready = view.summary && !view.summary.incomplete;
+  return `<div class="supply-stats outbound-summary">${[
+    ["total", "Total nota aktif", `${num(view.activeCount)} invoice dalam periode`],
+    ["paid", "Sudah dibayar", "Pembayaran tercatat untuk invoice periode ini"],
+    ["remaining", "Sisa tagihan", "Total nota aktif dikurangi pembayaran"],
+  ]
+    .map(
+      ([key, label, hint]) =>
+        `<article class="supply-stat"><span>${label}</span><strong data-invoice-total="${key}">${ready ? money(view.summary[key]) : "—"}</strong><small>${e(hint)}</small></article>`,
+    )
+    .join(
+      "",
+    )}</div>${view.summary?.incomplete ? '<p class="notice">Nilai invoice belum lengkap. Perbarui data untuk menghitung ringkasan.</p>' : ""}`;
+}
+function invoiceSection(s, view, bo, group) {
+  const titles = {
+    issued: "Sudah diterbitkan",
+    drafts: "Belum diterbitkan",
+    cancelled: "Dibatalkan",
+  };
+  const hint =
+    group === "issued"
+      ? `${num(view.issued.length)} dari ${num(view.activeCount)} invoice aktif dalam periode ditampilkan.`
+      : group === "drafts"
+        ? "Semua dokumen yang masih disiapkan atau menunggu penerbitan."
+        : "Semua dokumen dibatalkan, termasuk yang belum memiliki nomor invoice.";
+  return `<div class="outbound-table-heading"><h3>${titles[group]}</h3><span class="supply-badge">${num(view[group].length)}</span></div><p class="muted">${e(hint)}</p>${invoiceTable(s, view[group], bo, group)}`;
+}
+export function outboundPage(s, store, space) {
+  const { bo, orders } = invoiceScope(s, store, space),
+    filters = loadInvoiceFilters(s, store, space);
+  const view = outboundInvoiceView(orders, filters, today(), {
+    finance: bo,
+    transfers: s.transfers,
+  });
+  return `<section class="supply-workspace" data-outbound-page><div class="supply-hero"><div><span class="supply-eyebrow">DISTRIBUSI GUDANG</span><h2>Transfer toko & invoice wholesale</h2><p>${bo ? "Buat dokumen dan harga khusus, tunggu scan gudang, lalu terbitkan." : "Scan barang sesuai dokumen Back Office. Setiap barcode hanya boleh masuk satu pengiriman aktif."}</p></div><div class="toolbar"><button type="button" data-supply-refresh>Perbarui</button>${bo ? '<button type="button" class="primary" data-outbound-new>+ Transaksi baru</button>' : ""}</div></div><section class="panel outbound-filter-panel" aria-label="Filter invoice terbit"><h3>Periode invoice</h3><div class="outbound-filters">${field(
+    "Periode",
+    `<select data-invoice-period>${Object.entries(invoicePeriods)
+      .map(
+        ([k, v]) =>
+          `<option value="${k}" ${filters.period === k ? "selected" : ""}>${v}</option>`,
+      )
+      .join("")}</select>`,
+  )}${field("Tanggal awal", `<input data-invoice-from type="date" value="${e(view.period.from)}">`)}${field("Tanggal akhir", `<input data-invoice-to type="date" value="${e(view.period.to)}">`)}${bo ? field("Status pembayaran", `<select data-invoice-payment><option value="all" ${filters.payment === "all" ? "selected" : ""}>Semua pembayaran</option><option value="paid" ${filters.payment === "paid" ? "selected" : ""}>Lunas</option><option value="unpaid" ${filters.payment === "unpaid" ? "selected" : ""}>Belum lunas / sebagian</option></select>`) : ""}<button type="button" data-invoice-reset>Reset filter</button></div><p class="error" data-invoice-error role="alert">${e(view.period.error)}</p><p class="muted">Periode mengikuti tanggal terbit (WIB).${bo ? " Ringkasan mencakup seluruh invoice aktif dalam periode; filter pembayaran hanya menyaring tabel. Pembayaran di tanggal lain tetap dihitung untuk invoice yang sama." : ""}</p><p class="notice" data-invoice-missing-dates ${view.missingDates ? "" : "hidden"}>${num(view.missingDates)} invoice belum memiliki tanggal terbit yang valid. Invoice tersebut hanya muncul pada Semua periode.</p></section>${bo ? `<div data-invoice-summary aria-live="polite">${invoiceSummary(view)}</div>` : ""}${["issued", "drafts", "cancelled"].map((group) => `<section class="panel outbound-table-panel" data-invoice-table="${group}" aria-label="${{ issued: "Invoice sudah diterbitkan", drafts: "Dokumen belum diterbitkan", cancelled: "Dokumen dibatalkan" }[group]}">${invoiceSection(s, view, bo, group)}</section>`).join("")}</section>`;
+}
+export function bindOutboundPage(s, store, ctx) {
+  const root = document.querySelector("[data-outbound-page]");
+  if (!root) return;
+  let filters = loadInvoiceFilters(s, store, ctx.workspace);
+  const period = root.querySelector("[data-invoice-period]"),
+    from = root.querySelector("[data-invoice-from]"),
+    to = root.querySelector("[data-invoice-to]"),
+    payment = root.querySelector("[data-invoice-payment]");
+  const draw = () => {
+    const current = ctx.getState(),
+      { bo, orders } = invoiceScope(current, store, ctx.workspace);
+    const view = outboundInvoiceView(orders, filters, today(), {
+      finance: bo,
+      transfers: current.transfers,
+    });
+    period.value = filters.period;
+    from.value = view.period.from;
+    to.value = view.period.to;
+    if (payment) payment.value = filters.payment;
+    root.querySelector("[data-invoice-error]").textContent = view.period.error;
+    const missing = root.querySelector("[data-invoice-missing-dates]");
+    missing.hidden = !view.missingDates;
+    missing.textContent = `${num(view.missingDates)} invoice belum memiliki tanggal terbit yang valid. Invoice tersebut hanya muncul pada Semua periode.`;
+    const summary = root.querySelector("[data-invoice-summary]");
+    if (summary) summary.innerHTML = bo ? invoiceSummary(view) : "";
+    for (const group of ["issued", "drafts", "cancelled"])
+      root.querySelector(`[data-invoice-table="${group}"]`).innerHTML = invoiceSection(
+        current,
+        view,
+        bo,
+        group,
+      );
+  };
+  const save = () => {
+    filters = saveInvoiceFilters(ctx.getState(), store, ctx.workspace, filters);
+    draw();
+  };
+  period.onchange = () => {
+    filters = {
+      ...filters,
+      period: period.value,
+      from: from.value || today(),
+      to: to.value || today(),
+    };
+    save();
+  };
+  from.onchange = to.onchange = () => {
+    filters = { ...filters, period: "custom", from: from.value, to: to.value };
+    save();
+  };
+  if (payment)
+    payment.onchange = () => {
+      filters = { ...filters, payment: payment.value };
+      save();
+    };
+  root.querySelector("[data-invoice-reset]").onclick = () => {
+    filters = { period: "all", payment: "all", from: "", to: "" };
+    save();
+  };
+  root.addEventListener("click", (ev) => {
+    const button = ev.target.closest("[data-outbound-open]");
+    if (button) openOutbound(ctx.getState(), button.dataset.outboundOpen, ctx);
+  });
 }
 export function openOutboundForm(s, store, ctx, o) {
   if (!backOffice(s, ctx.workspace)) return;
