@@ -42,6 +42,7 @@ export const fruitStatus = {
   reject: "Reject",
   processed: "Diolah",
   waste: "Waste",
+  void: "Dibatalkan saat koreksi penerimaan",
 };
 
 export function trackedFruit(state, barcode, store, states = ["available"]) {

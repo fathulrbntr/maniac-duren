@@ -63,3 +63,19 @@ Patch 108 hanya mengubah tampilan lokasi. Rantai fondasi sampai 107 dan wireless
 `.vercelignore` mengecualikan **kedua** folder SQL. Gunakan salah satu jalur pemasangan yang sesuai riwayat database; jangan menjalankan ulang kedua salinan atau patch lama untuk merapikan kode.
 
 Patch 112 dipasang setelah 107; patch 109 tidak diperlukan. Baca `docs/PATCH-112-NOTA-SUPPLIER.md`. Salinan CLI `supabase/migrations/20261116112253_supplier_note_payments_112.sql` identik dengan sumber 112 dan ikut diperiksa oleh `npm run check`. Gunakan satu jalur instalasi sesuai riwayat proyek.
+
+Patch **114** (`warehouse-workflow-114.sql`) dipasang **setelah 112**. Patch ini
+menambah kg/butir nota supplier, sesi scan yang tersimpan, penguncian/pembukaan ulang,
+reservasi barcode, transfer dengan harga per dokumen dan invoice wholesale dengan
+pembayaran terpisah. Tidak menjalankan reset. Salinan CLI
+`supabase/migrations/20261116130125_warehouse_receiving_wholesale_114.sql` identik
+serta diperiksa oleh `npm run check`. Baca
+`docs/PATCH-114-PENERIMAAN-WHOLESALE.md`; gunakan salah satu jalur pemasangan.
+
+Tabel baru di schema `md_supply` memakai RLS dan tidak memberi akses langsung pada
+`anon`/`authenticated`. Mutasi masuk melalui `pos_warehouse_mutate` yang memeriksa
+akun aktif, izin, lokasi, revisi, identitas operasi dan status barcode. Helper serta
+wrapper lama tidak boleh diberi grant RPC. Perubahan harga supplier tetap khusus
+owner. Invoice wholesale mempunyai ledger sendiri; hanya baris penjualan dengan
+relasi `wholesale_order_id` yang dikecualikan dari guard pembayaran/shift kasir.
+Guard POS biasa tetap aktif. Jangan memasang ulang migrasi lama setelah 114.

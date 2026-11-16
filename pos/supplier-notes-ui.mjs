@@ -1,3 +1,5 @@
+import { receiptOfficeControls } from "./receiving-session-ui.mjs";
+import { workflowReady } from "./warehouse-workflow.mjs";
 import { escape as e, id, today, money, num } from "./core.mjs";
 import {
   noteBalance,
@@ -103,7 +105,16 @@ export function openSupplierNote(s, p, ctx) {
   const corrections = (p.corrections || [])
     .map(
       (c) =>
-        `<article class="note-history-item"><b>${e(c.actor)} · ${e(stamp(c.at))}</b><p>${e(c.reason)}</p><ul>${c.after.lines.map((l) => `<li>${e(name(s, "products", l.productId))}: ${money(c.before.lines.find((x) => x.productId === l.productId)?.purchaseCost)} → ${money(l.purchaseCost)}</li>`).join("")}<li>Ongkir: ${money(c.before.shippingCost)} → ${money(c.after.shippingCost)}</li></ul></article>`,
+        `<article class="note-history-item"><b>${e(c.actor)} · ${e(stamp(c.at))}</b><p>${e(c.reason)}</p><ul>${(c.after.lines || []).map((l) => `<li>${e(name(s, "products", l.productId))}: ${money(c.before.lines.find((x) => x.productId === l.productId)?.purchaseCost)} → ${money(l.purchaseCost)}</li>`).join("")}${
+          c.after.expected
+            ? Object.entries(c.after.expected)
+                .map(
+                  ([productId, v]) =>
+                    `<li>${e(name(s, "products", productId))}: ${c.before.expected?.[productId] ? `${num(c.before.expected[productId].kg)} kg / ${num(c.before.expected[productId].pieces)} butir` : "Belum dicatat"} → ${num(v.kg)} kg / ${num(v.pieces)} butir</li>`,
+                )
+                .join("")
+            : `<li>Ongkir: ${money(c.before.shippingCost)} → ${money(c.after.shippingCost)}</li>`
+        }</ul></article>`,
     )
     .join("");
   const d = ctx.modal(
@@ -116,7 +127,7 @@ export function openSupplierNote(s, p, ctx) {
       })
       .join(
         "",
-      )}</tbody></table></div><p class="muted">Modal termasuk alokasi ongkir, dibagi berat atau jumlah buah saat penerimaan. Modal/butir merupakan rata-rata per buah.${p.receivedId ? " Nilai — berarti data modal atau penerimaan belum tersedia untuk akun ini." : " Perhitungan tersedia setelah penerimaan selesai."}</p>${noteOwner(s) ? '<button type="button" data-note-correct>Koreksi harga & ongkir · Owner</button>' : '<p class="muted">Koreksi harga dan ongkir hanya dapat disetujui melalui akun owner.</p>'}<h3>Riwayat pembayaran</h3>${history || '<p class="muted">Belum ada pembayaran yang dicatat.</p>'}<h3>Riwayat koreksi owner</h3>${corrections || '<p class="muted">Belum ada koreksi.</p>'}</div>`,
+      )}</tbody></table></div><p class="muted">Modal termasuk alokasi ongkir, dibagi berat atau jumlah buah saat penerimaan. Modal/butir merupakan rata-rata per buah.${p.receivedId ? " Nilai — berarti data modal atau penerimaan belum tersedia untuk akun ini." : " Perhitungan tersedia setelah penerimaan selesai."}</p>${noteOwner(s) ? '<button type="button" data-note-correct>Koreksi harga & ongkir · Owner</button>' : '<p class="muted">Koreksi harga dan ongkir hanya dapat disetujui melalui akun owner.</p>'}<h3>Riwayat pembayaran</h3>${history || '<p class="muted">Belum ada pembayaran yang dicatat.</p>'}<h3>Riwayat koreksi nota</h3>${corrections || '<p class="muted">Belum ada koreksi.</p>'}</div>`,
     "Tutup",
   );
   d.classList.add("supply-modal");
@@ -165,5 +176,6 @@ export function openSupplierNote(s, p, ctx) {
         }));
       }),
   );
+  if (workflowReady(s)) receiptOfficeControls(s, p, d, ctx);
   return d;
 }

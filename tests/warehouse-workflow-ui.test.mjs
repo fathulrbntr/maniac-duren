@@ -1,0 +1,265 @@
+import { pricingPage } from "../pos/warehouse-ui.mjs";
+import assert from "node:assert/strict";
+import { Node, makeModal } from "./variant-dom.mjs";
+import {
+  receiptVariance,
+  receiptTotals,
+  saveWorkflow,
+  loadWorkflowPending,
+  clearWorkflowPending,
+} from "../pos/warehouse-workflow.mjs";
+import { receivingPage, openReceivingSession } from "../pos/receiving-session-ui.mjs";
+import { outboundPage } from "../pos/outbound-ui.mjs";
+import { applySupplyResponse, transferDocument } from "../pos/warehouse-flow.mjs";
+import { openSupplierNote } from "../pos/supplier-notes-ui.mjs";
+const p = {
+  id: "plan",
+  invoiceNo: "<img src=x>",
+  supplierId: "supplier",
+  storeId: "wh",
+  date: "2026-11-16",
+  revision: 1,
+  shippingCost: 10000,
+  lines: [{ productId: "fruit", purchaseCost: 500000 }],
+  expected: { fruit: { kg: 10, pieces: 5 } },
+  receiving: {
+    status: "open",
+    revision: 1,
+    scans: [{ barcode: "92011611260000010001002000", grams: 2000, productId: "fruit" }],
+  },
+};
+let s = {
+  me: { userId: "owner", role: "owner" },
+  access: { backoffice: true, finance: true },
+  warehouseWorkflowVersion: 114,
+  warehouseVersion: 107,
+  supplierNotesVersion: 112,
+  receiptPlans: [p],
+  outboundOrders: [],
+  supplyEvents: [],
+  locations: [{ id: "wh", name: "Gudang", locationType: "warehouse" }],
+  stores: [{ id: "wh", name: "Gudang" }],
+  lots: [],
+  products: [{ id: "fruit", name: "Monthong <script>", stockUnit: "kg_butir" }],
+  suppliers: [{ id: "supplier", name: "Supplier <script>" }],
+};
+assert.deepEqual(receiptTotals(p), { kg: 2, pieces: 1 });
+assert.equal(receiptVariance(p, "fruit").percent, null);
+const complete = { ...p, receiving: { ...p.receiving, status: "completed" } };
+assert.equal(receiptVariance(complete, "fruit").percent, 80);
+assert.equal(receiptVariance({ ...complete, expected: {} }, "fruit").percent, null);
+assert.equal(
+  receiptVariance({ ...complete, expected: { fruit: { kg: 1, pieces: 1 } } }, "fruit")
+    .percent,
+  -100,
+);
+assert(!pricingPage(s).includes("data-transfer-price"));
+const operational = receivingPage(s, "wh", "warehouse");
+assert(!operational.includes("500.000"));
+assert(!operational.includes("data-note-new"));
+assert(!operational.includes("Pembayaran"));
+assert(receivingPage(s, "wh", "backoffice").includes("data-note-new"));
+assert(!operational.includes("<script>"));
+const map = new Map(),
+  storage = {
+    getItem: (k) => map.get(k) || null,
+    setItem: (k, v) => map.set(k, v),
+    removeItem: (k) => map.delete(k),
+  };
+globalThis.localStorage = storage;
+const request = {
+    id: "stable-id",
+    planId: "plan",
+    barcode: p.receiving.scans[0].barcode,
+  },
+  calls = [];
+await assert.rejects(
+  saveWorkflow(
+    s,
+    "plan",
+    {
+      mutate: async (a, b) => {
+        calls.push([a, b]);
+        throw Error("offline");
+      },
+    },
+    "receipt_scan",
+    request,
+    storage,
+  ),
+  /offline/,
+);
+assert.equal(loadWorkflowPending(s, "plan", storage).payload.id, "stable-id");
+assert.equal(
+  loadWorkflowPending({ ...s, me: { userId: "someone-else" } }, "plan", storage),
+  null,
+);
+await assert.rejects(
+  saveWorkflow(
+    s,
+    "plan",
+    {
+      mutate: async () => {
+        throw Error("should not execute");
+      },
+    },
+    "receipt_scan",
+    { ...request, barcode: "other" },
+    storage,
+  ),
+  /belum pasti/,
+);
+await saveWorkflow(
+  s,
+  "plan",
+  { mutate: async (a, b) => calls.push([a, b]) },
+  "receipt_scan",
+  { ...request, id: "new-click-id" },
+  storage,
+);
+assert.equal(calls[1][1].id, "stable-id");
+assert.equal(loadWorkflowPending(s, "plan", storage), null);
+await assert.rejects(
+  saveWorkflow(
+    s,
+    "plan",
+    {
+      mutate: async () => {
+        throw Object.assign(Error("rejected"), { definitive: true });
+      },
+    },
+    "receipt_scan",
+    request,
+    storage,
+  ),
+);
+assert.equal(loadWorkflowPending(s, "plan", storage), null);
+const body = new Node("body");
+Node.prototype.prepend = function (n) {
+  this.insertBefore(n, this.children[0] || null);
+};
+globalThis.document = {
+  body,
+  createElement: (tag) => new Node(tag),
+  querySelector: (q) => body.querySelector(q),
+  querySelectorAll: (q) => body.querySelectorAll(q),
+};
+globalThis.confirm = () => true;
+const adapter = makeModal();
+let renders = 0;
+const ctx = {
+  workspace: "warehouse",
+  getState: () => s,
+  render: () => renders++,
+  refresh: async () => {},
+  modal: (...a) => {
+    const d = adapter.modal(...a);
+    body.append(d);
+    return d;
+  },
+  mutate: async (a, b) => {
+    calls.push([a, b]);
+    s = applySupplyResponse(s, {
+      supplyDelta: true,
+      planId: "plan",
+      receiving: {
+        ...s.receiptPlans[0].receiving,
+        revision: s.receiptPlans[0].receiving.revision + 1,
+        status:
+          a === "receipt_pause"
+            ? "paused"
+            : a === "receipt_finish"
+              ? "completed"
+              : "open",
+      },
+      event: { id: b.id, action: a },
+    });
+  },
+};
+let d = openReceivingSession(s, "plan", ctx);
+assert(d.querySelector("[data-session-code]"));
+assert(!d.textContent.includes("500.000"));
+await d.querySelector("[data-session-pause]").fire("click");
+assert.equal(s.receiptPlans[0].receiving.status, "paused");
+assert(!d.querySelector("[data-session-code]"));
+await d.querySelector("[data-session-resume]").fire("click");
+assert.equal(s.receiptPlans[0].receiving.status, "open");
+await d.querySelector("[data-session-finish]").fire("click");
+await new Promise((resolve) => setImmediate(resolve));
+assert.equal(s.receiptPlans[0].receiving.status, "completed");
+assert(!d.querySelector("[data-session-code]"));
+d.close();
+d = openSupplierNote(s, s.receiptPlans[0], { ...ctx, workspace: "backoffice" });
+assert(d.querySelector("[data-expected-edit]"));
+assert(d.querySelector("[data-receipt-reopen]"));
+assert(d.textContent.includes("80%"));
+assert.equal(d.querySelectorAll("script,img").length, 0);
+const o = {
+  id: "out",
+  kind: "wholesale",
+  invoiceNo: "INV-114",
+  deliveryNo: "SJ-114",
+  createdAt: "2026-11-16T00:00:00Z",
+  status: "approved",
+  sourceId: "wh",
+  origin: { name: "Gudang" },
+  destination: { name: "<img src=x>" },
+  buyer: { name: "<img src=x>" },
+  carrier: "Kurir",
+  rates: [{ productId: "fruit", unit: "kg", price: 90000 }],
+  lines: [
+    {
+      kind: "fruit",
+      productId: "fruit",
+      productName: "Monthong",
+      sourceLotId: "lot",
+      kg: 2,
+      pieces: 1,
+      unit: "kg",
+      price: 90000,
+      total: 180000,
+    },
+  ],
+  items: [{ barcode: request.barcode, grams: 2000, productId: "fruit" }],
+  total: 180000,
+  paid: 0,
+  paymentMode: "pending",
+};
+s = applySupplyResponse(s, { supplyDelta: true, outbound: o, event: { id: "event2" } });
+assert.equal(s.receiptPlans.length, 1);
+assert.equal(s.outboundOrders.length, 1);
+assert(!outboundPage(s, "wh", "warehouse").includes("180.000"));
+assert(outboundPage(s, "wh", "backoffice").includes("180.000"));
+assert(transferDocument(o, "invoice").includes("INVOICE WHOLESALE"));
+assert(!transferDocument(o, "delivery").includes("180.000"));
+assert(!transferDocument(o).includes("<img src=x>"));
+const delta = applySupplyResponse(s, {
+  supplyDelta: true,
+  planId: "plan",
+  receiving: {
+    status: "open",
+    revision: 9,
+    scanChanges: [{ barcode: "new", productId: "fruit", grams: 1000 }],
+    removedBarcode: null,
+  },
+  event: { id: "delta" },
+});
+assert.equal(delta.receiptPlans[0].receiving.scans.length, 2);
+const removed = applySupplyResponse(delta, {
+  supplyDelta: true,
+  planId: "plan",
+  receiving: { status: "open", revision: 10, scanChanges: [], removedBarcode: "new" },
+  event: { id: "delta2" },
+});
+assert.equal(removed.receiptPlans[0].receiving.scans.length, 1);
+const outDelta = applySupplyResponse(s, {
+  supplyDelta: true,
+  outbound: { ...o, itemsDelta: true, items: [{ barcode: "new-out", grams: 3000 }] },
+  event: { id: "delta3" },
+});
+assert.equal(outDelta.outboundOrders[0].items.length, 2);
+clearWorkflowPending(s, "plan", storage);
+assert(renders > 0);
+console.log(
+  "PASS workflow UI/model: expected vs actual variance, unknown/excess weights, role/workspace privacy, durable retry identity, user isolation, pause/resume/finish controls, office reopening, escaped invoices and delta merging.",
+);

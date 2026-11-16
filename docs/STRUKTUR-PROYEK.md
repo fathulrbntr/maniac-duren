@@ -77,3 +77,18 @@ Nama dan lokasi modul fitur aktif dipertahankan agar URL impor dan integrasi lam
 
 Belum ada migrasi massal ke folder `pos/features/`. Folder tersebut adalah pilihan
 untuk fitur baru yang memerlukan beberapa file, bukan tempat menyalin modul lama.
+
+## Penerimaan & wholesale 114
+
+- `pos/warehouse-workflow.mjs` memiliki aksi sesi, selisih nota/aktual, saldo invoice
+  dan penyimpanan operasi pending per akun/dokumen. Jangan membuat jalur stok kedua.
+- `pos/receiving-session-ui.mjs` memiliki UI penerimaan dan kontrol pembukaan ulang.
+- `pos/outbound-ui.mjs` memiliki UI penyiapan, harga per dokumen dan pembayaran keluar.
+- `pos/supply-session-ui.mjs` membagi utilitas formulir/pemulihan di kedua fitur.
+- `pos/warehouse-flow.mjs` mendaftarkan aksi pada dispatcher yang sudah ada dan
+  menggabungkan respons delta; `app.js` hanya meneruskan ruang kerja/konteks.
+- `database/warehouse-workflow-114.sql` memiliki otorisasi, sesi, reservasi barcode,
+  koreksi stok serta invoice wholesale; dipasang setelah 112 tanpa reset.
+- `tests/warehouse-workflow-{db,ui}.test.mjs` menguji aturan server/model/handler.
+  `tests/warehouse-workflow-browser.mjs` menguji aplikasi asli dengan SQL fixture.
+- Baca `docs/PATCH-114-PENERIMAAN-WHOLESALE.md` untuk alur dan pemasangan PowerShell.

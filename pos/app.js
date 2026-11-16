@@ -871,10 +871,10 @@ function render() {
       backoffice: () => supplyHome(state, store, "backoffice"),
       warehouse: () => supplyHome(state, store, "warehouse"),
       storehome: () => supplyHome(state, store, "store"),
-      transfers: () => transfersPage(state, store),
+      transfers: () => transfersPage(state, store, false, workspace),
       receiving: () => transfersPage(state, store, true),
       pricing: () => pricingPage(state),
-      supplierNotes: () => supplierNotesPage(state, store),
+      supplierNotes: () => supplierNotesPage(state, store, workspace),
       service: () => servicePage(state, store),
       cutting: () => cuttingPage(state, store),
       recipes: () => recipesPage(state, store),
@@ -917,7 +917,12 @@ function render() {
       return data;
     },
   };
-  bindSupply(state, store, view, { ...shiftContext, getState: () => state, refresh });
+  bindSupply(state, store, view, {
+    ...shiftContext,
+    getState: () => state,
+    refresh,
+    workspace,
+  });
   document.querySelectorAll("[data-workspace]").forEach(
     (b) =>
       (b.onclick = () => {
@@ -1338,6 +1343,8 @@ function addReceipt() {
       render,
       toast,
       getState: () => state,
+      workspace,
+      refresh,
     });
   openWeighingReceipt(state, store, { modal, mutate, render, toast });
 }

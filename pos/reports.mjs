@@ -641,7 +641,7 @@ export function reportSheets(s, f) {
       ["Toko", f.store ? label(s, "stores", f.store) : "Semua toko yang dapat diakses"],
       [
         "Penjualan",
-        "Transaksi lunas aktif, setelah diskon; pembatalan dikeluarkan dari periode penjualan asal.",
+        "Transaksi penjualan aktif, termasuk wholesale terkirim yang belum lunas, setelah diskon; pembatalan dikeluarkan dari periode penjualan asal.",
       ],
       [
         "Supplier",

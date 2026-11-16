@@ -131,7 +131,7 @@ export function bindReports(s, store, ctx) {
       headers = [],
       intro = "";
     if (tab === "summary") {
-      intro = `<div class="stats">${stat("Penjualan bersih", money(a.total))}${stat("Transaksi lunas aktif", num(a.tx.length))}${stat("Rata-rata transaksi", money(a.tx.length ? a.total / a.tx.length : 0))}${!s.access || s.access.finance ? stat("Pembelian + operasional", x.unknown ? "Belum lengkap" : money(x.total)) : ""}</div><p class="muted">Setelah diskon; transaksi batal/refund dikeluarkan dari periode penjualan asal. Invoice tidak menambah omzet.</p>`;
+      intro = `<div class="stats">${stat("Penjualan bersih", money(a.total))}${stat("Transaksi penjualan aktif", num(a.tx.length))}${stat("Rata-rata transaksi", money(a.tx.length ? a.total / a.tx.length : 0))}${!s.access || s.access.finance ? stat("Pembelian + operasional", x.unknown ? "Belum lengkap" : money(x.total)) : ""}</div><p class="muted">Setelah diskon; transaksi batal/refund dikeluarkan dari periode penjualan asal. Invoice dokumen tidak menambah omzet; wholesale dicatat sekali saat barang dikirim, termasuk yang belum lunas.</p>`;
       headers = ["Tanggal", "Transaksi", "Penjualan bersih"];
       rows = a.days.map((r) => [e(r.date), num(r.count), money(r.total)]);
     }

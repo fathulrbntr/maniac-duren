@@ -18,6 +18,7 @@ const files = [
   "ui-audit-browser.mjs",
   "public-browser.mjs",
   "warehouse-browser.mjs",
+  "warehouse-workflow-browser.mjs",
 ];
 for (const file of files) {
   console.log("\nRunning " + file);

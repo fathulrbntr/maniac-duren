@@ -1,3 +1,6 @@
+import { workflowReady, backOffice } from "./warehouse-workflow.mjs";
+import { receivingPage, openReceivingSession } from "./receiving-session-ui.mjs";
+import { outboundPage, openOutbound, openOutboundForm } from "./outbound-ui.mjs";
 import { escape as e, id, today, num, money } from "./core.mjs";
 import {
   warehouseEnabled,
@@ -101,14 +104,20 @@ export function supplyHome(s, store, space) {
         ) + " kg",
         "Siap pakai dan reject terpisah di stok",
       ) +
-      stat("Tagihan tersisa", money(due), "Invoice aktif dikurangi pembayaran");
+      (!workflowReady(s) || space === "backoffice"
+        ? stat("Tagihan tersisa", money(due), "Invoice aktif dikurangi pembayaran")
+        : stat(
+            "Penyiapan barang",
+            String((s.outboundOrders || []).filter((o) => o.status === "packing").length),
+            "Dokumen menunggu scan",
+          ));
   const desc =
     space === "backoffice"
       ? "PT. Altara Rasa Nusantara · kendali harga, distribusi, dan tagihan"
       : space === "warehouse"
         ? "Terima dari supplier, scan kiriman, lalu pantau penerimaan toko."
         : "Penerimaan lengkap, pelayanan meja, kasir, kitchen, dan potong buah.";
-  return `<section class="supply-workspace">${blocker(s)}<div class="supply-hero"><div><span class="supply-eyebrow">MANIAC DUREN / ${e(space === "backoffice" ? "ADMINISTRASI" : space === "warehouse" ? "DISTRIBUSI" : "PELAYANAN")}</span><h2>${title}</h2><p>${desc}</p></div><button type="button" data-supply-refresh>Perbarui</button></div><div class="supply-stats">${stats}</div><div class="supply-task-grid">${space === "backoffice" ? action("supplierNotes", "Nota supplier", "Atur modal dan ongkir sebelum gudang menerima") + action("pricing", "Harga transfer", "Harga khusus distribusi ke toko") + action("products", "Master barang & harga jual", "Harga pelanggan berlaku di seluruh toko") + action("transfers", "Pengiriman & tagihan", "Invoice, surat jalan, dan pembayaran") + action("reports", "Laporan batch supplier", "Telusuri posisi barang dan hasil olahan") : space === "warehouse" ? action("supplierNotes", "Penerimaan supplier", "Pilih nota admin dan scan label setiap buah") + action("transfers", "Pengiriman toko", "Scan barcode, terbitkan invoice dan surat jalan") + action("stock", "Stok gudang", "Periksa barang per produk dan batch") + action("waste", "Reject gudang", "Scan buah reject dan simpan buktinya") : [s.access?.receive ? action("receiving", "Terima kiriman", "Cari nomor nota, scan, periksa lengkap") : "", s.access?.serve ? action("service", "Waitress", "Meja, pesanan siap, dan pengantaran") : "", s.access?.sell ? action("orders", "Kasir", "Scan buah, pesanan tambahan, dan pembayaran") : "", s.access?.kitchen ? action("kitchen", "Kitchen", "Proses menu setelah pembayaran") : "", s.access?.cut ? action("cutting", "Tukang potong", "Scan buah, catat meja, dan tangani reject") : ""].join("")}</div>${
+  return `<section class="supply-workspace">${blocker(s)}<div class="supply-hero"><div><span class="supply-eyebrow">MANIAC DUREN / ${e(space === "backoffice" ? "ADMINISTRASI" : space === "warehouse" ? "DISTRIBUSI" : "PELAYANAN")}</span><h2>${title}</h2><p>${desc}</p></div><button type="button" data-supply-refresh>Perbarui</button></div><div class="supply-stats">${stats}</div><div class="supply-task-grid">${space === "backoffice" ? action("supplierNotes", "Nota supplier", "Atur modal dan ongkir sebelum gudang menerima") + action("pricing", "Harga transfer", "Harga khusus distribusi ke toko") + action("products", "Master barang & harga jual", "Harga pelanggan berlaku di seluruh toko") + action("transfers", "Pengiriman & tagihan", "Invoice, surat jalan, dan pembayaran") + action("reports", "Laporan batch supplier", "Telusuri posisi barang dan hasil olahan") : space === "warehouse" ? action("supplierNotes", "Penerimaan supplier", "Pilih nota admin dan scan label setiap buah") + action("transfers", "Pengiriman toko & wholesale", "Scan barang dari dokumen Back Office") + action("stock", "Stok gudang", "Periksa barang per produk dan batch") + action("waste", "Reject gudang", "Scan buah reject dan simpan buktinya") : [s.access?.receive ? action("receiving", "Terima kiriman", "Cari nomor nota, scan, periksa lengkap") : "", s.access?.serve ? action("service", "Waitress", "Meja, pesanan siap, dan pengantaran") : "", s.access?.sell ? action("orders", "Kasir", "Scan buah, pesanan tambahan, dan pembayaran") : "", s.access?.kitchen ? action("kitchen", "Kitchen", "Proses menu setelah pembayaran") : "", s.access?.cut ? action("cutting", "Tukang potong", "Scan buah, catat meja, dan tangani reject") : ""].join("")}</div>${
     space === "backoffice"
       ? `<section class="panel"><h3>Stok buah per lokasi</h3>${table(
           ["Lokasi", "Siap", "Reject"],
@@ -118,18 +127,25 @@ export function supplyHome(s, store, space) {
           ),
         )}</section>`
       : ""
-  }${operational ? "" : `<section class="panel"><h3>Kiriman yang belum diterima</h3>${transferTable(active.slice(0, 8))}</section>`}</section>`;
+  }${operational ? "" : `<section class="panel"><h3>Kiriman yang belum diterima</h3>${transferTable(active.slice(0, 8), !workflowReady(s) || space === "backoffice")}</section>`}</section>`;
 }
-function transferTable(rows) {
+function transferTable(rows, finance = true) {
   return table(
-    ["Nomor dokumen", "Tujuan / kiriman", "Status", "Tagihan", "Aksi"],
+    [
+      "Nomor dokumen",
+      "Tujuan / kiriman",
+      "Status",
+      ...(finance ? ["Tagihan"] : []),
+      "Aksi",
+    ],
     rows.map(
       (t) =>
-        `<tr><td><b>${e(t.deliveryNo)}</b><small>${e(t.invoiceNo)}</small></td><td>${e(t.destination.name)}<small>${t.items.length} buah · ${t.lines.length} baris batch/produk</small></td><td>${badge(t)}<small>${t.items.filter((i) => i.scannedAt).length}/${t.items.length} barcode diperiksa</small></td><td>${money(t.total)}<small>Sisa ${money(t.total - t.paid)}</small></td><td><button type="button" data-transfer="${e(t.id)}">Buka</button></td></tr>`,
+        `<tr><td><b>${e(t.deliveryNo)}</b><small>${e(t.invoiceNo)}</small></td><td>${e(t.destination.name)}<small>${t.items.length} buah · ${t.lines.length} baris batch/produk</small></td><td>${badge(t)}<small>${t.items.filter((i) => i.scannedAt).length}/${t.items.length} barcode diperiksa</small></td>${finance ? `<td>${money(t.total)}<small>Sisa ${money(t.total - t.paid)}</small></td>` : ""}<td><button type="button" data-transfer="${e(t.id)}">Buka</button></td></tr>`,
     ),
   );
 }
-export function transfersPage(s, store, incoming = false) {
+export function transfersPage(s, store, incoming = false, space) {
+  if (workflowReady(s) && !incoming) return outboundPage(s, store, space);
   const canSend =
     warehouseEnabled(s) &&
     s.access?.dispatch &&
@@ -146,6 +162,8 @@ export function transfersPage(s, store, incoming = false) {
     )}</select></div><section class="panel" data-transfer-list></section></section>`;
 }
 export function pricingPage(s) {
+  if (workflowReady(s))
+    return `<section class="supply-workspace"><section class="panel"><h2>Harga per transaksi</h2><p>Harga transfer toko dan wholesale ditentukan langsung pada dokumen pengiriman di Back Office. Pilih produk, satuan per kg/butir, lalu masukkan harga khusus transaksi tersebut.</p><p>Harga masih dapat diedit sebelum invoice diterbitkan. Pengaturan harga transfer lama tidak menentukan nilai dokumen baru.</p><button type="button" class="primary" data-view="transfers">Buka pengiriman & invoice</button></section></section>`;
   return `<section class="supply-workspace">${blocker(s)}<div class="supply-hero"><div><span class="supply-eyebrow">BACK OFFICE</span><h2>Harga transfer ke toko</h2><p>Harga ini terpisah dari modal batch dan harga jual pelanggan. Invoice yang sudah terbit tetap memakai harga saat dikirim.</p></div><button type="button" data-view="products">Master harga jual</button></div><section class="panel">${table(
     ["Produk", "Harga transfer", "Satuan", "Aksi"],
     s.products
@@ -156,7 +174,8 @@ export function pricingPage(s) {
       }),
   )}</section></section>`;
 }
-export function supplierNotesPage(s, store) {
+export function supplierNotesPage(s, store, space) {
+  if (workflowReady(s)) return receivingPage(s, store, space);
   const wh = warehouseId(s),
     plans = (s.receiptPlans || []).filter(
       (p) =>
@@ -350,7 +369,9 @@ export function openDispatch(s, store, ctx) {
 export function openWarehouseReceipt(s, store, ctx) {
   if (!safeContext(s, ctx)) return;
   const plans = (s.receiptPlans || []).filter(
-    (x) => x.storeId === store && !x.receivedId,
+    (x) =>
+      x.storeId === store &&
+      (workflowReady(s) ? x.receiving?.status !== "completed" : !x.receivedId),
   );
   if (!plans.length) {
     ctx.toast("Belum ada nota supplier. Admin perlu membuat nota terlebih dahulu.");
@@ -368,20 +389,22 @@ export function openWarehouseReceipt(s, store, ctx) {
     ev.preventDefault();
     const plan = plans.find((p) => p.id === ev.currentTarget.elements.plan.value);
     d.close();
-    openWeighingReceipt(s, store, { ...ctx, plan });
+    if (workflowReady(s)) openReceivingSession(s, plan.id, ctx);
+    else openWeighingReceipt(s, store, { ...ctx, plan });
   };
   return d;
 }
 function openTransfer(s, t, ctx, receiving) {
+  const finance = !workflowReady(s) || backOffice(s, ctx.workspace);
   const canReceive = receiving && s.access?.receive && t.status === "in_transit",
     scanned = t.items.filter((i) => i.scannedAt).length;
   const d = ctx.modal(
     t.deliveryNo,
-    `<div class="supply-detail-head"><div><h3>${e(t.origin.name)} → ${e(t.destination.name)}</h3><p>${e(t.invoiceNo)} · ${e(t.carrier)}</p></div>${badge(t)}</div><div class="toolbar"><button type="button" data-print-invoice>Cetak invoice</button><button type="button" data-print-delivery>Cetak surat jalan</button></div><div class="supply-stats">${stat("Total tagihan", money(t.total))}${stat("Sisa tagihan", money(t.total - t.paid))}${stat("Barcode cocok", scanned + " / " + t.items.length)}</div>${table(
-      ["Barang / batch", "Jumlah", "Harga transfer", "Total"],
+    `<div class="supply-detail-head"><div><h3>${e(t.origin.name)} → ${e(t.destination.name)}</h3><p>${e(t.invoiceNo)} · ${e(t.carrier)}</p></div>${badge(t)}</div><div class="toolbar">${finance ? '<button type="button" data-print-invoice>Cetak invoice</button>' : ""}<button type="button" data-print-delivery>Cetak surat jalan</button></div><div class="supply-stats">${finance ? stat("Total tagihan", money(t.total)) + stat("Sisa tagihan", money(t.total - t.paid)) : ""}${stat("Barcode cocok", scanned + " / " + t.items.length)}</div>${table(
+      ["Barang / batch", "Jumlah", ...(finance ? ["Harga transfer", "Total"] : [])],
       t.lines.map(
         (l) =>
-          `<tr><td>${e(l.productName)}<small>${e(l.supplierName || "—")} · ${e(l.sourceLotId.slice(0, 8))}</small></td><td>${l.kind === "fruit" ? num(l.kg) + " kg / " + l.pieces + " butir" : num(l.qty) + " " + e(l.unit)}</td><td>${money(l.price)} / ${e(l.unit)}</td><td>${money(l.total)}</td></tr>`,
+          `<tr><td>${e(l.productName)}<small>${e(l.supplierName || "—")} · ${e(l.sourceLotId.slice(0, 8))}</small></td><td>${l.kind === "fruit" ? num(l.kg) + " kg / " + l.pieces + " butir" : num(l.qty) + " " + e(l.unit)}</td>${finance ? `<td>${money(l.price)} / ${e(l.unit)}</td><td>${money(l.total)}</td>` : ""}</tr>`,
       ),
     )}${canReceive ? `<div class="supply-step"><b>1</b><span>Scan ulang barang yang tiba</span></div><div class="supply-scan"><input data-receive-code maxlength="26" autocomplete="off" spellcheck="false" placeholder="Scan barcode penerimaan" aria-label="Scan barcode penerimaan"><button type="button" data-receive-add>Catat scan</button></div><p data-receive-message role="status"></p><p class="notice">Scan tersimpan di server. Seluruh kiriman tetap dalam perjalanan sampai barcode lengkap dan penerimaan dikonfirmasi.</p>` : ""}<div data-receive-list>${receiptItems(t)}</div>${
       canReceive && t.lines.some((l) => l.kind === "unit")
@@ -395,7 +418,7 @@ function openTransfer(s, t, ctx, receiving) {
             )
             .join("")}`
         : ""
-    }${canReceive ? '<label class="supply-check"><input type="checkbox" name="confirmed" required> Semua barang sudah diperiksa dan sesuai surat jalan.</label>' : ""}${s.access?.backoffice && t.status !== "cancelled" ? `<div class="toolbar">${t.paid < t.total ? '<button type="button" data-transfer-payment>Catat pembayaran</button>' : ""}${t.status === "in_transit" && t.paid === 0 && scanned === 0 ? '<button type="button" data-transfer-cancel>Batalkan kiriman</button>' : ""}</div>` : ""}<p>${e(t.note || "")}</p>`,
+    }${canReceive ? '<label class="supply-check"><input type="checkbox" name="confirmed" required> Semua barang sudah diperiksa dan sesuai surat jalan.</label>' : ""}${finance && s.access?.backoffice && t.status !== "cancelled" ? `<div class="toolbar">${t.paid < t.total && !(s.outboundOrders || []).some((o) => o.id === t.id) ? '<button type="button" data-transfer-payment>Catat pembayaran</button>' : ""}${t.status === "in_transit" && t.paid === 0 && scanned === 0 ? '<button type="button" data-transfer-cancel>Batalkan kiriman</button>' : ""}</div>` : ""}<p>${e(t.note || "")}</p>`,
     canReceive ? "Konfirmasi penerimaan lengkap" : "Tutup",
   );
   d.classList.add("supply-modal");
@@ -409,7 +432,9 @@ function openTransfer(s, t, ctx, receiving) {
     win.document.write(transferDocument(t, type));
     win.document.close();
   };
-  d.querySelector("[data-print-invoice]").onclick = () => print("invoice");
+  d.querySelector("[data-print-invoice]")?.addEventListener("click", () =>
+    print("invoice"),
+  );
   d.querySelector("[data-print-delivery]").onclick = () => print("delivery");
   let working = false,
     scanId = null,
@@ -573,7 +598,7 @@ function noteDialog(s, ctx) {
     list.innerHTML = rows
       .map(
         (r, i) =>
-          `<div class="form-grid" data-note-line="${i}">${field("Produk", `<select data-note-product>${opts(products, r.productId)}</select>`)}${field("Total harga produk di nota (Rp)", `<input data-note-cost type="number" min="0.01" step="any" value="${e(r.purchaseCost)}" required>`)}${rows.length > 1 ? `<button type="button" data-note-remove="${i}">Hapus</button>` : ""}</div>`,
+          `<div class="form-grid" data-note-line="${i}">${field("Produk", `<select data-note-product>${opts(products, r.productId)}</select>`)}${field("Total harga produk di nota (Rp)", `<input data-note-cost type="number" min="0.01" step="any" value="${e(r.purchaseCost)}" required>`)}${workflowReady(s) ? field("Berat pada nota (kg)", `<input data-note-kg type="number" min="0.001" max="9000000" step="0.001" value="${e(r.expectedKg || "")}" required>`) + field("Butir pada nota", `<input data-note-pieces type="number" min="1" max="9000000" step="1" value="${e(r.expectedPieces || "")}" required>`) : ""}${rows.length > 1 ? `<button type="button" data-note-remove="${i}">Hapus</button>` : ""}</div>`,
       )
       .join("");
     list.querySelectorAll("[data-note-line]").forEach((el) => {
@@ -582,6 +607,14 @@ function noteDialog(s, ctx) {
         (r.productId = ev.target.value);
       el.querySelector("[data-note-cost]").oninput = (ev) =>
         (r.purchaseCost = ev.target.value);
+      el.querySelector("[data-note-kg]")?.addEventListener(
+        "input",
+        (ev) => (r.expectedKg = ev.target.value),
+      );
+      el.querySelector("[data-note-pieces]")?.addEventListener(
+        "input",
+        (ev) => (r.expectedPieces = ev.target.value),
+      );
     });
     list.querySelectorAll("[data-note-remove]").forEach(
       (b) =>
@@ -644,6 +677,33 @@ export function cuttingPage(s, store) {
   )}</section></section>`;
 }
 export function bindSupply(s, store, view, ctx) {
+  ctx = {
+    ...ctx,
+    printOutbound: (o, type) => {
+      if (type === "invoice" && !backOffice(s, ctx.workspace)) return;
+      const win = window.open("", "_blank");
+      if (!win) return ctx.toast("Izinkan pop-up untuk mencetak.");
+      win.opener = null;
+      win.document.write(transferDocument(o, type));
+      win.document.close();
+    },
+  };
+  document
+    .querySelectorAll("[data-session-open]")
+    .forEach(
+      (b) =>
+        (b.onclick = () =>
+          openReceivingSession(ctx.getState(), b.dataset.sessionOpen, ctx)),
+    );
+  document
+    .querySelectorAll("[data-outbound-open]")
+    .forEach(
+      (b) =>
+        (b.onclick = () => openOutbound(ctx.getState(), b.dataset.outboundOpen, ctx)),
+    );
+  document
+    .querySelector("[data-outbound-new]")
+    ?.addEventListener("click", () => openOutboundForm(ctx.getState(), store, ctx));
   document.querySelectorAll("[data-supply-refresh]").forEach(
     (b) =>
       (b.onclick = async () => {
@@ -678,6 +738,7 @@ export function bindSupply(s, store, view, ctx) {
                 .toLowerCase()
                 .includes(q)),
         ),
+        !workflowReady(s) || backOffice(s, ctx.workspace),
       );
     };
     document.querySelector("[data-transfer-search]").oninput = draw;
@@ -780,14 +841,19 @@ export function bindSupply(s, store, view, ctx) {
     b.onclick = () => {
       const current = ctx.getState?.() || s;
       const plan = current.receiptPlans.find((p) => p.id === b.dataset.noteOpen);
-      if (plan) openSupplierNote(current, plan, ctx);
+      if (plan) {
+        if (workflowReady(current) && !backOffice(current, ctx.workspace))
+          openReceivingSession(current, plan.id, ctx);
+        else openSupplierNote(current, plan, ctx);
+      }
     };
   });
   document.querySelectorAll("[data-note-receive]").forEach(
     (b) =>
       (b.onclick = () => {
         const plan = s.receiptPlans.find((x) => x.id === b.dataset.noteReceive);
-        openWeighingReceipt(s, plan.storeId, { ...ctx, plan });
+        if (workflowReady(s)) openReceivingSession(ctx.getState(), plan.id, ctx);
+        else openWeighingReceipt(s, plan.storeId, { ...ctx, plan });
       }),
   );
   document.querySelectorAll("[data-service-complete]").forEach((b) => {
