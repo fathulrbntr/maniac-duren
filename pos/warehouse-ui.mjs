@@ -9,6 +9,7 @@ import {
   transferPreview,
   transferDocument,
 } from "./warehouse-flow.mjs";
+import { notePaymentCell, openSupplierNote } from "./supplier-notes-ui.mjs";
 import { openWeighingReceipt } from "./receipt-weighing.mjs";
 const field = (label, html) => `<label class="field">${e(label)}${html}</label>`;
 const name = (s, key, v) => s[key]?.find((x) => x.id === v)?.name || "—";
@@ -162,10 +163,17 @@ export function supplierNotesPage(s, store) {
         p.storeId === (location(s, store)?.locationType === "warehouse" ? store : wh),
     );
   return `<section class="supply-workspace">${blocker(s)}<div class="supply-hero"><div><span class="supply-eyebrow">PENERIMAAN SUPPLIER</span><h2>Nota barang masuk gudang</h2><p>Admin mengisi harga nota dan ongkir. Petugas gudang memilih nota lalu scan seluruh buah.</p></div><div class="toolbar"><button type="button" data-supply-refresh>Perbarui</button>${s.access?.backoffice ? `<button type="button" data-legacy-labels>Registrasi barcode stok lama</button><button type="button" class="primary" data-note-new ${warehouseEnabled(s) ? "" : "disabled"}>+ Nota supplier</button>` : ""}</div></div><section class="panel">${table(
-    ["Nota / supplier", "Tanggal", "Isi nota", "Status", "Aksi"],
+    [
+      "Nota / supplier",
+      "Tanggal",
+      "Pembayaran nota",
+      "Pembayaran ongkir",
+      "Penerimaan",
+      "Aksi",
+    ],
     plans.map(
       (p) =>
-        `<tr><td><b>${e(p.invoiceNo)}</b><small>${e(name(s, "suppliers", p.supplierId))}</small></td><td>${e(p.date)}</td><td>${p.lines.length} produk</td><td>${p.receivedId ? "Sudah diterima" : "Menunggu scan gudang"}</td><td>${!p.receivedId ? `<button type="button" data-note-receive="${e(p.id)}" ${warehouseEnabled(s) ? "" : "disabled"}>Scan penerimaan</button>` : "Tersimpan"}</td></tr>`,
+        `<tr><td><b>${e(p.invoiceNo)}</b><small>${e(name(s, "suppliers", p.supplierId))}</small></td><td>${e(p.date)}</td><td>${notePaymentCell(p, "invoice")}</td><td>${notePaymentCell(p, "shipping")}</td><td>${p.receivedId ? "Sudah diterima" : "Menunggu scan gudang"}</td><td><button type="button" data-note-open="${e(p.id)}">Buka nota</button>${!p.receivedId ? `<button type="button" data-note-receive="${e(p.id)}" ${warehouseEnabled(s) ? "" : "disabled"}>Scan penerimaan</button>` : ""}</td></tr>`,
     ),
   )}</section></section>`;
 }
@@ -768,6 +776,13 @@ export function bindSupply(s, store, view, ctx) {
   document
     .querySelector("[data-note-new]")
     ?.addEventListener("click", () => noteDialog(s, ctx));
+  document.querySelectorAll("[data-note-open]").forEach((b) => {
+    b.onclick = () => {
+      const current = ctx.getState?.() || s;
+      const plan = current.receiptPlans.find((p) => p.id === b.dataset.noteOpen);
+      if (plan) openSupplierNote(current, plan, ctx);
+    };
+  });
   document.querySelectorAll("[data-note-receive]").forEach(
     (b) =>
       (b.onclick = () => {

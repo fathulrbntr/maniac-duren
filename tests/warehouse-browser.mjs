@@ -7,6 +7,7 @@ import { openSidebar } from "./helpers/browser-sidebar.mjs";
 import { warehouseDatabase } from "./helpers/warehouse-db.mjs";
 const db = await warehouseDatabase(),
   root = process.cwd();
+await db.exec(fs.readFileSync("database/supplier-notes-112.sql", "utf8"));
 const owner = id(),
   warehouseUser = id(),
   cashier = id(),
@@ -162,6 +163,10 @@ try {
   };
   await login("warehouse");
   await nav("supplierNotes");
+  await page.locator("[data-note-open]").click();
+  assert.equal(await page.locator("[data-note-correct]").count(), 0);
+  assert.equal(await page.locator("[data-note-pay]").count(), 0);
+  await page.locator("dialog[open] [type=submit]").click();
   await page.locator("[data-note-receive]").click();
   assert.equal(await page.locator("[data-purchase]").getAttribute("readonly"), "");
   assert.equal(await page.locator("[name=invoiceNo]").inputValue(), "SUP-BROWSER");
@@ -244,6 +249,61 @@ try {
   );
   await login("owner");
   await page.locator("[data-workspace=backoffice]").click();
+  await nav("supplierNotes");
+  await page.locator("[data-note-open]").click();
+  assert.match(await page.locator("dialog[open]").innerText(), /Sudah diterima/);
+  await page.locator('[data-note-pay="shipping"]').click();
+  await page.locator('dialog[open] [name="reference"]').fill("ONGKIR-0001");
+  await page.locator('dialog[open] [type="submit"]').click();
+  await page.locator(".note-detail").waitFor();
+  assert.match(await page.locator(".note-payment-card").nth(1).innerText(), /Lunas/);
+  await page.locator('[data-note-pay="invoice"]').click();
+  await page.locator('dialog[open] [name="amount"]').fill("100000");
+  await page.locator('dialog[open] [type="submit"]').click();
+  await page.locator(".note-detail").waitFor();
+  assert.match(await page.locator(".note-payment-card").nth(0).innerText(), /Sebagian/);
+  await page.locator("[data-note-correct]").click();
+  await page.locator('dialog[open] [name="cost0"]').fill("240000");
+  await page.locator('dialog[open] [name="shippingCost"]').fill("30000");
+  await page
+    .locator('dialog[open] [name="reason"]')
+    .fill("Koreksi total sesuai nota asli");
+  await page.locator('dialog[open] [name="confirmed"]').check();
+  await page.locator('dialog[open] [type="submit"]').click();
+  await page.locator(".note-detail").waitFor();
+  assert.match(
+    await page.locator("dialog[open]").innerText(),
+    /Koreksi total sesuai nota asli/,
+  );
+  assert.match(await page.locator(".note-payment-card").nth(1).innerText(), /Sebagian/);
+  for (const theme of ["light", "dark"]) {
+    await page.evaluate(
+      (value) => (document.documentElement.dataset.theme = value),
+      theme,
+    );
+    for (const width of [360, 390, 1440]) {
+      await page.setViewportSize({ width, height: 1000 });
+      assert(
+        await page
+          .locator("dialog[open]")
+          .evaluate((d) => d.scrollWidth <= d.clientWidth + 1),
+        "supplier note fits " + width,
+      );
+    }
+  }
+  await page.screenshot({
+    path: "test-results/supplier-note-detail-112.png",
+    fullPage: true,
+  });
+  await page.locator('dialog[open] [type="submit"]').click();
+  await page.reload();
+  await nav("supplierNotes");
+  await page.locator("[data-note-open]").click();
+  assert.match(await page.locator("dialog[open]").innerText(), /ONGKIR-0001/);
+  assert.equal(await page.locator(".note-history-item").count(), 3);
+  await page.locator('dialog[open] [type="submit"]').click();
+  await openSidebar(page);
+  await page.locator("[data-workspace=backoffice]").click();
   await page.screenshot({
     path: "test-results/warehouse-backoffice-desktop.png",
     fullPage: true,
@@ -282,7 +342,7 @@ try {
   );
   assert.deepEqual(errors, []);
   console.log(
-    "PASS browser + real SQL: admin note → warehouse scan → dispatch → documents → partial scan/reload → full receive → role workspaces, price form and responsive widths.",
+    "PASS browser + real SQL: admin note → warehouse scan → dispatch → documents → partial scan/reload → full receive → role workspaces, split supplier payments, owner correction, persisted history, price form and responsive widths.",
   );
 } finally {
   await browser.close();

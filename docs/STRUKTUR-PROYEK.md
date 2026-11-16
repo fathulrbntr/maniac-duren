@@ -50,6 +50,7 @@ Jalankan `npm run check`, `npm test`, lalu `npm run test:browser` untuk perubaha
 ## Peta tambahan audit 110
 
 - `pos/data/mutations.mjs`: satu dispatcher endpoint penyimpanan, termasuk penggabungan hasil scan gudang.
+- `pos/supplier-notes.mjs`, `pos/supplier-notes-ui.mjs`: saldo nota/ongkir, detail nota, pembayaran, serta koreksi owner melalui RPC gudang; aturan akses dan audit ada di `database/supplier-notes-112.sql`.
 - `pos/warehouse-*.mjs`, `pos/workspaces.mjs`: gudang, branch outlet, pengiriman, dan ruang kerja per divisi.
 - `pos/customer-display-*.mjs`, `api/pos-display.js`: layar pelanggan lokal/wireless.
 - `assets/logo.png`: sumber logo bersama untuk website dan POS; ikon PWA tetap terpisah sesuai ukuran.

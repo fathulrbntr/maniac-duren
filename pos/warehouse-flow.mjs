@@ -1,6 +1,8 @@
 import { escape as e, num, money } from "./core.mjs";
 import { parseTrackingBarcode } from "./scale-label.mjs";
+import { supplierNoteActions } from "./supplier-notes.mjs";
 export const supplyActions = new Set([
+  ...supplierNoteActions,
   "transfer_price_save",
   "receipt_plan_save",
   "transfer_dispatch",

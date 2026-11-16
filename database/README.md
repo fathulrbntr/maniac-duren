@@ -56,7 +56,10 @@ Fixture autentikasi lokal tidak menggantikan pemeriksaan konfigurasi Supabase, J
 | 106 | `fruit-batch-strict-scan-106.sql` | Barcode wajib sesuai batch asal |
 | 107 | `warehouse-flow-107.sql` | Gudang, outlet, surat jalan, penerimaan, peran divisi |
 | 109 | `reset-operasional-109.sql` | Alat penghapusan operasional, **bukan langkah instalasi** |
+| 112 | `supplier-notes-112.sql` | Detail nota supplier, pembayaran nota/ongkir terpisah, koreksi owner |
 
 Patch 108 hanya mengubah tampilan lokasi. Rantai fondasi sampai 107 dan wireless 103 diuji bersama secara lokal. Berkas 105/106 di `database/` memiliki salinan dengan identitas migrasi CLI di `supabase/migrations/`; keduanya dipertahankan dan diperiksa identik oleh `npm run check`. Menghapus riwayat migrasi dapat mengganggu database yang telah memakai CLI.
 
 `.vercelignore` mengecualikan **kedua** folder SQL. Gunakan salah satu jalur pemasangan yang sesuai riwayat database; jangan menjalankan ulang kedua salinan atau patch lama untuk merapikan kode.
+
+Patch 112 dipasang setelah 107; patch 109 tidak diperlukan. Baca `docs/PATCH-112-NOTA-SUPPLIER.md`. Salinan CLI `supabase/migrations/20261116112253_supplier_note_payments_112.sql` identik dengan sumber 112 dan ikut diperiksa oleh `npm run check`. Gunakan satu jalur instalasi sesuai riwayat proyek.
