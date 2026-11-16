@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { randomUUID as id } from "node:crypto";
+import { money } from "../pos/core.mjs";
 import { chromium } from "playwright";
 import { openSidebar } from "./helpers/browser-sidebar.mjs";
 import { warehouseDatabase } from "./helpers/warehouse-db.mjs";
@@ -252,6 +253,11 @@ try {
   await nav("supplierNotes");
   await page.locator("[data-note-open]").click();
   assert.match(await page.locator("dialog[open]").innerText(), /Sudah diterima/);
+  assert.equal(await page.locator("[data-note-cost-kg]").innerText(), money(220000 / 6));
+  assert.equal(
+    await page.locator("[data-note-cost-piece]").innerText(),
+    money(220000 / 3),
+  );
   await page.locator('[data-note-pay="shipping"]').click();
   await page.locator('dialog[open] [name="reference"]').fill("ONGKIR-0001");
   await page.locator('dialog[open] [type="submit"]').click();
@@ -276,6 +282,8 @@ try {
     /Koreksi total sesuai nota asli/,
   );
   assert.match(await page.locator(".note-payment-card").nth(1).innerText(), /Sebagian/);
+  assert.equal(await page.locator("[data-note-cost-kg]").innerText(), money(45000));
+  assert.equal(await page.locator("[data-note-cost-piece]").innerText(), money(90000));
   for (const theme of ["light", "dark"]) {
     await page.evaluate(
       (value) => (document.documentElement.dataset.theme = value),
@@ -301,6 +309,8 @@ try {
   await page.locator("[data-note-open]").click();
   assert.match(await page.locator("dialog[open]").innerText(), /ONGKIR-0001/);
   assert.equal(await page.locator(".note-history-item").count(), 3);
+  assert.equal(await page.locator("[data-note-cost-kg]").innerText(), money(45000));
+  assert.equal(await page.locator("[data-note-cost-piece]").innerText(), money(90000));
   await page.locator('dialog[open] [type="submit"]').click();
   await openSidebar(page);
   await page.locator("[data-workspace=backoffice]").click();

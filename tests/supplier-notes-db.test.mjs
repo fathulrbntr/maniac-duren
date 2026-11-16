@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import { randomUUID as id } from "node:crypto";
 import { warehouseDatabase } from "./helpers/warehouse-db.mjs";
-import { noteBalance } from "../pos/supplier-notes.mjs";
+import { noteBalance, noteUnitCosts } from "../pos/supplier-notes.mjs";
 import { batchReports } from "../pos/batch-report.mjs";
 const db = await warehouseDatabase();
 try {
@@ -333,6 +333,7 @@ try {
   const root = s.lots.find((l) => l.id === batch.lines[0].id),
     target = s.lots.find((l) => l.sourceLotId === root.id);
   assert.equal(root.unitCost, 105000);
+  assert.deepEqual(noteUnitCosts(root), { perKg: 105000, perPiece: 210000 });
   assert.equal(root.purchaseCost, 600000);
   assert.equal(root.shippingCost, 30000);
   assert.equal(target.unitCost, 120000, "issued transfer valuation remains fixed");
@@ -496,6 +497,13 @@ try {
       "invoice",
     ).total,
     800000,
+  );
+  assert.deepEqual(
+    multiBatch.lines.map((l) => noteUnitCosts(s.lots.find((x) => x.id === l.id))),
+    [
+      { perKg: 301500, perPiece: 603000 },
+      { perKg: 51500, perPiece: 206000 },
+    ],
   );
   const privileges = (
     await db.query(

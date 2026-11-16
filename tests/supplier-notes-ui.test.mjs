@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { Node, makeModal } from "./variant-dom.mjs";
-import { noteBalance, noteMoney, noteOwner } from "../pos/supplier-notes.mjs";
+import {
+  noteBalance,
+  noteMoney,
+  noteOwner,
+  noteUnitCosts,
+} from "../pos/supplier-notes.mjs";
+import { money } from "../pos/core.mjs";
 import { openSupplierNote } from "../pos/supplier-notes-ui.mjs";
 import { supplierNotesPage, bindSupply } from "../pos/warehouse-ui.mjs";
 Object.defineProperties(Node.prototype, {
@@ -191,6 +197,73 @@ for (const value of ["", " ", null, NaN, Infinity, -1, 1.001])
   assert.throws(() => noteMoney(value, true));
 assert.equal(noteMoney("150000.25"), 150000.25);
 assert.equal(noteMoney("0", true), 0);
+// Ratios use landed cost and original receipt quantities, even with no stock left.
+const batch = {
+  id: "batch",
+  shipmentId: "receipt",
+  productId: "fruit",
+  totalCost: 220000,
+  purchaseCost: 200000,
+  shippingCost: 20000,
+  receivedKg: 6,
+  receivedPieces: 3,
+  kg: 0,
+  pieces: 0,
+};
+assert.deepEqual(noteUnitCosts(batch), { perKg: 220000 / 6, perPiece: 220000 / 3 });
+assert.deepEqual(noteUnitCosts({ ...batch, kg: 2, pieces: 1 }), noteUnitCosts(batch));
+assert.deepEqual(noteUnitCosts({ ...batch, totalCost: 270000 }), {
+  perKg: 45000,
+  perPiece: 90000,
+});
+assert.deepEqual(noteUnitCosts({ ...batch, totalCost: 0 }), { perKg: 0, perPiece: 0 });
+assert.deepEqual(
+  noteUnitCosts({ ...batch, receivedKg: "6", receivedPieces: "3", totalCost: "220000" }),
+  noteUnitCosts(batch),
+);
+for (const value of [null, undefined, "", " ", -1, NaN, Infinity, true]) {
+  assert.deepEqual(noteUnitCosts({ ...batch, totalCost: value }), {
+    perKg: null,
+    perPiece: null,
+  });
+  assert.equal(noteUnitCosts({ ...batch, receivedKg: value }).perKg, null);
+  assert.equal(noteUnitCosts({ ...batch, receivedPieces: value }).perPiece, null);
+}
+assert.equal(noteUnitCosts({ ...batch, receivedPieces: 1.5 }).perPiece, null);
+assert.equal(noteUnitCosts({ ...batch, receivedKg: 0 }).perKg, null);
+assert.equal(noteUnitCosts({ ...batch, receivedPieces: 0 }).perPiece, null);
+assert.deepEqual(noteUnitCosts(), { perKg: null, perPiece: null });
+const detailsState = {
+  ...s,
+  lots: [
+    {
+      ...batch,
+      id: "transferred",
+      sourceLotId: "batch",
+      totalCost: 500000,
+      receivedKg: 2,
+      receivedPieces: 1,
+    },
+    { ...batch, id: "other-shipment", shipmentId: "other", totalCost: 1 },
+    batch,
+  ],
+};
+d = openSupplierNote(detailsState, p, ctx);
+assert.equal(d.querySelector("[data-note-cost-kg]").textContent, money(220000 / 6));
+assert.equal(d.querySelector("[data-note-cost-piece]").textContent, money(220000 / 3));
+assert.match(d.textContent, /termasuk alokasi ongkir/);
+const callsBeforeViewing = calls.length;
+d = openSupplierNote(detailsState, { ...p, receivedId: null }, ctx);
+assert.equal(d.querySelector("[data-note-cost-kg]").textContent, "—");
+assert.equal(d.querySelector("[data-note-cost-piece]").textContent, "—");
+assert.match(d.textContent, /setelah penerimaan selesai/);
+d = openSupplierNote({ ...detailsState, lots: [{ ...batch, totalCost: null }] }, p, ctx);
+assert.equal(
+  d.querySelector("[data-note-cost-kg]").textContent,
+  "—",
+  "unavailable finance data is not displayed as zero",
+);
+assert.equal(calls.length, callsBeforeViewing, "opening cost details does not save data");
 console.log(
-  "PASS supplier note UI: received detail, separate statuses and forms, legacy unknown, owner gate, escaped content, stable retry/revision, double-submit guard, corrections and payment cancellation.",
+  "PASS supplier note UI: received detail, separate statuses and forms, legacy unknown, owner gate, escaped content, stable retry/revision, double-submit guard, corrections, payment cancellation, landed cost/kg and cost/piece from original receipt quantities.",
 );

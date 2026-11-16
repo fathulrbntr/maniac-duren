@@ -9,6 +9,32 @@ export const noteReady = (s) => s.supplierNotesVersion >= 112 && !s.stockDemo;
 export const noteOwner = (s) => noteReady(s) && s.me?.role === "owner";
 export const noteCanPay = (s) =>
   noteReady(s) && !!s.access?.backoffice && !!s.access?.finance;
+// Use the received batch's landed cost and original quantities. Current stock
+// changes after sales/transfers; payments do not change the cost basis.
+export function noteUnitCosts(batch) {
+  const numeric = (value) =>
+    value == null || typeof value === "boolean" || String(value).trim() === ""
+      ? NaN
+      : Number(value);
+  const total = numeric(batch?.totalCost);
+  const per = (quantity) => {
+    const qty = numeric(quantity);
+    const value = total / qty;
+    return Number.isFinite(total) &&
+      total >= 0 &&
+      qty > 0 &&
+      Number.isFinite(qty) &&
+      Number.isFinite(value)
+      ? value
+      : null;
+  };
+  return {
+    perKg: per(batch?.receivedKg),
+    perPiece: Number.isInteger(numeric(batch?.receivedPieces))
+      ? per(batch?.receivedPieces)
+      : null,
+  };
+}
 export function noteBalance(note, component) {
   const total =
     component === "shipping"

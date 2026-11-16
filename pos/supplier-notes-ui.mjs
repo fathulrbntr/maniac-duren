@@ -5,7 +5,12 @@ import {
   noteOwner,
   noteCanPay,
   noteMoney,
+  noteUnitCosts,
 } from "./supplier-notes.mjs";
+const costValue = (value) =>
+  value == null
+    ? '<span title="Modal atau data penerimaan belum tersedia">—</span>'
+    : money(value);
 const field = (label, input) => `<label class="field">${e(label)}${input}</label>`;
 const name = (s, collection, key) =>
   s[collection]?.find((v) => v.id === key)?.name || "—";
@@ -103,14 +108,15 @@ export function openSupplierNote(s, p, ctx) {
     .join("");
   const d = ctx.modal(
     "Detail nota supplier",
-    `<div class="note-detail"><header><h3>${e(p.invoiceNo)}</h3><p>${e(name(s, "suppliers", p.supplierId))} · ${e(p.date)}</p><p>${e(name(s, "stores", p.storeId))} · <b>${p.receivedId ? "Sudah diterima" : "Menunggu scan gudang"}</b></p></header>${s.stockDemo ? '<p class="notice">Mode demo aktif. Pembayaran dan koreksi nota hanya tersedia pada data nyata.</p>' : !noteReady(s) ? '<p class="notice">Pasang pembaruan nota supplier 112 untuk mencatat pembayaran dan koreksi owner.</p>' : ""}<div class="note-payment-grid">${paymentCard(s, p, "invoice")}${paymentCard(s, p, "shipping")}</div><h3>Rincian produk</h3><div class="table-wrap"><table><thead><tr><th>Produk</th><th>Total harga nota</th><th>Diterima</th><th>Alokasi ongkir</th></tr></thead><tbody>${p.lines
+    `<div class="note-detail"><header><h3>${e(p.invoiceNo)}</h3><p>${e(name(s, "suppliers", p.supplierId))} · ${e(p.date)}</p><p>${e(name(s, "stores", p.storeId))} · <b>${p.receivedId ? "Sudah diterima" : "Menunggu scan gudang"}</b></p></header>${s.stockDemo ? '<p class="notice">Mode demo aktif. Pembayaran dan koreksi nota hanya tersedia pada data nyata.</p>' : !noteReady(s) ? '<p class="notice">Pasang pembaruan nota supplier 112 untuk mencatat pembayaran dan koreksi owner.</p>' : ""}<div class="note-payment-grid">${paymentCard(s, p, "invoice")}${paymentCard(s, p, "shipping")}</div><h3>Rincian produk</h3><div class="table-wrap"><table><thead><tr><th>Produk</th><th>Total harga nota</th><th>Diterima</th><th>Alokasi ongkir</th><th>Modal/kg</th><th>Modal/butir</th></tr></thead><tbody>${p.lines
       .map((l) => {
         const batch = batches.find((b) => b.productId === l.productId);
-        return `<tr><td>${e(name(s, "products", l.productId))}</td><td>${money(l.purchaseCost)}</td><td>${batch ? `${num(batch.receivedKg)} kg / ${num(batch.receivedPieces)} butir` : "—"}</td><td>${batch?.shippingCost != null ? money(batch.shippingCost) : "—"}</td></tr>`;
+        const costs = noteUnitCosts(batch);
+        return `<tr data-note-cost-row="${e(l.productId)}"><td>${e(name(s, "products", l.productId))}</td><td>${money(l.purchaseCost)}</td><td>${batch ? `${num(batch.receivedKg)} kg / ${num(batch.receivedPieces)} butir` : "—"}</td><td>${batch?.shippingCost != null ? money(batch.shippingCost) : "—"}</td><td data-note-cost-kg>${costValue(costs.perKg)}</td><td data-note-cost-piece>${costValue(costs.perPiece)}</td></tr>`;
       })
       .join(
         "",
-      )}</tbody></table></div>${noteOwner(s) ? '<button type="button" data-note-correct>Koreksi harga & ongkir · Owner</button>' : '<p class="muted">Koreksi harga dan ongkir hanya dapat disetujui melalui akun owner.</p>'}<h3>Riwayat pembayaran</h3>${history || '<p class="muted">Belum ada pembayaran yang dicatat.</p>'}<h3>Riwayat koreksi owner</h3>${corrections || '<p class="muted">Belum ada koreksi.</p>'}</div>`,
+      )}</tbody></table></div><p class="muted">Modal termasuk alokasi ongkir, dibagi berat atau jumlah buah saat penerimaan. Modal/butir merupakan rata-rata per buah.${p.receivedId ? " Nilai — berarti data modal atau penerimaan belum tersedia untuk akun ini." : " Perhitungan tersedia setelah penerimaan selesai."}</p>${noteOwner(s) ? '<button type="button" data-note-correct>Koreksi harga & ongkir · Owner</button>' : '<p class="muted">Koreksi harga dan ongkir hanya dapat disetujui melalui akun owner.</p>'}<h3>Riwayat pembayaran</h3>${history || '<p class="muted">Belum ada pembayaran yang dicatat.</p>'}<h3>Riwayat koreksi owner</h3>${corrections || '<p class="muted">Belum ada koreksi.</p>'}</div>`,
     "Tutup",
   );
   d.classList.add("supply-modal");
