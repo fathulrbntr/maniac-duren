@@ -105,3 +105,21 @@ untuk fitur baru yang memerlukan beberapa file, bukan tempat menyalin modul lama
   Fixture bersama berada di `tests/helpers/outbound-invoices-fixture.mjs`.
 - Patch ini memakai data dan otorisasi patch 114; tidak menambah jalur mutasi atau
   migrasi SQL. Panduan pemasangan dan commit/push: `docs/PATCH-115-INVOICE-FILTER.md`.
+
+## Supplier dan input POS 116
+
+- `pos/supplier-ui.mjs`: form tambah supplier bersama dan pilihan tambah dari dropdown.
+  Dipasang oleh factory modal `app.js`; dropdown stok produk dinamis dipasang oleh
+  `product-dialog.mjs`. Mutasi tetap `master` melalui `ctx.mutate`, dengan ID tetap
+  saat retry. Form induk tetap terpasang selama supplier disimpan.
+- `pos/money-input.mjs`: formatter seluruh input `type=number`, termasuk input
+  tanpa nama dan kolom dinamis. Tampilan memakai titik ribuan dan koma desimal;
+  `.value`, `.valueAsNumber` dan `FormData` tetap memakai angka tanpa pemisah ribuan.
+  Pertahankan atribut `min`, `max`, `step`, `required` untuk validasi.
+- `pos/barcode-scanner.mjs`: persiapan penggantian isi dan pemulihan fokus kolom
+  barcode. Barcode tetap string dan mempertahankan nol depan. Handler stok tetap
+  berada pada modul penerimaan, pengiriman, reject, kasir, dan pemeriksaan buah.
+- `tests/{money-input,barcode-input,supplier-quick-add}.test.mjs`: regresi nilai,
+  retry, pembatalan form, scan, dan hak akses. `tests/input-fields-browser.mjs`
+  memeriksa perilaku native input, FormData, dialog bertingkat dan fokus.
+- Pemasangan: `docs/PATCH-116-SUPPLIER-INPUT-BARCODE.md`.

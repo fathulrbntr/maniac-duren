@@ -1,3 +1,5 @@
+import { prepareBarcodeInput } from "./barcode-scanner.mjs";
+import { supplierDialog, bindSupplierSelect } from "./supplier-ui.mjs";
 import { commitMutation } from "./data/mutations.mjs";
 import { supplyActions, location } from "./warehouse-flow.mjs";
 import {
@@ -616,7 +618,9 @@ async function mutate(action, payload, { throwOnError = false } = {}) {
   } catch (error) {
     if (mode === "live") settleRetry(action, !error.definitive);
     {
-      const formError = document.querySelector("dialog[open] #form-error");
+      const formError = [...document.querySelectorAll("dialog[open]")]
+        .at(-1)
+        ?.querySelector("#form-error");
       if (formError) formError.textContent = error.message;
     }
     error.message +=
@@ -1281,6 +1285,17 @@ function modal(title, body, submitLabel = "Simpan") {
     if (!canClose()) ev.preventDefault();
   });
   d.addEventListener("close", () => d.remove());
+  d.querySelectorAll('select[name="supplierId"]').forEach((select) =>
+    bindSupplierSelect(select, { getState: () => state, modal, mutate, toast }),
+  );
+  d.querySelectorAll('input[name="barcode"], input[data-value="barcode"]').forEach(
+    (input) => {
+      prepareBarcodeInput(input);
+      input.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") event.preventDefault();
+      });
+    },
+  );
   d.showModal();
   return d;
 }
@@ -1346,7 +1361,13 @@ function addReceipt() {
       workspace,
       refresh,
     });
-  openWeighingReceipt(state, store, { modal, mutate, render, toast });
+  openWeighingReceipt(state, store, {
+    modal,
+    mutate,
+    render,
+    toast,
+    getState: () => state,
+  });
 }
 
 function movement() {
@@ -1362,6 +1383,10 @@ function movement() {
 }
 
 function addMaster(kind) {
+  if (kind === "suppliers")
+    return supplierDialog({ getState: () => state, modal, mutate, toast }, () =>
+      render(),
+    );
   if (kind === "stores")
     return storeDialog(state, {
       ...storeContext(),

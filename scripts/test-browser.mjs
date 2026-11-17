@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 const root = fileURLToPath(new URL("../", import.meta.url));
 // The first SQL suite supplies the document fixture required by the next two.
 const files = [
+  "input-fields-browser.mjs",
   "reports-admin-sql.test.mjs",
   "reports-admin-browser.mjs",
   "reports-app-smoke.mjs",

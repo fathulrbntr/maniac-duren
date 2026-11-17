@@ -1,3 +1,4 @@
+import { prepareBarcodeInput } from "./barcode-scanner.mjs";
 import { escape as e } from "./core.mjs";
 import {
   variantAxes,
@@ -116,6 +117,12 @@ export function bindVariantEditor(
       ...prices,
     ];
     results.innerHTML = `<div class="variant-heading"><b>2. Periksa ${rows.length} varian</b><small>${existing.length ? `${existing.length} sudah tersimpan · ` : ""}${count} varian baru. SKU dibuat otomatis dan boleh diganti.</small></div>${count ? `<div class="variant-bulk"><span>Isi harga yang sama untuk varian baru</span><div class="form-grid">${allPrices.map((k) => field(priceLabel(k), `<input data-bulk="${k}" type="number" min="${k.startsWith("buyPrice") ? 0 : 0.01}" step="any" placeholder="Opsional">`)).join("")}</div><button type="button" data-apply-prices>Terapkan ke varian baru</button></div>` : ""}<div class="variant-cards">${rows.map((p) => `<article class="variant-row" data-variant-row="${e(p.id)}"><div class="variant-row-title"><b>${e(p.name)}</b><span class="variant-tag">${p.existing ? "Sudah tersimpan" : "Baru"}</span></div>${p.existing ? `<small>${e(p.sku)} · Ubah harga dan foto melalui Edit pada varian ini.</small>` : `<div class="form-grid">${field("SKU", `<input data-value="sku" value="${e(p.sku)}" required maxlength="40">`)}${field("Barcode (opsional)", `<input data-value="barcode" value="${e(p.barcode)}" maxlength="80" placeholder="Ketik atau scan barcode">`)}${allPrices.map((k) => field(priceLabel(k), `<input data-value="${k}" type="number" min="${k.startsWith("buyPrice") ? 0 : 0.01}" max="1000000000000" step="any" value="${e(p[k] ?? "")}" ${k.startsWith("buyPrice") || common.itemType === "finished" ? 'placeholder="Opsional"' : "required"}>`)).join("")}</div>`}</article>`).join("")}</div><p class="muted">Stok tiap varian dicatat melalui Barang masuk. Foto dapat ditambahkan lewat Edit pada masing-masing varian.</p>`;
+    results.querySelectorAll('[data-value="barcode"]').forEach((input) => {
+      prepareBarcodeInput(input);
+      input.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") event.preventDefault();
+      });
+    });
     results.querySelector("[data-apply-prices]")?.addEventListener("click", () => {
       for (const input of results.querySelectorAll("[data-bulk]"))
         if (input.value !== "") {

@@ -46,7 +46,10 @@ function harness(failure, extra = {}) {
     applySupplyResponse,
     supplyActions,
     state: structuredClone(initial),
-    document: { querySelectorAll: () => [control], querySelector: () => null },
+    document: {
+      querySelectorAll: (selector) => (selector === "dialog[open]" ? [] : [control]),
+      querySelector: () => null,
+    },
     prepareRetry: (a, p) => p,
     settleRetry: (...x) => settled.push(x),
     request: async (path, body) => {
@@ -143,6 +146,30 @@ assert.equal(await ok.mutate("pos_category_save", {}, { throwOnError: true }), t
 assert.deepEqual(ok.settled, [["pos_category_save"]]);
 assert(!ok.isBusy());
 assert(!ok.control.disabled);
+// Supplier quick-add opens a child dialog over the unfinished note.
+// Mutation failures belong to the child, while the parent draft remains untouched.
+const dialogs = makeModal();
+const parent = dialogs.modal("Nota", '<input name="invoiceNo" value="NOTA-0001">');
+const child = dialogs.modal(
+  "Tambah supplier",
+  '<input name="name" value="Supplier baru">',
+);
+const nested = harness(serverError("Supplier gagal disimpan", "P0001"), {
+  document: {
+    querySelectorAll: (selector) => (selector === "dialog[open]" ? [parent, child] : []),
+  },
+});
+await assert.rejects(
+  nested.mutate(
+    "master",
+    { kind: "suppliers", id: id(), name: "Supplier baru" },
+    { throwOnError: true },
+  ),
+  /Supplier gagal disimpan/,
+);
+assert.equal(parent.querySelector("#form-error").textContent, "");
+assert.match(child.querySelector("#form-error").textContent, /Supplier gagal disimpan/);
+assert.equal(parent.querySelector('[name="invoiceNo"]').value, "NOTA-0001");
 console.log(
   "PASS actual app → category error flow: exact SQL/network/permission/schema/retry errors visible inside dialog, no false success, selection retained, uncertain operation retained, controls restored, legacy callers unchanged.",
 );

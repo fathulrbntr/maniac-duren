@@ -1,3 +1,4 @@
+import { prepareBarcodeInput, readyBarcodeInput } from "./barcode-scanner.mjs";
 import { workflowReady, backOffice } from "./warehouse-workflow.mjs";
 import { receivingPage, openReceivingSession } from "./receiving-session-ui.mjs";
 import { outboundPage, bindOutboundPage, openOutboundForm } from "./outbound-ui.mjs";
@@ -253,6 +254,7 @@ export function openDispatch(s, store, ctx) {
   const request = id(),
     input = d.querySelector("[data-dispatch-scan]"),
     message = d.querySelector("[data-scan-message]");
+  prepareBarcodeInput(input);
   const draw = () => {
     d.querySelector("[data-dispatch-codes]").innerHTML =
       `<div class="supply-scan-list">${codes
@@ -304,7 +306,7 @@ export function openDispatch(s, store, ctx) {
       message.textContent = err.message;
       message.className = "error";
     }
-    input.focus();
+    readyBarcodeInput(input);
   };
   input.onkeydown = (ev) => {
     if (ev.key === "Enter") {
@@ -471,10 +473,11 @@ function openTransfer(s, t, ctx, receiving) {
       msg.className = "error";
     } finally {
       working = false;
-      input.focus();
+      readyBarcodeInput(input);
     }
   };
   if (canReceive) {
+    prepareBarcodeInput(d.querySelector("[data-receive-code]"));
     d.querySelector("[data-receive-add]").onclick = scan;
     d.querySelector("[data-receive-code]").onkeydown = (ev) => {
       if (ev.key === "Enter") {
@@ -583,8 +586,8 @@ function noteDialog(s, ctx) {
   const wh = warehouseId(s),
     products = s.products.filter((p) => p.stockUnit === "kg_butir"),
     rows = [{ productId: products[0]?.id, purchaseCost: "" }];
-  if (!wh || !products.length || !s.suppliers.length) {
-    ctx.toast("Lengkapi gudang, supplier, dan produk terlebih dahulu.");
+  if (!wh || !products.length) {
+    ctx.toast("Lengkapi gudang dan produk terlebih dahulu.");
     return;
   }
   const d = ctx.modal(
@@ -870,6 +873,7 @@ export function bindSupply(s, store, view, ctx) {
   });
   const f = document.querySelector("[data-cut-form]");
   if (f) {
+    prepareBarcodeInput(f.elements.barcode);
     const request = id();
     let busy = false;
     f.onsubmit = async (ev) => {
@@ -883,7 +887,9 @@ export function bindSupply(s, store, view, ctx) {
           { throwOnError: true },
         );
         ctx.render();
+        readyBarcodeInput(document.querySelector("[data-cut-form] [name=barcode]"));
       } catch (err) {
+        readyBarcodeInput(f.elements.barcode);
         f.querySelector("[data-cut-error]").textContent = err.message;
       } finally {
         busy = false;

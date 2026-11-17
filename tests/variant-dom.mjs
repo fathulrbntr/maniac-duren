@@ -156,6 +156,12 @@ export class Node {
       } else stack.at(-1)._text += decode(raw);
     }
   }
+  insertAdjacentHTML(position, html) {
+    if (position !== "beforeend") throw Error("DOM adapter supports beforeend only");
+    const fragment = new Node();
+    fragment.innerHTML = html;
+    for (const child of [...fragment.children]) this.append(child);
+  }
   insertBefore(node, reference) {
     if (node === reference) return node;
     if (reference && reference.parent !== this) throw Error("Reference is not a child");

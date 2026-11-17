@@ -1,3 +1,4 @@
+import { prepareBarcodeInput, readyBarcodeInput } from "./barcode-scanner.mjs";
 import { escape as e, id, num, money, today } from "./core.mjs";
 import {
   backOffice,
@@ -294,7 +295,7 @@ export function openOutbound(s, oid, ctx) {
       recovery();
     } finally {
       working = false;
-      body.querySelector("[data-outbound-code]")?.focus();
+      readyBarcodeInput(body.querySelector("[data-outbound-code]"));
     }
   };
   const confirmForm = (action, title, html, extras) => {
@@ -338,6 +339,7 @@ export function openOutbound(s, oid, ctx) {
         : ""
     }<p>${e(o.note)}</p>`;
     const input = body.querySelector("[data-outbound-code]");
+    prepareBarcodeInput(input);
     const scan = () => {
       if (input.value.trim()) perform("outbound_scan", { barcode: input.value.trim() });
     };
@@ -423,6 +425,6 @@ export function openOutbound(s, oid, ctx) {
   };
   draw();
   d.addEventListener("close", () => ctx.render());
-  body.querySelector("[data-outbound-code]")?.focus();
+  readyBarcodeInput(body.querySelector("[data-outbound-code]"));
   return d;
 }

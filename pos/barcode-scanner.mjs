@@ -101,20 +101,47 @@ export function parseScaleBarcode(code) {
     );
   return { itemCode: code.slice(2, 6), grams, kg: grams / 1000 };
 }
+// Select the previous label at its terminator, even after a failed scan.
+// Keep the value intact for validation/retry; the next scanner keystrokes replace it.
+export function prepareBarcodeInput(input) {
+  if (!input || input.dataset?.barcodeReplace) return;
+  if (input.dataset) input.dataset.barcodeReplace = "true";
+  input.addEventListener("focus", () => input.select?.());
+  input.addEventListener(
+    "keydown",
+    (event) => {
+      if (event.isComposing || event.ctrlKey || event.altKey || event.metaKey) return;
+      if (["Enter", "Tab"].includes(event.key)) input.select?.();
+    },
+    true,
+  );
+}
+export function readyBarcodeInput(input) {
+  if (!input || input.isConnected === false || input.disabled) return;
+  // A scan can open a fruit-sale dialog. Do not take focus away from that dialog.
+  const activeDialog = input.ownerDocument?.activeElement?.closest?.("dialog[open]");
+  if (activeDialog && activeDialog !== input.closest?.("dialog[open]")) return;
+  input.focus();
+  input.select?.();
+}
 // Listen only on the scan field. Typing notes, prices or passwords elsewhere
 // must never add a product or trigger a payment.
 export function bindBarcodeInput(
   input,
   { getSettings = readDeviceSettings, onScan, onError },
 ) {
+  prepareBarcodeInput(input);
   let busy = false;
   const scan = async () => {
     if (busy) return;
     busy = true;
+    const scanned = input.value;
+    input.select?.();
     try {
       const settings = getSettings();
-      normalizeBarcode(input.value, settings);
-      if ((await onScan(input.value, settings)) !== false) input.value = "";
+      normalizeBarcode(scanned, settings);
+      if ((await onScan(scanned, settings)) !== false && input.value === scanned)
+        input.value = "";
       else {
         input.focus();
         input.select?.();
@@ -125,6 +152,7 @@ export function bindBarcodeInput(
       input.select?.();
     } finally {
       busy = false;
+      readyBarcodeInput(input);
     }
   };
   input.addEventListener("keydown", (event) => {

@@ -1,3 +1,4 @@
+import { bindSupplierSelect } from "./supplier-ui.mjs";
 import { dummyProductPhoto } from "./product-photos.mjs";
 import { posCategoryName, posCategories, categoryPayload } from "./pos-categories.mjs";
 import { variantEditorMarkup, bindVariantEditor } from "./variant-editor.mjs";
@@ -164,6 +165,12 @@ export function productDialog({
       : `${num(baseline.qty)} ${stockUnits[c("stockUnit").value]}`;
     d.querySelector("#stock-fields").innerHTML =
       `<div class="form-grid">${(stockDual ? ["kg", "pieces"] : ["qty"]).map((key) => field(key === "kg" ? "Stok akhir (kg)" : key === "pieces" ? "Stok akhir (butir)" : "Stok akhir (" + stockUnits[c("stockUnit").value] + ")", `<input name="target_${key}" type="number" min="0" max="1000000000" step="${key === "pieces" || (!stockDual && ["pcs", "porsi"].includes(c("stockUnit").value)) ? "1" : "0.000001"}" value="${baseline[key]}">`)).join("")}${stockDual ? field("Supplier untuk tambahan stok", `<select name="stockSupplier"><option value="">Pilih supplier</option>${options(Object.fromEntries(state.suppliers.map((x) => [x.id, x.name])), null)}</select>`) : ""}</div>${field("Alasan penyesuaian / stok awal", '<input name="stockReason" maxlength="300" placeholder="Contoh: hasil hitung fisik">')}<p class="muted">Isi jumlah akhir setelah dihitung. Pengurangan dialokasikan dari batch tertua; penambahan menjadi batch baru tanggal hari ini.</p>`;
+    bindSupplierSelect(c("stockSupplier"), {
+      getState: getState || (() => state),
+      modal,
+      mutate,
+      toast,
+    });
     toggleStock();
   }
   function toggleStock() {

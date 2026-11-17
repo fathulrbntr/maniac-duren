@@ -21,11 +21,11 @@ export function openWeighingReceipt(state, store, ctx) {
       )
       .join("");
   const products = state.products.filter(isLegacyStock);
-  if (!products.length || !state.suppliers.length || !state.stores.length)
-    return ctx.toast("Tambahkan produk, store dan supplier terlebih dahulu.");
+  if (!products.length || !state.stores.length)
+    return ctx.toast("Tambahkan produk dan store terlebih dahulu.");
   const d = ctx.modal(
     "Penerimaan barang",
-    `${formSection(1, "Identitas pengiriman", "Isi supplier, nomor nota, tanggal, dan outlet penerima.")}<div class="form-grid receipt-header-fields"><label class="field">Tanggal masuk<input name="date" type="date" value="${today()}" max="${today()}" required></label><label class="field">Store<select name="storeId">${options("stores", store)}</select></label><label class="field">Supplier<select name="supplierId">${options("suppliers")}</select></label><label class="field">Nomor nota<input name="invoiceNo" placeholder="Contoh: NOTA-001" maxlength="100" required></label></div>${formSection(2, "Rincian nota & timbang aktual", "Tambahkan semua jenis durian dalam pengiriman. Pilih produk, buka Catat timbang aktual, lalu scan label dari timbangan barcode.")}<div class="receipt-section-head"><h3>Produk dalam pengiriman</h3><span data-product-count></span></div><div class="receipt-lines" data-receipt-lines></div><button type="button" class="receipt-add" data-add-product>+ Tambah produk</button><label class="field receipt-shipping">Ongkir bersama (Rp)<input name="shippingCost" type="number" min="0" step="any" value="0" required></label><p class="form-help">Ongkir dibagi otomatis menurut berat aktual setiap produk.</p>${formSection(3, "Periksa modal & selesaikan", "Stok masuk setelah seluruh produk ditimbang dan penerimaan dikonfirmasi.")}<div data-weigh-summary class="weigh-summary receipt-total" aria-live="polite"></div><label class="field">Nomor surat jalan / catatan<input name="note" maxlength="300"></label><p class="form-help">Stok seluruh produk masuk sekaligus setelah penurunan barang dikonfirmasi selesai.</p>`,
+    `${formSection(1, "Identitas pengiriman", "Isi supplier, nomor nota, tanggal, dan outlet penerima.")}<div class="form-grid receipt-header-fields"><label class="field">Tanggal masuk<input name="date" type="date" value="${today()}" max="${today()}" required></label><label class="field">Store<select name="storeId">${options("stores", store)}</select></label><label class="field">Supplier<select name="supplierId" required>${options("suppliers")}</select></label><label class="field">Nomor nota<input name="invoiceNo" placeholder="Contoh: NOTA-001" maxlength="100" required></label></div>${formSection(2, "Rincian nota & timbang aktual", "Tambahkan semua jenis durian dalam pengiriman. Pilih produk, buka Catat timbang aktual, lalu scan label dari timbangan barcode.")}<div class="receipt-section-head"><h3>Produk dalam pengiriman</h3><span data-product-count></span></div><div class="receipt-lines" data-receipt-lines></div><button type="button" class="receipt-add" data-add-product>+ Tambah produk</button><label class="field receipt-shipping">Ongkir bersama (Rp)<input name="shippingCost" type="number" min="0" step="any" value="0" required></label><p class="form-help">Ongkir dibagi otomatis menurut berat aktual setiap produk.</p>${formSection(3, "Periksa modal & selesaikan", "Stok masuk setelah seluruh produk ditimbang dan penerimaan dikonfirmasi.")}<div data-weigh-summary class="weigh-summary receipt-total" aria-live="polite"></div><label class="field">Nomor surat jalan / catatan<input name="note" maxlength="300"></label><p class="form-help">Stok seluruh produk masuk sekaligus setelah penurunan barang dikonfirmasi selesai.</p>`,
     "Selesaikan penerimaan",
   );
   d.classList.add("receipt-shipment-dialog");
@@ -166,7 +166,7 @@ export function openWeighingReceipt(state, store, ctx) {
       if (state.receiptShipmentVersion !== 82)
         throw Error("Jalankan database/receipt-shipment-082.sql lalu muat ulang POS.");
       const p = payload(),
-        t = validateShipment(p, state);
+        t = validateShipment(p, ctx.getState?.() || state);
       if (
         !confirm(
           `Penurunan barang sudah selesai?\nNota ${p.invoiceNo}\n${lines.length} produk · ${num(t.kg)} kg · ${num(t.pieces)} butir\nTotal modal ${money(t.total)}\nSeluruh produk akan dimasukkan ke stok sekaligus.`,

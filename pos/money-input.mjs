@@ -1,8 +1,17 @@
-// Display Indonesian grouping while preserving the numeric .value contract used by POS.
+// All numeric POS fields display Indonesian grouping; .value and FormData stay canonical.
 const moneyName =
   /^(?:price|priceKg|pricePiece|salePrice|buyPrice|buyPricePiece|minPrice|maxPrice|purchaseCost|shippingCost|totalCost|paid|openingCash|closingCash|salary|wage)$/i;
+export function normalizeNumericInput(value) {
+  let raw = String(value ?? "");
+  if (/^-?\d+(?:\.\d+)?e[+-]?\d+$/i.test(raw) && Number.isFinite(Number(raw)))
+    raw = Number(raw).toLocaleString("en-US", {
+      useGrouping: false,
+      maximumFractionDigits: 20,
+    });
+  return raw.replace(/^(-?)0+(?=\d)/, "$1");
+}
 export function formatMoneyInput(value) {
-  const raw = String(value ?? "");
+  const raw = normalizeNumericInput(value);
   if (!raw) return "";
   const [integer, fraction] = raw.split(".");
   return (
@@ -13,8 +22,8 @@ export function formatMoneyInput(value) {
 export function parseMoneyInput(value) {
   const text = String(value ?? "").trim();
   if (!text) return "";
-  if (!/^-?[\d.]+(?:,\d*)?$/.test(text)) throw Error("Isi harga dengan angka Rupiah");
-  return text.replaceAll(".", "").replace(",", ".");
+  if (!/^-?[\d.]+(?:,\d*)?$/.test(text)) throw Error("Isi dengan angka yang valid");
+  return normalizeNumericInput(text.replaceAll(".", "").replace(",", "."));
 }
 export function installMoneyInputs(root = document) {
   const native = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
@@ -24,28 +33,33 @@ export function installMoneyInputs(root = document) {
       return;
     }
     if (
-      !moneyName.test(input.name || input.dataset.value || input.dataset.bulk || "") ||
+      (input.type !== "number" &&
+        !moneyName.test(input.name || input.dataset.value || input.dataset.bulk || "")) ||
       !["number", "text"].includes(input.type)
     )
       return;
     const initial = native.get.call(input);
+    const defaultStep = input.type === "number" ? "1" : "any";
     input.dataset.moneyInput = "true";
     input.type = "text";
     input.inputMode = "decimal";
-    let raw = initial;
+    let raw = normalizeNumericInput(initial);
     const validate = () => {
       const n = Number(raw);
       let error = "";
       if (raw && (!/^-?\d+(?:\.\d*)?$/.test(raw) || !Number.isFinite(n)))
-        error = "Isi harga dengan angka Rupiah";
+        error = "Isi dengan angka yang valid";
       else if (raw && input.min && n < Number(input.min))
         error = "Nominal minimal " + formatMoneyInput(input.min);
       else if (raw && input.max && n > Number(input.max))
         error = "Nominal maksimal " + formatMoneyInput(input.max);
-      else if (raw && input.step && input.step !== "any") {
-        const step = Number(input.step),
-          base = Number(input.min || 0);
-        if (Math.abs((n - base) / step - Math.round((n - base) / step)) > 1e-7)
+      else if (raw && (input.step || defaultStep) !== "any") {
+        const step = Number(input.step || defaultStep),
+          base = Number(input.min || input.getAttribute("value") || 0);
+        if (
+          step > 0 &&
+          Math.abs((n - base) / step - Math.round((n - base) / step)) > 1e-7
+        )
           error = "Nominal tidak sesuai kelipatan " + formatMoneyInput(input.step);
       }
       input.setCustomValidity(error);
@@ -54,7 +68,7 @@ export function installMoneyInputs(root = document) {
       configurable: true,
       get: () => raw,
       set: (value) => {
-        raw = String(value ?? "");
+        raw = normalizeNumericInput(value);
         native.set.call(input, formatMoneyInput(raw));
         validate();
       },
@@ -67,12 +81,22 @@ export function installMoneyInputs(root = document) {
       },
     });
     input.value = initial;
+    const selectZero = () => {
+      if (raw && Number(raw) === 0) input.select();
+    };
+    input.addEventListener("focus", selectZero);
+    input.addEventListener("click", selectZero);
     input.addEventListener(
       "input",
       () => {
         const displayed = native.get.call(input),
           caret = input.selectionStart ?? displayed.length;
-        const digitsBefore = displayed.slice(0, caret).replace(/[^\d,]/g, "").length;
+        const removedZeroes =
+          displayed.match(/^(-?)0+(?=\d)/)?.[0].replace("-", "").length || 0;
+        const digitsBefore = Math.max(
+          0,
+          displayed.slice(0, caret).replace(/[^\d,]/g, "").length - removedZeroes,
+        );
         try {
           raw = parseMoneyInput(displayed);
         } catch {
@@ -92,8 +116,20 @@ export function installMoneyInputs(root = document) {
       true,
     );
     input.form?.addEventListener("formdata", (event) => {
-      if (input.form === event.currentTarget && !input.disabled && input.name)
-        event.formData.set(input.name, raw);
+      if (
+        input.form === event.currentTarget &&
+        !input.matches(":disabled") &&
+        input.name
+      ) {
+        const controls = [...input.form.elements].filter(
+          (el) => el.name === input.name && !el.matches(":disabled"),
+        );
+        if (controls.length === 1) event.formData.set(input.name, raw);
+        else if (controls.every((el) => el.dataset.moneyInput)) {
+          event.formData.delete(input.name);
+          controls.forEach((el) => event.formData.append(input.name, el.value));
+        }
+      }
     });
     input.form?.addEventListener("reset", () => {
       queueMicrotask(() => {
@@ -129,7 +165,7 @@ export function installMoneyInputs(root = document) {
     childList: true,
     subtree: true,
     attributes: true,
-    attributeFilter: ["name", "min", "max", "step"],
+    attributeFilter: ["name", "min", "max", "step", "value"],
   });
   return observer;
 }

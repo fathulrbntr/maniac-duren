@@ -1,3 +1,4 @@
+import { prepareBarcodeInput, readyBarcodeInput } from "./barcode-scanner.mjs";
 import { escape as e, id, num, money } from "./core.mjs";
 import { noteBalance } from "./supplier-notes.mjs";
 import {
@@ -160,7 +161,7 @@ export function openReceivingSession(s, pid, ctx, readOnly = false) {
       recovery();
     } finally {
       working = false;
-      body.querySelector("[data-session-code]")?.focus();
+      readyBarcodeInput(body.querySelector("[data-session-code]"));
     }
   };
   const draw = () => {
@@ -175,6 +176,7 @@ export function openReceivingSession(s, pid, ctx, readOnly = false) {
       ),
     )}</details>`;
     const input = body.querySelector("[data-session-code]");
+    prepareBarcodeInput(input);
     const scan = () => {
       if (input.value.trim())
         return perform("receipt_scan", { barcode: input.value.trim() });
@@ -210,6 +212,6 @@ export function openReceivingSession(s, pid, ctx, readOnly = false) {
   };
   draw();
   d.addEventListener("close", () => ctx.render());
-  body.querySelector("[data-session-code]")?.focus();
+  readyBarcodeInput(body.querySelector("[data-session-code]"));
   return d;
 }
