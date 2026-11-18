@@ -179,6 +179,11 @@ try {
           ?.textContent.includes(`${n} butir tersimpan`),
       n,
     );
+    await page
+      .locator("[data-receiving-barcodes] code")
+      .filter({ hasText: code(n) })
+      .waitFor({ state: "visible" });
+    assert.equal(await page.locator("[data-receiving-barcodes] code").count(), n);
   }
   await page.locator("[data-session-pause]").click();
   await page.locator("[data-session-resume]").waitFor();
@@ -186,6 +191,10 @@ try {
   await page.locator("#pos-main").waitFor();
   await nav("supplierNotes");
   await page.locator("[data-session-open]").click();
+  await page
+    .locator("[data-receiving-barcodes] code")
+    .filter({ hasText: code(3) })
+    .waitFor({ state: "visible" });
   await page.locator("[data-session-resume]").click();
   await page.locator("[data-session-finish]").click();
   await page.locator("[data-session-code]").waitFor({ state: "detached" });

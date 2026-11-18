@@ -161,5 +161,13 @@ untuk fitur baru yang memerlukan beberapa file, bukan tempat menyalin modul lama
 - `tests/ui-audit-browser.mjs`: menunggu halaman tujuan yang benar serta menyimpan
   konteks kegagalan ke `test-results/ui-audit/failure.json` dan `failure.png`.
 - Pemasangan dan batas pengujian: `docs/PATCH-117C-SIDEBAR-TRANSITION.md`.
+
+## Barcode penerimaan 118
+
+- `pos/receiving-session-ui.mjs`: daftar barcode tersimpan selalu tampil saat
+  pembukaan dialog dan pembaruan hasil scan, tanpa panel yang dapat terlipat.
+- `tests/warehouse-workflow-browser.mjs`: memeriksa barcode terlihat setelah
+  scan berturut-turut dan setelah reload penerimaan.
+- Pemasangan: `docs/PATCH-118-BARCODE-TERBUKA.md`.
 - `tests/sidebar.test.mjs` dan `tests/browser-runner.test.mjs`: regresi media event
   terlambat, idempotensi membuka menu, agregasi kegagalan dan prasyarat fixture.

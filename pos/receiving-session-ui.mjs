@@ -168,13 +168,13 @@ export function openReceivingSession(s, pid, ctx, readOnly = false) {
     const status = p.receiving.status,
       editable = !readOnly && ["open", "reopened"].includes(status),
       totals = receiptTotals(p);
-    body.innerHTML = `<p>${e(name(s, "suppliers", p.supplierId))} · ${e(p.date)}</p><p class="notice">${e(receiptStatuses[status])} · ${num(totals.kg)} kg / ${num(totals.pieces)} butir tersimpan</p>${varianceTable(ctx.getState(), p)}${editable ? '<div class="supply-scan"><input data-session-code autocomplete="off" maxlength="26" inputmode="numeric" placeholder="Scan barcode buah" aria-label="Scan barcode buah"><button type="button" data-session-scan>Simpan scan</button></div><p class="muted">Tunggu konfirmasi tersimpan sebelum scan buah berikutnya. Barcode menentukan produk dan berat; satu label untuk satu buah.</p>' : ""}<div class="toolbar">${!readOnly ? (status === "paused" ? '<button type="button" data-session-resume>Lanjutkan penimbangan</button>' : editable ? '<button type="button" data-session-pause>Jeda penimbangan</button><button type="button" class="primary" data-session-finish>Selesaikan penerimaan</button>' : "<p>Penerimaan terkunci. Koreksi harus dibuka dari Back Office.</p>") : ""}</div><details><summary>Barcode tersimpan (${totals.pieces})</summary>${table(
+    body.innerHTML = `<p>${e(name(s, "suppliers", p.supplierId))} · ${e(p.date)}</p><p class="notice">${e(receiptStatuses[status])} · ${num(totals.kg)} kg / ${num(totals.pieces)} butir tersimpan</p>${varianceTable(ctx.getState(), p)}${editable ? '<div class="supply-scan"><input data-session-code autocomplete="off" maxlength="26" inputmode="numeric" placeholder="Scan barcode buah" aria-label="Scan barcode buah"><button type="button" data-session-scan>Simpan scan</button></div><p class="muted">Tunggu konfirmasi tersimpan sebelum scan buah berikutnya. Barcode menentukan produk dan berat; satu label untuk satu buah.</p>' : ""}<div class="toolbar">${!readOnly ? (status === "paused" ? '<button type="button" data-session-resume>Lanjutkan penimbangan</button>' : editable ? '<button type="button" data-session-pause>Jeda penimbangan</button><button type="button" class="primary" data-session-finish>Selesaikan penerimaan</button>' : "<p>Penerimaan terkunci. Koreksi harus dibuka dari Back Office.</p>") : ""}</div><section data-receiving-barcodes aria-label="Barcode tersimpan"><h3>Barcode tersimpan (${totals.pieces})</h3>${table(
       ["Barcode", "Produk", "Berat", ...(editable ? ["Aksi"] : [])],
       p.receiving.scans.map(
         (x) =>
           `<tr><td><code>${e(x.barcode)}</code></td><td>${e(name(ctx.getState(), "products", x.productId))}</td><td>${num(x.grams / 1000)} kg</td>${editable ? `<td><button type="button" data-session-remove="${e(x.barcode)}">Hapus scan</button></td>` : ""}</tr>`,
       ),
-    )}</details>`;
+    )}</section>`;
     const input = body.querySelector("[data-session-code]");
     prepareBarcodeInput(input);
     const scan = () => {
