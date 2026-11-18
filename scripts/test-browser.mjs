@@ -1,5 +1,5 @@
-import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { runBrowserSuites } from "./lib/browser-suite.mjs";
 const root = fileURLToPath(new URL("../", import.meta.url));
 // The first SQL suite supplies the document fixture required by the next two.
 const files = [
@@ -22,15 +22,13 @@ const files = [
   "warehouse-workflow-browser.mjs",
   "outbound-invoices-browser.mjs",
 ];
-for (const file of files) {
-  console.log("\nRunning " + file);
-  const result = spawnSync(process.execPath, ["tests/" + file], {
-    cwd: root,
-    stdio: "inherit",
-  });
-  if (result.error) throw result.error;
-  if (result.status !== 0) {
-    process.exitCode = result.status ?? 1;
-    break;
-  }
-}
+const report = await runBrowserSuites({
+  root,
+  suites: files.map((file) => ({
+    file,
+    requires: ["reports-admin-browser.mjs", "reports-app-smoke.mjs"].includes(file)
+      ? ["reports-admin-sql.test.mjs"]
+      : [],
+  })),
+});
+process.exitCode = report.failed || report.blocked ? 1 : 0;

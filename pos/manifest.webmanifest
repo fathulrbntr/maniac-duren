@@ -8,8 +8,8 @@
   "scope": "/pos/",
   "display": "standalone",
   "prefer_related_applications": false,
-  "background_color": "#f6f6f7",
-  "theme_color": "#f6f6f7",
+  "background_color": "#252836",
+  "theme_color": "#252836",
   "icons": [
     {
       "src": "icons/icon-192.png",

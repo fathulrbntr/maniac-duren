@@ -59,8 +59,8 @@ html:has(.system-dock) {
   color: var(--ink);
 }
 .system-dock button[aria-current="page"] {
-  background: var(--surface-raised);
-  color: var(--action-bg);
+  background: var(--action-bg);
+  color: var(--action-ink);
   border-color: var(--action-bg);
 }
 .system-dock button:focus-visible {

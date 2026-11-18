@@ -30,6 +30,14 @@ export function createSidebarController(root = document, viewport = window) {
   }
   const media = viewport.matchMedia?.("(max-width: 900px)");
   const mobile = () => !!media?.matches;
+  let appliedMobile = mobile();
+  function syncViewport() {
+    const current = mobile();
+    if (current !== appliedMobile) {
+      mobileOpen = false;
+      appliedMobile = current;
+    }
+  }
   let opener = null;
   function restoreFocus() {
     const target =
@@ -87,6 +95,9 @@ export function createSidebarController(root = document, viewport = window) {
     }
     const toggle = event.target.closest("[data-sidebar-toggle]");
     if (!toggle) return;
+    // Layout can cross the breakpoint before the queued media change event runs.
+    // Apply that transition before the click so the event cannot undo this choice.
+    syncViewport();
     if (!(mobile() ? mobileOpen : !collapsed)) opener = toggle;
     if (mobile()) mobileOpen = !mobileOpen;
     else {
@@ -126,7 +137,7 @@ export function createSidebarController(root = document, viewport = window) {
     }
   });
   media?.addEventListener("change", () => {
-    mobileOpen = false;
+    syncViewport();
     sync();
   });
   return {
@@ -137,6 +148,7 @@ export function createSidebarController(root = document, viewport = window) {
       if (nav) scroll = nav.scrollTop;
     },
     mount() {
+      syncViewport();
       sync();
       const nav = root.querySelector("#pos-navigation");
       if (nav) nav.scrollTop = scroll;

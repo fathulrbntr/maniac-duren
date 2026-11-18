@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { chromium } from "playwright";
 import { fixture } from "./stock-demo-fixture.mjs";
+import { openSidebar } from "./helpers/browser-sidebar.mjs";
 import {
   createStockDemo,
   applyStockDemoAction,
@@ -52,11 +53,11 @@ const browser = await chromium.launch({
   executablePath: process.env.BROWSER_EXECUTABLE || undefined,
   args: ["--no-sandbox"],
 });
+let page,
+  step = { phase: "startup", theme: "light", width: 1600, view: "dashboard" };
 try {
-  const page = await browser.newPage({
-      viewport: { width: 1600, height: 1000 },
-    }),
-    errors = [],
+  page = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
+  const errors = [],
     missing = [],
     layouts = [];
   page.on("pageerror", (error) => errors.push(error.message));
@@ -125,19 +126,21 @@ try {
     .locator("#pos-navigation [data-view]")
     .evaluateAll((nodes) => nodes.map((n) => n.dataset.view));
   const nav = async (view) => {
-    if (await page.locator("#pos-sidebar").evaluate((el) => el.inert))
-      await page.locator("#sidebar-toggle").click();
+    step = { ...step, phase: "navigation", view };
+    await openSidebar(page);
     const button = page.locator(`#pos-navigation [data-view="${view}"]`);
     await page.locator("#pos-sidebar").waitFor({ state: "visible" });
     if (!(await button.evaluate((el) => el.closest("details").open)))
       await button.locator("xpath=ancestor::details/summary").click();
     await button.click();
-    await page.locator("main").waitFor();
+    await page.locator(`.shell[data-page="${view}"] #pos-main`).waitFor();
   };
   for (const theme of ["light", "dark"]) {
     if ((await page.evaluate(() => document.documentElement.dataset.theme)) !== theme)
       await page.locator("[data-theme-toggle]").click();
-    for (const width of [1600, 1024, 390, 360]) {
+    for (const width of [1600, 1024, 900, 901, 390, 360, 1600]) {
+      step = { phase: "resize", theme, width, view: "dashboard" };
+      console.log(`UI audit 117C: theme=${theme} width=${width}`);
       await page.setViewportSize({ width, height: 1000 });
       for (const view of views) {
         await nav(view);
@@ -162,27 +165,34 @@ try {
           });
       }
       await nav("products");
+      step.phase = "product dialog";
       await page.locator("#add-catalog-product").click();
+      const productDialog = page.locator("dialog.product-entry-modal[open]");
+      await productDialog.waitFor({ state: "visible" });
       assert(
-        await page
-          .locator("dialog")
-          .evaluate((el) => el.scrollWidth <= el.clientWidth + 1),
+        await productDialog.evaluate((el) => el.scrollWidth <= el.clientWidth + 1),
         `product dialog overflow ${width}`,
       );
-      await page.locator("dialog .close").first().click();
+      await productDialog.getByRole("button", { name: "Tutup", exact: true }).click();
+      await productDialog.waitFor({ state: "hidden" });
       await nav("stock");
+      step.phase = "receipt dialog";
       await page.locator("#add-receipt").click();
-      await page.locator("#receive-durian").click();
+      await page.locator("dialog[open] #receive-durian").click();
+      // close() clears [open] before the queued close event removes the chooser.
+      // Inspect the new receipt, even while that closed dialog is still in the DOM.
+      const receiptDialog = page.locator("dialog.receipt-shipment-dialog[open]");
+      await receiptDialog.waitFor({ state: "visible" });
       assert(
-        await page
-          .locator("dialog")
-          .evaluate((el) => el.scrollWidth <= el.clientWidth + 1),
+        await receiptDialog.evaluate((el) => el.scrollWidth <= el.clientWidth + 1),
         `receipt dialog overflow ${width}`,
       );
-      await page.locator("dialog .close").first().click();
+      await receiptDialog.getByRole("button", { name: "Tutup", exact: true }).click();
+      await receiptDialog.waitFor({ state: "hidden" });
     }
   }
   // Refresh retains login; all module URLs must resolve to one identity per path.
+  step.phase = "reload and resources";
   await page.reload();
   await page.locator("#pos-main").waitFor();
   const duplicates = await page.evaluate(() => {
@@ -202,8 +212,52 @@ try {
   assert.deepEqual(missing, []);
   fs.writeFileSync(path.join(output, "layouts.json"), JSON.stringify(layouts, null, 2));
   console.log(
-    `PASS UI audit: ${views.length} menus × 4 widths × 2 themes, product/receipt dialogs, session reload and unique module URLs.`,
+    `PASS UI audit: ${views.length} menus × 7 viewport steps × 2 themes, breakpoint round trips, product/receipt dialogs, session reload and unique module URLs.`,
   );
+} catch (error) {
+  // Preserve the exact phase and state; a click timeout alone cannot distinguish
+  // a closing animation, a collapsed group, or a navigation that never completed.
+  const sidebar = await page
+    ?.evaluate((view) => {
+      const shell = document.querySelector(".shell"),
+        panel = document.querySelector("#pos-sidebar"),
+        toggle = document.querySelector("#sidebar-toggle"),
+        button = document.querySelector(`#pos-navigation [data-view="${view}"]`);
+      const describe = (element) => {
+        if (!element) return null;
+        const style = getComputedStyle(element),
+          rect = element.getBoundingClientRect();
+        return {
+          inert: element.inert,
+          ariaHidden: element.getAttribute("aria-hidden"),
+          display: style.display,
+          visibility: style.visibility,
+          transform: style.transform,
+          rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+        };
+      };
+      return {
+        viewport: { width: innerWidth, height: innerHeight },
+        mobile: matchMedia("(max-width: 900px)").matches,
+        shell: shell ? { ...shell.dataset } : null,
+        expanded: toggle?.getAttribute("aria-expanded"),
+        panel: describe(panel),
+        button: describe(button),
+        groupOpen: button?.closest("details")?.open,
+      };
+    }, step.view)
+    .catch((captureError) => ({ unavailable: captureError.message }));
+  fs.writeFileSync(
+    path.join(output, "failure.json"),
+    JSON.stringify({ step, sidebar, error: error.message }, null, 2),
+  );
+  await page
+    ?.screenshot({ path: path.join(output, "failure.png"), fullPage: true })
+    .catch((captureError) => console.error(`Screenshot: ${captureError.message}`));
+  console.error(
+    `FAIL UI audit 117C: ${JSON.stringify(step)}; see ${output}/failure.json`,
+  );
+  throw error;
 } finally {
   await browser.close();
 }

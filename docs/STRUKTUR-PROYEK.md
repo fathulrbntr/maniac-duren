@@ -123,3 +123,43 @@ untuk fitur baru yang memerlukan beberapa file, bukan tempat menyalin modul lama
   retry, pembatalan form, scan, dan hak akses. `tests/input-fields-browser.mjs`
   memeriksa perilaku native input, FormData, dialog bertingkat dan fokus.
 - Pemasangan: `docs/PATCH-116-SUPPLIER-INPUT-BARCODE.md`.
+
+## Tampilan Food POS Dark 117
+
+- `pos/ui-tokens.css`: font Barlow lokal, palet dark/coral, tema terang dan token
+  bersama. Lisensi font berada di `pos/assets/fonts/barlow/OFL.txt`.
+- `pos/workspace-ui.css`, `pos/ui-system.css`: navigasi ikon, panel, tabel, form dan
+  dialog semua modul. Tata letak khusus tetap dimiliki CSS fiturnya.
+- `pos/pos-menu.css`, `pos/cashier.css`: kartu foto bundar, kategori bergaris,
+  keranjang dan pembayaran, responsif untuk desktop/tablet/ponsel.
+- `pos/warehouse.css`: gudang, nota dan invoice memakai token bersama, termasuk
+  badge status dan perpindahan area kerja. Tidak lagi memakai palet olive terpisah.
+- `pos/customer-display.html`/`.css`: layar pelanggan memakai token/font yang sama;
+  bidang QR tetap putih. Tidak ada perubahan protokol pairing atau pembayaran.
+- `pos/index.html`, `pos/manifest.webmanifest`: tema awal dark untuk sesi tanpa
+  pilihan tersimpan. Pilihan light/dark pengguna tetap dihormati.
+- Patch kumulatif terhadap 115 ini mencakup supplier/input/barcode 116 dan koreksi
+  tes 116A. Pemasangan: `docs/PATCH-117-UI-FOOD-POS.md`.
+
+## Audit sidebar dan browser 117B
+
+- `pos/sidebar.mjs`: sinkronisasi breakpoint sebelum toggle, tanpa menutup kembali
+  menu yang baru dibuka ketika event media datang terlambat.
+- `tests/helpers/browser-sidebar.mjs`: tunggu status controller sesuai viewport
+  sebelum memilih toggle; dipakai audit UI, gudang, invoice dan suite lain.
+- `tests/ui-audit-browser.mjs`: dialog aktif, 20 menu fixture, tujuh langkah ukuran
+  layar termasuk 900/901 px dan kembali ke desktop, serta dua tema.
+- `scripts/lib/browser-suite.mjs`: eksekusi suite independen, prasyarat fixture,
+  log tiap suite dan ringkasan JSON. `scripts/test-browser.mjs` tetap entry point.
+
+## Koreksi transisi sidebar 117C
+
+- Helper sidebar menggunakan `aria-expanded` setelah sinkronisasi breakpoint,
+  sehingga animasi penutupan tidak salah dianggap panel terbuka.
+- `tests/sidebar.test.mjs`: regresi picker masih terlihat pada panel tertutup/inert,
+  pergantian breakpoint dua arah dan pemanggilan helper berulang.
+- `tests/ui-audit-browser.mjs`: menunggu halaman tujuan yang benar serta menyimpan
+  konteks kegagalan ke `test-results/ui-audit/failure.json` dan `failure.png`.
+- Pemasangan dan batas pengujian: `docs/PATCH-117C-SIDEBAR-TRANSITION.md`.
+- `tests/sidebar.test.mjs` dan `tests/browser-runner.test.mjs`: regresi media event
+  terlambat, idempotensi membuka menu, agregasi kegagalan dan prasyarat fixture.

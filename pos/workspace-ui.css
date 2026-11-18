@@ -147,27 +147,19 @@ h4 {
     scrollbar-gutter: auto;
   }
   .shell[data-sidebar-collapsed="true"] .sidebar .nav-section {
-    margin: 0 0 8px;
+    margin: 0 0 16px;
   }
   .shell[data-sidebar-collapsed="true"] .sidebar .nav-item {
     justify-content: center;
-    height: 44px;
-    min-height: 44px;
-    padding: 12px;
+    height: 56px;
+    min-height: 56px;
+    padding: 16px;
     position: relative;
   }
   .shell[data-sidebar-collapsed="true"] .sidebar .nav-item.active {
-    box-shadow: none;
-  }
-  .shell[data-sidebar-collapsed="true"] .nav-item.active:after {
-    content: "";
-    width: 3px;
-    height: 22px;
-    border-radius: 3px;
     background: var(--action-bg);
-    position: absolute;
-    right: 0;
-    top: 11px;
+    color: var(--action-ink);
+    box-shadow: 0 8px 20px color-mix(in srgb, var(--action-bg) 20%, transparent);
   }
   .shell[data-sidebar-collapsed="true"] .sidebar-account {
     flex-direction: column;
@@ -344,7 +336,7 @@ h4 {
 }
 .nav-items {
   display: grid;
-  gap: 2px;
+  gap: 8px;
 }
 .nav .nav-item {
   display: flex;
@@ -356,7 +348,7 @@ h4 {
   border-radius: 8px;
   padding: 9px 10px;
   background: transparent;
-  color: var(--sidebar-ink);
+  color: var(--action-bg);
   font-size: var(--text-xs);
   font-weight: var(--weight-normal);
   text-align: left;
@@ -744,9 +736,11 @@ td {
 .auth-workspace .auth-form {
   display: block;
   width: 100%;
-  max-width: 390px;
-  padding: 0;
-  background: transparent;
+  max-width: 450px;
+  padding: 32px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-modal);
 }
 .auth-workspace .auth-form > div {
   width: 100%;

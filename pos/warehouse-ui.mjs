@@ -29,7 +29,7 @@ const table = (headers, rows) =>
 const stat = (label, value, hint = "") =>
   `<article class="supply-stat"><span>${e(label)}</span><strong>${e(value)}</strong><small>${e(hint)}</small></article>`;
 const action = (view, label, description) =>
-  `<button type="button" class="supply-task" data-view="${view}"><span>${e(label)}</span><small>${e(description)}</small><b aria-hidden="true">↗</b></button>`;
+  `<button type="button" class="supply-task" data-view="${view}"><span>${e(label)}</span><small>${e(description)}</small><svg class="supply-task-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M7 17 17 7M7 7h10v10"/></svg></button>`;
 const badge = (t) =>
   `<span class="supply-badge ${e(t.status)}">${e(transferStatus[t.status])}</span>`;
 const blocker = (s) =>

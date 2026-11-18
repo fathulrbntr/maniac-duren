@@ -1,4 +1,4 @@
-/* Shared screen components; loaded last so every module uses one visual system.
+/* Shared screen components; feature styles retain ownership of their layouts.
    Print layouts remain owned by their feature styles. */
 body {
   font-family: var(--font-ui);
@@ -42,7 +42,7 @@ h4 {
   font-weight: var(--weight-semibold);
 }
 .shell .topbar h1 {
-  font-size: 20px;
+  font-size: var(--text-page);
   line-height: 1.35;
   font-weight: var(--weight-semibold);
 }
@@ -340,13 +340,14 @@ textarea {
   background: var(--action-bg);
 }
 th {
-  background: var(--surface-soft);
+  background: var(--surface);
   color: var(--muted);
   font-size: var(--text-xs);
   font-weight: var(--weight-semibold);
   letter-spacing: 0;
 }
 td {
+  font-variant-numeric: tabular-nums;
   border-color: var(--line);
   font-size: var(--text-sm);
 }
@@ -366,6 +367,7 @@ td {
 }
 .modal::backdrop {
   background: var(--backdrop);
+  backdrop-filter: blur(4px);
 }
 .modal .modal-head {
   align-items: flex-start;
@@ -539,7 +541,8 @@ input[type="radio"] {
   accent-color: var(--action-bg);
 }
 .shell .sidebar {
-  border-right: 1px solid var(--line);
+  border-right: 0;
+  border-radius: 0 var(--radius-card) var(--radius-card) 0;
   background: var(--surface);
 }
 .sidebar .brand img {
@@ -566,24 +569,24 @@ input[type="radio"] {
   padding: 8px;
 }
 .sidebar .nav .nav-section {
-  margin-bottom: 8px;
+  margin-bottom: 16px;
 }
 .sidebar .nav .nav-item {
-  min-height: 40px;
-  padding: 9px 10px;
-  border-radius: 8px;
+  min-height: 48px;
+  padding: 12px;
+  border-radius: 12px;
 }
 .sidebar .nav .nav-item.active {
-  box-shadow: inset 3px 0 0 var(--action-bg);
+  box-shadow: none;
 }
 .shell .topbar {
-  min-height: 88px;
-  padding: 18px 28px;
+  min-height: 96px;
+  padding: 20px 24px;
   border-bottom: 0;
   background: var(--bg);
 }
 .shell #pos-main .workspace-content {
-  padding: 8px 28px var(--dock-clearance);
+  padding: 8px 24px var(--dock-clearance);
   min-width: 0;
 }
 .shell .sidebar-toggle,

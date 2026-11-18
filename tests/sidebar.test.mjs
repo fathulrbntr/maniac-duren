@@ -77,6 +77,9 @@ function fixture({ mobile = false, saved = "{}", blocked = false } = {}) {
     setAttribute(k, v) {
       this.attrs[k] = v;
     },
+    getAttribute(k) {
+      return this.attrs[k] ?? null;
+    },
     getClientRects() {
       return [1];
     },
@@ -121,6 +124,7 @@ function fixture({ mobile = false, saved = "{}", blocked = false } = {}) {
     },
   };
   const viewport = {
+    innerWidth: mobile ? 900 : 1600,
     matchMedia: () => media,
     get localStorage() {
       if (blocked) throw Error("Blocked storage");
@@ -158,6 +162,7 @@ function fixture({ mobile = false, saved = "{}", blocked = false } = {}) {
     values,
     flags,
     media,
+    viewport,
     click,
     key,
   };
@@ -176,26 +181,61 @@ for (const config of [
   { saved: '{"collapsed":false}' },
   { mobile: true },
   { mobile: true, saved: '{"collapsed":false}', resizedToDesktop: true },
+  { saved: '{"collapsed":false}', resizedToMobile: true },
+  { resizedToMobile: true },
+  { saved: '{"collapsed":false}', resizedToMobile: true, layoutPending: true },
+  { saved: '{"collapsed":false}', resizedToMobile: true, closingTransition: true },
 ]) {
   const current = fixture(config);
-  // CSS adopts the desktop viewport before the queued matchMedia callback
-  // updates aria-expanded. The picker is already shown and the header toggle hidden.
-  let resizePending = !!config.resizedToDesktop;
-  if (resizePending) current.media.matches = false;
+  // Layout and CSS visibility can lead or lag the controller during resize.
+  // In particular, a closed/inert mobile panel remains visible while animating out.
+  let resizePending = !!(config.resizedToDesktop || config.resizedToMobile);
+  if (config.resizedToDesktop) current.media.matches = false;
+  if (config.resizedToMobile) current.media.matches = true;
+  const expectedWidth = current.media.matches ? 900 : 1600;
+  if (!config.layoutPending) current.viewport.innerWidth = expectedWidth;
+  else current.media.matches = !!config.mobile;
   const pickerVisible = () =>
-    current.media.matches
+    config.closingTransition ||
+    (current.media.matches
       ? current.shell.dataset.mobileOpen === "true"
-      : current.shell.dataset.sidebarCollapsed === "false";
+      : current.shell.dataset.sidebarCollapsed === "false");
   const settleResize = () => {
     if (resizePending) {
       resizePending = false;
+      current.viewport.innerWidth = expectedWidth;
+      current.media.matches = expectedWidth <= 900;
       current.media.change();
     }
   };
   let clicks = 0;
   const page = {
+    viewportSize: () => ({ width: expectedWidth, height: 1000 }),
+    async waitForFunction(predicate, arg) {
+      const previousDocument = globalThis.document,
+        previousWindow = globalThis.window;
+      try {
+        globalThis.document = current.root;
+        globalThis.window = current.viewport;
+        if (resizePending)
+          assert.equal(predicate(arg), false, "wait for viewport and controller");
+        settleResize();
+        assert.equal(predicate(arg), true, "controller now agrees with the viewport");
+      } finally {
+        globalThis.document = previousDocument;
+        globalThis.window = previousWindow;
+      }
+    },
     locator(selector) {
       if (selector === "#pos-main") return { waitFor: async () => {} };
+      if (selector === "#pos-sidebar") return { evaluate: async () => settleResize() };
+      if (selector === '#pos-sidebar[aria-hidden="false"]:not([inert])')
+        return {
+          waitFor: async () => {
+            assert.equal(current.panel.inert, false);
+            assert.equal(current.panel.attrs["aria-hidden"], "false");
+          },
+        };
       if (selector === "#sidebar-toggle")
         return {
           getAttribute: async (name) => {
@@ -235,7 +275,7 @@ for (const config of [
   await openSidebar(page);
   assert.equal(
     clicks,
-    config.saved ? 0 : 1,
+    config.resizedToMobile || !config.saved ? 1 : 0,
     "opening an already-open sidebar must not close it",
   );
 }
@@ -301,6 +341,27 @@ assert.equal(f.main.inert, false);
 assert(!f.flags.has("sidebar-mobile-open"));
 f.ctrl.reset();
 assert(!f.flags.has("sidebar-mobile-open"));
+// A click may run after the CSS breakpoint changes but before its media event.
+// The queued event must not undo an explicit open in the new viewport.
+for (const collapsed of [true, false]) {
+  f = fixture({ saved: JSON.stringify({ collapsed }) });
+  f.media.matches = true;
+  f.click("[data-sidebar-toggle]");
+  assert.equal(f.panel.inert, false);
+  assert.equal(f.main.inert, true);
+  f.media.change();
+  assert.equal(f.panel.inert, false, "delayed resize must keep the new menu open");
+  assert.equal(f.shell.dataset.mobileOpen, "true");
+  assert.equal(f.main.inert, true);
+  f.ctrl.navigate();
+  f.ctrl.mount();
+  assert.equal(f.panel.inert, true, "navigation still closes the mobile menu");
+  f.media.matches = false;
+  f.ctrl.mount();
+  f.media.change();
+  assert.equal(f.panel.inert, false, "desktop rail remains accessible after resize");
+  assert.equal(f.main.inert, false);
+}
 console.log(
   "PASS: menu permissions, unique groups, desktop toggle/persistence, scroll retention, blocked storage, mobile overlay, Escape, focus trap, navigation, resize and delayed desktop media synchronization.",
 );

@@ -180,7 +180,7 @@ try {
   assert.match(await page.locator("[data-total]").innerText(), /6 kg/);
   await page.locator(".weighing-dialog [data-close]").last().click();
   await page.locator(".receipt-shipment-dialog [type=submit]").click();
-  await page.waitForSelector("dialog", { state: "detached" });
+  await page.locator("dialog[open]").waitFor({ state: "hidden" });
   await nav("transfers");
   await page.locator("[data-transfer-new]").click();
   await page.locator("[name=toStoreId]").selectOption(store);
@@ -193,14 +193,16 @@ try {
   for (const width of [360, 390, 1440]) {
     await page.setViewportSize({ width, height: 1000 });
     assert(
-      await page.locator("dialog").evaluate((d) => d.scrollWidth <= d.clientWidth + 1),
+      await page
+        .locator("dialog[open]")
+        .evaluate((d) => d.scrollWidth <= d.clientWidth + 1),
       "dispatch dialog fits " + width,
     );
   }
-  await page.locator("dialog [type=submit]").click();
-  await page.waitForSelector("dialog", { state: "detached" });
+  await page.locator("dialog[open] [type=submit]").click();
+  await page.locator("dialog[open]").waitFor({ state: "hidden" });
   await page.locator("[data-transfer]").click();
-  assert.match(await page.locator("dialog").innerText(), /Dalam perjalanan/);
+  assert.match(await page.locator("dialog[open]").innerText(), /Dalam perjalanan/);
   const popupWait = page.waitForEvent("popup");
   await page.locator("[data-print-delivery]").click();
   const popup = await popupWait;
@@ -209,7 +211,7 @@ try {
   assert.match(await popup.locator("body").innerText(), /SURAT JALAN/);
   await popup.pdf({ path: "test-results/warehouse-delivery-qa.pdf", format: "A4" });
   await popup.close();
-  await page.locator("dialog [type=submit]").click();
+  await page.locator("dialog[open] [type=submit]").click();
   await login("cashier");
   assert.equal(await page.locator(".nav-item[data-view=pricing]").count(), 0);
   assert.equal(await page.locator(".nav-item[data-view=products]").count(), 0);
@@ -229,7 +231,7 @@ try {
     document.querySelector("[data-receive-message]").textContent.includes("1 / 2"),
   );
   await page.locator("[name=confirmed]").check();
-  await page.locator("dialog [type=submit]").click();
+  await page.locator("dialog[open] [type=submit]").click();
   assert.match(await page.locator("#form-error").innerText(), /belum dipindai/);
   await page.reload();
   await nav("receiving");
@@ -241,8 +243,8 @@ try {
     document.querySelector("[data-receive-message]").textContent.includes("2 / 2"),
   );
   await page.locator("[name=confirmed]").check();
-  await page.locator("dialog [type=submit]").click();
-  await page.waitForSelector("dialog", { state: "detached" });
+  await page.locator("dialog[open] [type=submit]").click();
+  await page.locator("dialog[open]").waitFor({ state: "hidden" });
   assert.equal(
     await page.locator("[data-transfer]").count(),
     0,
@@ -334,8 +336,8 @@ try {
   await nav("pricing");
   await page.locator('[data-transfer-price="' + product + '"]').click();
   await page.locator("[name=price]").fill("70000");
-  await page.locator("dialog [type=submit]").click();
-  await page.waitForSelector("dialog", { state: "detached" });
+  await page.locator("dialog[open] [type=submit]").click();
+  await page.locator("dialog[open]").waitFor({ state: "hidden" });
   await login("waitress");
   assert.equal(await page.locator(".nav-item[data-view=orders]").count(), 0);
   await nav("service");

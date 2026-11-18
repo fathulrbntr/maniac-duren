@@ -1,44 +1,49 @@
-/* Product cards share one image ratio, content rhythm and action position. */
+/* Food POS catalog: circular product photos, equal cards and clear prices. */
 .order-product-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
+  gap: 58px 24px;
   align-items: stretch;
+  padding-top: 42px;
 }
 .order-product-grid .order-product {
   position: relative;
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 0;
   height: 100%;
   min-width: 0;
-  padding: 12px;
-  text-align: left;
+  padding: 0 18px 22px;
+  text-align: center;
   color: var(--ink);
   background: var(--surface);
   border: 1px solid transparent;
   border-radius: var(--radius-card);
-  box-shadow: 0 2px 10px #00000003;
-  overflow: hidden;
+  box-shadow: none;
+  overflow: visible;
   transition:
     border-color 0.15s,
-    box-shadow 0.15s;
+    background-color 0.15s;
 }
 .order-product-grid .order-product:hover:not(:disabled) {
   transform: none;
-  border-color: color-mix(in srgb, var(--action-bg) 45%, var(--line));
-  box-shadow: 0 4px 16px #00000008;
+  border-color: var(--action-bg);
+  background: color-mix(in srgb, var(--surface) 95%, var(--action-bg));
+  box-shadow: none;
 }
 .order-product-grid .order-product-photo {
-  width: 100%;
+  width: min(132px, 85%);
   height: auto;
   flex: none;
-  aspect-ratio: 4/3;
+  aspect-ratio: 1;
   display: grid;
   place-items: center;
-  border-radius: 6px;
+  border-radius: 50%;
   background: var(--surface-soft);
   overflow: hidden;
+  margin: -36px auto 0;
+  box-shadow: 0 8px 16px #0002;
 }
 .order-product-grid .order-product-photo img {
   width: 100%;
@@ -47,48 +52,41 @@
   padding: 0;
 }
 .order-product-grid .order-product-photo > span {
-  color: var(--muted);
+  color: var(--action-bg);
   font-size: 32px;
   font-weight: 600;
 }
 .order-product-grid .order-product-info {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 7px;
   flex: 1;
   min-width: 0;
-  padding: 12px 0 0;
+  width: 100%;
+  padding: 16px 0 0;
 }
 .order-product-grid .order-product-info > strong {
   order: 0;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
-  line-height: 1.45;
-  min-height: 41px;
-  max-height: 41px;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
+  line-height: 1.4;
+  min-height: 42px;
   overflow-wrap: anywhere;
 }
 .order-product-grid .order-product-category {
   order: 1;
+  text-transform: none;
+  letter-spacing: 0;
   color: var(--muted);
   font-size: 12px;
   line-height: 18px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  letter-spacing: 0;
-  text-transform: none;
+  overflow-wrap: anywhere;
 }
 .order-product-grid .order-variant-count {
   order: 2;
   color: var(--muted);
   font-size: 12px;
   line-height: 18px;
-  min-height: 18px;
 }
 .order-product-grid .order-variant-count.is-placeholder {
   display: none;
@@ -97,51 +95,48 @@
   order: 3;
   display: block;
   margin-top: auto;
-  padding-top: 10px;
-  min-height: 30px;
-  font-size: 14px;
+  padding-top: 4px;
+  font-size: 15px;
   font-weight: 600;
-  line-height: 1.6;
-  color: var(--action-bg);
+  line-height: 1.5;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
 .order-product-grid .order-product-footer {
   display: block;
-  margin-top: 6px;
+  width: 100%;
+  margin-top: 8px;
   padding: 0;
-  min-height: 18px;
 }
 .order-product-grid .order-stock-status {
   margin: 0;
   padding: 0;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
-  line-height: 18px;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 .order-product-grid .order-product-add {
   position: absolute;
-  top: 20px;
-  right: 20px;
+  top: 12px;
+  right: 10px;
   display: grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
-  min-width: 32px;
-  min-height: 32px;
-  padding: 7px;
-  border: 1px solid #ffffff66;
-  border-radius: 6px;
-  background: var(--surface);
+  width: 26px;
+  height: 26px;
+  min-width: 26px;
+  min-height: 26px;
+  padding: 5px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--surface-soft);
   color: var(--action-bg);
-  box-shadow: 0 1px 5px #00000010;
+  box-shadow: none;
 }
 .order-product-add svg {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
 }
 .order-product-grid .order-product:disabled {
   opacity: 0.6;
@@ -153,31 +148,35 @@
 }
 .order-product-grid .order-product:focus-visible {
   outline: 2px solid var(--focus);
-  outline-offset: 3px;
+  outline-offset: 4px;
 }
-@container catalog (max-width:560px) {
+@container catalog (max-width: 600px) {
   .order-product-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
+    gap: 54px 16px;
   }
 }
 @media (max-width: 480px) {
   .order-product-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
+    gap: 48px 12px;
   }
   .order-product-grid .order-product {
-    padding: 10px;
+    padding: 0 12px 18px;
+  }
+  .order-product-grid .order-product-photo {
+    width: min(110px, 85%);
+    margin-top: -32px;
   }
   .order-product-grid .order-product-add {
-    top: 16px;
-    right: 16px;
+    top: 6px;
+    right: 6px;
   }
   .order-product-grid .order-product-info > strong {
-    font-size: 13px;
+    font-size: 14px;
   }
   .order-product-grid .order-product-price {
-    font-size: 13px;
+    font-size: 14px;
   }
 }
 

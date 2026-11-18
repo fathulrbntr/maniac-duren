@@ -101,9 +101,22 @@ menu sesudah reload, tunggu shell/sidebar siap dan periksa atribut `open` grup
 navigasinya; elemen yang belum dirender tidak berarti grupnya tertutup.
 
 Setelah perubahan viewport, layout CSS dapat berubah sebelum callback
-`matchMedia` memperbarui ARIA. Helper sidebar memeriksa keterlihatan picker
-lokasi agar tidak mengeklik tombol desktop yang sudah tersembunyi ketika
-sidebar terbuka.
+`matchMedia` memperbarui ARIA. Gunakan `openSidebar` dari
+`tests/helpers/browser-sidebar.mjs`: helper menunggu kesesuaian breakpoint,
+atribut shell, `inert`, dan ARIA, lalu menggunakan `aria-expanded` untuk
+menentukan apakah toggle perlu diklik. Keterlihatan picker bukan status buka:
+transisi `visibility` mempertahankan elemen terlihat ketika panel sedang menutup.
+Jumlah frame render juga bukan jaminan animasi selesai. Controller menerapkan perubahan
+breakpoint sebelum toggle, sehingga event media yang terlambat tidak membatalkan
+pilihan membuka menu.
+
+`npm run test:browser` menjalankan semua suite independen meskipun satu suite gagal.
+Konsumen fixture laporan hanya dijalankan setelah pembuat fixture SQL lulus.
+Hasil dan log per suite berada di `test-results/browser-suite/`; proses tetap
+mengembalikan exit code gagal jika ada suite gagal atau tertahan prasyarat.
+Audit UI mencetak tema/ukuran layar. Jika gagal, `test-results/ui-audit/failure.json`
+mencatat langkah, menu, viewport, status sidebar/grup dan posisi tombol;
+`failure.png` menyimpan tampilan kegagalan bila browser masih dapat mengambil gambar.
 
 ## Berkas yang dikirim untuk audit selanjutnya
 
