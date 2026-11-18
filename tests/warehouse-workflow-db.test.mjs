@@ -181,7 +181,7 @@ try {
     ),
     11,
   );
-  const save = async (kind = "transfer", mode = "pending") => {
+  const save = async (kind = "transfer", mode = "pending", priced = [products[0]]) => {
     await as(owner);
     const q = {
       id: id(),
@@ -190,7 +190,7 @@ try {
       targetId: kind === "transfer" ? store : null,
       buyer: { name: "Pembeli <uji>", phone: "081", address: "Alamat" },
       carrier: "Kurir",
-      rates: [{ productId: products[0], unit: "kg", price: 100000 }],
+      rates: priced.map((productId) => ({ productId, unit: "kg", price: 100000 })),
       paymentMode: mode,
     };
     await mut("outbound_save", q);
@@ -406,6 +406,63 @@ try {
     ],
   });
   assert.equal((await getPlan()).expected[products[0]].kg, 22);
+  const multi = await save("transfer", "pending", products);
+  const labels = [code(4), code(6, 2)];
+  await as(worker);
+  for (const barcode of labels) await out(multi, "outbound_scan", { barcode });
+  await out(multi, "outbound_ready");
+  await as(owner);
+  await out(multi, "outbound_issue");
+  await as(worker);
+  await out(multi, "outbound_dispatch", { confirmed: true });
+  await as(cashier);
+  const delivery = (await read()).transfers.find((x) => x.id === multi);
+  assert.equal(delivery.lines.length, 2);
+  const confirm = {
+    id: id(),
+    transferId: multi,
+    deliveryNo: delivery.deliveryNo,
+    confirmed: true,
+  };
+  await mut("transfer_scan", { ...confirm, id: id(), barcodes: labels });
+  const patch = fs.readFileSync("database/transfer-receive-119.sql", "utf8");
+  await db.exec(patch);
+  await db.exec(patch);
+  // A genuine mismatch must identify the unit and reject the whole receipt.
+  await db.query("update public.md_pos_fruit_units set transfer_id=null where barcode=$1", [
+    labels[1],
+  ]);
+  await assert.rejects(mut("transfer_receive", confirm), new RegExp(labels[1]));
+  assert.equal((await read()).transfers.find((x) => x.id === multi).status, "in_transit");
+  await db.query("update public.md_pos_fruit_units set transfer_id=$1 where barcode=$2", [
+    multi,
+    labels[1],
+  ]);
+  await mut("transfer_receive", confirm);
+  await mut("transfer_receive", confirm);
+  const received = (await read()).transfers.find((x) => x.id === multi);
+  assert.equal(received.status, "received");
+  assert.equal(received.items.filter((x) => x.scannedAt).length, labels.length);
+  const posted = await db.query(
+    `select fu.barcode, fu.status, fu.transfer_id, fu.store_id,
+            fu.lot_id = i.target_lot_id as correct_lot
+     from md_supply.items i join public.md_pos_fruit_units fu using (barcode)
+     where i.transfer_id=$1 order by fu.barcode`,
+    [multi],
+  );
+  assert.equal(posted.rows.length, labels.length);
+  for (const unit of posted.rows) {
+    assert.equal(unit.status, "available");
+    assert.equal(unit.store_id, store);
+    assert.equal(unit.transfer_id, null);
+    assert.equal(unit.correct_lot, true);
+  }
+  const journal = await db.query(
+    `select count(*)::int as lots, sum(pieces)::int as pieces, sum(qty)::int as kg
+     from public.md_pos_stock_journal where event_id=$1`,
+    [confirm.id],
+  );
+  assert.deepEqual(journal.rows, [{ lots: 2, pieces: 2, kg: 4 }]);
   // POS payment and shift guards still apply to ordinary sales.
   await assert.rejects(
     db.query(
