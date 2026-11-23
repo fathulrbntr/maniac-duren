@@ -13,6 +13,7 @@ import {
 } from "./cashier-ui.mjs";
 import { devicesPage, bindDevices } from "./devices-ui.mjs";
 import { readDeviceSettings } from "./device-settings.mjs";
+import { pricesForBranch } from "./branch-prices.mjs";
 import { barcodeProduct, bindBarcodeInput } from "./barcode-scanner.mjs";
 import { tableLabel } from "./cashier.mjs";
 import { posMenuEntries, updatePosCards, posVariantDialog } from "./pos-menu.mjs";
@@ -127,6 +128,7 @@ function cartLines(s) {
   );
 }
 export function opsPage(view, s, store) {
+  if (view === "orders") s = pricesForBranch(s, store);
   if (view === "devices") return devicesPage(s);
   if (["employees", "attendance"].includes(view)) return employeesPage(view, s, store);
   const note = !s.opsVersion
@@ -180,6 +182,12 @@ export function opsPage(view, s, store) {
   return note + html;
 }
 export function bindOps(view, s, store, ctx) {
+  if (view === "orders") {
+    const base = s,
+      getState = ctx.getState;
+    ctx = { ...ctx, getState: () => pricesForBranch(getState?.() || base, store) };
+    s = ctx.getState();
+  }
   if (view === "devices") return bindDevices(s, store, ctx);
   if (["employees", "attendance"].includes(view))
     return bindEmployees(view, s, store, ctx);
@@ -309,8 +317,9 @@ export function bindOps(view, s, store, ctx) {
     };
     showDraft();
     document.querySelector("#order-products").addEventListener("stock-refresh", (ev) => {
-      const changed = menuCatalogChanged(s, ev.detail);
-      s = ev.detail;
+      const next = pricesForBranch(ev.detail, store);
+      const changed = menuCatalogChanged(s, next);
+      s = next;
       if (changed) refreshCatalog();
       showDraft();
       variantDialog?.refresh();

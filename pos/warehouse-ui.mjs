@@ -1,3 +1,4 @@
+import { branchPricingPage, bindBranchPricing } from "./branch-prices-ui.mjs";
 import { locationFruitStock } from "./dashboard-data.mjs";
 import { prepareBarcodeInput, readyBarcodeInput } from "./barcode-scanner.mjs";
 import { workflowReady, backOffice } from "./warehouse-workflow.mjs";
@@ -137,7 +138,7 @@ export function supplyHome(s, store, space) {
       : space === "warehouse"
         ? "Terima dari supplier, scan kiriman, lalu pantau penerimaan toko."
         : "Penerimaan lengkap, pelayanan meja, kasir, kitchen, dan potong buah.";
-  return `<section class="supply-workspace">${blocker(s)}<div class="supply-hero"><div><span class="supply-eyebrow">MANIAC DUREN / ${e(space === "backoffice" ? "ADMINISTRASI" : space === "warehouse" ? "DISTRIBUSI" : "PELAYANAN")}</span><h2>${title}</h2><p>${desc}</p></div><button type="button" data-supply-refresh>Perbarui</button></div><div class="supply-stats">${stats}</div><div class="supply-task-grid">${space === "backoffice" ? action("supplierNotes", "Nota supplier", "Atur modal dan ongkir sebelum gudang menerima") + action("pricing", "Harga transfer", "Harga khusus distribusi ke toko") + action("products", "Master barang & harga jual", "Harga pelanggan berlaku di seluruh toko") + action("transfers", "Pengiriman & tagihan", "Invoice, surat jalan, dan pembayaran") + action("reports", "Laporan batch supplier", "Telusuri posisi barang dan hasil olahan") : space === "warehouse" ? action("supplierNotes", "Penerimaan supplier", "Pilih nota admin dan scan label setiap buah") + action("transfers", "Pengiriman toko & wholesale", "Scan barang dari dokumen Back Office") + action("stock", "Stok gudang", "Periksa barang per produk dan batch") + action("waste", "Reject gudang", "Scan buah reject dan simpan buktinya") : [s.access?.receive ? action("receiving", "Terima kiriman", "Cari nomor nota, scan, periksa lengkap") : "", s.access?.serve ? action("service", "Waitress", "Meja, pesanan siap, dan pengantaran") : "", s.access?.sell ? action("orders", "Kasir", "Scan buah, pesanan tambahan, dan pembayaran") : "", s.access?.kitchen ? action("kitchen", "Kitchen", "Proses menu setelah pembayaran") : "", s.access?.cut ? action("cutting", "Tukang potong", "Scan buah, catat meja, dan tangani reject") : ""].join("")}</div>${
+  return `<section class="supply-workspace">${blocker(s)}<div class="supply-hero"><div><span class="supply-eyebrow">MANIAC DUREN / ${e(space === "backoffice" ? "ADMINISTRASI" : space === "warehouse" ? "DISTRIBUSI" : "PELAYANAN")}</span><h2>${title}</h2><p>${desc}</p></div><button type="button" data-supply-refresh>Perbarui</button></div><div class="supply-stats">${stats}</div><div class="supply-task-grid">${space === "backoffice" ? action("supplierNotes", "Nota supplier", "Atur modal dan ongkir sebelum gudang menerima") + (workflowReady(s) ? action("pricing", "Harga jual", "Atur harga pelanggan per cabang toko") : action("pricing", "Harga transfer", "Harga khusus distribusi ke toko")) + action("products", "Master barang", "Produk, varian, dan harga jual dasar") + action("transfers", "Pengiriman & tagihan", "Invoice, surat jalan, dan pembayaran") + action("reports", "Laporan batch supplier", "Telusuri posisi barang dan hasil olahan") : space === "warehouse" ? action("supplierNotes", "Penerimaan supplier", "Pilih nota admin dan scan label setiap buah") + action("transfers", "Pengiriman toko & wholesale", "Scan barang dari dokumen Back Office") + action("stock", "Stok gudang", "Periksa barang per produk dan batch") + action("waste", "Reject gudang", "Scan buah reject dan simpan buktinya") : [s.access?.receive ? action("receiving", "Terima kiriman", "Cari nomor nota, scan, periksa lengkap") : "", s.access?.serve ? action("service", "Waitress", "Meja, pesanan siap, dan pengantaran") : "", s.access?.sell ? action("orders", "Kasir", "Scan buah, pesanan tambahan, dan pembayaran") : "", s.access?.kitchen ? action("kitchen", "Kitchen", "Proses menu setelah pembayaran") : "", s.access?.cut ? action("cutting", "Tukang potong", "Scan buah, catat meja, dan tangani reject") : ""].join("")}</div>${
     space === "backoffice" ? locationStockTable(s) : ""
   }${operational ? "" : `<section class="panel"><h3>Kiriman yang belum diterima</h3>${transferTable(active.slice(0, 8), !workflowReady(s) || space === "backoffice")}</section>`}</section>`;
 }
@@ -173,9 +174,9 @@ export function transfersPage(s, store, incoming = false, space) {
       "",
     )}</select></div><section class="panel" data-transfer-list></section></section>`;
 }
-export function pricingPage(s) {
-  if (workflowReady(s))
-    return `<section class="supply-workspace"><section class="panel"><h2>Harga per transaksi</h2><p>Harga transfer toko dan wholesale ditentukan langsung pada dokumen pengiriman di Back Office. Pilih produk, satuan per kg/butir, lalu masukkan harga khusus transaksi tersebut.</p><p>Harga masih dapat diedit sebelum invoice diterbitkan. Pengaturan harga transfer lama tidak menentukan nilai dokumen baru.</p><button type="button" class="primary" data-view="transfers">Buka pengiriman & invoice</button></section></section>`;
+export function pricingPage(s, store) {
+  if (workflowReady(s) || s.branchPricingVersion >= 123)
+    return branchPricingPage(s, store);
   return `<section class="supply-workspace">${blocker(s)}<div class="supply-hero"><div><span class="supply-eyebrow">BACK OFFICE</span><h2>Harga transfer ke toko</h2><p>Harga ini terpisah dari modal batch dan harga jual pelanggan. Invoice yang sudah terbit tetap memakai harga saat dikirim.</p></div><button type="button" data-view="products">Master harga jual</button></div><section class="panel">${table(
     ["Produk", "Harga transfer", "Satuan", "Aksi"],
     s.products
@@ -710,6 +711,7 @@ export function cuttingPage(s, store) {
   )}</section></section>`;
 }
 export function bindSupply(s, store, view, ctx) {
+  if (view === "pricing" && s.branchPricingVersion >= 123) return bindBranchPricing(ctx);
   ctx = {
     ...ctx,
     printOutbound: (o, type) => {

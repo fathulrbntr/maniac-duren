@@ -53,7 +53,9 @@ export function barcodeProduct(state, raw, settings = readDeviceSettings()) {
       );
     if (!Number.isFinite(Number(product.priceKg)) || !(Number(product.priceKg) > 0))
       throw Error(
-        "Harga jual per kg belum valid. Periksa Master Barang dan samakan dengan timbangan.",
+        state.branchPricingVersion >= 123
+          ? "Harga jual per kg belum tersedia untuk cabang ini."
+          : "Harga jual per kg belum valid. Periksa Master Barang dan samakan dengan timbangan.",
       );
     return { code, product, scale };
   }

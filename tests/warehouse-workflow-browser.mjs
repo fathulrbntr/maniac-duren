@@ -9,6 +9,16 @@ const db = await warehouseDatabase(),
   root = process.cwd();
 await db.exec(fs.readFileSync("database/supplier-notes-112.sql", "utf8"));
 await db.exec(fs.readFileSync("database/warehouse-workflow-114.sql", "utf8"));
+for (const patch of [
+  "transfer-receive-119",
+  "supplier-stock-122",
+  "branch-sale-prices-123",
+])
+  await db.exec(fs.readFileSync("database/" + patch + ".sql", "utf8"));
+const otherStore = id();
+await db.query("insert into public.md_pos_stores(id,name) values($1,'Jababeka uji')", [
+  otherStore,
+]);
 const owner = id(),
   warehouseUser = id(),
   cashier = id(),
@@ -214,6 +224,23 @@ try {
   await login("owner");
   await openSidebar(page);
   await page.locator("[data-workspace=backoffice]").click();
+  await nav("pricing");
+  await page.getByRole("heading", { name: "Harga Jual", exact: true }).waitFor();
+  const outlet = page.locator("[data-retail-store]");
+  await outlet.selectOption(store);
+  const priceButton = page.locator(`[data-edit-retail="${product}"]`);
+  const priceRow = priceButton.locator("xpath=ancestor::tr");
+  await priceButton.click();
+  const editor = page.locator("dialog[open]");
+  await editor.locator('[name="priceKg"]').fill("107000");
+  await editor.locator('[name="pricePiece"]').fill("163000");
+  await editor.getByRole("button", { name: "Simpan harga" }).click();
+  await priceRow.filter({ hasText: "Khusus cabang" }).waitFor();
+  assert.match(await priceRow.innerText(), /107\.000/);
+  await outlet.selectOption(otherStore);
+  await priceRow.filter({ hasText: "Master Barang" }).waitFor();
+  await outlet.selectOption(store);
+  await priceRow.filter({ hasText: "Khusus cabang" }).waitFor();
   await nav("supplierNotes");
   await page.locator("[data-note-open]").click();
   assert.match(await page.locator(".receipt-comparison").innerText(), /40%/);

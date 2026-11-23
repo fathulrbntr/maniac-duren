@@ -1,3 +1,4 @@
+import { pricesForBranch } from "./branch-prices.mjs";
 import { productPhoto } from "./product-photos.mjs";
 import { posCategories, inPosCategory, posCategoryName } from "./pos-categories.mjs";
 import { posCategoryManager, posCategoryDialog } from "./pos-categories-ui.mjs";
@@ -25,6 +26,7 @@ const options = (values, selected) =>
     .join("");
 const amount = (p) => (isMaterial(p) ? null : isLegacyStock(p) ? p.priceKg : p.salePrice);
 function entries(state, store, mode) {
+  if (mode === "stock") state = pricesForBranch(state, store);
   const available = availableStock(state, store, today());
   return (state.products || [])
     .map((p) => ({ ...productDefaults(p), ...(isMaterial(p) ? { category: null } : {}) }))

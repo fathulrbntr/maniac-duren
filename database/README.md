@@ -89,3 +89,11 @@ Back Office membuka nota dan memasukkan total beli setiap produk serta ongkir be
 Nota buah membagi ongkir menurut berat aktual. Jika nota memuat barang satuan, ongkir dibagi menurut proporsi nilai beli setiap baris. Modal per satuan adalah (total beli baris + alokasi ongkir) dibagi jumlah aktual. Untuk buah, jumlah aktual menggunakan kg hasil scan. Detail nota juga menampilkan modal rata-rata per butir.
 
 Harga jual dikelola di Master Barang. Bila dokumen sumber keliru, koreksi nota oleh owner menghitung ulang modal batch. Stok historis tetap memakai riwayat yang sudah tercatat. Transfer, produksi, dan olahan reject merujuk batch sumber.
+
+### Harga jual per cabang (123)
+
+Setelah patch 122, jalankan `database/branch-sale-prices-123.sql` di SQL Editor Supabase atau gunakan migrasi CLI `20261123190000_branch_sale_prices_123.sql`. Pasang frontend patch 123 dan muat ulang POS.
+
+Di **Back Office → Harga Jual**, pilih cabang toko dan produk atau varian. Buah memiliki harga per kg dan per butir. Produk kemasan dan menu resep menggunakan satuan jual masing-masing. Cabang mengikuti harga Master Barang sampai admin atau owner menyimpan harga khusus. Opsi **Ikuti Master Barang** mengembalikan cabang ke harga dasar untuk produk tersebut.
+
+Kasir memvalidasi harga cabang saat transaksi disimpan. Jika harga berubah selama pesanan masih di keranjang, perbarui kasir lalu masukkan kembali produk yang terpengaruh. Transaksi yang sudah tersimpan menyimpan harga saat penjualan. Harga pengiriman dan wholesale tetap di dokumen pengiriman.

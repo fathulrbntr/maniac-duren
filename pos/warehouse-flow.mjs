@@ -6,6 +6,7 @@ export const supplyActions = new Set([
   ...supplierNoteActions,
   ...workflowActions,
   "transfer_price_save",
+  "branch_price_save",
   "receipt_plan_save",
   "transfer_dispatch",
   "transfer_scan",

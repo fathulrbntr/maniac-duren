@@ -1,3 +1,4 @@
+import { pricesForBranch } from "./branch-prices.mjs";
 import { prepareBarcodeInput } from "./barcode-scanner.mjs";
 import { supplierDialog, bindSupplierSelect } from "./supplier-ui.mjs";
 import { commitMutation } from "./data/mutations.mjs";
@@ -202,7 +203,7 @@ const title = {
   storehome: "Dashboard Toko",
   transfers: "Pengiriman & Tagihan",
   receiving: "Penerimaan Kiriman",
-  pricing: "Harga Transfer",
+  pricing: "Harga Jual",
   supplierNotes: "Nota Supplier",
   service: "Pelayanan Meja",
   cutting: "Tukang Potong",
@@ -768,8 +769,8 @@ function inventoryTable(lots) {
 function cashier() {
   const total = cart.reduce((a, l) => a + l.total, 0);
   return `<div class="pos-layout"><section><div class="header-row"><div><h3>Pilih durian</h3><p class="muted">Store ${e(name("stores", store))}</p></div><button class="small" id="reload">Perbarui stok</button></div><div class="products">${
-    state.products
-      .filter(isLegacyStock)
+    pricesForBranch(state, store)
+      .products.filter(isLegacyStock)
       .map((p) => {
         const lots = state.lots.filter(
           (l) => l.storeId === store && l.productId === p.id,
@@ -877,7 +878,7 @@ function render() {
       storehome: () => supplyHome(state, store, "store"),
       transfers: () => transfersPage(state, store, false, workspace),
       receiving: () => transfersPage(state, store, true),
-      pricing: () => pricingPage(state),
+      pricing: () => pricingPage(state, store),
       supplierNotes: () => supplierNotesPage(state, store, workspace),
       service: () => servicePage(state, store),
       cutting: () => cuttingPage(state, store),
@@ -1304,13 +1305,13 @@ function modal(title, body, submitLabel = "Simpan") {
   return d;
 }
 function addItem(productId) {
-  const product = state.products.find((x) => x.id === productId),
+  const product = pricesForBranch(state, store).products.find((x) => x.id === productId),
     lots = state.lots.filter(
       (l) => l.productId === productId && l.storeId === store && l.kg > 0 && l.pieces > 0,
     );
   const d = modal(
     "Tambah " + e(product.name),
-    `${field("Asal barang / supplier", `<select name="lotId" required>${lots.map((l) => `<option value="${e(l.id)}">${e(name("suppliers", l.supplierId))} · ${l.date} · ${short(l.id)} · ${num(l.kg)} kg / ${l.pieces} butir</option>`).join("")}</select>`)}<div class="form-grid">${field("Cara jual", '<select name="unit"><option value="KG">Per kilogram</option><option value="BUTIR">Per butir</option></select>')}${field("Harga per satuan (Rp)", `<input name="price" type="number" min="0.01" step="any" value="${product.priceKg}" required>`)}${field("Berat ditimbang (kg)", '<input name="kg" type="number" min="0.000001" step="any" required placeholder="Contoh: 2,5">')}${field("Jumlah butir", '<input name="pieces" type="number" min="1" step="1" value="1" required>')}</div><div class="callout">Penjualan per butir tetap wajib ditimbang. Pilih asal barang yang sesuai dengan durian fisiknya.</div><div class="total"><span>Subtotal</span><span id="subtotal">${money(0)}</span></div>`,
+    `${field("Asal barang / supplier", `<select name="lotId" required>${lots.map((l) => `<option value="${e(l.id)}">${e(name("suppliers", l.supplierId))} · ${l.date} · ${short(l.id)} · ${num(l.kg)} kg / ${l.pieces} butir</option>`).join("")}</select>`)}<div class="form-grid">${field("Cara jual", '<select name="unit"><option value="KG">Per kilogram</option><option value="BUTIR">Per butir</option></select>')}${field("Harga per satuan (Rp)", `<input name="price" type="number" min="0.01" step="any" value="${product.priceKg}" ${state.branchPricingVersion >= 123 ? "readonly" : ""} required>`)}${field("Berat ditimbang (kg)", '<input name="kg" type="number" min="0.000001" step="any" required placeholder="Contoh: 2,5">')}${field("Jumlah butir", '<input name="pieces" type="number" min="1" step="1" value="1" required>')}</div><div class="callout">Penjualan per butir tetap wajib ditimbang. Pilih asal barang yang sesuai dengan durian fisiknya.</div><div class="total"><span>Subtotal</span><span id="subtotal">${money(0)}</span></div>`,
     "Tambah ke pesanan",
   );
   const f = d.querySelector("form");

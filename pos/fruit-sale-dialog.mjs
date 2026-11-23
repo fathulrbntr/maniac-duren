@@ -235,7 +235,12 @@ export function fruitSaleDialog({
       if (!Number.isInteger(pieces) || pieces <= 0)
         reject(scale ? "unit" : "pieces", "Isi jumlah butir bulat minimal 1.");
       if (!Number.isFinite(price) || price <= 0)
-        reject("unit", "Harga jual untuk cara jual ini belum diisi di Master Barang.");
+        reject(
+          "unit",
+          s.branchPricingVersion >= 123
+            ? "Harga jual buah belum tersedia untuk cabang ini."
+            : "Harga jual untuk cara jual ini belum diisi di Master Barang.",
+        );
       if (price !== displayedPrice) {
         preview();
         reject("unit", "Harga jual berubah. Periksa harga terbaru lalu tambah kembali.");

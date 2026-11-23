@@ -1,3 +1,4 @@
+import { pricesForBranch } from "./branch-prices.mjs";
 import { isPaymentLabel } from "./payment-methods.mjs";
 import { today } from "./core.mjs";
 import { sumProducts } from "./decimal-totals.mjs";
@@ -15,6 +16,7 @@ const positive = (v) => {
   return n;
 };
 export function cashierQuote(s, p) {
+  s = pricesForBranch(s, p.storeId);
   if (!Array.isArray(p.lines) || !p.lines.length || p.lines.length > 100)
     throw Error("Isi pesanan, maksimal 100 baris");
   const tableNo = p.tableNo == null || p.tableNo === "" ? null : Number(p.tableNo);
@@ -58,7 +60,11 @@ export function cashierQuote(s, p) {
       };
     }
     if (!Number.isFinite(price) || price <= 0 || Number(l.price) !== price)
-      throw Error("Harga mengikuti master. Gunakan diskon dengan persetujuan owner");
+      throw Error(
+        s.branchPricingVersion >= 123
+          ? "Harga jual cabang berubah. Perbarui kasir dan masukkan kembali produk."
+          : "Harga mengikuti master. Gunakan diskon dengan persetujuan owner",
+      );
     return out;
   });
   return {
