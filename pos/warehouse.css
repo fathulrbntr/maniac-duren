@@ -115,6 +115,33 @@
   margin-top: 4px;
   color: var(--muted);
 }
+.location-stock table {
+  min-width: 780px;
+  font-variant-numeric: tabular-nums;
+}
+.location-stock thead th,
+.location-stock tbody td {
+  text-align: right;
+}
+.location-stock th[scope="row"],
+.location-stock thead tr:first-child th:first-child {
+  text-align: left;
+}
+.location-stock th[scope="colgroup"] {
+  text-align: center;
+  border-bottom: 1px solid var(--line);
+}
+.location-stock th[scope="row"] {
+  background: inherit;
+  color: inherit;
+  font-size: 13px;
+}
+.location-stock th[scope="row"] small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-weight: normal;
+}
 .supply-badge {
   display: inline-flex;
   padding: 5px 9px;

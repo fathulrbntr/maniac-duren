@@ -1,3 +1,4 @@
+import { locationFruitStock } from "./dashboard-data.mjs";
 import { prepareBarcodeInput, readyBarcodeInput } from "./barcode-scanner.mjs";
 import { workflowReady, backOffice } from "./warehouse-workflow.mjs";
 import { receivingPage, openReceivingSession } from "./receiving-session-ui.mjs";
@@ -38,6 +39,24 @@ const blocker = (s) =>
     : s.warehouseVersion < 107
       ? '<div class="notice">Pembaruan gudang belum terpasang. Admin perlu memasang SQL 107 sebelum fitur ini digunakan.</div>'
       : "";
+function locationStockTable(s) {
+  const weight = (kg, pieces) =>
+    `<td>${num(kg)} kg<small>${num(pieces)} butir</small></td>`;
+  const rows = locationFruitStock(s).map(
+    (r) => `<tr>
+    <th scope="row"><b>${e(r.location.name)}</b><small>${r.location.locationType === "warehouse" ? "Gudang pusat" : "Toko"}</small></th>
+    ${weight(r.readyKg, r.readyPieces)}${weight(r.soldKg, r.soldPieces)}${weight(r.rejectKg, r.rejectPieces)}
+    <td>${num(r.durpas500)} pcs</td><td>${num(r.durpas1000)} pcs</td><td>${num(r.coral)} kg</td><td>${num(r.skinKg)} kg</td>
+  </tr>`,
+  );
+  return `<section class="panel location-stock"><h3 id="location-stock-heading">Stok buah per lokasi</h3>
+    <div class="table-wrap"><table aria-labelledby="location-stock-heading" aria-describedby="location-stock-help">
+    <colgroup span="4"></colgroup><colgroup span="4"></colgroup>
+    <thead><tr><th rowspan="2" scope="col">Lokasi</th><th rowspan="2" scope="col">Siap</th><th rowspan="2" scope="col">Terjual</th><th rowspan="2" scope="col">Reject belum diolah</th><th colspan="4" scope="colgroup">Hasil pengolahan reject</th></tr>
+    <tr><th scope="col">Durpas 500 g</th><th scope="col">Durpas 1 kg</th><th scope="col">Coral</th><th scope="col">Kulit terbuang (est.)</th></tr></thead>
+    <tbody>${rows.join("") || '<tr><td colspan="8" class="empty">Belum ada lokasi.</td></tr>'}</tbody></table></div>
+    <p id="location-stock-help" class="muted">Siap dan reject belum diolah menunjukkan stok saat ini. Terjual dan hasil pengolahan adalah total sejak pencatatan di tiap lokasi. Estimasi kulit mencakup kulit dan sisa proses, dihitung dari berat buah dikurangi hasil Durpas dan Coral.</p></section>`;
+}
 export function supplyHome(s, store, space) {
   const ts = (s.transfers || []).filter(
       (t) => space === "backoffice" || t.sourceId === store || t.targetId === store,
@@ -119,15 +138,7 @@ export function supplyHome(s, store, space) {
         ? "Terima dari supplier, scan kiriman, lalu pantau penerimaan toko."
         : "Penerimaan lengkap, pelayanan meja, kasir, kitchen, dan potong buah.";
   return `<section class="supply-workspace">${blocker(s)}<div class="supply-hero"><div><span class="supply-eyebrow">MANIAC DUREN / ${e(space === "backoffice" ? "ADMINISTRASI" : space === "warehouse" ? "DISTRIBUSI" : "PELAYANAN")}</span><h2>${title}</h2><p>${desc}</p></div><button type="button" data-supply-refresh>Perbarui</button></div><div class="supply-stats">${stats}</div><div class="supply-task-grid">${space === "backoffice" ? action("supplierNotes", "Nota supplier", "Atur modal dan ongkir sebelum gudang menerima") + action("pricing", "Harga transfer", "Harga khusus distribusi ke toko") + action("products", "Master barang & harga jual", "Harga pelanggan berlaku di seluruh toko") + action("transfers", "Pengiriman & tagihan", "Invoice, surat jalan, dan pembayaran") + action("reports", "Laporan batch supplier", "Telusuri posisi barang dan hasil olahan") : space === "warehouse" ? action("supplierNotes", "Penerimaan supplier", "Pilih nota admin dan scan label setiap buah") + action("transfers", "Pengiriman toko & wholesale", "Scan barang dari dokumen Back Office") + action("stock", "Stok gudang", "Periksa barang per produk dan batch") + action("waste", "Reject gudang", "Scan buah reject dan simpan buktinya") : [s.access?.receive ? action("receiving", "Terima kiriman", "Cari nomor nota, scan, periksa lengkap") : "", s.access?.serve ? action("service", "Waitress", "Meja, pesanan siap, dan pengantaran") : "", s.access?.sell ? action("orders", "Kasir", "Scan buah, pesanan tambahan, dan pembayaran") : "", s.access?.kitchen ? action("kitchen", "Kitchen", "Proses menu setelah pembayaran") : "", s.access?.cut ? action("cutting", "Tukang potong", "Scan buah, catat meja, dan tangani reject") : ""].join("")}</div>${
-    space === "backoffice"
-      ? `<section class="panel"><h3>Stok buah per lokasi</h3>${table(
-          ["Lokasi", "Siap", "Reject"],
-          (s.locations || s.stores).map(
-            (st) =>
-              `<tr><td><b>${e(st.name)}</b><small>${st.locationType === "warehouse" ? "Gudang pusat" : "Toko"}</small></td><td>${num(s.lots.filter((l) => l.storeId === st.id && l.quality === "ready").reduce((n, l) => n + l.kg, 0))} kg</td><td>${num(s.lots.filter((l) => l.storeId === st.id && l.quality === "reject").reduce((n, l) => n + l.kg, 0))} kg</td></tr>`,
-          ),
-        )}</section>`
-      : ""
+    space === "backoffice" ? locationStockTable(s) : ""
   }${operational ? "" : `<section class="panel"><h3>Kiriman yang belum diterima</h3>${transferTable(active.slice(0, 8), !workflowReady(s) || space === "backoffice")}</section>`}</section>`;
 }
 function transferTable(rows, finance = true) {

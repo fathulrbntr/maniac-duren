@@ -1,6 +1,6 @@
 // Read-only dashboard summaries use the same paid transactions as Laporan.
 import { today } from "./core.mjs";
-import { salesReport, periodRange } from "./reports.mjs";
+import { salesReport, periodRange, transactions } from "./reports.mjs";
 import { posCategories, inPosCategory } from "./pos-categories.mjs";
 const number = (v) => Number(v) || 0;
 const dayMs = 86400000;
@@ -224,15 +224,73 @@ export function dashboardStock(s, store) {
     units,
   };
 }
-export function dashboardRejects(s, f) {
-  const allowed = new Set(s.stores.map((x) => x.id)),
-    seen = new Set((s.rejectRecords || []).map((r) => r.id));
-  const rows = [
+function rejectHistory(s) {
+  const seen = new Set((s.rejectRecords || []).map((r) => r.id));
+  return [
     ...(s.rejectRecords || []),
     ...(s.wasteRuns || [])
       .filter((r) => !seen.has(r.id))
       .map((r) => ({ ...r, kind: "legacy" })),
-  ]
+  ];
+}
+
+export function locationFruitStock(s) {
+  const rows = new Map(
+    (s.locations || s.stores || []).map((location) => [
+      location.id,
+      {
+        location,
+        readyKg: 0,
+        readyPieces: 0,
+        rejectKg: 0,
+        rejectPieces: 0,
+        soldKg: 0,
+        soldPieces: 0,
+        durpas500: 0,
+        durpas1000: 0,
+        coral: 0,
+        skinKg: 0,
+      },
+    ]),
+  );
+  for (const lot of s.lots || []) {
+    const row = rows.get(lot.storeId);
+    if (!row) continue;
+    if (lot.quality === "ready") {
+      row.readyKg += number(lot.kg);
+      row.readyPieces += number(lot.pieces);
+    } else if (lot.quality === "reject") {
+      row.rejectKg += number(lot.kg);
+      row.rejectPieces += number(lot.pieces);
+    }
+  }
+  for (const tx of transactions(s)) {
+    const row = rows.get(tx.storeId);
+    if (!row) continue;
+    for (const line of tx.lines) {
+      // Legacy sales and dispatched wholesale invoices contain whole fruit lines only.
+      if (tx.kind !== "sale" && line.itemType !== "fruit") continue;
+      row.soldKg += number(line.kg);
+      row.soldPieces += number(line.pieces);
+    }
+  }
+  for (const record of rejectHistory(s)) {
+    const row = rows.get(record.storeId);
+    if (!row || record.voided || !["direct", "process", "legacy"].includes(record.kind))
+      continue;
+    for (const output of record.outputs || []) {
+      if (["durpas500", "durpas1000", "coral"].includes(output.key))
+        row[output.key] += number(output.qty);
+    }
+    // A run with zero output discarded the whole fruit; it does not measure peel.
+    if (record.outputKg > 0) row.skinKg += number(record.lossKg);
+  }
+  return [...rows.values()];
+}
+
+export function dashboardRejects(s, f) {
+  const allowed = new Set(s.stores.map((x) => x.id));
+  const rows = rejectHistory(s)
     .filter(
       (r) =>
         !r.voided &&
