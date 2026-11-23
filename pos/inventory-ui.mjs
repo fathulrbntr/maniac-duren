@@ -116,7 +116,7 @@ function leafCards(rows, mode, state) {
   </div>${statusDot(ready)}
   <button class="inv-more" type="button" ${mode === "products" ? `data-edit-product="${e(p.id)}"` : `data-stock-detail="${e(p.id)}"`} aria-label="${mode === "products" ? "Edit" : "Detail stok"} ${e(p.name)}">${mode === "products" ? "Edit barang" : "Detail stok"} ${icon("arrow")}</button>
   <div class="inv-metric" data-card-sale><span>HARGA JUAL</span><div class="inv-price-value"><strong>${e(sale.label)}</strong>${!isMaterial(p) && !sale.missing ? `<em>/${e(unit)}</em>` : ""}</div><small>${isMaterial(p) ? "Bahan internal" : dual ? `${e(priceRange([p], (p) => p.pricePiece).label)} /butir` : sale.missing ? "Belum diisi" : ""}</small></div>
-  <div class="inv-metric inv-secondary" data-card-buy><span>HARGA BELI</span><div class="inv-price-value"><strong>${e(buy.label)}</strong>${!buy.missing ? `<em>/${e(unit)}</em>` : ""}</div><small>${dual ? `${e(priceRange([p], (p) => p.buyPricePiece, true).label)} /butir` : buy.missing ? "Belum diisi" : "Harga referensi"}</small></div>
+  ${state.supplierStockVersion >= 122 && !state.stockDemo ? batchCostMetric([row]) : `<div class="inv-metric inv-secondary" data-card-buy><span>HARGA BELI</span><div class="inv-price-value"><strong>${e(buy.label)}</strong>${!buy.missing ? `<em>/${e(unit)}</em>` : ""}</div><small>${dual ? `${e(priceRange([p], (p) => p.buyPricePiece, true).label)} /butir` : buy.missing ? "Belum diisi" : "Harga referensi"}</small></div>`}
   ${mode === "stock" ? `<div class="inv-stock-details"><span>Tersedia dipakai <b>${num(usable)} ${e(unit)}${dual ? ` · ${num(availablePieces)} butir` : ""}</b></span><span>${own.filter((l) => Number(dual ? l.kg : l.qty) > 0).length} penerimaan</span></div>` : ""}
  </article></div>`;
       })
@@ -140,7 +140,26 @@ function priceRange(products, value, allowZero = false) {
     range: low !== high,
   };
 }
-function summaryPrices(group) {
+function batchCostMetric(group) {
+  const dual = isLegacyStock(group[0].p);
+  const unit = dual ? "kg" : group[0].p.stockUnit;
+  const batches = group
+    .flatMap((row) => row.own)
+    .filter((l) => Number(dual ? l.kg : l.qty) > 0);
+  const price = priceRange(batches, (l) => l.unitCost, true);
+  const pieces = dual
+    ? priceRange(
+        batches,
+        (l) =>
+          l.unitCost != null && l.receivedPieces > 0
+            ? (l.unitCost * l.receivedKg) / l.receivedPieces
+            : null,
+        true,
+      )
+    : null;
+  return `<span class="inv-summary-metric inv-secondary" data-card-buy><span>MODAL BATCH</span><span class="inv-price-value"><strong>${e(price.label)}</strong>${price.label !== "—" ? `<em>/${e(unit)}</em>` : ""}</span>${pieces && pieces.label !== "—" ? `<small>${e(pieces.label)} /butir</small>` : ""}</span>`;
+}
+function summaryPrices(group, state) {
   const products = group.map((row) => row.p),
     p = products[0],
     dual = isLegacyStock(p),
@@ -156,7 +175,7 @@ function summaryPrices(group) {
       : "";
   return `<span class="inv-summary-prices">
   <span class="inv-summary-metric" data-card-sale><span>HARGA JUAL</span><span class="inv-price-value ${sale.range ? "is-range" : ""}"><strong>${e(sale.label)}</strong>${!material && sale.missing < products.length ? `<em>/${e(unit)}</em>` : ""}</span><small>${material ? "Bahan internal" : dual ? `${e(priceRange(products, (p) => p.pricePiece).label)} /butir` : ""}</small>${!material && missing(sale) ? `<small>${e(missing(sale))}</small>` : ""}</span>
-  <span class="inv-summary-metric" data-card-buy><span>HARGA BELI</span><span class="inv-price-value ${buy.range ? "is-range" : ""}"><strong>${e(buy.label)}</strong>${buy.missing < products.length ? `<em>/${e(unit)}</em>` : ""}</span><small>${dual ? `${e(priceRange(products, (p) => p.buyPricePiece, true).label)} /butir` : e(missing(buy) || "Harga referensi")}</small></span>
+  ${state.supplierStockVersion >= 122 && !state.stockDemo ? batchCostMetric(group) : `<span class="inv-summary-metric" data-card-buy><span>HARGA BELI</span><span class="inv-price-value ${buy.range ? "is-range" : ""}"><strong>${e(buy.label)}</strong>${buy.missing < products.length ? `<em>/${e(unit)}</em>` : ""}</span><small>${dual ? `${e(priceRange(products, (p) => p.buyPricePiece, true).label)} /butir` : e(missing(buy) || "Harga referensi")}</small></span>`}
  </span>`;
 }
 function cards(rows, mode, state) {
@@ -200,7 +219,7 @@ function cards(rows, mode, state) {
                 p: { ...row.p, variant: "", variantOptions: [] },
               }))
             : group;
-        return `<article class="inv-catalog-card ${grouped ? "has-variants" : "no-variants"}" data-catalog-product="${e(p.id)}"><details class="inv-variant-group"><summary aria-label="${grouped ? "Lihat varian" : "Lihat detail"} ${e(title)}"><span class="inv-card-top"><span class="inv-summary-photo">${photo}</span><span class="inv-summary-copy"><b title="${e(title)}">${e(title)}</b><span class="inv-sku" title="${e(p.sku || "—")}">${e(p.sku || "—")}</span><small class="inv-kind" title="${e(itemTypes[p.itemType])}${subtitle ? ` · ${e(subtitle)}` : ""}">${e(itemTypes[p.itemType])}${subtitle ? ` · <span data-variant-count>${e(subtitle)}</span>` : ""}</small><small class="inv-summary-categories" title="${e(categoryNames)}" data-product-categories>${e(categoryNames)}</small><span class="inv-stockline">${stockLabel(group)}</span>${group.some((row) => row.expired) ? '<small class="inv-expired">Ada kedaluwarsa</small>' : ""}</span></span>${statusDot(group.some((row) => row.ready))}${summaryPrices(group)}${action}</summary><div class="variant-group-actions"><small>${grouped ? "Pilih Edit pada varian" : "Pilih Edit pada barang"} untuk mengubah harga, SKU, barcode, atau foto.</small></div><div class="variant-group-items">${leafCards(detailRows, mode, state)}</div></details></article>`;
+        return `<article class="inv-catalog-card ${grouped ? "has-variants" : "no-variants"}" data-catalog-product="${e(p.id)}"><details class="inv-variant-group"><summary aria-label="${grouped ? "Lihat varian" : "Lihat detail"} ${e(title)}"><span class="inv-card-top"><span class="inv-summary-photo">${photo}</span><span class="inv-summary-copy"><b title="${e(title)}">${e(title)}</b><span class="inv-sku" title="${e(p.sku || "—")}">${e(p.sku || "—")}</span><small class="inv-kind" title="${e(itemTypes[p.itemType])}${subtitle ? ` · ${e(subtitle)}` : ""}">${e(itemTypes[p.itemType])}${subtitle ? ` · <span data-variant-count>${e(subtitle)}</span>` : ""}</small><small class="inv-summary-categories" title="${e(categoryNames)}" data-product-categories>${e(categoryNames)}</small><span class="inv-stockline">${stockLabel(group)}</span>${group.some((row) => row.expired) ? '<small class="inv-expired">Ada kedaluwarsa</small>' : ""}</span></span>${statusDot(group.some((row) => row.ready))}${summaryPrices(group, state)}${action}</summary><div class="variant-group-actions"><small>${grouped ? "Pilih Edit pada varian" : "Pilih Edit pada barang"} untuk mengubah harga, SKU, barcode, atau foto.</small></div><div class="variant-group-items">${leafCards(detailRows, mode, state)}</div></details></article>`;
       })
       .join("") || leafCards([], mode, state)
   );
@@ -351,7 +370,7 @@ export function bindInventory(state, store, filter, mode, ctx) {
         dual = isLegacyStock(p);
       const d = ctx.modal(
         "Stok " + e(p.name),
-        `<p>${e(itemTypes[p.itemType])} · ${e(p.sku)}</p><p>Kategori: ${e(posCategoryName(state, p))}</p><div class="table-wrap"><table><thead><tr><th>Tanggal / lot</th><th>Supplier / asal</th><th>Sisa fisik</th><th>Kondisi / kedaluwarsa</th></tr></thead><tbody>${own.map((l) => `<tr><td>${e(l.date)}<small>${e(l.id)}</small></td><td>${e((state.suppliers || []).find((s) => s.id === l.supplierId)?.name || l.kind || "—")}</td><td>${dual ? `${num(l.kg)} kg / ${num(l.pieces)} butir` : `${num(l.qty)} ${e(p.stockUnit)}`}</td><td>${dual ? e({ ready: "Matang / siap jual", unripe: "Belum matang", unsorted: "Belum disortir", reject: "Reject" }[l.quality] || l.quality || "—") : e(l.expiry || "Tanpa tanggal")}<small>${e(l.note || "")}</small>${l.weighings?.length ? `<button type="button" data-weigh-log="${e(l.id)}">Riwayat timbang</button>` : ""}</td></tr>`).join("") || '<tr><td colspan="4">Belum ada penerimaan di toko ini.</td></tr>'}</tbody></table></div>`,
+        `<p>${e(itemTypes[p.itemType])} · ${e(p.sku)}</p><p>Kategori: ${e(posCategoryName(state, p))}</p><div class="table-wrap"><table><thead><tr><th>Tanggal / lot</th><th>Supplier / asal</th>${state.supplierStockVersion >= 122 && state.access?.finance ? "<th>Modal batch</th>" : ""}<th>Sisa fisik</th><th>Kondisi / kedaluwarsa</th></tr></thead><tbody>${own.map((l) => `<tr><td>${e(l.date)}<small>${e(l.id)}</small></td><td>${e((state.suppliers || []).find((s) => s.id === l.supplierId)?.name || l.kind || "—")}<small>${e(l.invoiceNo || "")}</small></td>${state.supplierStockVersion >= 122 && state.access?.finance ? `<td>${l.unitCost == null ? "—" : `${money(l.unitCost)} /${e(dual ? "kg" : p.stockUnit)}`}</td>` : ""}<td>${dual ? `${num(l.kg)} kg / ${num(l.pieces)} butir` : `${num(l.qty)} ${e(p.stockUnit)}`}</td><td>${dual ? e({ ready: "Matang / siap jual", unripe: "Belum matang", unsorted: "Belum disortir", reject: "Reject" }[l.quality] || l.quality || "—") : e(l.expiry || "Tanpa tanggal")}<small>${e(l.note || "")}</small>${l.weighings?.length ? `<button type="button" data-weigh-log="${e(l.id)}">Riwayat timbang</button>` : ""}</td></tr>`).join("") || '<tr><td colspan="4">Belum ada penerimaan di toko ini.</td></tr>'}</tbody></table></div>`,
       );
       d.querySelector("[type=submit]").hidden = true;
       d.querySelectorAll("[data-weigh-log]").forEach(

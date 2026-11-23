@@ -16,16 +16,43 @@ import {
   submitSession,
   bindRecovery,
 } from "./supply-session-ui.mjs";
+function receivedSummary(p) {
+  const units = p.lines.filter((l) => p.expected?.[l.productId]?.unit);
+  const result = [];
+  if (units.length < p.lines.length) {
+    const t = receiptTotals(p);
+    result.push(`${num(t.kg)} kg / ${num(t.pieces)} butir`);
+  }
+  if (units.length)
+    result.push(
+      `${units.filter((l) => p.receiving?.quantities?.[l.productId]).length} dari ${units.length} jenis barang satuan diterima`,
+    );
+  return result.join(" · ");
+}
+function quantityInput(attr, unit, value) {
+  const step = ["pcs", "porsi"].includes(unit) ? 1 : 0.000001;
+  return `<input ${attr} type="number" min="${step}" step="${step}" value="${e(value ?? "")}" required>`;
+}
 export function varianceTable(s, p) {
   return table(
     [
       "Produk",
       "Nota supplier",
-      "Hasil scan",
+      "Hasil penerimaan",
       "Selisih nota − aktual",
       "Penyusutan berat",
     ],
     p.lines.map((l) => {
+      const expected = p.expected?.[l.productId];
+      if (expected?.unit) {
+        const actual = p.receiving?.quantities?.[l.productId]?.qty;
+        const unit = e(expected.unit);
+        const diff =
+          p.receiving?.status === "completed" && actual != null
+            ? `${num(expected.qty - actual)} ${unit}`
+            : "Belum final";
+        return `<tr><td>${e(name(s, "products", l.productId))}</td><td>${num(expected.qty)} ${unit}</td><td>${actual == null ? "Belum dicatat" : num(actual) + " " + unit}</td><td>${diff}</td><td>—</td></tr>`;
+      }
       const v = receiptVariance(p, l.productId);
       const diff =
         v.kg === null ? "Menunggu selesai" : `${num(v.kg)} kg / ${num(v.pieces)} butir`;
@@ -44,17 +71,16 @@ export function varianceTable(s, p) {
 export function receivingPage(s, store, space) {
   const bo = backOffice(s, space),
     plans = (s.receiptPlans || []).filter((p) => bo || p.storeId === store);
-  return `<section class="supply-workspace"><div class="supply-hero"><div><span class="supply-eyebrow">PENERIMAAN SUPPLIER</span><h2>${bo ? "Nota barang masuk gudang" : "Penerimaan & penimbangan"}</h2><p>${bo ? "Catat berat dan butir sesuai nota supplier. Hasil scan gudang menjadi stok aktual." : "Pilih nota, timbang dan scan setiap buah. Progres tersimpan setiap scan berhasil."}</p></div><div class="toolbar"><button type="button" data-supply-refresh>Perbarui</button>${bo ? '<button type="button" data-legacy-labels>Registrasi barcode stok lama</button><button type="button" class="primary" data-note-new>+ Nota supplier</button>' : ""}</div></div><section class="panel">${table(
+  return `<section class="supply-workspace"><div class="supply-hero"><div><span class="supply-eyebrow">PENERIMAAN SUPPLIER</span><h2>${bo ? "Nota barang masuk gudang" : "Penerimaan & penimbangan"}</h2><p>${bo ? "Catat barang dan jumlah sesuai nota supplier. Stok masuk setelah gudang menyelesaikan penerimaan." : "Pilih nota untuk mencatat jumlah barang dan memindai label buah."}</p></div><div class="toolbar"><button type="button" data-supply-refresh>Perbarui</button>${bo ? '<button type="button" data-legacy-labels>Registrasi barcode stok lama</button><button type="button" class="primary" data-note-new>+ Nota supplier</button>' : ""}</div></div><section class="panel">${table(
     [
       "Nota / supplier",
       "Tanggal",
       ...(bo ? ["Pembayaran nota", "Pembayaran ongkir"] : []),
-      "Hasil scan",
+      "Hasil penerimaan",
       "Penerimaan",
       "Aksi",
     ],
     plans.map((p) => {
-      const totals = receiptTotals(p);
       return `<tr><td><b>${e(p.invoiceNo)}</b><small>${e(name(s, "suppliers", p.supplierId))}</small></td><td>${e(p.date)}</td>${
         bo
           ? ["invoice", "shipping"]
@@ -64,7 +90,7 @@ export function receivingPage(s, store, space) {
               })
               .join("")
           : ""
-      }<td>${num(totals.kg)} kg / ${num(totals.pieces)} butir</td><td>${e(receiptStatuses[p.receiving?.status] || "Belum dimulai")}</td><td><button type="button" ${bo ? `data-note-open="${e(p.id)}"` : `data-session-open="${e(p.id)}"`}>${bo ? "Buka nota" : p.receiving?.status === "completed" ? "Lihat penerimaan" : "Buka / lanjutkan"}</button></td></tr>`;
+      }<td>${receivedSummary(p)}</td><td>${e(receiptStatuses[p.receiving?.status] || "Belum dimulai")}</td><td><button type="button" ${bo ? `data-note-open="${e(p.id)}"` : `data-session-open="${e(p.id)}"`}>${bo ? "Buka nota" : p.receiving?.status === "completed" ? "Lihat penerimaan" : "Buka / lanjutkan"}</button></td></tr>`;
     }),
   )}</section></section>`;
 }
@@ -72,7 +98,7 @@ export function receiptOfficeControls(s, p, d, ctx) {
   if (!backOffice(s, ctx.workspace)) return;
   const section = document.createElement("section");
   section.className = "receipt-comparison";
-  section.innerHTML = `<h3>Nota supplier & hasil penerimaan</h3><p>${e(receiptStatuses[p.receiving?.status])}</p>${varianceTable(s, p)}<p class="muted">Penyusutan = (kg nota − kg aktual) ÷ kg nota × 100%. Selisih positif berarti kekurangan; negatif berarti kelebihan. Hasil final setelah penerimaan selesai.</p><div class="toolbar"><button type="button" data-expected-edit>Koreksi berat & butir nota</button>${p.receiving?.status === "completed" ? '<button type="button" data-receipt-reopen>Buka ulang penerimaan</button>' : ""}<button type="button" data-receiving-view>Lihat barcode penerimaan</button></div>`;
+  section.innerHTML = `<h3>Nota supplier & hasil penerimaan</h3><p>${e(receiptStatuses[p.receiving?.status])}</p>${varianceTable(s, p)}<p class="muted">Penyusutan = (kg nota − kg aktual) ÷ kg nota × 100%. Selisih positif berarti kekurangan; negatif berarti kelebihan. Hasil final setelah penerimaan selesai.</p><div class="toolbar"><button type="button" data-expected-edit>Koreksi jumlah pada nota</button>${p.receiving?.status === "completed" ? '<button type="button" data-receipt-reopen>Buka ulang penerimaan</button>' : ""}<button type="button" data-receiving-view>Lihat detail penerimaan</button></div>`;
   d.querySelector(".note-detail").prepend(section);
   const change = (action, title, body, payload) => {
     d.close();
@@ -90,11 +116,11 @@ export function receiptOfficeControls(s, p, d, ctx) {
   section.querySelector("[data-expected-edit]").onclick = () =>
     change(
       "receipt_expected_edit",
-      "Koreksi berat & butir pada nota",
+      "Koreksi jumlah pada nota",
       p.lines
         .map(
           (l) =>
-            `<fieldset data-expected-product="${e(l.productId)}"><legend>${e(name(s, "products", l.productId))}</legend><div class="form-grid">${field("Berat nota (kg)", `<input data-expected-kg type="number" min="0.001" step="0.001" value="${p.expected?.[l.productId]?.kg || ""}" required>`)}${field("Jumlah nota (butir)", `<input data-expected-pieces type="number" min="1" step="1" value="${p.expected?.[l.productId]?.pieces || ""}" required>`)}</div></fieldset>`,
+            `<fieldset data-expected-product="${e(l.productId)}"><legend>${e(name(s, "products", l.productId))}</legend><div class="form-grid">${p.expected?.[l.productId]?.unit ? field(`Jumlah nota (${p.expected[l.productId].unit})`, quantityInput("data-expected-qty", p.expected[l.productId].unit, p.expected[l.productId].qty)) : field("Berat nota (kg)", `<input data-expected-kg type="number" min="0.001" step="0.001" value="${p.expected?.[l.productId]?.kg || ""}" required>`) + field("Jumlah nota (butir)", `<input data-expected-pieces type="number" min="1" step="1" value="${p.expected?.[l.productId]?.pieces || ""}" required>`)}</div></fieldset>`,
         )
         .join("") +
         field(
@@ -104,8 +130,12 @@ export function receiptOfficeControls(s, p, d, ctx) {
       (f) => ({
         lines: [...f.querySelectorAll("[data-expected-product]")].map((el) => ({
           productId: el.dataset.expectedProduct,
-          expectedKg: Number(el.querySelector("[data-expected-kg]").value),
-          expectedPieces: Number(el.querySelector("[data-expected-pieces]").value),
+          ...(el.querySelector("[data-expected-qty]")
+            ? { expectedQty: Number(el.querySelector("[data-expected-qty]").value) }
+            : {
+                expectedKg: Number(el.querySelector("[data-expected-kg]").value),
+                expectedPieces: Number(el.querySelector("[data-expected-pieces]").value),
+              }),
         })),
       }),
     );
@@ -177,9 +207,11 @@ export function openReceivingSession(s, pid, ctx, readOnly = false) {
   const draw = () => {
     const status = p.receiving.status,
       editable = !readOnly && ["open", "reopened"].includes(status),
-      totals = receiptTotals(p);
-    header.innerHTML = `<p>${e(name(s, "suppliers", p.supplierId))} · ${e(p.date)}</p><p class="notice">${e(receiptStatuses[status])} · ${num(totals.kg)} kg / ${num(totals.pieces)} butir tersimpan</p>${varianceTable(ctx.getState(), p)}${editable ? '<div class="supply-scan"><input data-session-code autocomplete="off" maxlength="26" inputmode="numeric" placeholder="Scan barcode buah" aria-label="Scan barcode buah" aria-describedby="form-error"><button type="button" data-session-scan>Simpan scan</button></div>' : ""}`;
-    detail.innerHTML = `${editable ? '<p class="muted">Tunggu konfirmasi tersimpan sebelum scan buah berikutnya. Barcode menentukan produk dan berat; satu label untuk satu buah.</p>' : ""}<div class="toolbar">${!readOnly ? (status === "paused" ? '<button type="button" data-session-resume>Lanjutkan penimbangan</button>' : editable ? '<button type="button" data-session-pause>Jeda penimbangan</button><button type="button" class="primary" data-session-finish>Selesaikan penerimaan</button>' : "<p>Penerimaan terkunci. Koreksi harus dibuka dari Back Office.</p>") : ""}</div><section data-receiving-barcodes aria-label="Barcode tersimpan"><h3>Barcode tersimpan (${totals.pieces})</h3>${table(
+      totals = receiptTotals(p),
+      unitLines = p.lines.filter((l) => p.expected?.[l.productId]?.unit),
+      fruit = unitLines.length < p.lines.length;
+    header.innerHTML = `<p>${e(name(s, "suppliers", p.supplierId))} · ${e(p.date)}</p><p class="notice">${e(receiptStatuses[status])} · ${receivedSummary(p)}${unitLines.length ? "" : " tersimpan"}</p>${varianceTable(ctx.getState(), p)}${editable ? unitLines.map((l) => `<button type="button" data-session-quantity="${e(l.productId)}">Catat jumlah · ${e(name(s, "products", l.productId))}</button>`).join(" ") : ""}${editable && fruit ? '<div class="supply-scan"><input data-session-code autocomplete="off" maxlength="26" inputmode="numeric" placeholder="Scan barcode buah" aria-label="Scan barcode buah" aria-describedby="form-error"><button type="button" data-session-scan>Simpan scan</button></div>' : ""}`;
+    detail.innerHTML = `${editable && fruit ? '<p class="muted">Tunggu konfirmasi tersimpan sebelum scan buah berikutnya. Barcode menentukan produk dan berat; satu label untuk satu buah.</p>' : ""}<div class="toolbar">${!readOnly ? (status === "paused" ? '<button type="button" data-session-resume>Lanjutkan penerimaan</button>' : editable ? '<button type="button" data-session-pause>Jeda penerimaan</button><button type="button" class="primary" data-session-finish>Selesaikan penerimaan</button>' : "<p>Penerimaan terkunci. Koreksi harus dibuka dari Back Office.</p>") : ""}</div><section ${fruit ? "" : "hidden"} data-receiving-barcodes aria-label="Barcode tersimpan"><h3>Barcode tersimpan (${totals.pieces})</h3>${table(
       ["Barcode", "Produk", "Berat", ...(editable ? ["Aksi"] : [])],
       p.receiving.scans
         .slice()
@@ -189,6 +221,44 @@ export function openReceivingSession(s, pid, ctx, readOnly = false) {
             `<tr><td><code>${e(x.barcode)}</code></td><td>${e(name(ctx.getState(), "products", x.productId))}</td><td>${num(x.grams / 1000)} kg</td>${editable ? `<td><button type="button" data-session-remove="${e(x.barcode)}">Hapus scan</button></td>` : ""}</tr>`,
         ),
     )}</section>`;
+    body.querySelectorAll("[data-session-quantity]").forEach((button) => {
+      button.onclick = () => {
+        if (working) return;
+        const productId = button.dataset.sessionQuantity;
+        const unit = p.expected[productId].unit;
+        const saved = p.receiving.quantities?.[productId];
+        d.close();
+        const next = ctx.modal(
+          `Terima ${e(name(s, "products", productId))}`,
+          field(
+            `Jumlah aktual (${unit})`,
+            quantityInput('name="qty"', unit, saved?.qty),
+          ) +
+            field(
+              "Kedaluwarsa (opsional)",
+              `<input type="date" name="expiry" min="${e(p.date)}" value="${e(saved?.expiry || "")}">`,
+            ),
+          "Simpan jumlah",
+        );
+        next.classList.add("supply-modal");
+        const refreshRecovery = bindRecovery(next, ctx, pid, reopen);
+        submitSession(
+          next,
+          ctx,
+          pid,
+          "receipt_quantity",
+          (f) => ({
+            planId: pid,
+            expectedSessionRevision: p.receiving.revision,
+            productId,
+            qty: Number(f.elements.qty.value),
+            expiry: f.elements.expiry.value || null,
+          }),
+          reopen,
+          refreshRecovery,
+        );
+      };
+    });
     const input = body.querySelector("[data-session-code]");
     prepareBarcodeInput(input);
     const scan = () => {
@@ -211,7 +281,7 @@ export function openReceivingSession(s, pid, ctx, readOnly = false) {
     body.querySelector("[data-session-finish]")?.addEventListener("click", () => {
       if (
         confirm(
-          "Semua buah sudah ditimbang dan dipindai? Setelah selesai, penimbangan terkunci.",
+          "Semua barang pada nota sudah diperiksa dan jumlah aktualnya sesuai? Selesaikan penerimaan untuk membukukan stok.",
         )
       )
         perform("receipt_finish", { confirmed: true });

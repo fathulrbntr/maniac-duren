@@ -2,6 +2,7 @@ export const workflowActions = [
   "receipt_expected_edit",
   "receipt_reopen",
   "receipt_scan",
+  "receipt_quantity",
   "receipt_scan_remove",
   "receipt_pause",
   "receipt_resume",

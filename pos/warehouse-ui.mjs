@@ -381,6 +381,8 @@ export function openDispatch(s, store, ctx) {
 }
 export function openWarehouseReceipt(s, store, ctx) {
   if (!safeContext(s, ctx)) return;
+  if (s.supplierStockVersion >= 122 && backOffice(s, ctx.workspace))
+    return noteDialog(s, ctx);
   const plans = (s.receiptPlans || []).filter(
     (x) =>
       x.storeId === store &&
@@ -396,7 +398,7 @@ export function openWarehouseReceipt(s, store, ctx) {
       "Nomor nota",
       `<select name="plan">${plans.map((x) => `<option value="${e(x.id)}">${e(x.invoiceNo)} · ${e(name(s, "suppliers", x.supplierId))}</option>`).join("")}</select>`,
     ),
-    "Mulai scan",
+    "Buka penerimaan",
   );
   d.querySelector("form").onsubmit = (ev) => {
     ev.preventDefault();
@@ -595,7 +597,14 @@ function receiptItems(t) {
 }
 function noteDialog(s, ctx) {
   const wh = warehouseId(s),
-    products = s.products.filter((p) => p.stockUnit === "kg_butir"),
+    products = s.products.filter(
+      (p) =>
+        p.stockUnit === "kg_butir" ||
+        (s.supplierStockVersion >= 122 &&
+          !s.stockDemo &&
+          p.itemType !== "recipe" &&
+          ["kg", "g", "ml", "pcs", "porsi"].includes(p.stockUnit)),
+    ),
     rows = [{ productId: products[0]?.id, purchaseCost: "" }];
   if (!wh || !products.length) {
     ctx.toast("Lengkapi gudang dan produk terlebih dahulu.");
@@ -603,22 +612,32 @@ function noteDialog(s, ctx) {
   }
   const d = ctx.modal(
     "Nota supplier ke gudang",
-    `<p><b>${e(location(s, wh)?.name)}</b></p><div class="form-grid">${field("Supplier", `<select name="supplierId" required>${opts(s.suppliers)}</select>`)}${field("Nomor nota supplier", '<input name="invoiceNo" maxlength="100" required>')}${field("Tanggal penerimaan", `<input name="date" type="date" value="${today()}" max="${today()}" required>`)}${field("Ongkir bersama (Rp)", '<input name="shippingCost" type="number" min="0" step="any" value="0" required>')}</div><div data-note-lines></div><button type="button" data-note-add>+ Tambah produk</button><p class="muted">Total harga nota dibagi berat aktual hasil scan. Gudang tidak dapat mengubah harga ini.</p>`,
+    `<p><b>${e(location(s, wh)?.name)}</b></p><div class="form-grid">${field("Supplier", `<select name="supplierId" required>${opts(s.suppliers)}</select>`)}${field("Nomor nota supplier", '<input name="invoiceNo" maxlength="100" required>')}${field("Tanggal penerimaan", `<input name="date" type="date" value="${today()}" max="${today()}" required>`)}${field("Ongkir bersama (Rp)", '<input name="shippingCost" type="number" min="0" step="any" value="0" required>')}</div><div data-note-lines></div><button type="button" data-note-add>+ Tambah produk</button><p class="muted">Modal batch dihitung dari nilai barang dan bagian ongkir, dibagi jumlah aktual yang diterima.</p>`,
     "Simpan nota untuk gudang",
   );
   d.classList.add("supply-modal");
   const list = d.querySelector("[data-note-lines]");
+  const unitOf = (r) => products.find((p) => p.id === r.productId)?.stockUnit;
   const draw = () => {
     list.innerHTML = rows
       .map(
         (r, i) =>
-          `<div class="form-grid" data-note-line="${i}">${field("Produk", `<select data-note-product>${opts(products, r.productId)}</select>`)}${field("Total harga produk di nota (Rp)", `<input data-note-cost type="number" min="0.01" step="any" value="${e(r.purchaseCost)}" required>`)}${workflowReady(s) ? field("Berat pada nota (kg)", `<input data-note-kg type="number" min="0.001" max="9000000" step="0.001" value="${e(r.expectedKg || "")}" required>`) + field("Butir pada nota", `<input data-note-pieces type="number" min="1" max="9000000" step="1" value="${e(r.expectedPieces || "")}" required>`) : ""}${rows.length > 1 ? `<button type="button" data-note-remove="${i}">Hapus</button>` : ""}</div>`,
+          `<div class="form-grid" data-note-line="${i}">${field("Produk", `<select data-note-product>${opts(products, r.productId)}</select>`)}${field("Total harga produk di nota (Rp)", `<input data-note-cost type="number" min="0.01" step="any" value="${e(r.purchaseCost)}" required>`)}${unitOf(r) !== "kg_butir" ? field(`Jumlah pada nota (${e(unitOf(r))})`, `<input data-note-qty type="number" min="${["pcs", "porsi"].includes(unitOf(r)) ? 1 : 0.000001}" step="${["pcs", "porsi"].includes(unitOf(r)) ? 1 : 0.000001}" value="${e(r.expectedQty || "")}" required>`) : workflowReady(s) ? field("Berat pada nota (kg)", `<input data-note-kg type="number" min="0.001" max="9000000" step="0.001" value="${e(r.expectedKg || "")}" required>`) + field("Butir pada nota", `<input data-note-pieces type="number" min="1" max="9000000" step="1" value="${e(r.expectedPieces || "")}" required>`) : ""}${rows.length > 1 ? `<button type="button" data-note-remove="${i}">Hapus</button>` : ""}</div>`,
       )
       .join("");
     list.querySelectorAll("[data-note-line]").forEach((el) => {
       const r = rows[Number(el.dataset.noteLine)];
-      el.querySelector("[data-note-product]").onchange = (ev) =>
-        (r.productId = ev.target.value);
+      el.querySelector("[data-note-product]").onchange = (ev) => {
+        r.productId = ev.target.value;
+        delete r.expectedQty;
+        delete r.expectedKg;
+        delete r.expectedPieces;
+        draw();
+      };
+      el.querySelector("[data-note-qty]")?.addEventListener(
+        "input",
+        (ev) => (r.expectedQty = ev.target.value),
+      );
       el.querySelector("[data-note-cost]").oninput = (ev) =>
         (r.purchaseCost = ev.target.value);
       el.querySelector("[data-note-kg]")?.addEventListener(

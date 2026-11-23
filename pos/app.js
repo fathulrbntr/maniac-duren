@@ -1195,7 +1195,11 @@ function render() {
     const receiveButton = document.querySelector("#add-receipt");
     if (receiveButton)
       receiveButton.onclick = () => {
-        if (state.warehouseVersion && !state.stockDemo && !state.access?.backoffice)
+        if (
+          state.warehouseVersion &&
+          !state.stockDemo &&
+          (state.supplierStockVersion >= 122 || !state.access?.backoffice)
+        )
           return addReceipt();
         const d = modal(
           "Barang masuk",

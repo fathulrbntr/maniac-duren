@@ -24,7 +24,7 @@ export function sessionDialog(ctx, title, body) {
   };
   return d;
 }
-export function submitSession(d, ctx, key, action, payload, onDone) {
+export function submitSession(d, ctx, key, action, payload, onDone, onFailure) {
   let working = false;
   const request = id();
   d.querySelector("form").onsubmit = async (ev) => {
@@ -42,6 +42,7 @@ export function submitSession(d, ctx, key, action, payload, onDone) {
       onDone?.();
     } catch (err) {
       d.querySelector("#form-error").textContent = err.message;
+      onFailure?.();
     } finally {
       working = false;
     }

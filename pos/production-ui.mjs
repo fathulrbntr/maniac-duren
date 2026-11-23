@@ -168,6 +168,8 @@ export function recipeDialog(s, ctx, existing) {
   };
 }
 export function receiptDialog(s, store, ctx) {
+  if (s.supplierStockVersion >= 122 && !s.stockDemo)
+    return ctx.toast("Buka Penerimaan dan pilih nota supplier untuk mencatat barang.");
   const products = s.products.filter(scalar);
   if (!store || !products.length)
     return ctx.toast("Pilih store dan daftarkan item terlebih dahulu");

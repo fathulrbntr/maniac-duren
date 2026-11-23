@@ -79,3 +79,13 @@ wrapper lama tidak boleh diberi grant RPC. Perubahan harga supplier tetap khusus
 owner. Invoice wholesale mempunyai ledger sendiri; hanya baris penjualan dengan
 relasi `wholesale_order_id` yang dikecualikan dari guard pembayaran/shift kasir.
 Guard POS biasa tetap aktif. Jangan memasang ulang migrasi lama setelah 114.
+
+### Pembelian melalui nota supplier (122)
+
+Pasang `database/supplier-stock-122.sql` setelah patch 114 dan 119 melalui SQL Editor. Untuk proyek yang memakai migrasi CLI, salinannya adalah `supabase/migrations/20261123180000_supplier_stock_122.sql`. Pilih satu jalur pemasangan. Muat ulang POS setelah frontend terbaru tersedia.
+
+Back Office membuka nota dan memasukkan total beli setiap produk serta ongkir bersama. Gudang memilih nota, memindai buah dan mencatat jumlah fisik barang satuan beserta kedaluwarsa bila ada. Penyelesaian penerimaan membukukan seluruh baris dalam satu transaksi. Setiap baris membuat batch tersendiri yang terhubung ke nota dan supplier.
+
+Nota buah membagi ongkir menurut berat aktual. Jika nota memuat barang satuan, ongkir dibagi menurut proporsi nilai beli setiap baris. Modal per satuan adalah (total beli baris + alokasi ongkir) dibagi jumlah aktual. Untuk buah, jumlah aktual menggunakan kg hasil scan. Detail nota juga menampilkan modal rata-rata per butir.
+
+Harga jual dikelola di Master Barang. Bila dokumen sumber keliru, koreksi nota oleh owner menghitung ulang modal batch. Stok historis tetap memakai riwayat yang sudah tercatat. Transfer, produksi, dan olahan reject merujuk batch sumber.

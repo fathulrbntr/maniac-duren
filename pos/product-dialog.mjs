@@ -31,6 +31,7 @@ export function productDialog({
   render,
   toast,
 }) {
+  const batchCosts = state.supplierStockVersion >= 122 && !state.stockDemo;
   const editing = !!product,
     p = productDefaults(product || {}),
     productId = p.id || id(),
@@ -245,7 +246,12 @@ export function productDialog({
       )
       .join("");
     const pieceBuy = c("buyPricePiece");
-    const pieceBuyVisible = unit.value === "kg_butir" && state.access?.finance !== false;
+    if (batchCosts) {
+      c("buyPrice").disabled = true;
+      c("buyPrice").closest("label").hidden = true;
+    }
+    const pieceBuyVisible =
+      !batchCosts && unit.value === "kg_butir" && state.access?.finance !== false;
     pieceBuy.closest("label").hidden = !pieceBuyVisible;
     pieceBuy.disabled = !pieceBuyVisible;
     d.querySelector("#scale-barcode-help").hidden = unit.value !== "kg_butir";
@@ -255,6 +261,10 @@ export function productDialog({
   c("itemType").onchange = update;
   c("stockUnit").onchange = update;
   c("adjustStock").onchange = toggleStock;
+  if (batchCosts) {
+    c("adjustStock").checked = false;
+    c("adjustStock").closest("label").hidden = true;
+  }
   if (state.opsVersion) {
     c("adjustStock").disabled = true;
     c("adjustStock")
@@ -448,6 +458,10 @@ export function productDialog({
         kind: "products",
         editing,
       };
+      if (batchCosts) {
+        delete payload.buyPrice;
+        delete payload.buyPricePiece;
+      }
       if (
         Object.hasOwn(payload, "buyPricePiece") &&
         payload.buyPricePiece !== null &&
