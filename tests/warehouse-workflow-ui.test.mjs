@@ -176,6 +176,62 @@ const ctx = {
     });
   },
 };
+// A failed label must report beside the scanner without changing saved rows.
+{
+  const originalScans = p.receiving.scans;
+  const first = originalScans[0].barcode;
+  const second = "92011611260000020001002000";
+  const third = "92011611260000030001002000";
+  let receiptState = s;
+  const scanCtx = {
+    ...ctx,
+    getState: () => receiptState,
+    mutate: async (action, payload) => {
+      assert.equal(action, "receipt_scan");
+      if (payload.barcode.length !== 26)
+        throw Object.assign(Error("Gunakan barcode tracking 26 digit"), {
+          definitive: true,
+        });
+      receiptState = applySupplyResponse(receiptState, {
+        supplyDelta: true,
+        planId: p.id,
+        receiving: {
+          status: "open",
+          revision: receiptState.receiptPlans[0].receiving.revision + 1,
+          scanChanges: [{ ...originalScans[0], barcode: payload.barcode }],
+        },
+        event: { id: payload.id, action },
+      });
+    },
+  };
+  let dialog = openReceivingSession(receiptState, p.id, scanCtx);
+  const rows = () =>
+    dialog.querySelectorAll("[data-receiving-barcodes] code").map((el) => el.textContent);
+  const scan = async (code) => {
+    dialog.querySelector("[data-session-code]").value = code;
+    await dialog.querySelector("[data-session-scan]").fire("click");
+    assert.equal(Node.activeElement, dialog.querySelector("[data-session-code]"));
+  };
+  await scan(second);
+  assert.deepEqual(rows(), [second, first]);
+  await scan("8991102026352");
+  const feedback = dialog.querySelector("#form-error");
+  assert.equal(dialog.querySelector(".supply-scan").parentNode.nextSibling, feedback);
+  assert.equal(feedback.textContent, "Gunakan barcode tracking 26 digit");
+  assert.deepEqual(rows(), [second, first]);
+  await scan(third);
+  assert.match(feedback.textContent, new RegExp(third + ".*tersimpan"));
+  assert.deepEqual(rows(), [third, second, first]);
+  assert.deepEqual(
+    receiptState.receiptPlans[0].receiving.scans.map((x) => x.barcode),
+    [first, second, third],
+  );
+  dialog.close();
+  dialog = openReceivingSession(receiptState, p.id, scanCtx);
+  assert.deepEqual(rows(), [third, second, first]);
+  assert.equal(dialog.querySelector("#form-error").textContent, "");
+  dialog.close();
+}
 let d = openReceivingSession(s, "plan", ctx);
 assert(d.querySelector("[data-session-code]"));
 assert(!d.textContent.includes("500.000"));

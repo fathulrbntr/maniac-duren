@@ -121,7 +121,7 @@ try {
     mut("receipt_scan", { ...scan, id: id(), barcode: code(2) }),
     /Sesi berubah/,
   );
-  for (let n = 2; n <= 5; n++) await receipt("receipt_scan", { barcode: code(n) });
+  for (const n of [3, 2, 5, 4]) await receipt("receipt_scan", { barcode: code(n) });
   await receipt("receipt_scan", { barcode: code(6, 2) });
   await receipt("receipt_pause");
   await assert.rejects(receipt("receipt_scan", { barcode: code(7) }), /terkunci|dijeda/);
@@ -130,7 +130,11 @@ try {
   await assert.rejects(mut("receipt_scan", scan));
   await as(worker);
   await receipt("receipt_resume");
-  assert.equal((await getPlan()).receiving.scans.length, 6);
+  assert.deepEqual(
+    (await getPlan()).receiving.scans.map((x) => x.barcode),
+    [code(1), code(3), code(2), code(5), code(4), code(6, 2)],
+    "saved rows reload in scan order regardless of label number",
+  );
   await receipt("receipt_scan", { barcode: code(7) });
   await receipt("receipt_scan_remove", { barcode: code(7) });
   await receipt("receipt_finish", { confirmed: true });
@@ -429,9 +433,10 @@ try {
   await db.exec(patch);
   await db.exec(patch);
   // A genuine mismatch must identify the unit and reject the whole receipt.
-  await db.query("update public.md_pos_fruit_units set transfer_id=null where barcode=$1", [
-    labels[1],
-  ]);
+  await db.query(
+    "update public.md_pos_fruit_units set transfer_id=null where barcode=$1",
+    [labels[1]],
+  );
   await assert.rejects(mut("transfer_receive", confirm), new RegExp(labels[1]));
   assert.equal((await read()).transfers.find((x) => x.id === multi).status, "in_transit");
   await db.query("update public.md_pos_fruit_units set transfer_id=$1 where barcode=$2", [

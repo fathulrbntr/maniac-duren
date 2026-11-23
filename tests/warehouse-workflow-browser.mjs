@@ -169,21 +169,32 @@ try {
   await nav("supplierNotes");
   await page.locator("[data-session-open]").click();
   assert(!/Rp|Modal|Pembayaran/.test(await page.locator("dialog[open]").innerText()));
-  for (const n of [1, 2, 3]) {
-    await page.locator("[data-session-code]").fill(code(n));
-    await page.locator("[data-session-code]").press("Enter");
-    await page.waitForFunction(
-      (n) =>
-        document
-          .querySelector("[data-receiving-session]")
-          ?.textContent.includes(`${n} butir tersimpan`),
-      n,
+  const scanner = page.locator("[data-session-code]");
+  const feedback = page.locator("dialog[open] #form-error");
+  const savedCodes = page.locator("[data-receiving-barcodes] code");
+  await scanner.fill("8991102026352");
+  await scanner.press("Enter");
+  await feedback.filter({ hasText: "Gunakan barcode tracking 26 digit" }).waitFor();
+  const scanBox = await scanner.boundingBox();
+  const messageBox = await feedback.boundingBox();
+  const helpBox = await page.locator("[data-session-detail] .muted").boundingBox();
+  assert(messageBox.y >= scanBox.y + scanBox.height);
+  assert(messageBox.y + messageBox.height <= helpBox.y + 1);
+  assert.equal(await savedCodes.count(), 0);
+  const newestFirst = [];
+  for (const n of [2, 3, 1]) {
+    await scanner.fill(code(n));
+    if (n === 3) await page.locator("[data-session-scan]").click();
+    else await scanner.press("Enter");
+    await feedback.filter({ hasText: `Barcode ${code(n)} sudah tersimpan.` }).waitFor();
+    newestFirst.unshift(code(n));
+    assert(
+      (await page.locator("[data-receiving-session] .notice").innerText()).includes(
+        `${newestFirst.length} butir tersimpan`,
+      ),
     );
-    await page
-      .locator("[data-receiving-barcodes] code")
-      .filter({ hasText: code(n) })
-      .waitFor({ state: "visible" });
-    assert.equal(await page.locator("[data-receiving-barcodes] code").count(), n);
+    assert.deepEqual(await savedCodes.allTextContents(), newestFirst);
+    assert.equal(await scanner.evaluate((el) => document.activeElement === el), true);
   }
   await page.locator("[data-session-pause]").click();
   await page.locator("[data-session-resume]").waitFor();
@@ -195,6 +206,7 @@ try {
     .locator("[data-receiving-barcodes] code")
     .filter({ hasText: code(3) })
     .waitFor({ state: "visible" });
+  assert.deepEqual(await savedCodes.allTextContents(), newestFirst);
   await page.locator("[data-session-resume]").click();
   await page.locator("[data-session-finish]").click();
   await page.locator("[data-session-code]").waitFor({ state: "detached" });

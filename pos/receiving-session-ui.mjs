@@ -136,15 +136,23 @@ export function openReceivingSession(s, pid, ctx, readOnly = false) {
   const d = sessionDialog(
     ctx,
     `Penerimaan · ${p.invoiceNo}`,
-    "<div data-receiving-session></div>",
+    "<div data-receiving-session><div data-session-header></div><div data-session-detail></div></div>",
   );
   const body = d.querySelector("[data-receiving-session]");
+  const header = body.querySelector("[data-session-header]");
+  const detail = body.querySelector("[data-session-detail]");
+  const feedback = d.querySelector("#form-error");
+  feedback.setAttribute("role", "status");
+  body.insertBefore(feedback, detail);
   let working = false;
   const reopen = () => openReceivingSession(ctx.getState(), pid, ctx, readOnly);
   const recovery = bindRecovery(d, ctx, pid, reopen);
   const perform = async (action, extra = {}) => {
     if (working) return;
     working = true;
+    const scanning = action === "receipt_scan";
+    feedback.className = scanning ? "muted" : "error";
+    feedback.textContent = scanning ? "Menyimpan scan…" : "";
     try {
       await saveWorkflow(ctx.getState(), pid, ctx, action, {
         id: id(),
@@ -154,10 +162,12 @@ export function openReceivingSession(s, pid, ctx, readOnly = false) {
       });
       p = ctx.getState().receiptPlans.find((x) => x.id === pid);
       d.dataset.dirty = "false";
-      d.querySelector("#form-error").textContent = "";
       draw();
+      feedback.className = scanning ? "positive" : "error";
+      feedback.textContent = scanning ? `Barcode ${extra.barcode} sudah tersimpan.` : "";
     } catch (err) {
-      d.querySelector("#form-error").textContent = err.message;
+      feedback.className = "error";
+      feedback.textContent = err.message;
       recovery();
     } finally {
       working = false;
@@ -168,12 +178,16 @@ export function openReceivingSession(s, pid, ctx, readOnly = false) {
     const status = p.receiving.status,
       editable = !readOnly && ["open", "reopened"].includes(status),
       totals = receiptTotals(p);
-    body.innerHTML = `<p>${e(name(s, "suppliers", p.supplierId))} · ${e(p.date)}</p><p class="notice">${e(receiptStatuses[status])} · ${num(totals.kg)} kg / ${num(totals.pieces)} butir tersimpan</p>${varianceTable(ctx.getState(), p)}${editable ? '<div class="supply-scan"><input data-session-code autocomplete="off" maxlength="26" inputmode="numeric" placeholder="Scan barcode buah" aria-label="Scan barcode buah"><button type="button" data-session-scan>Simpan scan</button></div><p class="muted">Tunggu konfirmasi tersimpan sebelum scan buah berikutnya. Barcode menentukan produk dan berat; satu label untuk satu buah.</p>' : ""}<div class="toolbar">${!readOnly ? (status === "paused" ? '<button type="button" data-session-resume>Lanjutkan penimbangan</button>' : editable ? '<button type="button" data-session-pause>Jeda penimbangan</button><button type="button" class="primary" data-session-finish>Selesaikan penerimaan</button>' : "<p>Penerimaan terkunci. Koreksi harus dibuka dari Back Office.</p>") : ""}</div><section data-receiving-barcodes aria-label="Barcode tersimpan"><h3>Barcode tersimpan (${totals.pieces})</h3>${table(
+    header.innerHTML = `<p>${e(name(s, "suppliers", p.supplierId))} · ${e(p.date)}</p><p class="notice">${e(receiptStatuses[status])} · ${num(totals.kg)} kg / ${num(totals.pieces)} butir tersimpan</p>${varianceTable(ctx.getState(), p)}${editable ? '<div class="supply-scan"><input data-session-code autocomplete="off" maxlength="26" inputmode="numeric" placeholder="Scan barcode buah" aria-label="Scan barcode buah" aria-describedby="form-error"><button type="button" data-session-scan>Simpan scan</button></div>' : ""}`;
+    detail.innerHTML = `${editable ? '<p class="muted">Tunggu konfirmasi tersimpan sebelum scan buah berikutnya. Barcode menentukan produk dan berat; satu label untuk satu buah.</p>' : ""}<div class="toolbar">${!readOnly ? (status === "paused" ? '<button type="button" data-session-resume>Lanjutkan penimbangan</button>' : editable ? '<button type="button" data-session-pause>Jeda penimbangan</button><button type="button" class="primary" data-session-finish>Selesaikan penerimaan</button>' : "<p>Penerimaan terkunci. Koreksi harus dibuka dari Back Office.</p>") : ""}</div><section data-receiving-barcodes aria-label="Barcode tersimpan"><h3>Barcode tersimpan (${totals.pieces})</h3>${table(
       ["Barcode", "Produk", "Berat", ...(editable ? ["Aksi"] : [])],
-      p.receiving.scans.map(
-        (x) =>
-          `<tr><td><code>${e(x.barcode)}</code></td><td>${e(name(ctx.getState(), "products", x.productId))}</td><td>${num(x.grams / 1000)} kg</td>${editable ? `<td><button type="button" data-session-remove="${e(x.barcode)}">Hapus scan</button></td>` : ""}</tr>`,
-      ),
+      p.receiving.scans
+        .slice()
+        .reverse()
+        .map(
+          (x) =>
+            `<tr><td><code>${e(x.barcode)}</code></td><td>${e(name(ctx.getState(), "products", x.productId))}</td><td>${num(x.grams / 1000)} kg</td>${editable ? `<td><button type="button" data-session-remove="${e(x.barcode)}">Hapus scan</button></td>` : ""}</tr>`,
+        ),
     )}</section>`;
     const input = body.querySelector("[data-session-code]");
     prepareBarcodeInput(input);
