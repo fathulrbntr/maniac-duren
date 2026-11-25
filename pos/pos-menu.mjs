@@ -131,7 +131,6 @@ const saleEntries = (state, store, draft, category = "all", query = "") =>
         a.entry.name.localeCompare(b.entry.name, "id", { numeric: true }) ||
         a.entry.key.localeCompare(b.entry.key),
     );
-const cardIcon = () => uiIcon("bag");
 export function posProductCards(s, store, draft = []) {
   return (
     saleEntries(s, store, draft)
@@ -139,7 +138,7 @@ export function posProductCards(s, store, draft = []) {
         const photo = productPhoto(entry.products[0]),
           ids = entryCategories(s, entry),
           p = entry.products[0];
-        return `<button type="button" class="order-product ${entry.hasVariants ? "order-product-variants" : ""}" ${!status.ok ? "disabled" : ""} aria-disabled="${!status.ok}" title="${e(entry.name + " · " + status.reason)}" data-menu-key="${e(entry.key)}" ${entry.hasVariants ? `data-order-group="${e(p.variantGroupId || p.id)}" aria-haspopup="dialog"` : `data-order-add="${e(p.id)}"`} data-categories="${e(["all", ...ids].join(" "))}"><span class="order-product-photo">${
+        return `<button type="button" class="order-product ${entry.hasVariants ? "order-product-variants" : ""}" ${!status.ok ? "disabled" : ""} aria-disabled="${!status.ok}" title="${e(entry.name + " · " + status.reason)}" data-menu-key="${e(entry.key)}" ${entry.hasVariants ? `data-order-group="${e(p.variantGroupId || p.id)}" aria-haspopup="dialog"` : `data-order-add="${e(p.id)}"`} data-categories="${e(["all", ...ids].join(" "))}"><span class="order-product-photo" aria-hidden="true">${
           photo
             ? `<img src="${e(photo)}" alt="" loading="lazy" decoding="async">`
             : `<span>${e(
@@ -150,7 +149,7 @@ export function posProductCards(s, store, draft = []) {
                   .join("")
                   .toUpperCase(),
               )}</span>`
-        }</span><span class="order-product-info"><span class="order-product-category">${e(entryCategoryName(s, entry))}</span><strong>${e(entry.name)}</strong><span class="order-variant-count ${entry.hasVariants ? "" : "is-placeholder"}" ${entry.hasVariants ? "" : 'aria-hidden="true"'}>${entry.hasVariants ? `${entry.products.length} pilihan varian` : ""}</span><span class="order-product-price">${e(entryPrice(entry))}</span></span><span class="order-product-footer"><span class="order-stock-status">${e(status.reason)}</span><span class="order-product-add" aria-hidden="true">${cardIcon(entry.hasVariants)}</span></span></button>`;
+        }</span><span class="order-product-info"><span class="order-product-category">${e(entryCategoryName(s, entry))}</span><strong>${e(entry.name)}</strong><span class="order-variant-count ${entry.hasVariants ? "" : "is-placeholder"}" ${entry.hasVariants ? "" : 'aria-hidden="true"'}>${entry.hasVariants ? `${entry.products.length} pilihan varian` : ""}</span><span class="order-product-price">${e(entryPrice(entry))}</span></span><span class="order-product-footer"><span class="order-stock-status">${e(status.reason)}</span><span class="order-product-add">${uiIcon("bag")}${entry.hasVariants ? "Pilih" : "Tambah"}</span></span></button>`;
       })
       .join("") || '<div class="empty">Belum ada produk jual di Master Barang.</div>'
   );

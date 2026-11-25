@@ -171,3 +171,11 @@ untuk fitur baru yang memerlukan beberapa file, bukan tempat menyalin modul lama
 - Pemasangan: `docs/PATCH-118-BARCODE-TERBUKA.md`.
 - `tests/sidebar.test.mjs` dan `tests/browser-runner.test.mjs`: regresi media event
   terlambat, idempotensi membuka menu, agregasi kegagalan dan prasyarat fixture.
+
+## Tampilan POS dan menu pelanggan (patch 124)
+
+Palet POS mengikuti `style.css` dan `menu/menu.css`. Font DM Sans dan Manrope
+beserta lisensinya berada di `pos/assets/fonts/`. Warna untuk kedua tema dan
+skala teks dikelola di `pos/ui-tokens.css`. Halaman kasir memakai
+`pos/pos-menu.css` untuk kartu dan `pos/cashier.css` untuk kategori dan checkout.
+POS memakai tema terang saat belum ada pilihan tersimpan.

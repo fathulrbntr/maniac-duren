@@ -1,183 +1,160 @@
-/* Food POS catalog: circular product photos, equal cards and clear prices. */
+/* The catalog adapts to the space beside checkout or below the mobile header. */
 .order-product-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 58px 24px;
+  gap: 16px;
+  padding-top: 0;
   align-items: stretch;
-  padding-top: 42px;
+}
+@container catalog (max-width: 800px) {
+  .order-product-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@container catalog (max-width: 520px) {
+  .order-product-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 .order-product-grid .order-product {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0;
-  height: 100%;
-  min-width: 0;
-  padding: 0 18px 22px;
-  text-align: center;
+  display: grid;
+  grid-template: "info photo" 1fr "footer footer" auto / minmax(0, 1fr) minmax(64px, 29%);
+  align-items: start;
+  gap: 14px 10px;
+  min-height: 172px;
+  padding: 18px;
   color: var(--ink);
   background: var(--surface);
-  border: 1px solid transparent;
+  text-align: left;
+  border: 1px solid var(--line);
   border-radius: var(--radius-card);
   box-shadow: none;
-  overflow: visible;
-  transition:
-    border-color 0.15s,
-    background-color 0.15s;
 }
-.order-product-grid .order-product:hover:not(:disabled) {
+.order-product-grid .order-product:hover {
   transform: none;
-  border-color: var(--action-bg);
-  background: color-mix(in srgb, var(--surface) 95%, var(--action-bg));
   box-shadow: none;
 }
+.order-product-grid .order-product:hover:not(:disabled) {
+  border-color: var(--action-bg);
+}
+.order-product-grid .order-product:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
 .order-product-grid .order-product-photo {
-  width: min(132px, 85%);
-  height: auto;
-  flex: none;
-  aspect-ratio: 1;
+  grid-area: photo;
   display: grid;
   place-items: center;
-  border-radius: 50%;
-  background: var(--surface-soft);
+  width: 100%;
+  max-width: 110px;
+  height: auto;
+  aspect-ratio: 1;
+  justify-self: end;
+  border-radius: 8px;
+  background: transparent;
   overflow: hidden;
-  margin: -36px auto 0;
-  box-shadow: 0 8px 16px #0002;
 }
 .order-product-grid .order-product-photo img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  padding: 0;
+  object-fit: contain;
 }
 .order-product-grid .order-product-photo > span {
-  color: var(--action-bg);
-  font-size: 32px;
+  color: var(--muted);
+  font-size: 18px;
   font-weight: 600;
 }
 .order-product-grid .order-product-info {
+  grid-area: info;
   display: flex;
   flex-direction: column;
-  gap: 7px;
-  flex: 1;
-  min-width: 0;
-  width: 100%;
-  padding: 16px 0 0;
+  align-items: start;
+  gap: 4px;
+  padding: 0;
+  overflow-wrap: anywhere;
 }
 .order-product-grid .order-product-info > strong {
-  order: 0;
-  font-size: 15px;
-  font-weight: 600;
-  line-height: 1.4;
-  min-height: 42px;
-  overflow-wrap: anywhere;
+  order: -1;
+  min-height: 0;
+  font-weight: 700;
+  font-size: 16px;
+  line-height: 1.35;
 }
-.order-product-grid .order-product-category {
-  order: 1;
+.order-product-grid .order-product-category,
+.order-product-grid .order-variant-count {
   text-transform: none;
   letter-spacing: 0;
-  color: var(--muted);
   font-size: 12px;
-  line-height: 18px;
-  overflow-wrap: anywhere;
-}
-.order-product-grid .order-variant-count {
-  order: 2;
   color: var(--muted);
-  font-size: 12px;
-  line-height: 18px;
 }
 .order-product-grid .order-variant-count.is-placeholder {
   display: none;
 }
 .order-product-grid .order-product-price {
-  order: 3;
-  display: block;
-  margin-top: auto;
   padding-top: 4px;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
-  line-height: 1.5;
+  line-height: 1.45;
   color: var(--ink);
   font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
 }
 .order-product-grid .order-product-footer {
-  display: block;
-  width: 100%;
-  margin-top: 8px;
-  padding: 0;
+  grid-area: footer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
 }
 .order-product-grid .order-stock-status {
-  margin: 0;
   padding: 0;
+  margin: 0;
   font-size: 12px;
-  color: var(--muted);
-  line-height: 1.5;
+  font-weight: 600;
+  color: var(--stock-ready);
   overflow-wrap: anywhere;
 }
 .order-product-grid .order-product-add {
-  position: absolute;
-  top: 12px;
-  right: 10px;
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  min-width: 26px;
-  min-height: 26px;
-  padding: 5px;
-  border: 1px solid var(--line);
-  border-radius: 50%;
+  position: static;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  gap: 5px;
+  width: auto;
+  height: auto;
+  min-height: 34px;
+  padding: 6px 12px;
+  border: 1px solid var(--action-bg);
+  border-radius: var(--radius-pill);
   background: var(--surface-soft);
   color: var(--action-bg);
-  box-shadow: none;
+  font-size: 13px;
+  font-weight: 700;
 }
-.order-product-add svg {
-  width: 16px;
-  height: 16px;
+.order-product-grid .order-product-add svg {
+  width: 14px;
+  height: 14px;
+}
+.order-product-grid .order-product:is(:hover, :focus-visible):enabled .order-product-add {
+  background: var(--action-bg);
+  color: var(--action-ink);
 }
 .order-product-grid .order-product:disabled {
-  opacity: 0.6;
+  opacity: 1;
   cursor: not-allowed;
-  box-shadow: none;
+}
+.order-product:disabled .order-product-photo {
+  filter: grayscale(1);
+  opacity: 0.65;
+}
+.order-product-grid .order-product:disabled .order-stock-status {
+  color: var(--stock-empty);
 }
 .order-product-grid .order-product:disabled .order-product-add {
+  background: var(--hover);
+  border-color: var(--line);
   color: var(--muted);
-}
-.order-product-grid .order-product:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 4px;
-}
-@container catalog (max-width: 600px) {
-  .order-product-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 54px 16px;
-  }
-}
-@media (max-width: 480px) {
-  .order-product-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 48px 12px;
-  }
-  .order-product-grid .order-product {
-    padding: 0 12px 18px;
-  }
-  .order-product-grid .order-product-photo {
-    width: min(110px, 85%);
-    margin-top: -32px;
-  }
-  .order-product-grid .order-product-add {
-    top: 6px;
-    right: 6px;
-  }
-  .order-product-grid .order-product-info > strong {
-    font-size: 14px;
-  }
-  .order-product-grid .order-product-price {
-    font-size: 14px;
-  }
 }
 
 /* Grouped POS cards and the sale variant confirmation modal. */

@@ -118,6 +118,23 @@ try {
     });
   });
   await page.goto("https://test.invalid/pos/");
+  await page.locator("#login-form").waitFor();
+  assert.equal(await page.locator("html").getAttribute("data-theme"), "light");
+  const menuBrand = await page.evaluate(async () => {
+    await document.fonts.ready;
+    const loaded = [...document.fonts].filter((face) => face.status === "loaded");
+    return {
+      background: getComputedStyle(document.body).backgroundColor,
+      action: getComputedStyle(document.querySelector("#login-form .primary"))
+        .backgroundColor,
+      fonts: loaded.map((face) => face.family.replaceAll('"', "")).sort(),
+    };
+  });
+  assert.deepEqual(menuBrand, {
+    background: "rgb(243, 240, 223)",
+    action: "rgb(20, 99, 33)",
+    fonts: ["DM Sans", "Manrope"],
+  });
   await page.locator("[name=identifier]").fill("owner");
   await page.locator("[name=password]").fill("fixture");
   await page.locator("#login-form [type=submit]").click();
@@ -150,6 +167,25 @@ try {
           mainWidth: document.querySelector("main").clientWidth,
           mainScroll: document.querySelector("main").scrollWidth,
         }));
+        if (view === "orders" && [1600, 360].includes(width)) {
+          const card = page.locator("#order-products .order-product:visible").first();
+          const geometry = await card.evaluate((el) => {
+            const rect = (selector) => el.querySelector(selector).getBoundingClientRect();
+            const info = rect(".order-product-info");
+            const photo = rect(".order-product-photo");
+            const footer = rect(".order-product-footer");
+            return {
+              photoRightOfText: photo.left >= info.right,
+              footerBelow: footer.top >= Math.max(info.bottom, photo.bottom) - 1,
+              fitsCard: el.scrollWidth <= el.clientWidth + 1,
+            };
+          });
+          assert.deepEqual(geometry, {
+            photoRightOfText: true,
+            footerBelow: true,
+            fitsCard: true,
+          });
+        }
         layouts.push({ theme, width, view, ...result });
         assert(
           result.pageWidth <= width + 1,
@@ -195,6 +231,7 @@ try {
   step.phase = "reload and resources";
   await page.reload();
   await page.locator("#pos-main").waitFor();
+  assert.equal(await page.locator("html").getAttribute("data-theme"), "dark");
   const duplicates = await page.evaluate(() => {
     const urls = new Map();
     for (const entry of performance.getEntriesByType("resource")) {

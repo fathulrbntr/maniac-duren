@@ -8,13 +8,13 @@
     />
     <meta name="robots" content="noindex,nofollow" />
     <title>Maniac Duren · POS</title>
-    <meta name="theme-color" content="#252836" />
+    <meta name="theme-color" content="#f3f0df" />
     <script>
       (() => {
         let theme;
         try { theme = localStorage.getItem('maniac-pos-theme'); } catch {}
-        document.documentElement.dataset.theme = ['light','dark'].includes(theme) ? theme : 'dark';
-        document.querySelector('meta[name="theme-color"]').setAttribute('content', document.documentElement.dataset.theme === 'dark' ? '#252836' : '#f4f3f8');
+        document.documentElement.dataset.theme = ['light','dark'].includes(theme) ? theme : 'light';
+        document.querySelector('meta[name="theme-color"]').setAttribute('content', document.documentElement.dataset.theme === 'dark' ? '#172019' : '#f3f0df');
       })();
     </script>
     <link rel="icon" href="/assets/logo.png" />
@@ -25,10 +25,10 @@
       startPWA();
     </script>
     <link rel="stylesheet" href="pos.css?v=81" />
-    <link rel="stylesheet" href="ui-tokens.css?v=117" />
+    <link rel="stylesheet" href="ui-tokens.css?v=124" />
     <link rel="stylesheet" href="catalog-table.css?v=81" />
     <link rel="stylesheet" href="employees.css?v=81" />
-    <link rel="stylesheet" href="workspace-ui.css?v=117" />
+    <link rel="stylesheet" href="workspace-ui.css?v=124" />
     <link rel="stylesheet" href="variants.css?v=81" />
     <link rel="stylesheet" href="pos-categories.css?v=81" />
     <link rel="stylesheet" href="stock-demo.css?v=81" />
@@ -48,9 +48,9 @@
     <link rel="stylesheet" href="crm.css?v=85" />
     <link rel="stylesheet" href="system-dock.css?v=117" />
     <link rel="stylesheet" href="dashboard.css?v=96" media="screen" />
-    <link rel="stylesheet" href="ui-system.css?v=117" media="screen" />
-    <link rel="stylesheet" href="pos-menu.css?v=117" media="screen" />
-    <link rel="stylesheet" href="cashier.css?v=117" />
+    <link rel="stylesheet" href="ui-system.css?v=124" media="screen" />
+    <link rel="stylesheet" href="pos-menu.css?v=124" media="screen" />
+    <link rel="stylesheet" href="cashier.css?v=124" />
     <link rel="stylesheet" href="warehouse.css?v=117" />
   </head>
   <body>

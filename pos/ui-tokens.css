@@ -1,28 +1,22 @@
-/* Shared Food POS palette and type scale. Fonts are served locally. */
+/* POS typography and colors follow the public menu. */
 @font-face {
-  font-family: "MD Barlow";
-  src: url("assets/fonts/barlow/Barlow-Regular.ttf") format("truetype");
-  font-weight: 400;
+  font-family: "DM Sans";
+  src: url("assets/fonts/dm-sans/dm-sans-latin-wght-normal.woff2") format("woff2");
+  font-weight: 100 1000;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
-  font-family: "MD Barlow";
-  src: url("assets/fonts/barlow/Barlow-SemiBold.ttf") format("truetype");
-  font-weight: 600;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "MD Barlow";
-  src: url("assets/fonts/barlow/Barlow-Bold.ttf") format("truetype");
-  font-weight: 700;
+  font-family: "Manrope";
+  src: url("assets/fonts/manrope/manrope-latin-wght-normal.woff2") format("woff2");
+  font-weight: 200 800;
   font-style: normal;
   font-display: swap;
 }
 :root {
   color-scheme: light;
-  --font-ui: "MD Barlow", Arial, sans-serif;
+  --font-ui: "DM Sans", Arial, sans-serif;
+  --font-heading: "Manrope", var(--font-ui);
   --text-xs: 12px;
   --text-sm: 13px;
   --text-body: 14px;
@@ -32,7 +26,7 @@
   --text-2xl: 24px;
   --text-3xl: 28px;
   --text-4xl: 32px;
-  --text-page: 24px;
+  --text-page: 28px;
   --text-dialog: 22px;
   --text-section: 18px;
   --text-control: 14px;
@@ -42,38 +36,38 @@
   --weight-medium: 600;
   --weight-semibold: 600;
   --weight-bold: 700;
-  --radius-control: 8px;
-  --radius-card: 16px;
+  --radius-control: 10px;
+  --radius-card: 18px;
   --radius-modal: 16px;
   --radius-pill: 999px;
   --control-height: 44px;
   --dialog-control-height: 44px;
   --sidebar-width: 252px;
   --sidebar-rail-width: 96px;
-  --bg: #f4f3f8;
-  --surface: #ffffff;
-  --surface-soft: #f0eff5;
-  --surface-raised: #fbe9e5;
-  --ink: #252836;
-  --muted: #646879;
-  --line: #e0dfe8;
+  --bg: #f3f0df;
+  --surface: #f8f6ec;
+  --surface-soft: #ffffff;
+  --surface-raised: #e3edda;
+  --ink: #111111;
+  --muted: #605f55;
+  --line: #d9d8cc;
   --panel: var(--surface);
   --sidebar: var(--surface);
   --sidebar-ink: var(--ink);
-  --hover: #eae8f1;
-  --action-bg: #b04435;
+  --hover: #eceedd;
+  --action-bg: #146321;
   --action-ink: #ffffff;
   --action-large-ink: #ffffff;
   --success: #42752f;
   --success-bg: #eaf2e5;
-  --danger: #b63c45;
+  --danger: #ad2737;
   --danger-bg: #f9e9eb;
   --warning: #845d19;
   --warning-bg: #f7efdd;
   --info: #41677c;
   --info-bg: #e8eff3;
-  --stock-ready: #528b2d;
-  --stock-empty: #af635b;
+  --stock-ready: #25622e;
+  --stock-empty: #b3283a;
   --focus: var(--action-bg);
   --backdrop: #0009;
   --shadow: 0 8px 32px #0000000d;
@@ -88,41 +82,41 @@
   --accent: var(--action-bg);
   --accent-soft: var(--surface-raised);
   --surface-2: var(--surface-soft);
-  --chart-1: #b04435;
-  --chart-2: #7464ad;
-  --chart-3: #477f88;
-  --chart-4: #9c7440;
-  --chart-5: #728777;
+  --chart-1: var(--action-bg);
+  --chart-2: #8a681c;
+  --chart-3: #367783;
+  --chart-4: #9d5144;
+  --chart-5: #68628a;
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #252836;
-  --surface: #1f1d2b;
-  --surface-soft: #2d303e;
-  --surface-raised: #3b2b33;
-  --ink: #ffffff;
-  --muted: #abb3c1;
-  --line: #393c49;
-  --hover: #343746;
-  --action-bg: #ea7c69;
-  --action-ink: #24191a;
-  --action-large-ink: #24191a;
-  --success: #7dd8bd;
-  --success-bg: #243c3b;
-  --danger: #ff9aa7;
-  --danger-bg: #422d3b;
-  --warning: #ffcf92;
-  --warning-bg: #40372d;
-  --info: #b7a5f1;
-  --info-bg: #332e48;
-  --stock-ready: #7dd8bd;
-  --stock-empty: #ff9aa7;
+  --bg: #172019;
+  --surface: #202b22;
+  --surface-soft: #29352b;
+  --surface-raised: #304632;
+  --ink: #f8f6ec;
+  --muted: #bec9ba;
+  --line: #405144;
+  --hover: #354638;
+  --action-bg: #a6dd99;
+  --action-ink: #142e19;
+  --action-large-ink: #142e19;
+  --success: #a6dd99;
+  --success-bg: #334934;
+  --danger: #ffa6af;
+  --danger-bg: #493035;
+  --warning: #f3d291;
+  --warning-bg: #403a2c;
+  --info: #9ed4e1;
+  --info-bg: #2b3e42;
+  --stock-ready: var(--success);
+  --stock-empty: var(--danger);
   --shadow: 0 18px 60px #0005;
-  --chart-1: #ea7c69;
-  --chart-2: #b7a5f1;
-  --chart-3: #65b0c7;
-  --chart-4: #ffcf92;
-  --chart-5: #7dd8bd;
+  --chart-1: var(--action-bg);
+  --chart-2: #e1c16e;
+  --chart-3: #89ccd3;
+  --chart-4: #f5ad96;
+  --chart-5: #bbb0da;
   --ui-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24'%3E%3Cpath d='m6 9 6 6 6-6' fill='none' stroke='%23b3b3ba' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 @media (max-width: 600px) {

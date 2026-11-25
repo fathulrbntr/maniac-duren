@@ -135,66 +135,51 @@
 }
 .order-categories {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 20px;
+  gap: 8px;
   flex: 1;
   min-width: 0;
   margin: 0;
-  padding: 0;
-  border-bottom: 1px solid var(--line);
-  overflow-x: auto;
-  flex-wrap: nowrap;
-  scrollbar-width: thin;
+  padding: 3px;
+  border-bottom: 0;
+  overflow: visible;
 }
 .order-category {
   display: inline-flex;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
   justify-content: center;
-  flex: none;
-  min-height: 42px;
-  padding: 12px 0 16px;
+  max-width: 100%;
+  white-space: normal;
+  min-height: 44px;
+  padding: 9px 15px;
   font-size: 14px;
   font-weight: 600;
   line-height: 20px;
-  position: relative;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  color: var(--ink);
-  white-space: nowrap;
+  border: 1px solid var(--action-bg);
+  border-radius: var(--radius-pill);
+  background: var(--surface-soft);
+  color: var(--action-bg);
+}
+.order-category span {
+  overflow-wrap: anywhere;
 }
 .order-category .ui-icon {
-  width: 17px;
-  height: 17px;
+  width: 16px;
+  height: 16px;
 }
 .order-category small {
   font-size: 11px;
-  font-weight: 400;
-  opacity: 0.7;
-  margin-left: 0;
-  background: none;
   color: inherit;
 }
-.order-category.selected {
-  background: transparent;
-  border-color: transparent;
-  color: var(--action-bg);
-  box-shadow: none;
-}
-.order-category.selected::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 3px;
-  background: var(--action-bg);
-  border-radius: 3px;
-}
 .order-category:hover {
-  background: transparent;
-  color: var(--action-bg);
+  background: var(--surface-raised);
+}
+.order-category.selected {
+  background: var(--action-bg);
+  border-color: var(--action-bg);
+  color: var(--action-ink);
 }
 .order-menu-settings {
   position: relative;
@@ -251,7 +236,7 @@
   max-height: calc(100dvh - 128px);
   min-height: min(540px, calc(100dvh - 128px));
   padding: 22px;
-  border: 0;
+  border: 1px solid var(--line);
   border-radius: var(--radius-card);
   box-shadow: none;
   overflow: hidden;
@@ -535,7 +520,7 @@
   min-height: 48px;
   font-size: 15px;
   padding: 12px 8px;
-  border-radius: var(--radius-control);
+  border-radius: var(--radius-pill);
 }
 .order-payment-hint {
   font-size: 11px;
@@ -552,7 +537,16 @@
 .order-queue .table-wrap {
   margin-top: 16px;
 }
-@container catalog (max-width:600px) {
+@container catalog (max-width: 600px) {
+  .order-categories {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 4px 3px;
+    scrollbar-width: thin;
+  }
+  .order-category {
+    flex-shrink: 0;
+  }
   .order-catalog-head {
     flex-direction: column;
     align-items: stretch;
@@ -662,7 +656,7 @@
     flex-direction: column;
   }
   .order-category {
-    padding: 12px 0 16px;
+    padding: 8px 12px;
   }
 }
 @media print {
