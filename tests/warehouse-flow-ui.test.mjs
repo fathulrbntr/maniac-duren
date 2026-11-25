@@ -303,6 +303,55 @@ const cutterHome = supplyHome({ ...s, access: { cut: true } }, store, "store");
 assert(cutterHome.includes("Pemeriksaan buah"));
 assert(!cutterHome.includes("Tagihan tersisa"));
 assert(!waitress.includes("orders") && !waitress.includes("cutting"));
+const storeAccess = { receive: true, sell: true, waste: true };
+const storeState = { ...s, access: storeAccess };
+const storeSummary = supplyHome(storeState, store, "store");
+assert.match(storeSummary, /Buah siap jual/);
+assert.match(storeSummary, /Buah reject/);
+assert(!storeSummary.includes("Tagihan tersisa"));
+const taskViews = (html) => {
+  const root = new Node("main");
+  root.innerHTML = html;
+  return root.querySelectorAll(".supply-task").map((button) => button.dataset.view);
+};
+assert.deepEqual(taskViews(supplyHome(storeState, store, "store")), [
+  "receiving",
+  "orders",
+  "waste",
+]);
+assert.deepEqual(
+  taskViews(
+    transfersPage(
+      {
+        ...storeState,
+        transfers: [
+          { status: "received", targetId: wh },
+          { status: "in_transit", targetId: store },
+        ],
+      },
+      store,
+      true,
+    ),
+  ),
+  [],
+);
+const received = { ...storeState, transfers: [{ status: "received", targetId: store }] };
+assert.deepEqual(taskViews(transfersPage(received, store, true)), ["orders", "waste"]);
+assert.deepEqual(
+  taskViews(
+    transfersPage({ ...received, access: { receive: true, sell: true } }, store, true),
+  ),
+  ["orders"],
+);
+assert.deepEqual(
+  taskViews(transfersPage({ ...received, access: { receive: true } }, store, true)),
+  [],
+);
+const storeGroups = workspaceGroups({ workspace: "store", ...storeAccess });
+assert.deepEqual(
+  storeGroups.filter((g) => g.pages.includes("waste")).map((g) => g.label),
+  ["Reject toko"],
+);
 const cutter = workspaceGroups({
   workspace: "store",
   cut: true,

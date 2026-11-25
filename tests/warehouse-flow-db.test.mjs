@@ -282,7 +282,31 @@ try {
     }),
     /tidak valid/,
   );
+  const proof =
+    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Zl1sAAAAASUVORK5CYII=";
   await as(cutter);
+  const storeReject = {
+    id: id(),
+    storeId: store,
+    date: s.lots.find((l) => l.id === t.lines[0].targetLotId).date,
+    sourceLotId: t.lines[0].targetLotId,
+    rejectLotId: id(),
+    kg: 2,
+    pieces: 1,
+    barcodes: [code(2)],
+    processNow: false,
+    cause: "taste",
+    evidence: { reject: proof },
+    reason: "Buah rusak setelah diterima toko",
+  };
+  await old("reject_mark", storeReject);
+  s = await read();
+  const markedUnit = s.fruitUnits.find((u) => u.barcode === code(2));
+  assert.equal(markedUnit.status, "reject");
+  assert.equal(markedUnit.storeId, store);
+  assert.equal(markedUnit.receiptLotId, batch.lines[0].id);
+  assert.equal(s.lots.find((l) => l.id === storeReject.rejectLotId).kg, 2);
+  assert.equal(s.lots.find((l) => l.id === storeReject.sourceLotId).kg, 2);
   s = await mut("fruit_cut_check", {
     id: id(),
     storeId: store,
@@ -315,6 +339,14 @@ try {
       },
     ],
   };
+  await assert.rejects(
+    old("order_create", {
+      ...sale,
+      id: id(),
+      lines: [{ ...sale.lines[0], barcode: code(2) }],
+    }),
+    /reject|batch|tersedia/i,
+  );
   await old("order_create", sale);
   const sold = (
     await db.query("select cost,consumption from public.md_pos_order_runs where id=$1", [
@@ -408,8 +440,6 @@ try {
     confirmed: true,
     units: [],
   });
-  const proof =
-    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Zl1sAAAAASUVORK5CYII=";
   bs = await old("reject_mark", {
     id: id(),
     storeId: wh,

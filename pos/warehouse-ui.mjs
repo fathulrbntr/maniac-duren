@@ -58,6 +58,125 @@ function locationStockTable(s) {
     <tbody>${rows.join("") || '<tr><td colspan="8" class="empty">Belum ada lokasi.</td></tr>'}</tbody></table></div>
     <p id="location-stock-help" class="muted">Siap dan reject belum diolah menunjukkan stok saat ini. Terjual dan hasil pengolahan adalah total sejak pencatatan di tiap lokasi. Estimasi kulit mencakup kulit dan sisa proses, dihitung dari berat buah dikurangi hasil Durpas dan Coral.</p></section>`;
 }
+function storeStockActions(access) {
+  return [
+    access?.sell &&
+      action(
+        "orders",
+        "Penjualan toko",
+        "Scan barang siap jual dari stok toko, lalu proses pembayaran.",
+      ),
+    access?.waste &&
+      action(
+        "waste",
+        "Catat atau olah reject",
+        "Pilih batch toko dan scan buah yang tidak layak. Olah sekarang atau simpan untuk diolah nanti.",
+      ),
+  ]
+    .filter(Boolean)
+    .join("");
+}
+
+function supplyTasks(s, space) {
+  const access = s.access || {};
+  if (space === "backoffice") {
+    return [
+      action(
+        "supplierNotes",
+        "Buka nota supplier",
+        "Isi barang, modal dan ongkir untuk penerimaan gudang.",
+      ),
+      action(
+        "transfers",
+        "Transfer toko & wholesale",
+        "Kelola dokumen pengiriman ke toko dan penjualan grosir.",
+      ),
+      workflowReady(s)
+        ? action(
+            "pricing",
+            "Harga jual cabang",
+            "Pilih toko dan atur harga jual pelanggan.",
+          )
+        : action("pricing", "Harga transfer", "Atur harga distribusi ke toko."),
+      action("products", "Master barang", "Kelola produk, varian dan harga dasar."),
+      (access.reports || access.trace) &&
+        action(
+          "reports",
+          "Laporan batch supplier",
+          "Telusuri posisi stok dan hasil olahan.",
+        ),
+    ]
+      .filter(Boolean)
+      .join("");
+  }
+  if (space === "warehouse") {
+    return [
+      (access.stock || access.backoffice) &&
+        action(
+          "supplierNotes",
+          "Terima barang supplier",
+          "Buka nota admin, timbang dan scan barang yang diterima.",
+        ),
+      (access.dispatch || access.backoffice) &&
+        action(
+          "transfers",
+          "Siapkan transfer & wholesale",
+          "Scan barang sesuai dokumen pengiriman.",
+        ),
+      access.waste &&
+        action(
+          "waste",
+          "Catat atau olah reject gudang",
+          "Pilih batch gudang dan catat buah yang perlu dipisahkan.",
+        ),
+      (access.stock || access.produce || access.receive) &&
+        action("stock", "Stok gudang", "Periksa saldo per produk dan batch."),
+    ]
+      .filter(Boolean)
+      .join("");
+  }
+  return [
+    access.receive &&
+      action(
+        "receiving",
+        "Terima kiriman",
+        "Buka surat jalan, scan kiriman dan konfirmasi barang masuk toko.",
+      ),
+    storeStockActions(access),
+    access.serve && action("service", "Waitress", "Meja, pesanan siap dan pengantaran."),
+    access.kitchen && action("kitchen", "Kitchen", "Proses menu setelah pembayaran."),
+    access.cut &&
+      action(
+        "cutting",
+        "Tukang potong",
+        "Scan buah dan catat pemeriksaan untuk meja pelanggan.",
+      ),
+  ]
+    .filter(Boolean)
+    .join("");
+}
+
+function storeReceiptStats(s, store, pending) {
+  const stock = locationFruitStock(s).find((row) => row.location.id === store);
+  return (
+    stat(
+      "Kiriman dalam perjalanan",
+      String(pending.filter((t) => t.targetId === store).length),
+      "Menunggu penerimaan lengkap",
+    ) +
+    stat(
+      "Buah siap jual",
+      num(stock?.readyKg || 0) + " kg",
+      num(stock?.readyPieces || 0) + " butir di toko",
+    ) +
+    stat(
+      "Buah reject",
+      num(stock?.rejectKg || 0) + " kg",
+      num(stock?.rejectPieces || 0) + " butir menunggu penanganan",
+    )
+  );
+}
+
 export function supplyHome(s, store, space) {
   const ts = (s.transfers || []).filter(
       (t) => space === "backoffice" || t.sourceId === store || t.targetId === store,
@@ -115,30 +234,34 @@ export function supplyHome(s, store, space) {
           String(orders.filter((o) => o.status === "ready").length),
           "Menunggu pelayanan meja",
         )
-    : stat("Dalam perjalanan", String(active.length), "Menunggu penerimaan lengkap") +
-      stat(
-        "Buah di lokasi",
-        num(
-          s.lots
-            .filter((l) => space === "backoffice" || l.storeId === store)
-            .reduce((n, l) => n + l.kg, 0),
-        ) + " kg",
-        "Siap pakai dan reject terpisah di stok",
-      ) +
-      (!workflowReady(s) || space === "backoffice"
-        ? stat("Tagihan tersisa", money(due), "Invoice aktif dikurangi pembayaran")
-        : stat(
-            "Penyiapan barang",
-            String((s.outboundOrders || []).filter((o) => o.status === "packing").length),
-            "Dokumen menunggu scan",
-          ));
+    : space === "store"
+      ? storeReceiptStats(s, store, active)
+      : stat("Dalam perjalanan", String(active.length), "Menunggu penerimaan lengkap") +
+        stat(
+          "Buah di lokasi",
+          num(
+            s.lots
+              .filter((l) => space === "backoffice" || l.storeId === store)
+              .reduce((n, l) => n + l.kg, 0),
+          ) + " kg",
+          "Siap pakai dan reject terpisah di stok",
+        ) +
+        (!workflowReady(s) || space === "backoffice"
+          ? stat("Tagihan tersisa", money(due), "Invoice aktif dikurangi pembayaran")
+          : stat(
+              "Penyiapan barang",
+              String(
+                (s.outboundOrders || []).filter((o) => o.status === "packing").length,
+              ),
+              "Dokumen menunggu scan",
+            ));
   const desc =
     space === "backoffice"
-      ? "PT. Altara Rasa Nusantara · kendali harga, distribusi, dan tagihan"
+      ? "Buka nota supplier, siapkan dokumen transfer atau wholesale, dan atur harga jual tiap cabang."
       : space === "warehouse"
-        ? "Terima dari supplier, scan kiriman, lalu pantau penerimaan toko."
-        : "Penerimaan lengkap, pelayanan meja, kasir, kitchen, dan potong buah.";
-  return `<section class="supply-workspace">${blocker(s)}<div class="supply-hero"><div><span class="supply-eyebrow">MANIAC DUREN / ${e(space === "backoffice" ? "ADMINISTRASI" : space === "warehouse" ? "DISTRIBUSI" : "PELAYANAN")}</span><h2>${title}</h2><p>${desc}</p></div><button type="button" data-supply-refresh>Perbarui</button></div><div class="supply-stats">${stats}</div><div class="supply-task-grid">${space === "backoffice" ? action("supplierNotes", "Nota supplier", "Atur modal dan ongkir sebelum gudang menerima") + (workflowReady(s) ? action("pricing", "Harga jual", "Atur harga pelanggan per cabang toko") : action("pricing", "Harga transfer", "Harga khusus distribusi ke toko")) + action("products", "Master barang", "Produk, varian, dan harga jual dasar") + action("transfers", "Pengiriman & tagihan", "Invoice, surat jalan, dan pembayaran") + action("reports", "Laporan batch supplier", "Telusuri posisi barang dan hasil olahan") : space === "warehouse" ? action("supplierNotes", "Penerimaan supplier", "Pilih nota admin dan scan label setiap buah") + action("transfers", "Pengiriman toko & wholesale", "Scan barang dari dokumen Back Office") + action("stock", "Stok gudang", "Periksa barang per produk dan batch") + action("waste", "Reject gudang", "Scan buah reject dan simpan buktinya") : [s.access?.receive ? action("receiving", "Terima kiriman", "Cari nomor nota, scan, periksa lengkap") : "", s.access?.serve ? action("service", "Waitress", "Meja, pesanan siap, dan pengantaran") : "", s.access?.sell ? action("orders", "Kasir", "Scan buah, pesanan tambahan, dan pembayaran") : "", s.access?.kitchen ? action("kitchen", "Kitchen", "Proses menu setelah pembayaran") : "", s.access?.cut ? action("cutting", "Tukang potong", "Scan buah, catat meja, dan tangani reject") : ""].join("")}</div>${
+        ? "Terima barang berdasarkan nota supplier. Siapkan transfer toko atau wholesale, dan catat reject gudang."
+        : "Setelah kiriman diterima, jual barang yang layak. Catat reject dari batch toko saat ditemukan.";
+  return `<section class="supply-workspace">${blocker(s)}<div class="supply-hero"><div><span class="supply-eyebrow">MANIAC DUREN / ${e(space === "backoffice" ? "ADMINISTRASI" : space === "warehouse" ? "DISTRIBUSI" : "PELAYANAN")}</span><h2>${title}</h2><p>${desc}</p></div><button type="button" data-supply-refresh>Perbarui</button></div><div class="supply-task-grid">${supplyTasks(s, space)}</div><div class="supply-stats">${stats}</div>${
     space === "backoffice" ? locationStockTable(s) : ""
   }${operational ? "" : `<section class="panel"><h3>Kiriman yang belum diterima</h3>${transferTable(active.slice(0, 8), !workflowReady(s) || space === "backoffice")}</section>`}</section>`;
 }
@@ -163,7 +286,12 @@ export function transfersPage(s, store, incoming = false, space) {
     warehouseEnabled(s) &&
     s.access?.dispatch &&
     location(s, store)?.locationType === "warehouse";
-  return `<section class="supply-workspace">${blocker(s)}<div class="supply-hero"><div><span class="supply-eyebrow">${incoming ? "PENERIMAAN TOKO" : "DISTRIBUSI GUDANG"}</span><h2>${incoming ? "Periksa kiriman masuk" : "Pengiriman & tagihan"}</h2><p>${incoming ? "Cocokkan seluruh barcode dengan surat jalan. Stok masuk setelah lengkap." : "Setiap kiriman memiliki invoice, surat jalan, dan jejak barcode."}</p></div><div class="toolbar"><button type="button" data-supply-refresh>Perbarui</button>${canSend ? '<button type="button" class="primary" data-transfer-new>+ Buat pengiriman</button>' : ""}</div></div><div class="supply-filters"><input type="search" data-transfer-search placeholder="Cari nomor surat jalan, invoice, atau toko…" aria-label="Cari kiriman"><select data-transfer-filter aria-label="Status kiriman"><option value="">Semua status</option>${Object.entries(
+  const afterReceipt =
+    incoming &&
+    (s.transfers || []).some((t) => t.targetId === store && t.status === "received")
+      ? storeStockActions(s.access)
+      : "";
+  return `<section class="supply-workspace">${blocker(s)}<div class="supply-hero"><div><span class="supply-eyebrow">${incoming ? "PENERIMAAN TOKO" : "DISTRIBUSI GUDANG"}</span><h2>${incoming ? "Periksa kiriman masuk" : "Pengiriman & tagihan"}</h2><p>${incoming ? "Scan kiriman sesuai surat jalan, lalu konfirmasi penerimaan lengkap agar barang masuk stok toko." : "Setiap kiriman memiliki invoice, surat jalan, dan jejak barcode."}</p></div><div class="toolbar"><button type="button" data-supply-refresh>Perbarui</button>${canSend ? '<button type="button" class="primary" data-transfer-new>+ Buat pengiriman</button>' : ""}</div></div><div class="supply-filters"><input type="search" data-transfer-search placeholder="Cari nomor surat jalan, invoice, atau toko…" aria-label="Cari kiriman"><select data-transfer-filter aria-label="Status kiriman"><option value="">Semua status</option>${Object.entries(
     transferStatus,
   )
     .map(
@@ -172,7 +300,7 @@ export function transfersPage(s, store, incoming = false, space) {
     )
     .join(
       "",
-    )}</select></div><section class="panel" data-transfer-list></section></section>`;
+    )}</select></div><section class="panel" data-transfer-list></section>${afterReceipt ? `<section><h3>Setelah barang diterima</h3><div class="supply-task-grid">${afterReceipt}</div></section>` : ""}</section>`;
 }
 export function pricingPage(s, store) {
   if (workflowReady(s) || s.branchPricingVersion >= 123)

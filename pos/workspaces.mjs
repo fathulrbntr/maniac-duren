@@ -29,9 +29,9 @@ export function workspaceGroups(a) {
               pages: [
                 "backoffice",
                 "dashboard",
-                "pricing",
                 "supplierNotes",
                 "transfers",
+                "pricing",
                 "reports",
                 "documents",
               ],
@@ -59,9 +59,9 @@ export function workspaceGroups(a) {
                 pages: [
                   "warehouse",
                   "supplierNotes",
-                  "stock",
                   "transfers",
                   "waste",
+                  "stock",
                   "reports",
                 ],
               },
@@ -72,10 +72,11 @@ export function workspaceGroups(a) {
                 label: "Operasional toko",
                 pages: ["storehome", "receiving", "stock"],
               },
-              { id: "service", label: "Waitress", pages: ["service"] },
               { id: "cashier", label: "Kasir", pages: ["shifts", "orders"] },
+              { id: "store_reject", label: "Reject toko", pages: ["waste"] },
+              { id: "service", label: "Waitress", pages: ["service"] },
               { id: "kitchen", label: "Kitchen", pages: ["kitchen", "production"] },
-              { id: "cutter", label: "Tukang potong", pages: ["cutting", "waste"] },
+              { id: "cutter", label: "Tukang potong", pages: ["cutting"] },
               { id: "store_reports", label: "Laporan toko", pages: ["reports"] },
             ];
   const allowed = {

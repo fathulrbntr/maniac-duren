@@ -111,6 +111,13 @@ try {
               JSON.stringify(p.payload),
             ])
           ).rows[0].s;
+        else if (rpc === "pos_mutate_027" && p.action === "reject_mark")
+          result = (
+            await db.query("select public.pos_mutate_027($1,$2::jsonb) s", [
+              p.action,
+              JSON.stringify(p.payload),
+            ])
+          ).rows[0].s;
         else if (rpc === "pos_fruit_history")
           result = (await db.query("select public.pos_fruit_history($1) s", [p.code]))
             .rows[0].s;
@@ -250,6 +257,10 @@ try {
     0,
     "received shipment leaves pending list",
   );
+  const nextSteps = page.locator(".workspace-content .supply-task-grid");
+  assert.equal(await nextSteps.locator('[data-view="waste"]').count(), 0);
+  await nextSteps.getByRole("button", { name: /Penjualan toko/ }).click();
+  await page.locator('.shell[data-page="orders"] #order-products').waitFor();
   await login("owner");
   await page.locator("[data-workspace=backoffice]").click();
   await nav("supplierNotes");
@@ -352,6 +363,38 @@ try {
       .querySelector(".supply-workspace")
       .textContent.includes("Pemeriksaan 7 hari"),
   );
+  await nav("storehome");
+  await page
+    .locator(".workspace-content")
+    .getByRole("button", { name: /Catat atau olah reject/ })
+    .click();
+  await page.locator('[data-reject-op="mark"]').click();
+  const reject = page.locator("dialog.reject-modal[open]");
+  await reject.locator("[data-fruit-scan-open]").click();
+  await page.locator("[data-fruit-scan]").fill(code(2));
+  await page.locator("[data-fruit-scan]").press("Enter");
+  await page
+    .locator("[data-fruit-scan-list]")
+    .getByText(code(2), { exact: true })
+    .waitFor();
+  await page
+    .getByRole("button", { name: "Tutup pencatatan barcode", exact: true })
+    .click();
+  await reject.locator('[name="reason"]').fill("Kulit pecah saat diperiksa di toko");
+  await reject.locator('[data-proof-file="reject"]').setInputFiles("assets/logo.png");
+  await reject.getByText(/Foto siap disimpan/).waitFor();
+  await reject.locator('[type="submit"]').click();
+  await reject.waitFor({ state: "hidden" });
+  const statuses = (
+    await db.query(
+      "select barcode, status from public.md_pos_fruit_units where store_id=$1 order by barcode",
+      [store],
+    )
+  ).rows;
+  assert.deepEqual(statuses, [
+    { barcode: code(1), status: "available" },
+    { barcode: code(2), status: "reject" },
+  ]);
   assert.deepEqual(errors, []);
   console.log(
     "PASS browser + real SQL: admin note → warehouse scan → dispatch → documents → partial scan/reload → full receive → role workspaces, split supplier payments, owner correction, persisted history, price form and responsive widths.",
