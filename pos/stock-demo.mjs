@@ -176,6 +176,10 @@ export function createStockDemo(source) {
     ),
   };
   for (const key of transactionKeys) s[key] = [];
+  delete s.pettyCashVersion;
+  delete s.pettyRequests;
+  delete s.pettyBalances;
+  delete s.retailBalance;
   collapseSingleVariants(s.products);
   setDemoPrices(s);
   s.cashDepositProofs = {};

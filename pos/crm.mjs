@@ -1,5 +1,8 @@
 // Shared CRM validation, estimates, and isolated training-mode behavior.
-export const crmAdmin = (s) => ["owner", "manager"].includes(s.me?.role);
+export const crmAdmin = (s) =>
+  (s.pettyCashVersion >= 130 ? ["owner", "admin"] : ["owner", "manager"]).includes(
+    s.me?.role,
+  );
 export const consentText =
   "Pelanggan setuju menerima promosi Maniac Duren melalui WhatsApp dan dapat berhenti kapan saja.";
 export function normalizePhone(value) {

@@ -36,7 +36,13 @@ import {
 } from "./dashboard-ui.mjs";
 import { createSessionManager } from "./session.mjs";
 import { installButton, bindInstall } from "./pwa.mjs";
-import { reportsPage, bindReports, selectReportTab } from "./reports-ui.mjs";
+import { pettyPanel, bindPetty } from "./petty-cash-ui.mjs";
+import {
+  expenseDialog,
+  reportsPage,
+  bindReports,
+  selectReportTab,
+} from "./reports-ui.mjs";
 import { documentsPage, bindDocuments } from "./documents-ui.mjs";
 import { variantGroupDialog, productVariantDialog } from "./variant-editor.mjs";
 import { createSidebarController, sidebarIcon } from "./sidebar.mjs";
@@ -85,6 +91,7 @@ let workspace = "";
 function workspaceAccess() {
   return {
     ...state.access,
+    pettyCash: state.pettyCashVersion >= 130 && !state.stockDemo,
     cashierExpenses: state.cashierExpenseVersion >= 128 && !state.stockDemo,
     cashierOwner: state.me?.role === "owner",
     crmAdmin: ["owner", "admin"].includes(state.me?.role),
@@ -213,6 +220,7 @@ const title = {
   crm: "Member & Poin",
   payments: "Metode Pembayaran",
   shifts: "Shift Kasir",
+  retailFunds: "Keuangan PT Retail",
   storeExpenses: "Pengeluaran Toko",
   devices: "Printer & Scanner",
   discounts: "Diskon & Persetujuan",
@@ -255,6 +263,7 @@ const paths = {
   payments: "M3 5h18v14H3z M3 10h18 M6 15h5",
   storeExpenses: "M4 6h16v14H4z M4 6l11-3v3 M11 13h6 M14 10l3 3-3 3",
   shifts: "M4 4h16v16H4z M8 8h8 M8 12h3 M15 12v5 M12 15h6",
+  retailFunds: "M3 7h18v13H3z M3 7l14-4v4 M15 12h6v5h-6z",
   documents: "M4 3h11l5 5v13H4z M15 3v6h5 M8 13h8 M8 17h5",
   devices: "M6 9V3h12v6 M6 17H3V9h18v8h-3 M6 14h12v7H6z M17 12h1",
   discounts:
@@ -550,7 +559,12 @@ async function restoreSession() {
     if (activeSessionId !== saved.sessionId) return;
     if (spacesFor(state).includes(saved.workspace)) workspace = saved.workspace;
     const allowed = visibleSections(workspaceAccess()).flatMap((group) => group.pages);
-    view = allowed.includes(saved.view) ? saved.view : defaultView();
+    const archiveView =
+      workspace === "backoffice" &&
+      workspaceAccess().pettyCash &&
+      state.access?.backoffice &&
+      ["documents", "dashboard"].includes(saved.view);
+    view = allowed.includes(saved.view) || archiveView ? saved.view : defaultView();
     render();
   } catch (error) {
     if (activeSessionId !== saved.sessionId) return;
@@ -733,7 +747,18 @@ function accountProfile() {
 function shell(body) {
   const access = workspaceAccess();
   const pageTitles =
-    access.workspace === "store" ? { ...title, ...storePageTitles } : title;
+    access.workspace === "store"
+      ? { ...title, ...storePageTitles }
+      : access.pettyCash
+        ? {
+            ...title,
+            documents: "Arsip dokumen",
+            dashboard: "Analisis penjualan",
+            backoffice: "Dashboard",
+            products: "Master barang",
+            employees: "Akun karyawan",
+          }
+        : title;
   const activeLocation = state.stores.find((x) => x.id === store),
     activeIcon = activeLocation?.locationType === "warehouse" ? "warehouse" : "stores";
   const selectableLocations =
@@ -853,6 +878,14 @@ function render() {
     );
     if (!locations.some((x) => x.id === store)) store = locations[0]?.id || "";
     const permitted = new Set(visibleSections(workspaceAccess()).flatMap((g) => g.pages));
+    if (
+      workspace === "backoffice" &&
+      workspaceAccess().pettyCash &&
+      state.access.backoffice
+    ) {
+      permitted.add("documents");
+      permitted.add("dashboard");
+    }
     if (!permitted.has(view)) view = workspace === "store" ? "storehome" : workspace;
   }
 
@@ -883,6 +916,7 @@ function render() {
       crm: () => crmPage(state),
       payments: () => paymentsPage(state, store),
       shifts: () => shiftsPage(state, store),
+      retailFunds: () => pettyPanel(state, store, true),
       storeExpenses: () => storeExpensesPage(state, store),
       dashboard,
       backoffice: () => supplyHome(state, store, "backoffice"),
@@ -1101,6 +1135,7 @@ function render() {
   trackForms();
   bindProduction(view, state, store, { modal, mutate, render, toast, refresh });
   const adminContext = {
+    workspace,
     modal,
     mutate,
     render,
@@ -1118,6 +1153,11 @@ function render() {
       }
     },
   };
+  if (view === "retailFunds") {
+    bindPetty(state, store, adminContext);
+    document.querySelector("[data-pt-expense]").onclick = () =>
+      expenseDialog(state, store, adminContext, true);
+  }
   if (view === "reports") bindReports(state, store, adminContext);
   if (view === "documents") bindDocuments(state, store, adminContext);
   bindWaste(view, state, store, {

@@ -40,12 +40,12 @@ export function workspaceGroups(a) {
               label: "Back office",
               pages: [
                 "backoffice",
-                "dashboard",
+                ...(a.pettyCash ? [] : ["dashboard"]),
                 "supplierNotes",
                 "transfers",
                 "pricing",
                 "reports",
-                "documents",
+                ...(a.pettyCash ? ["retailFunds"] : ["documents"]),
               ],
             },
             {
@@ -115,6 +115,7 @@ export function workspaceGroups(a) {
     production: a.produce,
     waste: a.waste,
     reports: a.reports || a.trace,
+    retailFunds: all && a.finance && a.pettyCash,
     documents: all,
     products: all,
     recipes: all,
@@ -130,10 +131,20 @@ export function workspaceGroups(a) {
   };
   return [
     ...groups,
+    ...(a.pettyCash
+      ? [
+          {
+            id: "staff_attendance",
+            label: "Karyawan",
+            pages: ["attendance"],
+            standalone: true,
+          },
+        ]
+      : []),
     {
       id: "common",
-      label: "Akun & perangkat",
-      pages: ["attendance", "devices", "guide"],
+      label: a.pettyCash ? "Perangkat & bantuan" : "Akun & perangkat",
+      pages: a.pettyCash ? ["devices", "guide"] : ["attendance", "devices", "guide"],
     },
   ]
     .map((g) => ({ ...g, pages: g.pages.filter((p) => allowed[p]) }))

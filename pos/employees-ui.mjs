@@ -1,5 +1,7 @@
 import { compressPhoto } from "./photo-compression.mjs";
 import { escape as e, id, today } from "./core.mjs";
+const canEditStaff = (s, role) =>
+  s.me?.role !== "admin" || !["owner", "admin"].includes(role);
 const roles = {
   staff: "Staff",
   owner: "Owner",
@@ -153,7 +155,7 @@ export function employeesPage(view, s, store) {
     )}</div><div class="team-heading"><input type="search" data-team-search placeholder="Cari nama, email, atau nomor telepon" aria-label="Cari karyawan"><select data-team-status aria-label="Status karyawan"><option value="all">Semua status</option><option value="active">Aktif</option><option value="inactive">Nonaktif</option></select></div><div class="team-grid">${rows
     .map(
       (x) =>
-        `<article class="employee-card employee-card-v22" data-employee-card="${e(x.id)}" tabindex="0" aria-label="Edit karyawan ${e(x.name)}"><div class="employee-card-copy"><h3><span>${e(x.name)}</span></h3><p class="employee-username">${e(x.username || "Username belum diisi")}</p><p class="employee-role">${e(roles[x.role] || "Staff")}</p></div><div class="employee-card-photo">${
+        `<article class="employee-card employee-card-v22" data-employee-card="${e(x.id)}" tabindex="0" aria-label="${canEditStaff(s, x.role) ? "Edit karyawan" : "Karyawan"} ${e(x.name)}"><div class="employee-card-copy"><h3><span>${e(x.name)}</span></h3><p class="employee-username">${e(x.username || "Username belum diisi")}</p><p class="employee-role">${e(roles[x.role] || "Staff")}</p></div><div class="employee-card-photo">${
           x.profile_photo
             ? `<img src="${e(x.profile_photo)}" alt="Foto ${e(x.name)}" loading="lazy">`
             : `<span class="employee-photo-placeholder" aria-label="Foto belum diunggah">${e(
@@ -165,7 +167,7 @@ export function employeesPage(view, s, store) {
                   .join("")
                   .toUpperCase(),
               )}</span>`
-        }</div><div class="employee-card-footer"><span class="employee-status ${x.active ? "is-active" : "is-inactive"}">${x.active ? "Aktif" : "Nonaktif"}</span><details class="employee-more"><summary aria-label="Aksi ${e(x.name)}" title="Detail dan akun">•••</summary><div><button data-detail="${e(x.id)}">Detail & rekap</button>${!x.user_id ? `<button data-account="${e(x.id)}">Buat akun</button>` : `<button data-password="${e(x.id)}">Ubah password</button>`}</div></details></div></article>`,
+        }</div><div class="employee-card-footer"><span class="employee-status ${x.active ? "is-active" : "is-inactive"}">${x.active ? "Aktif" : "Nonaktif"}</span><details class="employee-more"><summary aria-label="Aksi ${e(x.name)}" title="Detail dan akun">•••</summary><div><button data-detail="${e(x.id)}">Detail & rekap</button>${!canEditStaff(s, x.role) ? "" : !x.user_id ? `<button data-account="${e(x.id)}">Buat akun</button>` : `<button data-password="${e(x.id)}">Ubah password</button>`}</div></details></div></article>`,
     )
     .join(
       "",
@@ -274,6 +276,7 @@ export function bindEmployees(view, s, store, ctx) {
       store_ids: [store],
       permissions: [],
     };
+    if (!canEditStaff(s, x.role)) return;
     let photo,
       profile,
       photoPending = false,
@@ -297,12 +300,13 @@ export function bindEmployees(view, s, store, ctx) {
         .join("")}${field(
         "Role",
         `<select name="role">${Object.entries(roles)
+          .filter(([role]) => canEditStaff(s, role))
           .map(
             ([k, n]) =>
               `<option value="${k}" ${k === x.role ? "selected" : ""}>${n}</option>`,
           )
           .join("")}</select>`,
-      )}${field("Status", `<select name="active"><option value="true" ${x.active ? "selected" : ""}>Aktif</option><option value="false" ${!x.active ? "selected" : ""}>Nonaktif</option></select>`)}</div>${employeeDetailsForm(x, s.employeeDetailsVersion >= 70)}${!x.user_id ? `<h3>Akun login</h3>${field("Password awal", '<input name="initialPassword" type="password" minlength="6" maxlength="128" autocomplete="new-password" placeholder="Minimal 6 karakter"><button type="button" data-toggle-initial-password aria-pressed="false">Tampilkan password</button>')}<p>Isi password untuk sekaligus membuat akun login. Email wajib diisi dan status harus Aktif. Kosongkan password jika hanya ingin menyimpan data karyawan.</p>` : ""}<p>Role awal Staff memiliki akses absensi. Owner dapat mengatur role dan akses tambahan.</p><h3>Foto profil</h3><input type="file" data-profile accept="image/jpeg,image/png,image/webp"><img class="ktp-preview" data-profile-preview ${x.profile_photo ? `src="${e(x.profile_photo)}"` : "hidden"} alt="Preview foto profil"><button type="button" data-remove-profile>Hapus foto profil</button><h3>Foto KTP</h3><p>${x.has_ktp ? "Foto tersimpan. Pilih file untuk mengganti." : "Belum ada foto."} Hanya owner dapat membuka foto KTP.</p><input type="file" data-photo accept="image/jpeg,image/png,image/webp" aria-label="Foto KTP"><img class="ktp-preview" data-photo-preview hidden alt="Preview foto KTP"><button type="button" data-remove-photo>Hapus foto KTP</button><div data-owner-access-note hidden><b>Owner mendapatkan akses penuh ke semua fitur dan semua toko.</b></div><div data-employee-access><h3>Cabang yang boleh diakses</h3><div class="check-grid">${s.stores.map((t) => `<label><input type="checkbox" name="storeIds" value="${e(t.id)}" ${x.store_ids.includes(t.id) ? "checked" : ""}> ${e(t.name)}</label>`).join("")}</div><h3>Tambahan hak akses</h3>${s.warehouseVersion ? "<p>Harga dan keuangan pusat khusus Admin Back Office / Owner. Penerimaan, waitress, dan potong mengikuti role.</p>" : ""}<div class="check-grid">${Object.entries(
+      )}${field("Status", `<select name="active"><option value="true" ${x.active ? "selected" : ""}>Aktif</option><option value="false" ${!x.active ? "selected" : ""}>Nonaktif</option></select>`)}</div>${employeeDetailsForm(x, s.employeeDetailsVersion >= 70)}${!x.user_id ? `<h3>Akun login</h3>${field("Password awal", '<input name="initialPassword" type="password" minlength="6" maxlength="128" autocomplete="new-password" placeholder="Minimal 6 karakter"><button type="button" data-toggle-initial-password aria-pressed="false">Tampilkan password</button>')}<p>Isi password untuk sekaligus membuat akun login. Email wajib diisi dan status harus Aktif. Kosongkan password jika hanya ingin menyimpan data karyawan.</p>` : ""}<p>Role awal Staff memiliki akses absensi. ${s.pettyCashVersion >= 130 ? "Admin Back Office mengatur peran dan akses karyawan operasional." : "Owner dapat mengatur role dan akses tambahan."}</p><h3>Foto profil</h3><input type="file" data-profile accept="image/jpeg,image/png,image/webp"><img class="ktp-preview" data-profile-preview ${x.profile_photo ? `src="${e(x.profile_photo)}"` : "hidden"} alt="Preview foto profil"><button type="button" data-remove-profile>Hapus foto profil</button><h3>Foto KTP</h3><p>${x.has_ktp ? "Foto tersimpan. Pilih file untuk mengganti." : "Belum ada foto."} ${s.pettyCashVersion >= 130 ? "Foto KTP dapat dibuka oleh pengelola akun ini." : "Hanya owner dapat membuka foto KTP."}</p><input type="file" data-photo accept="image/jpeg,image/png,image/webp" aria-label="Foto KTP"><img class="ktp-preview" data-photo-preview hidden alt="Preview foto KTP"><button type="button" data-remove-photo>Hapus foto KTP</button><div data-owner-access-note hidden><b>Owner mendapatkan akses penuh ke semua fitur dan semua toko.</b></div><div data-employee-access><h3>Cabang yang boleh diakses</h3><div class="check-grid">${s.stores.map((t) => `<label><input type="checkbox" name="storeIds" value="${e(t.id)}" ${x.store_ids.includes(t.id) ? "checked" : ""}> ${e(t.name)}</label>`).join("")}</div><h3>Tambahan hak akses</h3>${s.warehouseVersion ? "<p>Harga dan keuangan pusat khusus Admin Back Office / Owner. Penerimaan, waitress, dan potong mengikuti role.</p>" : ""}<div class="check-grid">${Object.entries(
         perms,
       )
         .filter(([k]) => !s.warehouseVersion || !["finance", "master"].includes(k))
@@ -465,7 +469,7 @@ export function bindEmployees(view, s, store, ctx) {
             .map(([k, v]) => `<div><dt>${k}</dt><dd>${e(v || "Belum diisi")}</dd></div>`)
             .join(
               "",
-            )}</dl>${employeeDetailsInfo(x)}<h3>Foto KTP</h3><div data-document>${x.has_ktp ? '<button type="button" data-open-document>Lihat foto KTP</button>' : "Belum diunggah"}</div><div class="team-heading"><h3>Rekap absensi</h3>${period()}</div><div data-recap>${recap(s, x.id, "month")}</div>`,
+            )}</dl>${employeeDetailsInfo(x)}<h3>Foto KTP</h3><div data-document>${!canEditStaff(s, x.role) ? "Dikelola owner" : x.has_ktp ? '<button type="button" data-open-document>Lihat foto KTP</button>' : "Belum diunggah"}</div><div class="team-heading"><h3>Rekap absensi</h3>${period()}</div><div data-recap>${recap(s, x.id, "month")}</div>`,
         );
         d.classList.add("employee-dialog", "employee-recap-dialog");
         d.querySelector("[type=submit]").hidden = true;

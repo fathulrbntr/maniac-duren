@@ -29,17 +29,21 @@ let kind = "",
   page = 0;
 const can = (s, k) => !s.access || (k === "DO" ? s.access.stock : s.access.finance);
 export function documentsPage(s, store = "") {
-  return `${s.warehouseVersion && !s.stockDemo ? '<p class="notice">Distribusi stok memakai <button type="button" data-view="transfers">Pengiriman & Tagihan</button>. Nota masuk durian dibuat di <button type="button" data-view="supplierNotes">Nota Supplier</button>. Dokumen di bawah untuk administrasi dan cetak referensi.</p>' : ""}<div class="intro"><div><h2>Admin Dokumen</h2><p class="muted">PO → pembelian · transaksi POS → invoice / surat jalan · transfer → surat jalan.</p></div><div class="doc-toolbar">${s.me?.role === "owner" ? `<button id="letterhead" ${s.reportsAdminVersion >= 71 ? "" : "disabled"}>Kop surat</button>` : ""}<button id="documents-refresh">Perbarui</button>${s.stockDemo && (!s.access || (s.access.finance && s.access.stock && s.access.sell)) ? `<button type="button" id="documents-examples" ${s.stockDemo.documentExamples?.[store || s.stores[0]?.id] || !activeShift(s, store || s.stores[0]?.id) ? "disabled" : ""}>Buat contoh dokumen</button>` : ""}</div></div>${s.reportsAdminVersion >= 71 ? "" : '<p class="notice">Jalankan database/reports-admin-071.sql untuk mengaktifkan penyimpanan dokumen.</p>'}${s.stockDemo ? '<p class="notice">Latihan dokumen: simpan draft, terbitkan, cetak/PDF, dan batalkan. Semua hasil diberi label DEMO. Pembelian dan transfer hanya mengubah stok demo di tab ini.</p>' + (!activeShift(s, store || s.stores[0]?.id) ? '<p class="notice">Untuk membuat contoh dokumen, <button type="button" data-view="orders">buka kasir demo</button> di outlet aktif terlebih dahulu.</p>' : "") : ""}<div class="doc-toolbar">${Object.entries(
-    documentKinds,
-  )
-    .filter(([k]) => can(s, k) && !(s.warehouseVersion && !s.stockDemo && k === "PUR"))
-    .map(
-      ([k, v]) =>
-        `<button class="primary" data-new-document="${k}" ${s.reportsAdminVersion >= 71 ? "" : "disabled"}>+ ${v}</button>`,
-    )
-    .join(
-      "",
-    )}</div><section class="panel" style="margin-top:18px"><div class="report-filter-grid">${field("Cari nomor / referensi", '<input id="doc-search" type="search" placeholder="Nomor surat atau ID transaksi…">')}${field(
+  const archive = s.pettyCashVersion >= 130 && !s.stockDemo;
+  const introduction = archive
+    ? `<div class="intro"><div><h2>Arsip dokumen</h2><p>Dokumen yang dibuat melalui Admin Dokumen sebelum alur nota supplier digunakan.</p></div><div class="doc-toolbar">${s.me?.role === "owner" ? '<button id="letterhead">Kop surat</button>' : ""}<button id="documents-refresh">Perbarui</button></div></div>`
+    : `${s.warehouseVersion && !s.stockDemo ? '<p class="notice">Distribusi stok memakai <button type="button" data-view="transfers">Pengiriman & Tagihan</button>. Nota masuk durian dibuat di <button type="button" data-view="supplierNotes">Nota Supplier</button>. Dokumen di bawah untuk administrasi dan cetak referensi.</p>' : ""}<div class="intro"><div><h2>Admin Dokumen</h2><p class="muted">PO → pembelian · transaksi POS → invoice / surat jalan · transfer → surat jalan.</p></div><div class="doc-toolbar">${s.me?.role === "owner" ? `<button id="letterhead" ${s.reportsAdminVersion >= 71 ? "" : "disabled"}>Kop surat</button>` : ""}<button id="documents-refresh">Perbarui</button>${s.stockDemo && (!s.access || (s.access.finance && s.access.stock && s.access.sell)) ? `<button type="button" id="documents-examples" ${s.stockDemo.documentExamples?.[store || s.stores[0]?.id] || !activeShift(s, store || s.stores[0]?.id) ? "disabled" : ""}>Buat contoh dokumen</button>` : ""}</div></div>${s.reportsAdminVersion >= 71 ? "" : '<p class="notice">Jalankan database/reports-admin-071.sql untuk mengaktifkan penyimpanan dokumen.</p>'}${s.stockDemo ? '<p class="notice">Latihan dokumen: simpan draft, terbitkan, cetak/PDF, dan batalkan. Semua hasil diberi label DEMO. Pembelian dan transfer hanya mengubah stok demo di tab ini.</p>' + (!activeShift(s, store || s.stores[0]?.id) ? '<p class="notice">Untuk membuat contoh dokumen, <button type="button" data-view="orders">buka kasir demo</button> di outlet aktif terlebih dahulu.</p>' : "") : ""}<div class="doc-toolbar">${Object.entries(
+        documentKinds,
+      )
+        .filter(
+          ([k]) => can(s, k) && !(s.warehouseVersion && !s.stockDemo && k === "PUR"),
+        )
+        .map(
+          ([k, v]) =>
+            `<button class="primary" data-new-document="${k}" ${s.reportsAdminVersion >= 71 ? "" : "disabled"}>+ ${v}</button>`,
+        )
+        .join("")}</div>`;
+  return `${introduction}<section class="panel" style="margin-top:18px"><div class="report-filter-grid">${field("Cari nomor / referensi", '<input id="doc-search" type="search" placeholder="Nomor surat atau ID transaksi…">')}${field(
     "Jenis",
     `<select id="doc-kind"><option value="">Semua jenis</option>${Object.entries(
       documentKinds,
@@ -234,7 +238,8 @@ export function bindDocuments(s, store, ctx) {
   );
   async function detail(key) {
     const d = await ctx.rpc("pos_document_get", { document_id: key });
-    if (d.status === "draft") previewDraft(d, ctx.getState());
+    const archive = s.pettyCashVersion >= 130 && !s.stockDemo;
+    if (!archive && d.status === "draft") previewDraft(d, ctx.getState());
     const related = (ctx.getState().documents || []).filter(
       (x) =>
         x.id !== d.id &&
@@ -245,7 +250,7 @@ export function bindDocuments(s, store, ctx) {
     const body = d.body || {},
       dialog = ctx.modal(
         documentKinds[d.kind],
-        `<div class="doc-summary"><div>Nomor<b>${e(d.number || "Belum terbit")}</b></div><div>Status<b>${e(statusNames[d.status])}</b></div><div>Tanggal<b>${e(d.document_date)}</b></div></div><div class="doc-toolbar" style="margin-top:14px">${d.status === "draft" ? '<button type="button" id="doc-edit">Edit draft</button><button type="button" id="doc-issue" class="primary">Terbitkan dokumen</button>' : '<button type="button" id="doc-print">Cetak A4 / PDF</button>'}${d.kind === "PO" && d.status === "issued" ? '<button type="button" id="doc-purchase">Lanjut pembelian</button>' : ""}${d.status !== "cancelled" && !(d.status === "issued" && (d.kind === "PUR" || (d.kind === "DO" && d.source_type === "transfer"))) ? '<button type="button" class="danger" id="doc-cancel">Batalkan</button>' : ""}</div>${d.status === "draft" ? '<p class="doc-help">Nomor dibuat saat terbit. Pembelian baru menambah stok; transfer baru memindahkan stok. Invoice dan dokumen dari referensi lama tidak mencatat transaksi lagi.</p>' : ""}<div class="doc-preview">${documentPrint(d)}</div>${related.length ? `<h3>Dokumen terkait</h3><div class="doc-toolbar">${related.map((x) => `<button type="button" data-related="${e(x.id)}">${e(x.number || documentKinds[x.kind] + " · Draft")} · ${e(statusNames[x.status])}</button>`).join("")}</div>` : ""}<h3>Riwayat dokumen</h3><div class="doc-history">${(d.history || []).map((h) => `<p>${e(new Date(h.at).toLocaleString("id-ID", { timeZone: "Asia/Jakarta" }))} WIB · ${e({ document_save: "Draft disimpan", document_issue: "Diterbitkan", document_cancel: "Dibatalkan" }[h.action] || h.action)}<small>${e(s.employees?.find((x) => x.user_id === h.actor)?.name || h.actor)} ${e(h.note || "")}</small></p>`).join("")}</div>`,
+        `<div class="doc-summary"><div>Nomor<b>${e(d.number || "Belum terbit")}</b></div><div>Status<b>${e(statusNames[d.status])}</b></div><div>Tanggal<b>${e(d.document_date)}</b></div></div><div class="doc-toolbar" style="margin-top:14px">${!archive && d.status === "draft" ? '<button type="button" id="doc-edit">Edit draft</button><button type="button" id="doc-issue" class="primary">Terbitkan dokumen</button>' : '<button type="button" id="doc-print">Cetak A4 / PDF</button>'}${!archive && d.kind === "PO" && d.status === "issued" ? '<button type="button" id="doc-purchase">Lanjut pembelian</button>' : ""}${!archive && d.status !== "cancelled" && !(d.status === "issued" && (d.kind === "PUR" || (d.kind === "DO" && d.source_type === "transfer"))) ? '<button type="button" class="danger" id="doc-cancel">Batalkan</button>' : ""}</div>${!archive && d.status === "draft" ? '<p class="doc-help">Nomor dibuat saat terbit. Pembelian baru menambah stok; transfer baru memindahkan stok. Invoice dan dokumen dari referensi lama tidak mencatat transaksi lagi.</p>' : ""}<div class="doc-preview">${documentPrint(d)}</div>${related.length ? `<h3>Dokumen terkait</h3><div class="doc-toolbar">${related.map((x) => `<button type="button" data-related="${e(x.id)}">${e(x.number || documentKinds[x.kind] + " · Draft")} · ${e(statusNames[x.status])}</button>`).join("")}</div>` : ""}<h3>Riwayat dokumen</h3><div class="doc-history">${(d.history || []).map((h) => `<p>${e(new Date(h.at).toLocaleString("id-ID", { timeZone: "Asia/Jakarta" }))} WIB · ${e({ document_save: "Draft disimpan", document_issue: "Diterbitkan", document_cancel: "Dibatalkan" }[h.action] || h.action)}<small>${e(s.employees?.find((x) => x.user_id === h.actor)?.name || h.actor)} ${e(h.note || "")}</small></p>`).join("")}</div>`,
         "Tutup",
       );
     dialog.classList.add("document-dialog");

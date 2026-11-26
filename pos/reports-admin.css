@@ -315,3 +315,17 @@
 .cash-flow-grid tbody tr:last-child {
   font-weight: 700;
 }
+
+.report-tabs:has(.report-tab-group strong) {
+  align-items: flex-start;
+  gap: 1.25rem 2rem;
+}
+.report-tab-group strong {
+  display: block;
+  margin-bottom: 0.45rem;
+}
+.report-tab-group .toolbar {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}

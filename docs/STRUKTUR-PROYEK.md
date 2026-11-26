@@ -217,3 +217,25 @@ Akun dengan akses laporan dapat melihat transaksi lunas seluruh kasir di cabang 
 Ekstrak patch 129 di folder utama proyek setelah patch 128, kemudian jalankan
 `.\scripts\windows\push-patch-129.cmd` dari PowerShell. Patch ini hanya mengubah
 aplikasi dan tes. Skema database tetap menggunakan patch 128.
+
+### Patch 130 · Kas kecil dan administrasi Back Office
+
+Pasang setelah patch 129. Jalankan `database/petty-cash-130.sql` di Supabase SQL Editor,
+atau gunakan migrasi bernomor yang sama melalui alur migrasi proyek. Muat ulang POS
+sesudah SQL dan frontend terpasang.
+
+- Absensi tersedia langsung di sidebar Toko, Gudang dan Back Office. Admin Back Office
+  mengelola CRM, master barang dan akun operasional. Akun owner dan admin pusat dikelola owner.
+- Dokumen manual lama dapat dibuka melalui **Laporan → Arsip dokumen**. Nota supplier
+  menjadi dasar penerimaan dan batch gudang. Invoice dan surat jalan pengiriman
+  dibuat melalui **Pengiriman & Tagihan**. Riwayat pelanggan dan poin berada di CRM.
+  Tab pelanggan yang sebelumnya bersumber dari invoice manual telah disembunyikan.
+- Kasir mengajukan dana awal atau reimbursement melalui **Pengeluaran Toko**.
+  Saldo petty cash awal tiap cabang Rp0. Back Office mencatat pencairan aktual
+  melalui **Keuangan PT Retail**. Pencairan mendebit saldo setoran dan menambah
+  kas kecil cabang. Pengeluaran kasir mengurangi petty cash saat disimpan.
+- Biaya rutin cabang seperti gaji, sewa dan listrik dibayar dari saldo PT Retail di
+  Back Office. Pencairan reimburse merupakan perpindahan dana. Biaya toko sudah
+  tercatat pada transaksi pengeluaran. Transaksi historis mempertahankan sumber dana awal.
+- Ekstrak patch di folder proyek dan jalankan `.\scripts\windows\push-patch-130.cmd`
+  dari PowerShell untuk verifikasi, commit dan push.

@@ -1,4 +1,4 @@
-// Service role stays on the server. Every operation must pass the owner-only target RPC.
+// Service role stays on the server. Every operation must pass the employee-management target RPC.
 const { randomUUID } = require("node:crypto");
 module.exports = async (req, res) => {
   res.setHeader("Cache-Control", "no-store");

@@ -54,17 +54,33 @@ export function reportsPage(s, workspace) {
     tab = Object.keys(tabs).find((t) => allowed(s, t, workspace)) || "summary";
   const stores =
     tab === "cashflow" ? s.stores.filter((x) => x.locationType === "store") : s.stores;
-  return `<div class="intro report-heading"><div><h2>Laporan</h2><p class="muted">Penjualan, pergerakan barang, dan biaya dalam satu tempat.</p></div><div class="toolbar report-actions"><button type="button" id="report-refresh">Perbarui</button><button type="button" id="report-excel">Excel (.xlsx)</button><button type="button" id="report-pdf">PDF / Cetak A4</button></div></div><nav class="report-tabs" aria-label="Jenis laporan">${Object.entries(
-    tabs,
-  )
-    .filter(([k]) => allowed(s, k, workspace))
-    .map(
-      ([k, v]) =>
-        `<button type="button" data-report-tab="${k}" aria-pressed="${tab === k}" class="${tab === k ? "primary" : ""}">${v}</button>`,
-    )
-    .join(
-      "",
-    )}</nav><section class="panel" id="report-filters" ${tab === "batches" ? "hidden" : ""}><div class="report-filter-grid">${field("Periode", `<select id="report-period"><option value="day">Hari ini</option><option value="week">Minggu ini (Senin–Minggu)</option><option value="month">Bulan ini</option><option value="custom">Custom periode</option></select>`)}${field("Dari", '<input id="report-from" type="date" required>')}${field("Sampai", '<input id="report-to" type="date" required>')}${field("Toko", `<select id="report-store">${options({ stores })}</select>`)}</div><p id="report-error" class="error" role="alert"></p></section><div id="report-result"></div>`;
+  const grouped = s.pettyCashVersion >= 130 && !s.stockDemo;
+  const groups = grouped
+    ? [
+        ["Penjualan", ["summary", "payments", "products", "stores"]],
+        ["Stok & supplier", ["stock", "suppliers", "batches"]],
+        ["Keuangan", ["cashflow", "expenses", "margin"]],
+      ]
+    : [["", Object.keys(tabs)]];
+  const nav = groups
+    .map(([group, keys]) => {
+      const links = keys
+        .filter((k) => allowed(s, k, workspace))
+        .map(
+          (k) =>
+            `<button type="button" data-report-tab="${k}" aria-pressed="${k === tab}" class="${k === tab ? "primary" : ""}">${tabs[k]}</button>`,
+        )
+        .join("");
+      return links
+        ? `<div class="report-tab-group">${group ? `<strong>${group}</strong>` : ""}<div class="toolbar">${links}</div></div>`
+        : "";
+    })
+    .join("");
+  const archive =
+    grouped && workspace === "backoffice" && s.access?.backoffice
+      ? '<button data-view="documents">Arsip dokumen</button><button data-view="dashboard">Analisis penjualan</button>'
+      : "";
+  return `<div class="intro report-heading"><div><h2>Laporan</h2><p class="muted">Penjualan, pergerakan barang, dan biaya dalam satu tempat.</p></div><div class="toolbar report-actions">${archive}<button type="button" id="report-refresh">Perbarui</button><button type="button" id="report-excel">Excel (.xlsx)</button><button type="button" id="report-pdf">PDF / Cetak A4</button></div></div><nav class="report-tabs" aria-label="Jenis laporan">${nav}</nav><section class="panel" id="report-filters" ${tab === "batches" ? "hidden" : ""}><div class="report-filter-grid">${field("Periode", `<select id="report-period"><option value="day">Hari ini</option><option value="week">Minggu ini (Senin–Minggu)</option><option value="month">Bulan ini</option><option value="custom">Custom periode</option></select>`)}${field("Dari", '<input id="report-from" type="date" required>')}${field("Sampai", '<input id="report-to" type="date" required>')}${field("Toko", `<select id="report-store">${options({ stores })}</select>`)}</div><p id="report-error" class="error" role="alert"></p></section><div id="report-result"></div>`;
 }
 const table = (headers, rows) =>
   `<div class="table-wrap"><table><thead><tr>${headers.map((x) => `<th>${e(x)}</th>`).join("")}</tr></thead><tbody>${rows.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join("")}</tr>`).join("") || `<tr><td colspan="${headers.length}" class="empty">Belum ada data pada periode ini.</td></tr>`}</tbody></table></div>`;
@@ -83,6 +99,10 @@ export function bindReports(s, store, ctx) {
   $("#report-period").value = filters.period;
   $("#report-from").value = filters.from;
   $("#report-to").value = filters.to;
+  if (s.pettyCashVersion >= 130 && ctx.workspace === "store") {
+    filters.store = store;
+    $("#report-store").disabled = true;
+  }
   $("#report-store").value = filters.store;
   const filter = () => ({
     from: $("#report-from").value,
@@ -304,10 +324,12 @@ export function bindReports(s, store, ctx) {
         r.amount == null ? "Belum diketahui" : money(r.amount),
         e(r.reference || "—"),
         r.kind === "expense"
-          ? `${s.cashFlowVersion >= 127 && !s.stockDemo && !r.funding ? `<button type="button" data-expense-funding="${e(r.id)}">Tentukan sumber dana</button>` : ""}<button data-expense-void="${e(r.id)}" class="small danger">Batalkan</button>`
+          ? s.pettyCashVersion >= 130 && ctx.workspace !== "backoffice"
+            ? ""
+            : `${s.cashFlowVersion >= 127 && !s.stockDemo && !r.funding ? `<button type="button" data-expense-funding="${e(r.id)}">Tentukan sumber dana</button>` : ""}<button data-expense-void="${e(r.id)}" class="small danger">Batalkan</button>`
           : "Dari penerimaan",
       ]);
-      intro = `<div class="header-row"><p>Biaya pembelian termasuk ongkir + pengeluaran operasional. HPP, waste, PO, invoice, dan transfer tidak dihitung ulang. Ini laporan biaya, bukan arus kas pembayaran utang.</p><button id="add-expense" class="primary" ${s.reportsAdminVersion >= 71 && !s.stockDemo ? "" : "disabled"}>+ Pengeluaran</button></div><div class="stats">${stat("Pembelian tercatat", money(x.purchases))}${stat("Operasional", money(x.operating))}${stat("Total pengeluaran", x.unknown ? "Belum lengkap" : money(x.total))}</div>${x.unknown ? `<p class="notice">${x.unknown} penerimaan belum memiliki modal.</p>` : ""}`;
+      intro = `<div class="header-row"><p>Biaya pembelian termasuk ongkir + pengeluaran operasional. HPP, waste, PO, invoice, dan transfer tidak dihitung ulang. Ini laporan biaya, bukan arus kas pembayaran utang.</p><button id="add-expense" ${s.pettyCashVersion >= 130 && ctx.workspace !== "backoffice" ? "hidden" : ""} class="primary" ${s.reportsAdminVersion >= 71 && !s.stockDemo ? "" : "disabled"}>+ Pengeluaran</button></div><div class="stats">${stat("Pembelian tercatat", money(x.purchases))}${stat("Operasional", money(x.operating))}${stat("Total pengeluaran", x.unknown ? "Belum lengkap" : money(x.total))}</div>${x.unknown ? `<p class="notice">${x.unknown} penerimaan belum memiliki modal.</p>` : ""}`;
     }
     const max = Math.max(0, Math.ceil(rows.length / 50) - 1);
     page = Math.min(page, max);
@@ -486,15 +508,27 @@ function payerOptions(s, store) {
       .join("")
   );
 }
-function expenseDialog(s, store, ctx) {
+export function expenseDialog(s, store, ctx, retailOnly = false) {
+  const modern = s.pettyCashVersion >= 130;
+  const locations = retailOnly
+    ? s.stores.filter((t) => t.locationType === "store")
+    : s.stores;
+  if (!locations.length) return ctx.toast("Belum ada toko untuk biaya operasional.");
+  if (!locations.some((t) => t.id === store)) store = locations[0].id;
+  const funding = (key) => {
+    if (!modern) return payerOptions(s, key);
+    return locations.find((t) => t.id === key)?.locationType === "warehouse"
+      ? '<option value="distribution">PT Distribusi</option>'
+      : `<option value="retail">Saldo PT Retail · ${money(s.retailBalance)}</option>`;
+  };
   const d = ctx.modal(
     "Pengeluaran operasional",
-    `<p>Pembelian stok dicatat lewat penerimaan/pembelian barang. Jangan masukkan kembali di sini.</p>${expenseFields(`${field("Tanggal", `<input type="date" name="date" value="${today()}" max="${today()}" required>`)}${field("Toko", `<select name="storeId">${s.stores.map((t) => `<option value="${e(t.id)}" ${t.id === store ? "selected" : ""}>${e(t.name)}</option>`).join("")}</select>`)}${s.cashFlowVersion >= 127 ? field("Dibayar oleh", `<select name="funding" required>${payerOptions(s, store)}</select>`) : ""}`)}`,
+    `<p>Pembelian stok dicatat lewat penerimaan/pembelian barang. Jangan masukkan kembali di sini.</p>${expenseFields(`${field("Tanggal", `<input type="date" name="date" value="${today()}" max="${today()}" required>`)}${field("Toko", `<select name="storeId">${locations.map((t) => `<option value="${e(t.id)}" ${t.id === store ? "selected" : ""}>${e(t.name)}</option>`).join("")}</select>`)}${s.cashFlowVersion >= 127 ? field("Dibayar oleh", `<select name="funding" required>${funding(store)}</select>`) : ""}`)}`,
   );
   const form = d.querySelector("form");
   if (form.elements.funding) {
     const sync = () => {
-      form.elements.funding.innerHTML = payerOptions(s, form.elements.storeId.value);
+      form.elements.funding.innerHTML = funding(form.elements.storeId.value);
     };
     form.elements.storeId.onchange = sync;
     sync();

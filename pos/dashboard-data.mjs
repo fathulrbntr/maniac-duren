@@ -28,7 +28,7 @@ export function dashboardTabs(s) {
     ["stock", "Stock", can("stock", "trace", "produce")],
     ["suppliers", "Supplier", can("reports")],
     ["reject", "Reject", can("waste", "trace", "finance")],
-    ["customers", "Customer", can("finance")],
+    ["customers", "Customer", can("finance") && !(s.pettyCashVersion >= 130)],
   ].filter((x) => x[2]);
 }
 function timeline(tx, range) {

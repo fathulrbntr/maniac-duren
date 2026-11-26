@@ -1,3 +1,5 @@
+import { depositButtons } from "./cash-deposits-ui.mjs";
+import { transactions } from "./reports.mjs";
 import { branchPricingPage, bindBranchPricing } from "./branch-prices-ui.mjs";
 import { locationFruitStock } from "./dashboard-data.mjs";
 import { prepareBarcodeInput, readyBarcodeInput } from "./barcode-scanner.mjs";
@@ -255,6 +257,52 @@ export function supplyHome(s, store, space) {
               ),
               "Dokumen menunggu scan",
             ));
+  if (s.pettyCashVersion >= 130) {
+    const central = space === "backoffice";
+    const branchIds = new Set(
+      s.stores
+        .filter((b) => b.locationType === "store" && (central || b.id === store))
+        .map((b) => b.id),
+    );
+    const sales =
+      central || (space === "store" && (s.access?.reports || s.access?.sell))
+        ? transactions(s).filter((t) => t.date === today() && branchIds.has(t.storeId))
+        : null;
+    const revenue = sales?.reduce((a, t) => a + t.total, 0) || 0;
+    const posStats = sales
+      ? stat(
+          "Omzet hari ini",
+          money(revenue),
+          central ? "Seluruh toko" : location(s, store)?.name || "Toko",
+        ) +
+        stat("Transaksi lunas", num(sales.length), "Hari ini") +
+        stat(
+          "Rata-rata per struk",
+          money(sales.length ? revenue / sales.length : 0),
+          "Hari ini",
+        )
+      : "";
+    const funds = central
+      ? stat("Saldo PT Retail", money(s.retailBalance), "Dari setoran toko")
+      : space === "store" && s.access?.sell
+        ? stat(
+            "Saldo petty cash",
+            money(s.pettyBalances?.[store] || 0),
+            "Dana pengeluaran toko",
+          )
+        : "";
+    const deposits =
+      !central && sales && s.cashDepositSummary?.find((x) => x.storeId === store);
+    const extra =
+      central && s.access?.finance
+        ? action(
+            "retailFunds",
+            "Keuangan PT Retail",
+            `${(s.pettyRequests || []).filter((r) => r.status === "pending").length} pengajuan petty cash menunggu.`,
+          )
+        : "";
+    return `<section class="supply-workspace">${blocker(s)}<div class="header-row"><h2>${central ? "Dashboard Back Office" : space === "warehouse" ? "Dashboard gudang" : e(location(s, store)?.name || "Dashboard toko")}</h2><button data-supply-refresh>Perbarui</button></div><div class="supply-stats">${posStats}${funds}${deposits ? stat("Tunai belum disetor", money(deposits.pending), "Akumulasi cabang") : ""}${!sales ? stats : ""}</div><div class="supply-task-grid">${supplyTasks(s, space)}${extra}</div>${space === "store" && s.access?.sell ? depositButtons(s, store) : ""}${central ? locationStockTable(s) : ""}${!operational ? `<section class="panel"><h3>Kiriman yang belum diterima</h3>${transferTable(active.slice(0, 8), central)}</section>` : ""}</section>`;
+  }
   const desc =
     space === "backoffice"
       ? "Buka nota supplier, siapkan dokumen transfer atau wholesale, dan atur harga jual tiap cabang."

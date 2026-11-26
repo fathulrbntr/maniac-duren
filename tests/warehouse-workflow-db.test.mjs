@@ -491,6 +491,9 @@ try {
     "branch-sale-prices-123",
     "outbound-batches-126",
     "outbound-batches-126",
+    "cash-flow-127",
+    "cashier-expenses-128",
+    "petty-cash-130",
   ]) {
     await db.exec(fs.readFileSync("database/" + patch + ".sql", "utf8"));
   }
@@ -581,6 +584,27 @@ try {
   assert.notEqual(lineA.unitCost, lineB.unitCost);
   await as(worker);
   await out(legacy, "outbound_dispatch", { confirmed: true });
+  await as(owner);
+  const sent = await order(legacy);
+  assert.ok(sent.invoiceNo && sent.deliveryNo);
+  const day = (
+    await db.query("select ((now() at time zone 'Asia/Jakarta')::date)::text d")
+  ).rows[0].d;
+  const payment = {
+    amount: 10000,
+    date: day,
+    method: "transfer",
+    reference: "PT-130",
+    paymentConfirmed: true,
+  };
+  await assert.rejects(out(legacy, "outbound_payment", payment), /Saldo PT Retail/);
+  await db.query(
+    "insert into public.md_pos_cash_deposits(id,store_id,deposit_date,created_at,amount,bank,cashier_id,cashier_name,created_by) values($1,$2,$3,now(),2000000,'BCA',$4,'Kasir',$4)",
+    [id(), store, day, cashier],
+  );
+  const beforePayment = (await read()).retailBalance;
+  await out(legacy, "outbound_payment", payment);
+  assert.equal((await read()).retailBalance, beforePayment - payment.amount);
   console.log(
     "PASS batch rates: legacy upgrade, wrong-batch scan, reserved scans, repricing, distinct units/costs, retry, redaction and dispatch.",
   );

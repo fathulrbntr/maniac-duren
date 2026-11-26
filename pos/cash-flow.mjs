@@ -2,6 +2,7 @@ import { sumProducts } from "./decimal-totals.mjs";
 
 export const fundingNames = {
   store: "Toko",
+  petty: "Petty cash toko",
   retail: "PT Retail",
   distribution: "PT Distribusi",
 };
@@ -49,6 +50,16 @@ export function cashFlowSheets(report, outlet, from, to) {
     transfers = total("transfer_collection"),
     wholesale = total("wholesale_collection");
   const opening = cashChange("opening");
+  const petty = report.pettyCashVersion >= 130;
+  const movement = (column) =>
+    add(total("petty_disbursement", column), -total("petty_expense", column));
+  const retail = (column) =>
+    add(
+      total("deposit", column),
+      -total("transfer_collection", column),
+      -total("retail_expense", column),
+      -total("petty_disbursement", column),
+    );
   const result = [
     sheet("Transaksi Toko", [
       ["Penjualan tunai", total("sale", "amount", true)],
@@ -57,6 +68,14 @@ export function cashFlowSheets(report, outlet, from, to) {
       ["Refund nontunai", -total("refund", "amount", false)],
       ["Pengeluaran dibayar toko · tunai", -total("store_expense", "amount", true)],
       ["Pengeluaran dibayar toko · nontunai", -total("store_expense", "amount", false)],
+      ...(petty
+        ? [
+            ["Saldo awal petty cash", movement("opening")],
+            ["Pengisian petty cash dari PT Retail", total("petty_disbursement")],
+            ["Pengeluaran petty cash", -total("petty_expense")],
+            ["Saldo akhir petty cash", add(movement("opening"), movement("amount"))],
+          ]
+        : []),
       ["Setoran ke PT Retail", -deposits],
       ["Uang kas tercatat sebelum " + from, opening],
       ["Uang kas tercatat sampai " + to, add(opening, cashChange("amount"))],
@@ -66,7 +85,16 @@ export function cashFlowSheets(report, outlet, from, to) {
       ["Pembayaran nota ke PT Distribusi", -transfers],
       ...expenses("retail_expense"),
       ["Total operasional toko dibayar PT Retail", -total("retail_expense")],
-      ["Arus bersih PT Retail", add(deposits, -transfers, -total("retail_expense"))],
+      ...(petty ? [["Pencairan petty cash ke toko", -total("petty_disbursement")]] : []),
+      ["Arus bersih PT Retail", retail("amount")],
+      ...(petty
+        ? [
+            [
+              outlet ? "Saldo kumulatif terkait cabang" : "Saldo akhir PT Retail",
+              add(retail("opening"), retail("amount")),
+            ],
+          ]
+        : []),
     ]),
     sheet("PT Distribusi (Gudang)", [
       ["Penerimaan pembayaran nota toko", transfers],
