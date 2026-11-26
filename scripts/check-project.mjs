@@ -109,6 +109,7 @@ for (const [source, migration] of [
   ["fruit-batch-strict-scan-106.sql", "20261108140738_fruit_batch_strict_scan.sql"],
   ["supplier-notes-112.sql", "20261116112253_supplier_note_payments_112.sql"],
   ["branch-sale-prices-123.sql", "20261123190000_branch_sale_prices_123.sql"],
+  ["outbound-batches-126.sql", "20261126160000_outbound_batches_126.sql"],
   ["supplier-stock-122.sql", "20261123180000_supplier_stock_122.sql"],
   ["warehouse-workflow-114.sql", "20261116130125_warehouse_receiving_wholesale_114.sql"],
 ]) {

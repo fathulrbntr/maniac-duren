@@ -97,3 +97,24 @@ Setelah patch 122, jalankan `database/branch-sale-prices-123.sql` di SQL Editor 
 Di **Back Office → Harga Jual**, pilih cabang toko dan produk atau varian. Buah memiliki harga per kg dan per butir. Produk kemasan dan menu resep menggunakan satuan jual masing-masing. Cabang mengikuti harga Master Barang sampai admin atau owner menyimpan harga khusus. Opsi **Ikuti Master Barang** mengembalikan cabang ke harga dasar untuk produk tersebut.
 
 Kasir memvalidasi harga cabang saat transaksi disimpan. Jika harga berubah selama pesanan masih di keranjang, perbarui kasir lalu masukkan kembali produk yang terpengaruh. Transaksi yang sudah tersimpan menyimpan harga saat penjualan. Harga pengiriman dan wholesale tetap di dokumen pengiriman.
+
+### Batch untuk transaksi barang keluar (126)
+
+Ekstrak patch ke folder proyek Maniac Duren. Setelah SQL 123, jalankan
+`database/outbound-batches-126.sql` di SQL Editor Supabase, atau pasang salinan
+CLI `20261126160000_outbound_batches_126.sql` melalui alur migrasi proyek.
+Gunakan satu jalur. Dari PowerShell di folder proyek, jalankan
+`.\scripts\windows\push-patch-126.cmd` untuk pengujian, commit, dan push.
+Muat ulang POS setelah frontend terpasang.
+
+Di Back Office → Pengiriman & Tagihan → Transaksi barang keluar, pilih produk
+dan batch asal. Nomor nota, supplier, tanggal, dan kode membedakan batch.
+Modal per kg mengikuti biaya stok batch gudang. Modal rata-rata per butir
+menggunakan berat dan jumlah awal penerimaannya. Harga khusus per kg atau per
+butir diisi per baris. Untuk mengirim produk yang sama dari dua batch, tambahkan
+baris kedua. Gudang melihat batch dan memindai barcode sesuai dokumen.
+
+Dokumen lama dapat dilanjutkan dengan harga yang sudah tersimpan. Saat mengedit
+draf lama, batch yang sudah dipindai mendapat baris masing-masing. Pilih batch
+untuk produk yang belum dipindai. Harga transfer pada invoice tetap menjadi
+dasar modal barang yang diterima toko.

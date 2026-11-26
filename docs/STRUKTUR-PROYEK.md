@@ -179,3 +179,10 @@ beserta lisensinya berada di `pos/assets/fonts/`. Warna untuk kedua tema dan
 skala teks dikelola di `pos/ui-tokens.css`. Halaman kasir memakai
 `pos/pos-menu.css` untuk kartu dan `pos/cashier.css` untuk kategori dan checkout.
 POS memakai tema terang saat belum ada pilihan tersimpan.
+
+## Batch transaksi barang keluar (126)
+
+Pilihan batch dan modal gudang ditampilkan di `pos/outbound-ui.mjs`.
+`pos/warehouse-workflow.mjs` menyaring barcode siap kirim dan memulihkan baris draf lama.
+`database/outbound-batches-126.sql` mengikat harga dokumen, scan dan baris invoice ke
+batch sumber. Urutan pemasangan tersedia di `database/README.md`.

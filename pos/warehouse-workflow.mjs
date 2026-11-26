@@ -65,6 +65,64 @@ export function receiptVariance(p, productId) {
     percent: (kg / expected.kg) * 100,
   };
 }
+// Only labeled fruit can leave through the outbound workflow. Reservations on
+// the document being edited remain available to its own rows.
+export function outboundBatches(s, warehouseId, orderId) {
+  const reserved = new Set(
+    (s.outboundOrders || [])
+      .filter(
+        (o) => o.id !== orderId && ["packing", "ready", "approved"].includes(o.status),
+      )
+      .flatMap((o) => o.items.map((item) => item.barcode)),
+  );
+  const reopened = new Set(
+    (s.receiptPlans || [])
+      .filter((p) => p.receivedId && p.receiving && p.receiving.status !== "completed")
+      .map((p) => p.receivedId),
+  );
+  const blockedRoots = new Set(
+    (s.lots || []).filter((l) => reopened.has(l.shipmentId)).map((l) => l.id),
+  );
+  const available = new Map();
+  for (const u of s.fruitUnits || []) {
+    if (
+      u.storeId !== warehouseId ||
+      u.status !== "available" ||
+      reserved.has(u.barcode) ||
+      blockedRoots.has(u.receiptLotId)
+    )
+      continue;
+    const qty = available.get(u.lotId) || { grams: 0, pieces: 0 };
+    qty.grams += Number(u.grams);
+    qty.pieces++;
+    available.set(u.lotId, qty);
+  }
+  return (s.lots || [])
+    .filter(
+      (l) =>
+        l.storeId === warehouseId &&
+        l.quality === "ready" &&
+        l.kg > 0 &&
+        l.pieces > 0 &&
+        available.has(l.id),
+    )
+    .map((l) => ({ ...l, available: available.get(l.id) }))
+    .sort(
+      (a, b) => String(a.date).localeCompare(String(b.date)) || a.id.localeCompare(b.id),
+    );
+}
+export function outboundRateRows(order) {
+  return order.rates.flatMap((r) => {
+    if (r.sourceLotId) return [{ ...r }];
+    // An old product-level rate may already have scans from multiple lots.
+    const lots = new Set(
+      order.items.filter((i) => i.productId === r.productId).map((i) => i.sourceLotId),
+    );
+    return lots.size
+      ? [...lots].map((sourceLotId) => ({ ...r, sourceLotId }))
+      : [{ ...r, sourceLotId: "" }];
+  });
+}
 export function outboundBalance(o) {
   const total = Number(o.total || 0),
     paid = Number(o.paid || 0);

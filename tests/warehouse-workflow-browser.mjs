@@ -13,6 +13,7 @@ for (const patch of [
   "transfer-receive-119",
   "supplier-stock-122",
   "branch-sale-prices-123",
+  "outbound-batches-126",
 ])
   await db.exec(fs.readFileSync("database/" + patch + ".sql", "utf8"));
 const otherStore = id();
@@ -246,13 +247,52 @@ try {
   assert.match(await page.locator(".receipt-comparison").innerText(), /40%/);
   assert.equal(await page.locator("[data-receipt-reopen]").count(), 1);
   await page.locator("dialog[open] [type=submit]").click();
+  const secondPlan = {
+    ...plan,
+    id: id(),
+    invoiceNo: "SUP-KEDUA",
+    shippingCost: 0,
+    lines: [
+      { productId: product, purchaseCost: 120000, expectedKg: 2, expectedPieces: 1 },
+    ],
+  };
+  await invoke("receipt_plan_save", secondPlan);
+  await invoke("receipt_scan", {
+    id: id(),
+    planId: secondPlan.id,
+    expectedSessionRevision: 0,
+    barcode: code(4),
+  });
+  const latest = await invoke("receipt_finish", {
+    id: id(),
+    planId: secondPlan.id,
+    expectedSessionRevision: 1,
+    confirmed: true,
+  });
+  const lotFor = (barcode) => latest.fruitUnits.find((u) => u.barcode === barcode).lotId;
+  await page.reload();
+  await page.locator("#pos-main").waitFor();
   await nav("transfers");
   await page.locator("[data-outbound-new]").click();
   await page.locator("[name=kind]").selectOption("wholesale");
   await page.locator("[name=buyerName]").fill("Pembeli Uji");
   await page.locator("[name=carrier]").fill("Kurir");
   await page.locator("[data-rate-product]").selectOption(product);
+  const batch = page.getByLabel("Batch asal gudang");
+  assert.equal(await batch.evaluate((el) => el.validity.valueMissing), true);
+  await batch.selectOption(lotFor(code(4)));
+  assert.match(await page.locator("[data-batch-cost]").innerText(), /60\.000/);
+  await batch.selectOption(lotFor(code(1)));
+  assert.match(await page.locator("[data-batch-cost]").innerText(), /36\.666,67/);
+  assert.match(await page.locator("[data-batch-cost]").innerText(), /73\.333,33/);
   await page.locator("[data-rate-price]").fill("90000");
+  await page.locator("[data-rate-add]").click();
+  const extraRow = page.locator('[data-rate-row="1"]');
+  await extraRow.getByLabel("Produk").selectOption(product);
+  assert.equal(await extraRow.locator(`option[value="${lotFor(code(1))}"]`).count(), 0);
+  await extraRow.getByLabel("Batch asal gudang").selectOption(lotFor(code(4)));
+  await extraRow.locator("[data-rate-remove]").click();
+  assert.equal(await batch.inputValue(), lotFor(code(1)));
   await page.locator("[name=paymentMode]").selectOption("pending");
   await page.locator("dialog[open] [type=submit]").click();
   await page.locator("[data-outbound-detail]").waitFor();
@@ -260,7 +300,12 @@ try {
   await login("warehouse");
   await nav("transfers");
   await page.locator("[data-outbound-open]").click();
-  assert(!/Rp|Harga khusus/.test(await page.locator("dialog[open]").innerText()));
+  const packingText = await page.locator("dialog[open]").innerText();
+  assert.match(packingText, /SUP-BROWSER/);
+  assert(!/Rp|Harga khusus|Modal/.test(packingText));
+  await page.locator("[data-outbound-code]").fill(code(4));
+  await page.locator("[data-outbound-code]").press("Enter");
+  await feedback.filter({ hasText: "batch barcode tidak sesuai" }).waitFor();
   await page.locator("[data-outbound-code]").fill(code(1));
   await page.locator("[data-outbound-code]").press("Enter");
   await page.waitForFunction(() =>

@@ -482,6 +482,108 @@ try {
     )
   ).rows[0];
   assert.deepEqual(privileges, { a: false, b: false, c: false });
+  // Upgrade an open product-priced order, leaving issued documents intact.
+  const legacy = await save();
+  await as(worker);
+  await out(legacy, "outbound_scan", { barcode: code(8, 1, 3000) });
+  for (const patch of [
+    "supplier-stock-122",
+    "branch-sale-prices-123",
+    "outbound-batches-126",
+    "outbound-batches-126",
+  ]) {
+    await db.exec(fs.readFileSync("database/" + patch + ".sql", "utf8"));
+  }
+  await out(legacy, "outbound_ready");
+  await as(owner);
+  assert.equal((await order(legacy)).total, 300000);
+  assert.equal((await order(transfer)).total, invoice.total);
+  const rateA = {
+    productId: products[0],
+    unit: "kg",
+    price: 105000,
+    sourceLotId: root.id,
+  };
+  const edit = {
+    storeId: wh,
+    kind: "transfer",
+    targetId: store,
+    carrier: "Pengantar",
+    paymentMode: "pending",
+  };
+  await out(legacy, "outbound_save", { ...edit, rates: [rateA] });
+  assert.equal((await order(legacy)).total, 315000);
+  await out(legacy, "outbound_repack");
+
+  const otherPlan = {
+    ...plan,
+    id: id(),
+    invoiceNo: "SECOND-126",
+    shippingCost: 20000,
+    lines: [
+      { productId: products[0], purchaseCost: 180000, expectedKg: 2, expectedPieces: 1 },
+    ],
+  };
+  await mut("receipt_plan_save", otherPlan);
+  await as(worker);
+  await mut("receipt_scan", {
+    id: id(),
+    planId: otherPlan.id,
+    expectedSessionRevision: 0,
+    barcode: code(12),
+  });
+  const completed = await mut("receipt_finish", {
+    id: id(),
+    planId: otherPlan.id,
+    expectedSessionRevision: 1,
+    confirmed: true,
+  });
+  const lotB = completed.fruitUnits.find((u) => u.barcode === code(12)).lotId;
+  const rateB = { ...rateA, sourceLotId: lotB, unit: "butir", price: 220000 };
+  await assert.rejects(
+    out(legacy, "outbound_scan", { barcode: code(12) }),
+    /batch barcode/,
+  );
+  assert.equal((await order(legacy)).items.length, 1);
+  await as(owner);
+  for (const [rates, error] of [
+    [[rateB], /sudah dipindai/],
+    [[rateA, rateA], /sama sudah dipilih/],
+    [[{ ...rateA, sourceLotId: null }], /Pilih batch/],
+    [[{ ...rateA, productId: products[1] }], /produk dan gudang/],
+    [[{ ...rateA, sourceLotId: received.lines[0].targetLotId }], /produk dan gudang/],
+  ])
+    await assert.rejects(out(legacy, "outbound_save", { ...edit, rates }), error);
+  const updated = {
+    ...edit,
+    rates: [rateA, rateB],
+    id: id(),
+    orderId: legacy,
+    expectedRevision: (await order(legacy)).revision,
+  };
+  await mut("outbound_save", updated);
+  await mut("outbound_save", updated);
+  assert.deepEqual((await order(legacy)).rates, updated.rates);
+  await as(worker);
+  await out(legacy, "outbound_scan", { barcode: code(12) });
+  const ready = (await out(legacy, "outbound_ready")).outbound;
+  assert(ready.rates.every((r) => r.sourceLotId && !("price" in r)));
+  assert(ready.lines.every((l) => !("unitCost" in l)));
+  await as(owner);
+  await out(legacy, "outbound_issue");
+  const issued = await order(legacy);
+  assert.equal(issued.total, 535000);
+  const lineB = issued.lines.find((line) => line.sourceLotId === lotB);
+  assert.equal(lineB.unitCost, 100000);
+  assert.equal(lineB.total, 220000);
+  const lineA = issued.lines.find((line) => line.sourceLotId === root.id);
+  assert.equal(lineA.total, 315000);
+  assert.notEqual(lineA.unitCost, lineB.unitCost);
+  await as(worker);
+  await out(legacy, "outbound_dispatch", { confirmed: true });
+  console.log(
+    "PASS batch rates: legacy upgrade, wrong-batch scan, reserved scans, repricing, distinct units/costs, retry, redaction and dispatch.",
+  );
   console.log(
     "PASS warehouse workflow SQL: persistent scans, pause/reload/lock/reopen, correction without duplicate stock, barcode reservations, split destinations, custom pricing, payments, real transfers/wholesale sales, retries, redaction and access isolation.",
   );

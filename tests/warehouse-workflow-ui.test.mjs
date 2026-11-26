@@ -9,7 +9,7 @@ import {
   clearWorkflowPending,
 } from "../pos/warehouse-workflow.mjs";
 import { receivingPage, openReceivingSession } from "../pos/receiving-session-ui.mjs";
-import { outboundPage } from "../pos/outbound-ui.mjs";
+import { outboundPage, openOutboundForm } from "../pos/outbound-ui.mjs";
 import { applySupplyResponse, transferDocument } from "../pos/warehouse-flow.mjs";
 import { openSupplierNote } from "../pos/supplier-notes-ui.mjs";
 const p = {
@@ -231,6 +231,95 @@ const ctx = {
   assert.deepEqual(rows(), [third, second, first]);
   assert.equal(dialog.querySelector("#form-error").textContent, "");
   dialog.close();
+}
+// Use the normal modal handlers to switch costs, build two rates and restore a legacy draft.
+{
+  const lots = ["A", "B", "reserved"].map((id, i) => ({
+    id,
+    productId: "fruit",
+    storeId: "wh",
+    quality: "ready",
+    receivedKg: 10,
+    receivedPieces: 5,
+    kg: 3,
+    pieces: 1,
+    unitCost: 50000 + i * 10000,
+  }));
+  const state = {
+    ...s,
+    outboundBatchVersion: 126,
+    lots,
+    fruitUnits: lots.map((l) => ({
+      lotId: l.id,
+      barcode: l.id,
+      grams: 3000,
+      status: "available",
+      storeId: "wh",
+    })),
+    outboundOrders: [{ id: "other", status: "ready", items: [{ barcode: "reserved" }] }],
+  };
+  const bo = {
+    ...ctx,
+    getState: () => state,
+    workspace: "backoffice",
+    modal: (...args) => {
+      const d = ctx.modal(...args);
+      const form = d.querySelector("form");
+      Object.defineProperty(form, "elements", {
+        value: Object.fromEntries(
+          form.querySelectorAll("[name]").map((el) => [el.name, el]),
+        ),
+      });
+      return d;
+    },
+    mutate: async (action, payload) => calls.push([action, payload]),
+  };
+  assert.equal(openOutboundForm(state, "wh", ctx), undefined);
+  const dialog = openOutboundForm(state, "wh", bo);
+  const row = (i) => dialog.querySelector(`[data-rate-row="${i}"]`);
+  const field = async (el, selector, value, event = "change") => {
+    const input = el.querySelector(selector);
+    input.value = value;
+    await input.fire(event);
+  };
+  assert.deepEqual(
+    row(0)
+      .querySelector("[data-rate-batch]")
+      .options.map((x) => x.value),
+    ["", "A", "B"],
+  );
+  await field(row(0), "[data-rate-batch]", "B");
+  assert.match(row(0).querySelector("[data-batch-cost]").textContent, /120\.000/);
+  await field(row(0), "[data-rate-price]", "120000", "input");
+  await field(row(0), "[data-rate-batch]", "A");
+  assert.match(row(0).querySelector("[data-batch-cost]").textContent, /50\.000/);
+  assert.equal(row(0).querySelector("[data-rate-price]").value, "");
+  await field(row(0), "[data-rate-price]", "80000", "input");
+  await dialog.querySelector("[data-rate-add]").fire("click");
+  assert.deepEqual(
+    row(1)
+      .querySelector("[data-rate-batch]")
+      .options.map((x) => x.value),
+    ["", "B"],
+  );
+  await field(row(1), "[data-rate-batch]", "B");
+  await field(row(1), "[data-rate-unit]", "butir");
+  await field(row(1), "[data-rate-price]", "150000", "input");
+  await dialog.querySelector("form").fire("submit");
+  assert.deepEqual(calls.at(-1)[1].rates, [
+    { productId: "fruit", sourceLotId: "A", unit: "kg", price: 80000 },
+    { productId: "fruit", sourceLotId: "B", unit: "butir", price: 150000 },
+  ]);
+  const legacy = openOutboundForm(state, "wh", bo, {
+    id: "legacy",
+    rates: [{ productId: "fruit", unit: "kg", price: 90000 }],
+    items: ["B", "A", "B"].map((sourceLotId) => ({ productId: "fruit", sourceLotId })),
+  });
+  assert.deepEqual(
+    legacy.querySelectorAll("[data-rate-batch]").map((el) => el.value),
+    ["B", "A"],
+  );
+  legacy.close();
 }
 let d = openReceivingSession(s, "plan", ctx);
 assert(d.querySelector("[data-session-code]"));
