@@ -194,3 +194,10 @@ menjaga hak akses keuangan dan menyesuaikan saldo setoran toko.
 `pos/cash-flow.mjs` menyusun angka Toko, PT Retail, PT Distribusi dan piutang
 untuk tampilan, Excel, dan PDF. Filter dan form sumber dana menggunakan
 `pos/reports-ui.mjs` serta rute mutasi POS yang sama dengan laporan lainnya.
+
+## Pengeluaran toko dari kasir (128)
+
+`pos/store-expenses-ui.mjs` memuat halaman input kasir dan kolom pengeluaran bersama
+untuk Back Office. `database/cashier-expenses-128.sql` menggunakan pencatatan pengeluaran
+yang sama dengan laporan arus kas, membatasi akses per cabang, dan menghubungkan
+pengeluaran tunai ke shift milik kasir bila terbuka.

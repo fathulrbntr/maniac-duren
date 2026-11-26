@@ -148,3 +148,21 @@ Setoran dan pembayaran antar-PT memakai catatan yang sama di kedua sisi.
 Pembatalan setoran, pengeluaran, atau pembayaran supplier membalik nilai pada
 tanggal koreksi. Untuk biaya lama, buka **Laporan → Pengeluaran → Tentukan sumber dana**.
 Klasifikasi ini mengalokasikan pembayaran pada tanggal pengeluaran aslinya.
+
+### Pengeluaran toko dari kasir (128)
+
+Setelah patch 127, jalankan `database/cashier-expenses-128.sql` di SQL Editor Supabase.
+Untuk alur migrasi CLI gunakan `20261126230000_cashier_expenses_128.sql` sebagai gantinya.
+Ekstrak patch ke folder utama proyek, jalankan `.\scripts\windows\push-patch-128.cmd`
+di PowerShell dari folder tersebut, lalu muat ulang POS setelah frontend terpasang.
+
+Di **Toko → Kasir → Pengeluaran Toko**, isi kategori, nominal, cara bayar, dan keterangan.
+Nomor bukti opsional. Toko mengikuti cabang aktif, sumber dana selalu toko, dan tanggal
+mengikuti saat pencatatan di WIB. Kasir dapat melihat 20 pengeluaran terakhir yang ia
+catat dari dana cabang itu. Koreksi dilakukan dari menu Pengeluaran di Back Office.
+
+Tunai mengurangi kas toko dan saldo yang dapat disetor. Apabila kasir membuka shift di
+cabang itu, pengeluaran tunai juga mengurangi kas yang seharusnya ada di laci saat tutup.
+Di luar shift, pengeluaran tunai tetap tercatat pada toko. Transfer dan QRIS tercatat sebagai
+pengeluaran nontunai. Pembatalan memperbarui shift yang masih buka. Rekap shift yang sudah
+ditutup menyimpan hasil perhitungan saat penutupan.

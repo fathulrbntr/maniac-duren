@@ -29,7 +29,7 @@ const summary = (sh) => {
       { payment: "QRIS", sales: t.qrisSales, refunds: t.qrisRefunds },
       { payment: "Transfer", sales: t.transferSales, refunds: t.transferRefunds },
     ];
-  return `<dl class="shift-totals"><dt>Uang awal</dt><dd>${money(sh.openingCash)}</dd><dt>Penjualan (${t.salesCount || 0} transaksi)</dt><dd>${money(t.sales || 0)}</dd><dt>Refund (${t.refundCount || 0} transaksi)</dt><dd>−${money(t.refunds || 0)}</dd>${payments.map((x) => `<dt>${e(x.payment)} bersih</dt><dd>${money((x.sales || 0) - (x.refunds || 0))}</dd>`).join("")}<dt class="shift-total">Kas yang seharusnya</dt><dd class="shift-total">${money(t.expectedCash || 0)}</dd>${sh.closedAt ? `<dt>Kas aktual</dt><dd>${money(sh.closingCash)}</dd><dt>Selisih</dt><dd class="${t.difference ? "error" : ""}">${money(t.difference || 0)}</dd>` : ""}</dl>`;
+  return `<dl class="shift-totals"><dt>Uang awal</dt><dd>${money(sh.openingCash)}</dd><dt>Penjualan (${t.salesCount || 0} transaksi)</dt><dd>${money(t.sales || 0)}</dd><dt>Refund (${t.refundCount || 0} transaksi)</dt><dd>−${money(t.refunds || 0)}</dd>${payments.map((x) => `<dt>${e(x.payment)} bersih</dt><dd>${money((x.sales || 0) - (x.refunds || 0))}</dd>`).join("")}${t.cashExpenses ? `<dt>Pengeluaran tunai shift</dt><dd>−${money(t.cashExpenses)}</dd>` : ""}<dt class="shift-total">Kas yang seharusnya</dt><dd class="shift-total">${money(t.expectedCash || 0)}</dd>${sh.closedAt ? `<dt>Kas aktual</dt><dd>${money(sh.closingCash)}</dd><dt>Selisih</dt><dd class="${t.difference ? "error" : ""}">${money(t.difference || 0)}</dd>` : ""}</dl>`;
 };
 export function shiftBanner(s, store) {
   if (s.access && !s.access.sell) return "";

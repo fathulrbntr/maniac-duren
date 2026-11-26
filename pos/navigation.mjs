@@ -7,7 +7,11 @@ export const sections = [
     label: "01 · Gudang & Penerimaan",
     pages: ["stock", "products", "suppliers"],
   },
-  { id: "pelayanan", label: "02 · Pelayanan & Kasir", pages: ["shifts", "orders"] },
+  {
+    id: "pelayanan",
+    label: "02 · Pelayanan & Kasir",
+    pages: ["shifts", "orders", "storeExpenses"],
+  },
   { id: "kitchen", label: "03 · Kitchen", pages: ["kitchen", "production", "recipes"] },
   {
     id: "laporan",
@@ -33,6 +37,7 @@ export function visibleSections(access) {
         discounts: access.cashierOwner,
         salesreport: access.reports,
         orders: access.sell,
+        storeExpenses: access.sell && access.cashierExpenses,
         kitchen: access.kitchen || access.sell,
         shifts: access.sell || access.reports || access.finance,
         dashboard: access.reports,

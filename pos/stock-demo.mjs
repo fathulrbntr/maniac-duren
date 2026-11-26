@@ -61,6 +61,7 @@ const transactionKeys = [
   "cashierShiftEntries",
   "documents",
   "expenses",
+  "myStoreExpenses",
   "adminEvents",
   "lots",
   "unitLots",

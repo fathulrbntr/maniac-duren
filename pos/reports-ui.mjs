@@ -1,3 +1,4 @@
+import { expenseFields } from "./store-expenses-ui.mjs";
 import { escape as e, today, money, num, id } from "./core.mjs";
 import {
   label,
@@ -488,7 +489,7 @@ function payerOptions(s, store) {
 function expenseDialog(s, store, ctx) {
   const d = ctx.modal(
     "Pengeluaran operasional",
-    `<p>Pembelian stok dicatat lewat penerimaan/pembelian barang. Jangan masukkan kembali di sini.</p><div class="form-grid">${field("Tanggal", `<input type="date" name="date" value="${today()}" max="${today()}" required>`)}${field("Toko", `<select name="storeId">${s.stores.map((t) => `<option value="${e(t.id)}" ${t.id === store ? "selected" : ""}>${e(t.name)}</option>`).join("")}</select>`)}${s.cashFlowVersion >= 127 ? field("Dibayar oleh", `<select name="funding" required>${payerOptions(s, store)}</select>`) : ""}${field("Kategori", `<select name="category">${["Gaji", "Sewa", "Listrik & air", "Transportasi", "Operasional", "Lainnya"].map((x) => `<option>${x}</option>`).join("")}</select>`)}${field("Nominal (Rp)", '<input type="number" name="amount" min="0.01" step="any" required>')}${field("Pembayaran", '<select name="payment"><option>Tunai</option><option>Transfer</option><option>QRIS</option></select>')}${field("Nomor bukti", '<input name="reference" maxlength="100">')}</div>${field("Keterangan", '<textarea name="description" minlength="3" maxlength="500" required></textarea>')}`,
+    `<p>Pembelian stok dicatat lewat penerimaan/pembelian barang. Jangan masukkan kembali di sini.</p>${expenseFields(`${field("Tanggal", `<input type="date" name="date" value="${today()}" max="${today()}" required>`)}${field("Toko", `<select name="storeId">${s.stores.map((t) => `<option value="${e(t.id)}" ${t.id === store ? "selected" : ""}>${e(t.name)}</option>`).join("")}</select>`)}${s.cashFlowVersion >= 127 ? field("Dibayar oleh", `<select name="funding" required>${payerOptions(s, store)}</select>`) : ""}`)}`,
   );
   const form = d.querySelector("form");
   if (form.elements.funding) {

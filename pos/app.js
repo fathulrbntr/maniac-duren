@@ -79,10 +79,13 @@ import { today, money, num, escape as e, id, emptyState } from "./core.mjs";
 import { isLegacyStock } from "./catalog.mjs";
 import { catalogPanel, productDialog } from "./catalog-ui.mjs";
 
+import { storeExpensesPage, bindStoreExpenses } from "./store-expenses-ui.mjs";
+
 let workspace = "";
 function workspaceAccess() {
   return {
     ...state.access,
+    cashierExpenses: state.cashierExpenseVersion >= 128 && !state.stockDemo,
     cashierOwner: state.me?.role === "owner",
     crmAdmin: ["owner", "admin"].includes(state.me?.role),
     ...(state.warehouseVersion && !state.stockDemo
@@ -210,6 +213,7 @@ const title = {
   crm: "Member & Poin",
   payments: "Metode Pembayaran",
   shifts: "Shift Kasir",
+  storeExpenses: "Pengeluaran Toko",
   devices: "Printer & Scanner",
   discounts: "Diskon & Persetujuan",
   dashboard: "Dashboard",
@@ -249,6 +253,7 @@ const paths = {
 
   crm: "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0 M20 8v6 M17 11h6",
   payments: "M3 5h18v14H3z M3 10h18 M6 15h5",
+  storeExpenses: "M4 6h16v14H4z M4 6l11-3v3 M11 13h6 M14 10l3 3-3 3",
   shifts: "M4 4h16v16H4z M8 8h8 M8 12h3 M15 12v5 M12 15h6",
   documents: "M4 3h11l5 5v13H4z M15 3v6h5 M8 13h8 M8 17h5",
   devices: "M6 9V3h12v6 M6 17H3V9h18v8h-3 M6 14h12v7H6z M17 12h1",
@@ -545,6 +550,7 @@ async function restoreSession() {
     if (activeSessionId !== saved.sessionId) return;
     const allowed = visibleSections({
       ...state.access,
+      cashierExpenses: state.cashierExpenseVersion >= 128 && !state.stockDemo,
       cashierOwner: state.me?.role === "owner",
       crmAdmin: ["owner", "manager"].includes(state.me?.role),
     }).flatMap((group) => group.pages);
@@ -875,6 +881,7 @@ function render() {
       crm: () => crmPage(state),
       payments: () => paymentsPage(state, store),
       shifts: () => shiftsPage(state, store),
+      storeExpenses: () => storeExpensesPage(state, store),
       dashboard,
       backoffice: () => supplyHome(state, store, "backoffice"),
       warehouse: () => supplyHome(state, store, "warehouse"),
@@ -950,6 +957,7 @@ function render() {
   if (view === "payments") bindPayments(shiftContext, store);
   bindShiftBanner(shiftContext, store);
   if (view === "shifts") bindShiftsPage(shiftContext, store);
+  if (view === "storeExpenses") bindStoreExpenses(state, store, shiftContext);
   document.querySelector("#order-products")?.addEventListener("stock-refresh", () => {
     const banner = document.querySelector("[data-shift-banner]");
     if (banner) {
