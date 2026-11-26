@@ -296,3 +296,22 @@
     min-height: 36px;
   }
 }
+
+.cash-flow-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+  gap: 16px;
+}
+.cash-flow-grid .panel {
+  min-width: 0;
+  margin: 0;
+}
+.cash-flow-grid td:last-child,
+.cash-flow-grid th:last-child {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.cash-flow-grid tbody tr:last-child {
+  font-weight: 700;
+}

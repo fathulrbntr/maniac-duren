@@ -855,7 +855,10 @@ function render() {
     selectReportTab(
       {
         salesreport: "summary",
-        finance: "expenses",
+        finance:
+          state.cashFlowVersion >= 127 && workspace === "backoffice"
+            ? "cashflow"
+            : "expenses",
         batches: "batches",
         trace: "stock",
       }[view],
@@ -888,7 +891,7 @@ function render() {
       stock: stockPage,
       waste: () => wastePage(state, store),
       losses: () => wastePage(state, store),
-      reports: () => reportsPage(state),
+      reports: () => reportsPage(state, workspace),
       documents: () => documentsPage(state, store),
       products: productsPage,
       stores: () => directoryPage("stores"),

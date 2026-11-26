@@ -186,3 +186,11 @@ Pilihan batch dan modal gudang ditampilkan di `pos/outbound-ui.mjs`.
 `pos/warehouse-workflow.mjs` menyaring barcode siap kirim dan memulihkan baris draf lama.
 `database/outbound-batches-126.sql` mengikat harga dokumen, scan dan baris invoice ke
 batch sumber. Urutan pemasangan tersedia di `database/README.md`.
+
+## Arus kas (127)
+
+`database/cash-flow-127.sql` mengelompokkan pergerakan uang berdasarkan tanggal,
+menjaga hak akses keuangan dan menyesuaikan saldo setoran toko.
+`pos/cash-flow.mjs` menyusun angka Toko, PT Retail, PT Distribusi dan piutang
+untuk tampilan, Excel, dan PDF. Filter dan form sumber dana menggunakan
+`pos/reports-ui.mjs` serta rute mutasi POS yang sama dengan laporan lainnya.

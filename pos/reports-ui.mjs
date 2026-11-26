@@ -9,6 +9,7 @@ import {
   reportSheets,
   batchReportSheets,
 } from "./reports.mjs";
+import { cashFlowSheets, fundingNames, fundingOptions } from "./cash-flow.mjs";
 import { downloadWorkbook, printWindow, reportPrint } from "./report-export.mjs";
 import { batchReportPage, bindBatchReport } from "./batch-report-ui.mjs";
 const options = (s) =>
@@ -22,6 +23,7 @@ const tabs = {
   stores: "Toko",
   suppliers: "Supplier",
   stock: "Stok",
+  cashflow: "Arus kas",
   expenses: "Pengeluaran",
   margin: "HPP & Hasil",
   batches: "Batch supplier",
@@ -29,31 +31,39 @@ const tabs = {
 let tab = "summary",
   filters = { ...periodRange("month", today()), store: "", period: "month" },
   page = 0;
-const allowed = (s, t) =>
-  !s.access ||
-  (["expenses", "margin"].includes(t)
-    ? s.access.finance
-    : t === "batches"
-      ? s.access.trace || s.access.finance || s.access.waste
-      : t === "stock"
-        ? s.access.trace
-        : s.access.reports);
+const allowed = (s, t, workspace) =>
+  t === "cashflow"
+    ? workspace === "backoffice" &&
+      s.access?.backoffice &&
+      s.access?.finance &&
+      !s.stockDemo
+    : !s.access ||
+      (["expenses", "margin"].includes(t)
+        ? s.access.finance
+        : t === "batches"
+          ? s.access.trace || s.access.finance || s.access.waste
+          : t === "stock"
+            ? s.access.trace
+            : s.access.reports);
 export function selectReportTab(t) {
   tab = t;
 }
-export function reportsPage(s) {
-  if (!allowed(s, tab)) tab = Object.keys(tabs).find((t) => allowed(s, t)) || "summary";
+export function reportsPage(s, workspace) {
+  if (!allowed(s, tab, workspace))
+    tab = Object.keys(tabs).find((t) => allowed(s, t, workspace)) || "summary";
+  const stores =
+    tab === "cashflow" ? s.stores.filter((x) => x.locationType === "store") : s.stores;
   return `<div class="intro report-heading"><div><h2>Laporan</h2><p class="muted">Penjualan, pergerakan barang, dan biaya dalam satu tempat.</p></div><div class="toolbar report-actions"><button type="button" id="report-refresh">Perbarui</button><button type="button" id="report-excel">Excel (.xlsx)</button><button type="button" id="report-pdf">PDF / Cetak A4</button></div></div><nav class="report-tabs" aria-label="Jenis laporan">${Object.entries(
     tabs,
   )
-    .filter(([k]) => allowed(s, k))
+    .filter(([k]) => allowed(s, k, workspace))
     .map(
       ([k, v]) =>
         `<button type="button" data-report-tab="${k}" aria-pressed="${tab === k}" class="${tab === k ? "primary" : ""}">${v}</button>`,
     )
     .join(
       "",
-    )}</nav><section class="panel" id="report-filters" ${tab === "batches" ? "hidden" : ""}><div class="report-filter-grid">${field("Periode", `<select id="report-period"><option value="day">Hari ini</option><option value="week">Minggu ini (Senin–Minggu)</option><option value="month">Bulan ini</option><option value="custom">Custom periode</option></select>`)}${field("Dari", '<input id="report-from" type="date" required>')}${field("Sampai", '<input id="report-to" type="date" required>')}${field("Toko", `<select id="report-store">${options(s)}</select>`)}</div><p id="report-error" class="error" role="alert"></p></section><div id="report-result"></div>`;
+    )}</nav><section class="panel" id="report-filters" ${tab === "batches" ? "hidden" : ""}><div class="report-filter-grid">${field("Periode", `<select id="report-period"><option value="day">Hari ini</option><option value="week">Minggu ini (Senin–Minggu)</option><option value="month">Bulan ini</option><option value="custom">Custom periode</option></select>`)}${field("Dari", '<input id="report-from" type="date" required>')}${field("Sampai", '<input id="report-to" type="date" required>')}${field("Toko", `<select id="report-store">${options({ stores })}</select>`)}</div><p id="report-error" class="error" role="alert"></p></section><div id="report-result"></div>`;
 }
 const table = (headers, rows) =>
   `<div class="table-wrap"><table><thead><tr>${headers.map((x) => `<th>${e(x)}</th>`).join("")}</tr></thead><tbody>${rows.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join("")}</tr>`).join("") || `<tr><td colspan="${headers.length}" class="empty">Belum ada data pada periode ini.</td></tr>`}</tbody></table></div>`;
@@ -62,7 +72,13 @@ const stat = (name, value) =>
 export function bindReports(s, store, ctx) {
   const $ = (q) => document.querySelector(q),
     result = $("#report-result");
-  if (filters.store && !s.stores.some((t) => t.id === filters.store)) filters.store = "";
+  if (
+    filters.store &&
+    !s.stores.some(
+      (t) => t.id === filters.store && (tab !== "cashflow" || t.locationType === "store"),
+    )
+  )
+    filters.store = "";
   $("#report-period").value = filters.period;
   $("#report-from").value = filters.from;
   $("#report-to").value = filters.to;
@@ -113,12 +129,63 @@ export function bindReports(s, store, ctx) {
   result.addEventListener("report-sync", (event) => {
     if (tab === "batches") applyBatchState(event.detail);
   });
+  let requestNumber = 0,
+    flowSheets = null;
+  const drawFlow = async (selected, ticket) => {
+    $("#report-excel").disabled = $("#report-pdf").disabled = true;
+    if (!(s.cashFlowVersion >= 127)) {
+      result.textContent = "Pasang SQL arus kas 127 lalu muat ulang POS.";
+      return;
+    }
+    result.textContent = "Memuat arus kas…";
+    try {
+      const report = await ctx.rpc("pos_cash_flow_read", { filters: selected });
+      if (!result.isConnected || ticket !== requestNumber || tab !== "cashflow") return;
+      flowSheets = cashFlowSheets(report, selected.store, selected.from, selected.to);
+      const [shop, retail, distribution, invoices, review] = flowSheets;
+      const sheetTable = (sheet) =>
+        table(
+          ["Komponen", "Nilai"],
+          sheet.rows.map(([label, value]) => [
+            e(label),
+            label.includes("jumlah transaksi") ? num(value) : money(value),
+          ]),
+        );
+      const panel = (sheet, extra = "") =>
+        `<section class="panel"><h3>${e(sheet.name)}</h3>${sheetTable(sheet)}${extra}</section>`;
+      const invoiceTable = `<h4>Tagihan dan invoice</h4>${sheetTable(invoices)}`;
+      result.innerHTML =
+        `<div class="cash-flow-grid">${panel(shop)}${panel(retail)}${panel(distribution, invoiceTable)}</div>` +
+        (review ? panel(review) : "") +
+        `<p class="muted">Uang kas toko mengikuti transaksi tunai tercatat sejak awal riwayat POS. Uang awal kembalian tidak termasuk. Penjualan nontunai mengikuti pembayaran di kasir. Setoran dan pembayaran nota antarpihak ditampilkan di kedua pihak. Tagihan menjadi arus kas saat dibayar.</p>` +
+        (selected.store
+          ? '<p class="muted">Filter cabang menampilkan dana terkait toko terpilih. Pilih semua toko untuk melihat wholesale dan pembayaran supplier.</p>'
+          : "") +
+        (review
+          ? '<p class="notice">Saldo hanya mencakup transaksi yang dapat dialokasikan. Lengkapi sumber dana melalui Laporan → Pengeluaran dan periksa tanggal refund yang belum tersedia.</p>'
+          : "") +
+        '<button type="button" id="flow-expense">+ Pengeluaran</button>';
+      $("#flow-expense").onclick = () => expenseDialog(s, selected.store || store, ctx);
+      $("#report-excel").disabled = $("#report-pdf").disabled = false;
+    } catch (error) {
+      if (result.isConnected && ticket === requestNumber && tab === "cashflow") {
+        flowSheets = null;
+        result.textContent = "Arus kas belum dapat dimuat. " + error.message;
+      }
+    }
+  };
   const draw = () => {
+    requestNumber++;
+    flowSheets = null;
     if (!valid()) {
       result.innerHTML = "";
       return;
     }
     filters = filter();
+    if (tab === "cashflow") {
+      void drawFlow(filters, requestNumber);
+      return;
+    }
     if (tab === "batches") {
       result.innerHTML = batchReportPage(s, store);
       bindBatchReport(s, store, { ...ctx, refreshBatch });
@@ -228,12 +295,15 @@ export function bindReports(s, store, ctx) {
       ];
       rows = x.rows.map((r) => [
         `${e(r.date)}<small>${e(label(s, "stores", r.storeId))}</small>`,
-        e(r.category),
+        e(r.category) +
+          (r.kind === "expense" && s.cashFlowVersion >= 127
+            ? `<small>${e(fundingNames[r.funding] || "Sumber dana belum dipilih")}</small>`
+            : ""),
         e(r.description),
         r.amount == null ? "Belum diketahui" : money(r.amount),
         e(r.reference || "—"),
         r.kind === "expense"
-          ? `<button data-expense-void="${e(r.id)}" class="small danger">Batalkan</button>`
+          ? `${s.cashFlowVersion >= 127 && !s.stockDemo && !r.funding ? `<button type="button" data-expense-funding="${e(r.id)}">Tentukan sumber dana</button>` : ""}<button data-expense-void="${e(r.id)}" class="small danger">Batalkan</button>`
           : "Dari penerimaan",
       ]);
       intro = `<div class="header-row"><p>Biaya pembelian termasuk ongkir + pengeluaran operasional. HPP, waste, PO, invoice, dan transfer tidak dihitung ulang. Ini laporan biaya, bukan arus kas pembayaran utang.</p><button id="add-expense" class="primary" ${s.reportsAdminVersion >= 71 && !s.stockDemo ? "" : "disabled"}>+ Pengeluaran</button></div><div class="stats">${stat("Pembelian tercatat", money(x.purchases))}${stat("Operasional", money(x.operating))}${stat("Total pengeluaran", x.unknown ? "Belum lengkap" : money(x.total))}</div>${x.unknown ? `<p class="notice">${x.unknown} penerimaan belum memiliki modal.</p>` : ""}`;
@@ -265,6 +335,34 @@ export function bindReports(s, store, ctx) {
       draw();
     };
     $("#add-expense")?.addEventListener("click", () => expenseDialog(s, store, ctx));
+    result.querySelectorAll("[data-expense-funding]").forEach((button) => {
+      button.onclick = () => {
+        const row = x.rows.find((r) => r.id === button.dataset.expenseFunding);
+        const dialog = ctx.modal(
+          "Sumber dana pengeluaran",
+          `<p>${e(row.description)} · ${money(row.amount)}</p>` +
+            field(
+              "Dibayar oleh",
+              `<select name="funding" required>${payerOptions(s, row.storeId)}</select>`,
+            ),
+        );
+        const request = id();
+        dialog.querySelector("form").onsubmit = async (ev) => {
+          ev.preventDefault();
+          if (
+            await ctx.mutate("expense_funding", {
+              id: request,
+              expenseId: row.id,
+              storeId: row.storeId,
+              funding: ev.currentTarget.elements.funding.value,
+            })
+          ) {
+            dialog.close();
+            ctx.render();
+          }
+        };
+      };
+    });
     result.querySelectorAll("[data-expense-void]").forEach(
       (b) =>
         (b.onclick = () => {
@@ -330,21 +428,23 @@ export function bindReports(s, store, ctx) {
     }
   };
   const exportSheets = () =>
-    tab === "batches"
-      ? batchReportSheets(
-          s,
-          Object.fromEntries(
-            ["from", "to", "supplier", "status"]
-              .map((k) => [k, $("#batch-" + k).value])
-              .concat([
-                ["store", $("#batch-outlet").value],
-                ["query", $("#batch-search").value.trim()],
-              ]),
-          ),
-        )
-      : reportSheets(s, filters);
+    tab === "cashflow"
+      ? flowSheets
+      : tab === "batches"
+        ? batchReportSheets(
+            s,
+            Object.fromEntries(
+              ["from", "to", "supplier", "status"]
+                .map((k) => [k, $("#batch-" + k).value])
+                .concat([
+                  ["store", $("#batch-outlet").value],
+                  ["query", $("#batch-search").value.trim()],
+                ]),
+            ),
+          )
+        : reportSheets(s, filters);
   $("#report-excel").onclick = () => {
-    if (valid())
+    if ((tab !== "cashflow" || flowSheets) && valid())
       downloadWorkbook(
         exportSheets(),
         "Laporan-Maniac-Duren-" + filters.from + "-" + filters.to,
@@ -352,7 +452,7 @@ export function bindReports(s, store, ctx) {
   };
   // Open synchronously to keep mobile popup blockers from swallowing the print action.
   $("#report-pdf").onclick = () => {
-    if (valid()) {
+    if ((tab !== "cashflow" || flowSheets) && valid()) {
       try {
         const h = filters.store
             ? s.stores.find((t) => t.id === filters.store)
@@ -376,15 +476,35 @@ export function bindReports(s, store, ctx) {
   };
   draw();
 }
+function payerOptions(s, store) {
+  const warehouse = s.stores.find((st) => st.id === store)?.locationType === "warehouse";
+  return (
+    '<option value="">Pilih sumber dana</option>' +
+    fundingOptions(warehouse)
+      .map((k) => `<option value="${k}">${e(fundingNames[k])}</option>`)
+      .join("")
+  );
+}
 function expenseDialog(s, store, ctx) {
   const d = ctx.modal(
     "Pengeluaran operasional",
-    `<p>Pembelian stok dicatat lewat penerimaan/pembelian barang. Jangan masukkan kembali di sini.</p><div class="form-grid">${field("Tanggal", `<input type="date" name="date" value="${today()}" max="${today()}" required>`)}${field("Toko", `<select name="storeId">${s.stores.map((t) => `<option value="${e(t.id)}" ${t.id === store ? "selected" : ""}>${e(t.name)}</option>`).join("")}</select>`)}${field("Kategori", `<select name="category">${["Gaji", "Sewa", "Listrik & air", "Transportasi", "Operasional", "Lainnya"].map((x) => `<option>${x}</option>`).join("")}</select>`)}${field("Nominal (Rp)", '<input type="number" name="amount" min="0.01" step="any" required>')}${field("Pembayaran", '<select name="payment"><option>Tunai</option><option>Transfer</option><option>QRIS</option></select>')}${field("Nomor bukti", '<input name="reference" maxlength="100">')}</div>${field("Keterangan", '<textarea name="description" minlength="3" maxlength="500" required></textarea>')}`,
+    `<p>Pembelian stok dicatat lewat penerimaan/pembelian barang. Jangan masukkan kembali di sini.</p><div class="form-grid">${field("Tanggal", `<input type="date" name="date" value="${today()}" max="${today()}" required>`)}${field("Toko", `<select name="storeId">${s.stores.map((t) => `<option value="${e(t.id)}" ${t.id === store ? "selected" : ""}>${e(t.name)}</option>`).join("")}</select>`)}${s.cashFlowVersion >= 127 ? field("Dibayar oleh", `<select name="funding" required>${payerOptions(s, store)}</select>`) : ""}${field("Kategori", `<select name="category">${["Gaji", "Sewa", "Listrik & air", "Transportasi", "Operasional", "Lainnya"].map((x) => `<option>${x}</option>`).join("")}</select>`)}${field("Nominal (Rp)", '<input type="number" name="amount" min="0.01" step="any" required>')}${field("Pembayaran", '<select name="payment"><option>Tunai</option><option>Transfer</option><option>QRIS</option></select>')}${field("Nomor bukti", '<input name="reference" maxlength="100">')}</div>${field("Keterangan", '<textarea name="description" minlength="3" maxlength="500" required></textarea>')}`,
   );
+  const form = d.querySelector("form");
+  if (form.elements.funding) {
+    const sync = () => {
+      form.elements.funding.innerHTML = payerOptions(s, form.elements.storeId.value);
+    };
+    form.elements.storeId.onchange = sync;
+    sync();
+  }
+  const requestId = id();
   d.querySelector("form").onsubmit = async (ev) => {
     ev.preventDefault();
     const p = Object.fromEntries(new FormData(ev.currentTarget));
-    if (await ctx.mutate("expense_save", { ...p, id: id(), amount: Number(p.amount) })) {
+    if (
+      await ctx.mutate("expense_save", { ...p, id: requestId, amount: Number(p.amount) })
+    ) {
       d.close();
       ctx.render();
     }

@@ -118,3 +118,33 @@ Dokumen lama dapat dilanjutkan dengan harga yang sudah tersimpan. Saat mengedit
 draf lama, batch yang sudah dipindai mendapat baris masing-masing. Pilih batch
 untuk produk yang belum dipindai. Harga transfer pada invoice tetap menjadi
 dasar modal barang yang diterima toko.
+
+### Arus kas Toko, PT Retail, dan PT Distribusi (127)
+
+Dari proyek yang sudah memakai patch 126, ekstrak berkas patch 127. Di SQL Editor
+Supabase jalankan `database/cash-flow-127.sql`. Jika memakai migrasi CLI, gunakan
+`20261126220000_cash_flow_127.sql` melalui jalur migrasi proyek. Pilih satu jalur.
+Untuk pengujian, commit dan push dari folder proyek Windows jalankan
+`.\scripts\windows\push-patch-127.cmd` di PowerShell. Muat ulang POS setelah frontend terpasang.
+
+Buka **Back Office → Laporan → Arus kas** dengan akun owner atau admin keuangan.
+Filter **Semua toko** mencakup wholesale, supplier, serta operasional gudang.
+Filter satu cabang menunjukkan transaksi cabang tersebut dan pembayaran nota terkait.
+Excel dan PDF pada tab ini mengikuti tanggal serta pilihan cabang yang sama.
+
+- **Toko** mencatat penjualan tunai dan nontunai, refund menurut tanggal pengembalian,
+  pengeluaran yang dibayar toko, dan setoran ke PT Retail. Uang kas adalah saldo
+  kumulatif transaksi tunai POS, di luar uang awal kembalian. Pengeluaran tunai
+  dengan sumber Toko juga mengurangi batas setoran yang dapat disimpan.
+- **PT Retail** menerima setoran toko, membayar nota gudang, serta membayar biaya
+  cabang seperti listrik, sewa, dan gaji. Pengeluaran dicatat sekali untuk cabang
+  yang mendapat manfaat dengan pilihan **Dibayar oleh → PT Retail**.
+- **PT Distribusi** menerima pembayaran nota toko dan wholesale, lalu membayar
+  supplier dan ongkir. Pembayaran cicilan masuk sesuai tanggal bayar. Nilai nota
+  terbit dan sisa piutang ditampilkan terpisah dari arus uang. Penjualan wholesale
+  yang juga tercatat saat pengiriman tidak menambah penerimaan untuk kedua kalinya.
+
+Setoran dan pembayaran antar-PT memakai catatan yang sama di kedua sisi.
+Pembatalan setoran, pengeluaran, atau pembayaran supplier membalik nilai pada
+tanggal koreksi. Untuk biaya lama, buka **Laporan → Pengeluaran → Tentukan sumber dana**.
+Klasifikasi ini mengalokasikan pembayaran pada tanggal pengeluaran aslinya.

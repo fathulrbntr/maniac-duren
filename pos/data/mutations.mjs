@@ -8,6 +8,7 @@ const payloadRoutes = new Map([
   ["receipt_batch", "pos_receive_shipment"],
 ]);
 const actionRoutes = new Map([
+  ["expense_funding", "pos_warehouse_mutate"],
   ["cash_deposit_save", "pos_cash_deposit_mutate"],
   ["cash_deposit_void", "pos_cash_deposit_mutate"],
   ["cashier_shift_open", "pos_cashier_shift_mutate"],
