@@ -27,7 +27,7 @@ export const receiptStatuses = {
   reopened: "Dibuka kembali",
 };
 export const outboundStatuses = {
-  packing: "Scan penyiapan",
+  packing: "Penyiapan gudang",
   ready: "Menunggu Back Office",
   approved: "Siap dikirim",
   dispatched: "Sudah dikirim",
@@ -65,8 +65,7 @@ export function receiptVariance(p, productId) {
     percent: (kg / expected.kg) * 100,
   };
 }
-// Only labeled fruit can leave through the outbound workflow. Reservations on
-// the document being edited remain available to its own rows.
+// Reservations on the document being edited remain available to its own rows.
 export function outboundBatches(s, warehouseId, orderId) {
   const reserved = new Set(
     (s.outboundOrders || [])
@@ -97,7 +96,7 @@ export function outboundBatches(s, warehouseId, orderId) {
     qty.pieces++;
     available.set(u.lotId, qty);
   }
-  return (s.lots || [])
+  const fruit = (s.lots || [])
     .filter(
       (l) =>
         l.storeId === warehouseId &&
@@ -106,10 +105,39 @@ export function outboundBatches(s, warehouseId, orderId) {
         l.pieces > 0 &&
         available.has(l.id),
     )
-    .map((l) => ({ ...l, available: available.get(l.id) }))
-    .sort(
-      (a, b) => String(a.date).localeCompare(String(b.date)) || a.id.localeCompare(b.id),
-    );
+    .map((l) => ({ ...l, available: available.get(l.id) }));
+  const unitReserved = new Map();
+  const units = [];
+  if (s.outboundBatchVersion >= 131) {
+    for (const order of s.outboundOrders || []) {
+      if (
+        order.id === orderId ||
+        !["packing", "ready", "approved"].includes(order.status)
+      )
+        continue;
+      for (const rate of order.rates || []) {
+        if (rate.kind === "unit")
+          unitReserved.set(
+            rate.sourceLotId,
+            (unitReserved.get(rate.sourceLotId) || 0) + Number(rate.qty),
+          );
+      }
+    }
+    const day = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Jakarta" });
+    for (const lot of s.unitLots || []) {
+      const qty = Number((Number(lot.qty) - (unitReserved.get(lot.id) || 0)).toFixed(6));
+      if (
+        lot.storeId === warehouseId &&
+        qty > 0 &&
+        (!lot.expiry || lot.expiry >= day) &&
+        !reopened.has(lot.shipmentId)
+      )
+        units.push({ ...lot, available: { qty } });
+    }
+  }
+  return [...fruit, ...units].sort(
+    (a, b) => String(a.date).localeCompare(String(b.date)) || a.id.localeCompare(b.id),
+  );
 }
 export function outboundRateRows(order) {
   return order.rates.flatMap((r) => {

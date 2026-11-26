@@ -9,7 +9,7 @@ import {
   clearWorkflowPending,
 } from "../pos/warehouse-workflow.mjs";
 import { receivingPage, openReceivingSession } from "../pos/receiving-session-ui.mjs";
-import { outboundPage, openOutboundForm } from "../pos/outbound-ui.mjs";
+import { outboundPage, openOutbound, openOutboundForm } from "../pos/outbound-ui.mjs";
 import { applySupplyResponse, transferDocument } from "../pos/warehouse-flow.mjs";
 import { openSupplierNote } from "../pos/supplier-notes-ui.mjs";
 const p = {
@@ -310,6 +310,81 @@ const ctx = {
     { productId: "fruit", sourceLotId: "A", unit: "kg", price: 80000 },
     { productId: "fruit", sourceLotId: "B", unit: "butir", price: 150000 },
   ]);
+  state.outboundBatchVersion = 131;
+  state.products = [
+    ...state.products,
+    { id: "susu", name: "Susu", stockUnit: "ml", itemType: "raw" },
+  ];
+  state.unitLots = [
+    { id: "milk", productId: "susu", storeId: "wh", unit: "ml", qty: 100, unitCost: 200 },
+    {
+      id: "old",
+      productId: "susu",
+      storeId: "wh",
+      unit: "ml",
+      qty: 20,
+      expiry: "2000-01-01",
+    },
+    { id: "branch", productId: "susu", storeId: "shop", unit: "ml", qty: 50 },
+  ];
+  state.outboundOrders.push({
+    id: "reserved-unit",
+    status: "approved",
+    items: [],
+    rates: [{ kind: "unit", sourceLotId: "milk", qty: 10.5 }],
+  });
+  const mixed = openOutboundForm(state, "wh", bo);
+  const mr = (i) => mixed.querySelector(`[data-rate-row="${i}"]`);
+  await field(mr(0), "[data-rate-batch]", "A");
+  await field(mr(0), "[data-rate-price]", "70000", "input");
+  await mixed.querySelector("[data-rate-add]").fire("click");
+  await field(mr(1), "[data-rate-product]", "susu");
+  assert.deepEqual(
+    mr(1)
+      .querySelector("[data-rate-batch]")
+      .options.map((x) => x.value),
+    ["", "milk"],
+  );
+  await field(mr(1), "[data-rate-batch]", "milk");
+  const preview = mr(1).querySelector("[data-batch-cost]").textContent;
+  for (const text of ["Modal/ml", "200", "89,5 ml"]) assert.ok(preview.includes(text));
+  await field(mr(1), "[data-rate-qty]", "12.5", "input");
+  await field(mr(1), "[data-rate-price]", "250", "input");
+  await mixed.querySelector("form").fire("submit");
+  assert.deepEqual(calls.at(-1)[1].rates[1], {
+    kind: "unit",
+    sourceLotId: "milk",
+    productId: "susu",
+    unit: "ml",
+    qty: 12.5,
+    price: 250,
+  });
+  const only = openOutboundForm(
+    { ...state, products: state.products.filter((p) => p.id === "susu") },
+    "wh",
+    bo,
+  );
+  assert.ok(only.querySelector("[data-rate-qty]"));
+  only.close();
+  const unitOrder = {
+    id: "milk-shipment",
+    status: "packing",
+    kind: "transfer",
+    rates: [calls.at(-1)[1].rates[1]],
+    items: [],
+    revision: 7,
+  };
+  state.outboundOrders.push(unitOrder);
+  const warehouse = { ...bo, workspace: "warehouse" };
+  const detail = openOutbound(state, unitOrder.id, warehouse);
+  assert.ok(!detail.querySelector("[data-outbound-code]"));
+  await detail.querySelector("[data-outbound-ready]").fire("click");
+  const count = adapter.latest;
+  count.querySelector("[data-packed-lot]").value = "12.5";
+  await count.querySelector("form").fire("submit");
+  assert.equal(calls.at(-1)[0], "outbound_ready");
+  assert.deepEqual(calls.at(-1)[1].unitCounts, { milk: "12.5" });
+  adapter.latest.close();
   const legacy = openOutboundForm(state, "wh", bo, {
     id: "legacy",
     rates: [{ productId: "fruit", unit: "kg", price: 90000 }],

@@ -166,3 +166,10 @@ cabang itu, pengeluaran tunai juga mengurangi kas yang seharusnya ada di laci sa
 Di luar shift, pengeluaran tunai tetap tercatat pada toko. Transfer dan QRIS tercatat sebagai
 pengeluaran nontunai. Pembatalan memperbarui shift yang masih buka. Rekap shift yang sudah
 ditutup menyimpan hasil perhitungan saat penutupan.
+
+### Transfer nonbuah 131
+
+Setelah patch 130, jalankan `database/outbound-units-131.sql` atau migrasi
+`20261126234500_outbound_units_131.sql`. Perubahan menambahkan reservasi jumlah
+stok per batch ke alur pengiriman toko. Dokumen lama tetap mengikuti rincian
+dan status yang sudah tersimpan.

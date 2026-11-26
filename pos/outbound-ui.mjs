@@ -31,6 +31,18 @@ function invoiceScope(s, store, space) {
     orders: (s.outboundOrders || []).filter((o) => bo || o.sourceId === store),
   };
 }
+function outboundContents(o) {
+  const parts = [];
+  if (o.items.length || !o.rates?.some((r) => r.kind === "unit"))
+    parts.push(
+      `${num(o.items.length)} butir / ${num(o.items.reduce((sum, i) => sum + i.grams, 0) / 1000)} kg`,
+    );
+  const totals = new Map();
+  for (const r of o.rates || [])
+    if (r.kind === "unit") totals.set(r.unit, (totals.get(r.unit) || 0) + Number(r.qty));
+  for (const [unit, qty] of totals) parts.push(`${num(qty)} ${e(unit)}`);
+  return parts.join(" · ");
+}
 function invoiceTable(s, rows, bo, group) {
   return table(
     [
@@ -53,7 +65,7 @@ function invoiceTable(s, rows, bo, group) {
         : transfer?.status === "received"
           ? "Diterima toko"
           : outboundStatuses[o.status] || o.status;
-      return `<tr data-outbound-row="${e(o.id)}"><td><b>${e(o.invoiceNo || (cancelled ? "Dokumen dibatalkan" : "Belum terbit"))}</b><small>${e(o.deliveryNo || o.id.slice(0, 8))}</small></td><td>${e(invoiceDate(group === "issued" ? o.issuedAt : o.createdAt) || "Belum tersedia")}</td><td>${o.kind === "transfer" ? "Transfer toko" : "Wholesale"}<small>${e(o.kind === "transfer" ? name(s, "locations", o.targetId) : o.buyer?.name)}</small></td><td>${num(o.items.length)} butir / ${num(o.items.reduce((v, i) => v + i.grams, 0) / 1000)} kg</td><td>${e(status)}</td>${bo ? `<td>${o.total == null ? "Menunggu scan" : money(balance.total)}${cancelled ? "<small>Tidak masuk tagihan aktif</small>" : o.invoiceNo ? `<small class="outbound-payment ${e(payment)}">${e({ paid: "Lunas", partial: "Dibayar sebagian", unpaid: "Belum dibayar", unknown: "Nilai belum tersedia" }[payment])}</small>${payment !== "unknown" ? `<small>Sudah dibayar ${money(balance.paid)}</small><small>Sisa ${money(balance.remaining)}</small>` : ""}` : "<small>Belum terbit</small>"}</td>` : ""}${cancelled ? `<td>${e(o.cancelReason || transfer?.cancelReason || "—")}</td>` : ""}<td><button type="button" data-outbound-open="${e(o.id)}">Buka</button></td></tr>`;
+      return `<tr data-outbound-row="${e(o.id)}"><td><b>${e(o.invoiceNo || (cancelled ? "Dokumen dibatalkan" : "Belum terbit"))}</b><small>${e(o.deliveryNo || o.id.slice(0, 8))}</small></td><td>${e(invoiceDate(group === "issued" ? o.issuedAt : o.createdAt) || "Belum tersedia")}</td><td>${o.kind === "transfer" ? "Transfer toko" : "Wholesale"}<small>${e(o.kind === "transfer" ? name(s, "locations", o.targetId) : o.buyer?.name)}</small></td><td>${outboundContents(o)}</td><td>${e(status)}</td>${bo ? `<td>${o.total == null ? "Menunggu penyiapan" : money(balance.total)}${cancelled ? "<small>Tidak masuk tagihan aktif</small>" : o.invoiceNo ? `<small class="outbound-payment ${e(payment)}">${e({ paid: "Lunas", partial: "Dibayar sebagian", unpaid: "Belum dibayar", unknown: "Nilai belum tersedia" }[payment])}</small>${payment !== "unknown" ? `<small>Sudah dibayar ${money(balance.paid)}</small><small>Sisa ${money(balance.remaining)}</small>` : ""}` : "<small>Belum terbit</small>"}</td>` : ""}${cancelled ? `<td>${e(o.cancelReason || transfer?.cancelReason || "—")}</td>` : ""}<td><button type="button" data-outbound-open="${e(o.id)}">Buka</button></td></tr>`;
     }),
   );
 }
@@ -93,7 +105,7 @@ export function outboundPage(s, store, space) {
     finance: bo,
     transfers: s.transfers,
   });
-  return `<section class="supply-workspace" data-outbound-page><div class="supply-hero"><div><span class="supply-eyebrow">DISTRIBUSI GUDANG</span><h2>Transfer toko & invoice wholesale</h2><p>${bo ? "Buat dokumen dan harga khusus, tunggu scan gudang, lalu terbitkan." : "Scan barang sesuai dokumen Back Office. Setiap barcode hanya boleh masuk satu pengiriman aktif."}</p></div><div class="toolbar"><button type="button" data-supply-refresh>Perbarui</button>${bo ? '<button type="button" class="primary" data-outbound-new>+ Transaksi baru</button>' : ""}</div></div><section class="panel outbound-filter-panel" aria-label="Filter invoice terbit"><h3>Periode invoice</h3><div class="outbound-filters">${field(
+  return `<section class="supply-workspace" data-outbound-page><div class="supply-hero"><div><span class="supply-eyebrow">DISTRIBUSI GUDANG</span><h2>Transfer toko & invoice wholesale</h2><p>${bo ? "Tentukan batch dan harga, lalu terbitkan dokumen setelah gudang memeriksa barang." : "Pindai barcode buah dan cocokkan jumlah fisik nonbuah per batch."}</p></div><div class="toolbar"><button type="button" data-supply-refresh>Perbarui</button>${bo ? '<button type="button" class="primary" data-outbound-new>+ Transaksi baru</button>' : ""}</div></div><section class="panel outbound-filter-panel" aria-label="Filter invoice terbit"><h3>Periode invoice</h3><div class="outbound-filters">${field(
     "Periode",
     `<select data-invoice-period>${Object.entries(invoicePeriods)
       .map(
@@ -179,6 +191,8 @@ function batchLabel(s, lot) {
 }
 function batchCostInfo(lot) {
   if (!lot) return "";
+  if (lot.available.qty != null)
+    return `Modal/${e(lot.unit)} <b>${lot.unitCost == null ? "Belum tersedia" : money(lot.unitCost)}</b><br>Siap dikirim ${num(lot.available.qty)} ${e(lot.unit)}`;
   const perKg = lot.unitCost ?? noteUnitCosts(lot).perKg;
   const perPiece =
     perKg != null && lot.receivedKg > 0 && lot.receivedPieces > 0
@@ -198,22 +212,37 @@ export function openOutboundForm(s, store, ctx, o) {
       locations.find(
         (x) => x.locationType === "warehouse" && x.id === (o?.sourceId || store),
       ) || locations.find((x) => x.locationType === "warehouse"),
-    products = s.products.filter((p) => p.stockUnit === "kg_butir"),
+    products = s.products.filter(
+      (p) =>
+        p.stockUnit === "kg_butir" ||
+        (s.outboundBatchVersion >= 131 &&
+          ["kg", "g", "ml", "pcs", "porsi"].includes(p.stockUnit) &&
+          (p.itemType !== "recipe" ||
+            s.unitLots?.some(
+              (l) => l.storeId === wh?.id && l.productId === p.id && l.qty > 0,
+            ))),
+    ),
     stores = locations.filter((x) => x.locationType === "store");
   if (!wh || !products.length) {
-    ctx.toast("Lengkapi gudang dan master buah terlebih dahulu.");
+    ctx.toast("Lengkapi gudang dan master barang terlebih dahulu.");
     return;
   }
   const batches = outboundBatches(s, wh.id, o?.id);
+  const isFruit = (product) => product.stockUnit === "kg_butir";
+  const newRow = (p) => ({
+    productId: p.id,
+    sourceLotId: "",
+    unit: isFruit(p) ? "kg" : p.stockUnit,
+    price: "",
+    ...(isFruit(p) ? {} : { kind: "unit", qty: "" }),
+  });
   const initialProduct =
     products.find((p) => batches.some((l) => l.productId === p.id)) || products[0];
   const key = o?.id || id(),
-    rows = o
-      ? outboundRateRows(o)
-      : [{ productId: initialProduct.id, sourceLotId: "", unit: "kg", price: "" }];
+    rows = o ? outboundRateRows(o) : [newRow(initialProduct)];
   const d = ctx.modal(
     o ? "Edit dokumen & harga" : "Transaksi barang keluar",
-    `<div class="form-grid">${field("Jenis transaksi", `<select name="kind"><option value="transfer" ${o?.kind !== "wholesale" ? "selected" : ""}>Transfer ke toko Maniac Duren</option><option value="wholesale" ${o?.kind === "wholesale" ? "selected" : ""}>Penjualan wholesale</option></select>`)}${field("Toko tujuan", `<select name="targetId">${options(stores, o?.targetId)}</select>`)}${field("Nama pembeli wholesale", `<input name="buyerName" maxlength="150" value="${e(o?.buyer?.name || "")}">`)}${field("Telepon pembeli", `<input name="phone" maxlength="50" value="${e(o?.buyer?.phone || "")}">`)}${field("Alamat pembeli", `<textarea name="address" maxlength="500">${e(o?.buyer?.address || "")}</textarea>`)}${field("Pengantar / kendaraan", `<input name="carrier" maxlength="150" value="${e(o?.carrier || "")}" required>`)}${field("Pilihan pembayaran", `<select name="paymentMode"><option value="pending" ${o?.paymentMode !== "paid" ? "selected" : ""}>Pending payment</option><option value="paid" ${o?.paymentMode === "paid" ? "selected" : ""}>Langsung bayar saat invoice terbit</option></select>`)}</div><h3>Batch dan harga transaksi</h3><div data-outbound-rates></div><button type="button" data-rate-add>+ Produk / batch</button>${field("Catatan", `<textarea name="note" maxlength="500">${e(o?.note || "")}</textarea>`)}<p class="muted">Jumlah dan berat berasal dari barcode yang disiapkan gudang. Harga dikunci saat invoice diterbitkan. Pembayaran langsung dikonfirmasi setelah total diketahui.</p>`,
+    `<div class="form-grid">${field("Jenis transaksi", `<select name="kind"><option value="transfer" ${o?.kind !== "wholesale" ? "selected" : ""}>Transfer ke toko Maniac Duren</option><option value="wholesale" ${o?.kind === "wholesale" ? "selected" : ""}>Penjualan wholesale</option></select>`)}${field("Toko tujuan", `<select name="targetId">${options(stores, o?.targetId)}</select>`)}${field("Nama pembeli wholesale", `<input name="buyerName" maxlength="150" value="${e(o?.buyer?.name || "")}">`)}${field("Telepon pembeli", `<input name="phone" maxlength="50" value="${e(o?.buyer?.phone || "")}">`)}${field("Alamat pembeli", `<textarea name="address" maxlength="500">${e(o?.buyer?.address || "")}</textarea>`)}${field("Pengantar / kendaraan", `<input name="carrier" maxlength="150" value="${e(o?.carrier || "")}" required>`)}${field("Pilihan pembayaran", `<select name="paymentMode"><option value="pending" ${o?.paymentMode !== "paid" ? "selected" : ""}>Pending payment</option><option value="paid" ${o?.paymentMode === "paid" ? "selected" : ""}>Langsung bayar saat invoice terbit</option></select>`)}</div><h3>Batch dan harga transaksi</h3><div data-outbound-rates></div><button type="button" data-rate-add>+ Produk / batch</button>${field("Catatan", `<textarea name="note" maxlength="500">${e(o?.note || "")}</textarea>`)}<p class="muted">${s.outboundBatchVersion >= 131 ? "Pindai barcode buah. Untuk transfer barang nonbuah, isi jumlah sesuai satuan batch." : "Untuk mengaktifkan transfer nonbuah, pasang SQL 131."} Harga dikunci saat invoice diterbitkan. Pembayaran langsung dikonfirmasi setelah total diketahui.</p>`,
     "Simpan dokumen",
   );
   d.classList.add("supply-modal");
@@ -227,7 +256,28 @@ export function openOutboundForm(s, store, ctx, o) {
       f.elements[k].closest("label").hidden = !wholesale;
     f.elements.buyerName.required = wholesale;
   };
-  f.elements.kind.onchange = kind;
+  const visibleProducts = () =>
+    f.elements.kind.value === "wholesale" ? products.filter(isFruit) : products;
+  f.elements.kind.onchange = () => {
+    if (f.elements.kind.value === "wholesale") {
+      const first = visibleProducts()[0];
+      if (
+        !first ||
+        rows.some((r) => r.kind === "unit" && (r.sourceLotId || r.qty || r.price))
+      ) {
+        f.elements.kind.value = "transfer";
+        ctx.toast(
+          "Wholesale membutuhkan baris buah. Hapus baris nonbuah yang telah diisi.",
+        );
+      } else {
+        rows.forEach((r, i) => {
+          if (r.kind === "unit") rows[i] = newRow(first);
+        });
+      }
+    }
+    kind();
+    draw();
+  };
   kind();
   const availableFor = (productId, row) =>
     batches.filter(
@@ -250,42 +300,64 @@ export function openOutboundForm(s, store, ctx, o) {
         );
       select.value = selected?.id || "";
       const info = el.querySelector("[data-batch-cost]");
+      const quantity = el.querySelector("[data-rate-qty]");
+      if (quantity) {
+        quantity.max = selected?.available.qty ?? "";
+        quantity.disabled = !selected;
+      }
       if (row.sourceLotId && !selected) {
-        const prior = s.lots?.find((l) => l.id === row.sourceLotId);
+        const prior = (row.kind === "unit" ? s.unitLots : s.lots)?.find(
+          (l) => l.id === row.sourceLotId,
+        );
         info.textContent = `Batch ${prior ? batchLabel(s, prior) : row.sourceLotId} sudah tidak tersedia. Pilih batch lain atau hapus baris.`;
       } else {
         info.innerHTML = batchCostInfo(selected);
       }
     });
     d.querySelector("[data-rate-add]").disabled =
-      rows.length >= 50 ||
-      !batches.some((l) => !rows.some((r) => r.sourceLotId === l.id));
+      rows.length >= 50 || !visibleProducts().some((p) => availableFor(p.id).length);
   };
   const draw = () => {
     list.innerHTML = rows
       .map(
         (r, i) =>
-          `<div class="form-grid" data-rate-row="${i}">${field("Produk", `<select data-rate-product>${options(products, r.productId)}</select>`)}${field("Batch asal gudang", "<select data-rate-batch required></select>")}<p class="muted" data-batch-cost aria-live="polite"></p>${field("Satuan harga", `<select data-rate-unit><option value="kg" ${r.unit === "kg" ? "selected" : ""}>Per kg</option><option value="butir" ${r.unit === "butir" ? "selected" : ""}>Per butir</option></select>`)}${field("Harga khusus (Rp)", `<input data-rate-price type="number" min="0.01" step="0.01" value="${e(r.price)}" required>`)}${rows.length > 1 ? `<button type="button" data-rate-remove="${i}">Hapus baris</button>` : ""}</div>`,
+          `<div class="form-grid" data-rate-row="${i}">${field("Produk", `<select data-rate-product>${options(visibleProducts(), r.productId)}</select>`)}${field("Batch asal gudang", "<select data-rate-batch required></select>")}<p class="muted" data-batch-cost aria-live="polite"></p>${r.kind === "unit" ? field("Jumlah kirim (" + r.unit + ")", `<input data-rate-qty type="number" min="${["pcs", "porsi"].includes(r.unit) ? "1" : "0.000001"}" step="${["pcs", "porsi"].includes(r.unit) ? "1" : "0.000001"}" value="${e(r.qty)}" required>`) : field("Satuan harga", `<select data-rate-unit><option value="kg" ${r.unit === "kg" ? "selected" : ""}>Per kg</option><option value="butir" ${r.unit === "butir" ? "selected" : ""}>Per butir</option></select>`)}${field(r.kind === "unit" ? "Harga per " + r.unit + " (Rp)" : "Harga khusus (Rp)", `<input data-rate-price type="number" min="0.01" step="0.01" value="${e(r.price)}" required>`)}${rows.length > 1 ? `<button type="button" data-rate-remove="${i}">Hapus baris</button>` : ""}</div>`,
       )
       .join("");
     refreshBatches();
     list.querySelectorAll("[data-rate-row]").forEach((el, index) => {
       const r = rows[index];
       const price = el.querySelector("[data-rate-price]");
+      const qty = el.querySelector("[data-rate-qty]");
+      if (qty)
+        qty.oninput = () => {
+          r.qty = qty.value;
+        };
       const changeBatch = (lotId) => {
+        if (qty) {
+          r.qty = qty.value = "";
+          const lot = batches.find((l) => l.id === lotId);
+          if (lot && r.unit !== lot.unit) {
+            Object.assign(r, { unit: lot.unit, sourceLotId: lotId, price: "" });
+            draw();
+            return;
+          }
+        }
         r.sourceLotId = lotId;
         r.price = price.value = "";
         refreshBatches();
       };
       el.querySelector("[data-rate-product]").onchange = (ev) => {
-        r.productId = ev.target.value;
-        changeBatch("");
+        rows[index] = newRow(products.find((p) => p.id === ev.target.value));
+        draw();
       };
       el.querySelector("[data-rate-batch]").onchange = (ev) =>
         changeBatch(ev.target.value);
-      el.querySelector("[data-rate-unit]").onchange = (ev) => {
-        r.unit = ev.target.value;
-      };
+      const unit = el.querySelector("[data-rate-unit]");
+      if (unit)
+        unit.onchange = (ev) => {
+          r.unit = ev.target.value;
+        };
       price.oninput = () => {
         r.price = price.value;
       };
@@ -300,13 +372,9 @@ export function openOutboundForm(s, store, ctx, o) {
   };
   d.querySelector("[data-rate-add]").onclick = () => {
     if (rows.length < 50) {
-      rows.push({
-        productId:
-          products.find((p) => availableFor(p.id).length)?.id || initialProduct.id,
-        sourceLotId: "",
-        unit: "kg",
-        price: "",
-      });
+      const p = visibleProducts().find((p) => availableFor(p.id).length);
+      if (!p) return;
+      rows.push(newRow(p));
       draw();
     }
   };
@@ -330,7 +398,11 @@ export function openOutboundForm(s, store, ctx, o) {
       carrier: f.elements.carrier.value.trim(),
       note: f.elements.note.value.trim(),
       paymentMode: f.elements.paymentMode.value,
-      rates: rows.map((r) => ({ ...r, price: Number(r.price) })),
+      rates: rows.map((r) => ({
+        ...r,
+        price: Number(r.price),
+        ...(r.kind === "unit" ? { qty: Number(r.qty) } : {}),
+      })),
     }),
     () => openOutbound(ctx.getState(), key, ctx),
   );
@@ -392,23 +464,31 @@ export function openOutbound(s, oid, ctx) {
   };
   const draw = () => {
     const balance = outboundBalance(o),
-      packing = !bo && o.status === "packing";
+      packing = !bo && o.status === "packing",
+      units = o.rates.filter((r) => r.kind === "unit"),
+      hasFruit = o.rates.some((r) => r.kind !== "unit");
     body.innerHTML = `<p><b>${o.kind === "transfer" ? "Transfer toko" : "Penjualan wholesale"}</b> · ${e(o.kind === "transfer" ? name(ctx.getState(), "locations", o.targetId) : o.buyer?.name)}</p><p>${e(o.carrier)} · ${e(outboundStatuses[o.status])}</p>${bo ? `<div class="notice">${e(balance.label)}${o.total != null ? ` · Total ${money(balance.total)} · Dibayar ${money(balance.paid)} · Sisa ${money(balance.remaining)}` : ""}</div>` : ""}${table(
       ["Produk", "Batch asal", ...(bo ? ["Harga khusus"] : [])],
       o.rates.map((r) => {
-        const lot = ctx.getState().lots?.find((l) => l.id === r.sourceLotId);
+        const lot = (
+          r.kind === "unit" ? ctx.getState().unitLots : ctx.getState().lots
+        )?.find((l) => l.id === r.sourceLotId);
         const batch = lot
           ? batchLabel(ctx.getState(), lot)
           : r.sourceLotId || "Mengikuti barcode (dokumen lama)";
-        return `<tr><td>${e(name(ctx.getState(), "products", r.productId))}</td><td>${e(batch)}</td>${bo ? `<td>${money(r.price)} / ${e(r.unit)}</td>` : ""}</tr>`;
+        return `<tr><td>${e(name(ctx.getState(), "products", r.productId))}</td><td>${e(batch)}${r.kind === "unit" ? `<small>${num(r.qty)} ${e(r.unit)}</small>` : ""}</td>${bo ? `<td>${money(r.price)} / ${e(r.unit)}</td>` : ""}</tr>`;
       }),
-    )}<p><b>${o.items.length} butir · ${num(o.items.reduce((n, x) => n + x.grams, 0) / 1000)} kg tersimpan</b></p>${packing ? '<div class="supply-scan"><input data-outbound-code aria-label="Scan barcode pengiriman" placeholder="Scan barcode barang yang disiapkan" maxlength="26" autocomplete="off"><button type="button" data-outbound-add>Simpan scan</button></div><p class="muted">Scan tersimpan otomatis. Dokumen ini dapat ditutup dan dilanjutkan dari daftar pengiriman.</p>' : ""}<div class="toolbar">${bo && ["packing", "ready"].includes(o.status) ? '<button type="button" data-outbound-edit>Edit dokumen & harga</button>' : ""}${bo && o.status === "ready" ? '<button type="button" data-outbound-repack>Buka ulang penyiapan</button><button type="button" class="primary" data-outbound-issue>Terbitkan invoice & surat jalan</button>' : ""}${packing ? '<button type="button" class="primary" data-outbound-ready>Selesai scan penyiapan</button>' : ""}${!bo && o.status === "approved" ? '<button type="button" class="primary" data-outbound-dispatch>Konfirmasi barang dikirim</button>' : ""}${bo && o.invoiceNo && balance.remaining > 0 && o.status !== "cancelled" ? '<button type="button" data-outbound-pay>Catat pembayaran</button>' : ""}${bo && ["packing", "ready", "approved"].includes(o.status) && !o.paid ? '<button type="button" data-outbound-cancel>Batalkan dokumen</button>' : ""}${o.invoiceNo ? `${bo ? '<button type="button" data-outbound-print="invoice">Cetak invoice</button>' : ""}<button type="button" data-outbound-print="delivery">Cetak surat jalan</button>` : ""}</div><details open><summary>Barcode dalam dokumen</summary>${table(
-      ["Barcode", "Produk", "Berat", ...(packing ? ["Aksi"] : [])],
-      o.items.map(
-        (i) =>
-          `<tr><td><code>${e(i.barcode)}</code></td><td>${e(name(ctx.getState(), "products", i.productId))}</td><td>${num(i.grams / 1000)} kg</td>${packing ? `<td><button type="button" data-outbound-remove="${e(i.barcode)}">Hapus</button></td>` : ""}</tr>`,
-      ),
-    )}</details>${
+    )}<p><b>${outboundContents(o)}</b></p>${packing && hasFruit ? '<div class="supply-scan"><input data-outbound-code aria-label="Scan barcode pengiriman" placeholder="Scan barcode barang yang disiapkan" maxlength="26" autocomplete="off"><button type="button" data-outbound-add>Simpan scan</button></div><p class="muted">Scan tersimpan otomatis. Dokumen ini dapat ditutup dan dilanjutkan dari daftar pengiriman.</p>' : ""}<div class="toolbar">${bo && ["packing", "ready"].includes(o.status) ? '<button type="button" data-outbound-edit>Edit dokumen & harga</button>' : ""}${bo && o.status === "ready" ? '<button type="button" data-outbound-repack>Buka ulang penyiapan</button><button type="button" class="primary" data-outbound-issue>Terbitkan invoice & surat jalan</button>' : ""}${packing ? '<button type="button" class="primary" data-outbound-ready>Selesaikan penyiapan</button>' : ""}${!bo && o.status === "approved" ? '<button type="button" class="primary" data-outbound-dispatch>Konfirmasi barang dikirim</button>' : ""}${bo && o.invoiceNo && balance.remaining > 0 && o.status !== "cancelled" ? '<button type="button" data-outbound-pay>Catat pembayaran</button>' : ""}${bo && ["packing", "ready", "approved"].includes(o.status) && !o.paid ? '<button type="button" data-outbound-cancel>Batalkan dokumen</button>' : ""}${o.invoiceNo ? `${bo ? '<button type="button" data-outbound-print="invoice">Cetak invoice</button>' : ""}<button type="button" data-outbound-print="delivery">Cetak surat jalan</button>` : ""}</div>${
+      hasFruit
+        ? `<details open><summary>Barcode dalam dokumen</summary>${table(
+            ["Barcode", "Produk", "Berat", ...(packing ? ["Aksi"] : [])],
+            o.items.map(
+              (i) =>
+                `<tr><td><code>${e(i.barcode)}</code></td><td>${e(name(ctx.getState(), "products", i.productId))}</td><td>${num(i.grams / 1000)} kg</td>${packing ? `<td><button type="button" data-outbound-remove="${e(i.barcode)}">Hapus</button></td>` : ""}</tr>`,
+            ),
+          )}</details>`
+        : ""
+    }${
       bo && o.payments?.length
         ? `<h3>Riwayat pembayaran</h3>${table(
             ["Tanggal", "Jumlah", "Metode / referensi", "Dicatat oleh"],
@@ -439,6 +519,29 @@ export function openOutbound(s, oid, ctx) {
             perform("outbound_scan_remove", { barcode: b.dataset.outboundRemove })),
       );
     body.querySelector("[data-outbound-ready]")?.addEventListener("click", () => {
+      if (units.length) {
+        confirmForm(
+          "outbound_ready",
+          "Periksa jumlah fisik",
+          units
+            .map((r) =>
+              field(
+                `${name(s, "products", r.productId)} · batch ${r.sourceLotId.slice(0, 8)} · ${num(r.qty)} ${r.unit}`,
+                `<input type="number" data-packed-lot="${e(r.sourceLotId)}" min="0.000001" step="any" required placeholder="Jumlah yang disiapkan">`,
+              ),
+            )
+            .join(""),
+          (f) => ({
+            unitCounts: Object.fromEntries(
+              Array.from(f.querySelectorAll("[data-packed-lot]"), (el) => [
+                el.dataset.packedLot,
+                el.value,
+              ]),
+            ),
+          }),
+        );
+        return;
+      }
       if (confirm("Semua barcode untuk pengiriman ini sudah lengkap?"))
         perform("outbound_ready");
     });
@@ -461,7 +564,7 @@ export function openOutbound(s, oid, ctx) {
       confirmForm(
         "outbound_issue",
         "Terbitkan dokumen",
-        `<p>Total ${money(o.total)}. Harga dan daftar barcode akan dikunci.</p>${o.paymentMode === "paid" ? paymentFields() : "<p>Pembayaran: Pending payment. Pelunasan dicatat terpisah setelah uang diterima.</p>"}`,
+        `<p>Total ${money(o.total)}. Harga dan rincian barang akan dikunci.</p>${o.paymentMode === "paid" ? paymentFields() : "<p>Pembayaran: Pending payment. Pelunasan dicatat terpisah setelah uang diterima.</p>"}`,
         (f) =>
           o.paymentMode === "paid"
             ? {

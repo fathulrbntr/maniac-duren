@@ -239,3 +239,20 @@ sesudah SQL dan frontend terpasang.
   tercatat pada transaksi pengeluaran. Transaksi historis mempertahankan sumber dana awal.
 - Ekstrak patch di folder proyek dan jalankan `.\scripts\windows\push-patch-130.cmd`
   dari PowerShell untuk verifikasi, commit dan push.
+
+### Patch 131 · Transfer barang nonbuah ke toko
+
+Back Office dapat memasukkan buah dan barang nonbuah dalam satu dokumen
+**Pengiriman & Tagihan → Transaksi barang keluar → Transfer ke toko Maniac Duren**.
+Pilih produk dan batch gudang. Form menampilkan modal dan sisa batch. Untuk nonbuah,
+isi jumlah kirim dan harga per satuan stok. Dokumen aktif mencadangkan jumlah itu.
+
+Gudang memindai barcode buah dan memasukkan jumlah fisik nonbuah per batch saat
+menyelesaikan penyiapan. Setelah invoice dan surat jalan terbit, konfirmasi kirim
+mengurangi stok gudang. Toko memeriksa setiap baris saat penerimaan lengkap.
+Batch tujuan menyimpan referensi batch asal, supplier, kedaluwarsa, modal supplier,
+dan harga transfer sebagai modal toko.
+
+Pasang setelah patch 130. Jalankan `database/outbound-units-131.sql` di Supabase SQL Editor
+atau gunakan migrasi yang sesuai. Ekstrak ZIP di folder proyek. Untuk verifikasi, commit,
+dan push dari PowerShell, jalankan `.\scripts\windows\push-patch-131.cmd`.

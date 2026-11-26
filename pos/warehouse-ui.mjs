@@ -339,7 +339,7 @@ export function transfersPage(s, store, incoming = false, space) {
     (s.transfers || []).some((t) => t.targetId === store && t.status === "received")
       ? storeStockActions(s.access)
       : "";
-  return `<section class="supply-workspace">${blocker(s)}<div class="supply-hero"><div><span class="supply-eyebrow">${incoming ? "PENERIMAAN TOKO" : "DISTRIBUSI GUDANG"}</span><h2>${incoming ? "Periksa kiriman masuk" : "Pengiriman & tagihan"}</h2><p>${incoming ? "Scan kiriman sesuai surat jalan, lalu konfirmasi penerimaan lengkap agar barang masuk stok toko." : "Setiap kiriman memiliki invoice, surat jalan, dan jejak barcode."}</p></div><div class="toolbar"><button type="button" data-supply-refresh>Perbarui</button>${canSend ? '<button type="button" class="primary" data-transfer-new>+ Buat pengiriman</button>' : ""}</div></div><div class="supply-filters"><input type="search" data-transfer-search placeholder="Cari nomor surat jalan, invoice, atau toko…" aria-label="Cari kiriman"><select data-transfer-filter aria-label="Status kiriman"><option value="">Semua status</option>${Object.entries(
+  return `<section class="supply-workspace">${blocker(s)}<div class="supply-hero"><div><span class="supply-eyebrow">${incoming ? "PENERIMAAN TOKO" : "DISTRIBUSI GUDANG"}</span><h2>${incoming ? "Periksa kiriman masuk" : "Pengiriman & tagihan"}</h2><p>${incoming ? "Scan barcode buah dan cocokkan jumlah barang nonbuah per batch dengan surat jalan." : "Setiap kiriman memiliki invoice, surat jalan, dan jejak barcode."}</p></div><div class="toolbar"><button type="button" data-supply-refresh>Perbarui</button>${canSend ? '<button type="button" class="primary" data-transfer-new>+ Buat pengiriman</button>' : ""}</div></div><div class="supply-filters"><input type="search" data-transfer-search placeholder="Cari nomor surat jalan, invoice, atau toko…" aria-label="Cari kiriman"><select data-transfer-filter aria-label="Status kiriman"><option value="">Semua status</option>${Object.entries(
     transferStatus,
   )
     .map(
@@ -592,19 +592,19 @@ function openTransfer(s, t, ctx, receiving) {
     scanned = t.items.filter((i) => i.scannedAt).length;
   const d = ctx.modal(
     t.deliveryNo,
-    `<div class="supply-detail-head"><div><h3>${e(t.origin.name)} → ${e(t.destination.name)}</h3><p>${e(t.invoiceNo)} · ${e(t.carrier)}</p></div>${badge(t)}</div><div class="toolbar">${finance ? '<button type="button" data-print-invoice>Cetak invoice</button>' : ""}<button type="button" data-print-delivery>Cetak surat jalan</button></div><div class="supply-stats">${finance ? stat("Total tagihan", money(t.total)) + stat("Sisa tagihan", money(t.total - t.paid)) : ""}${stat("Barcode cocok", scanned + " / " + t.items.length)}</div>${table(
+    `<div class="supply-detail-head"><div><h3>${e(t.origin.name)} → ${e(t.destination.name)}</h3><p>${e(t.invoiceNo)} · ${e(t.carrier)}</p></div>${badge(t)}</div><div class="toolbar">${finance ? '<button type="button" data-print-invoice>Cetak invoice</button>' : ""}<button type="button" data-print-delivery>Cetak surat jalan</button></div><div class="supply-stats">${finance ? stat("Total tagihan", money(t.total)) + stat("Sisa tagihan", money(t.total - t.paid)) : ""}${t.items.length ? stat("Barcode cocok", scanned + " / " + t.items.length) : ""}</div>${table(
       ["Barang / batch", "Jumlah", ...(finance ? ["Harga transfer", "Total"] : [])],
       t.lines.map(
         (l) =>
           `<tr><td>${e(l.productName)}<small>${e(l.supplierName || "—")} · ${e(l.sourceLotId.slice(0, 8))}</small></td><td>${l.kind === "fruit" ? num(l.kg) + " kg / " + l.pieces + " butir" : num(l.qty) + " " + e(l.unit)}</td>${finance ? `<td>${money(l.price)} / ${e(l.unit)}</td><td>${money(l.total)}</td>` : ""}</tr>`,
       ),
-    )}${canReceive ? `<div class="supply-step"><b>1</b><span>Scan ulang barang yang tiba</span></div><div class="supply-scan"><input data-receive-code maxlength="26" autocomplete="off" spellcheck="false" placeholder="Scan barcode penerimaan" aria-label="Scan barcode penerimaan"><button type="button" data-receive-add>Catat scan</button></div><p data-receive-message role="status"></p><p class="notice">Scan tersimpan di server. Seluruh kiriman tetap dalam perjalanan sampai barcode lengkap dan penerimaan dikonfirmasi.</p>` : ""}<div data-receive-list>${receiptItems(t)}</div>${
+    )}${canReceive && t.items.length ? `<div class="supply-step"><b>1</b><span>Scan ulang barang yang tiba</span></div><div class="supply-scan"><input data-receive-code maxlength="26" autocomplete="off" spellcheck="false" placeholder="Scan barcode penerimaan" aria-label="Scan barcode penerimaan"><button type="button" data-receive-add>Catat scan</button></div><p data-receive-message role="status"></p><p class="notice">Scan tersimpan di server. Seluruh kiriman tetap dalam perjalanan sampai barcode lengkap dan penerimaan dikonfirmasi.</p>` : ""}<div data-receive-list>${t.items.length ? receiptItems(t) : ""}</div>${
       canReceive && t.lines.some((l) => l.kind === "unit")
         ? `<h3>Periksa jumlah barang satuan</h3>${t.lines
             .filter((l) => l.kind === "unit")
             .map((l) =>
               field(
-                `${l.productName} — dikirim ${num(l.qty)} ${l.unit}`,
+                `${l.productName} · batch ${l.sourceLotId.slice(0, 8)} · dikirim ${num(l.qty)} ${l.unit}`,
                 `<input type="number" min="0" step="any" data-receive-unit="${e(l.sourceLotId)}" required placeholder="Jumlah fisik diterima">`,
               ),
             )
@@ -666,7 +666,7 @@ function openTransfer(s, t, ctx, receiving) {
       readyBarcodeInput(input);
     }
   };
-  if (canReceive) {
+  if (canReceive && t.items.length) {
     prepareBarcodeInput(d.querySelector("[data-receive-code]"));
     d.querySelector("[data-receive-add]").onclick = scan;
     d.querySelector("[data-receive-code]").onkeydown = (ev) => {

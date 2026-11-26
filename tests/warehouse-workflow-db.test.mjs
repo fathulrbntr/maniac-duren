@@ -494,6 +494,7 @@ try {
     "cash-flow-127",
     "cashier-expenses-128",
     "petty-cash-130",
+    "outbound-units-131",
   ]) {
     await db.exec(fs.readFileSync("database/" + patch + ".sql", "utf8"));
   }
