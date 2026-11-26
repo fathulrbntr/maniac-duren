@@ -584,6 +584,16 @@ input[type="radio"] {
   padding: 12px;
   border-radius: 12px;
 }
+.sidebar .nav[data-workspace-nav="store"] .nav-section {
+  margin-bottom: 10px;
+}
+.sidebar .nav[data-workspace-nav="store"] .nav-items {
+  gap: 2px;
+}
+.sidebar .nav[data-workspace-nav="store"] .nav-item {
+  min-height: 44px;
+  padding-block: 9px;
+}
 .sidebar .nav .nav-item.active {
   box-shadow: none;
 }

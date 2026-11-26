@@ -66,7 +66,12 @@ export function createSessionManager({
             typeof location.store === "string" &&
             typeof location.view === "string"
           )
-            memory = { ...memory, store: location.store, view: location.view };
+            memory = {
+              ...memory,
+              store: location.store,
+              view: location.view,
+              workspace: location.workspace || "",
+            };
         }
       } catch {
         persistent = false;
@@ -125,20 +130,29 @@ export function createSessionManager({
       expiresAt: now() + Number(data.expires_in) * 1000,
       store: previous?.store || "",
       view: previous?.view || "",
+      workspace: previous?.workspace || "",
     };
   }
   function save(data) {
     return write(fromResponse(data));
   }
-  function location(expectedId, store, view) {
+  function location(expectedId, store, view, workspace = "") {
     const current = read();
     if (current?.sessionId !== expectedId) return;
-    if (current.store === store && current.view === view) return;
+    if (
+      current.store === store &&
+      current.view === view &&
+      current.workspace === workspace
+    )
+      return;
     // UI preference writes must never overwrite credentials rotated in another tab.
-    memory = { ...current, store, view };
+    memory = { ...current, store, view, workspace };
     if (persistent) {
       try {
-        storage.setItem(locationKey(expectedId), JSON.stringify({ store, view }));
+        storage.setItem(
+          locationKey(expectedId),
+          JSON.stringify({ store, view, workspace }),
+        );
       } catch {
         persistent = false;
       }

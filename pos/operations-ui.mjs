@@ -28,6 +28,7 @@ import { employeesPage, bindEmployees } from "./employees-ui.mjs";
 import { checkOrder } from "./order-stock.mjs";
 import { fruitSaleDialog } from "./fruit-sale-dialog.mjs";
 import { orderMargins } from "./finance.mjs";
+import { transactions } from "./reports.mjs";
 import { escape as e, id, today, num, money } from "./core.mjs";
 export const opsPages = [
   "devices",
@@ -161,8 +162,10 @@ export function opsPage(view, s, store) {
   if (view === "salesreport")
     html =
       header(
-        "Laporan seluruh penjualan",
-        "Penjualan pesanan dan riwayat transaksi buah lama. Pesanan belum dibayar tidak dihitung.",
+        "Penjualan",
+        allowed(s, "reports")
+          ? "Riwayat transaksi lunas di cabang aktif."
+          : "Riwayat transaksi lunas yang Anda layani di cabang aktif.",
       ) +
       `<section class="panel"><div class="form-grid">${field("Dari", input("reportFrom", "date", `id="sales-from" value="${today().slice(0, 8)}01"`))}${field("Sampai", input("reportTo", "date", `id="sales-to" value="${today()}"`))}</div><div id="sales-result"></div></section>`;
   if (view === "trace")
@@ -550,49 +553,27 @@ export function bindOps(view, s, store, ctx) {
     renderTrace();
   }
   if (view === "salesreport") {
+    const canReadAll = allowed(s, "reports");
+    const visibleCashier = (row) => canReadAll || (s.me?.id && row.cashierId === s.me.id);
+    const orders = (s.orders || []).filter((o) => o.store_id === store);
+    const orderIds = new Set(orders.map((o) => o.id));
+    const sales = transactions({
+      ...s,
+      orders: orders.filter(visibleCashier),
+      sales: (s.sales || []).filter(
+        (r) => r.storeId === store && !orderIds.has(r.id) && visibleCashier(r),
+      ),
+    }).sort((a, b) => b.date.localeCompare(a.date));
     const draw = () => {
       const from = document.querySelector("#sales-from").value,
         to = document.querySelector("#sales-to").value;
-      const rows = [
-        ...(s.orders || [])
-          .filter((o) => o.store_id === store && isPaid(o))
-          .map((o) => ({
-            id: o.id,
-            date: o.paid_date,
-            total: o.total,
-            payment: o.payment,
-            items: o.lines
-              .map((l) => l.name + " × " + num(l.qty) + " " + l.unit)
-              .join(", "),
-          })),
-        ...(s.sales || [])
-          .filter((o) => o.storeId === store && !o.voided)
-          .map((o) => ({
-            id: o.id,
-            date: o.date,
-            total: o.total,
-            payment: o.payment,
-            items: o.lines
-              .map(
-                (l) =>
-                  nm(s, "products", l.productId) +
-                  " · " +
-                  num(l.kg) +
-                  " kg / " +
-                  l.pieces +
-                  " butir",
-              )
-              .join(", "),
-          })),
-      ]
-        .filter((o) => o.date >= from && o.date <= to)
-        .sort((a, b) => b.date.localeCompare(a.date));
+      const rows = sales.filter((o) => o.date >= from && o.date <= to);
       document.querySelector("#sales-result").innerHTML =
         `<div class="stats"><div class="stat"><small>Omzet</small><strong>${money(rows.reduce((a, x) => a + x.total, 0))}</strong></div><div class="stat"><small>Transaksi lunas</small><strong>${rows.length}</strong></div></div>${table(
           ["Tanggal / struk", "Item", "Pembayaran", "Total"],
           rows.map(
             (o) =>
-              `<tr><td>${e(o.date)}<small>${e(o.id.slice(0, 8))}</small></td><td>${e(o.items)}</td><td>${e(o.payment)}</td><td>${money(o.total)}</td></tr>`,
+              `<tr><td>${e(o.date)}<small>${e(o.id.slice(0, 8))}</small></td><td>${o.lines.map((l) => `${e(l.name)} × ${num(l.qty)} ${e(l.unit)}`).join("<br>")}</td><td>${e(o.payment)}</td><td>${money(o.total)}</td></tr>`,
           ),
         )}`;
     };

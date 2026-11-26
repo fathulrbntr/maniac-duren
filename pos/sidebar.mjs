@@ -13,21 +13,9 @@ export function createSidebarController(root = document, viewport = window) {
   let collapsed = saved.collapsed !== false,
     mobileOpen = false,
     scroll = 0;
-  const closedGroups = {};
-  for (const group of [
-    "utama",
-    "inventory",
-    "produksi",
-    "pelayanan",
-    "potong",
-    "kitchen",
-    "laporan",
-    "manajemen",
-    "pengaturan",
-    "bantuan",
-  ]) {
-    if (saved.groups?.[group] === true) closedGroups[group] = true;
-  }
+  const closedGroups = Object.fromEntries(
+    Object.entries(saved.groups || {}).filter(([, closed]) => closed === true),
+  );
   const media = viewport.matchMedia?.("(max-width: 900px)");
   const mobile = () => !!media?.matches;
   let appliedMobile = mobile();

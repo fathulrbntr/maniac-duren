@@ -18,6 +18,18 @@ export function defaultSpace(s) {
       ? "warehouse"
       : "store";
 }
+// Branch terminology applies only in the Toko workspace.
+export const storePageTitles = {
+  storehome: "Dashboard",
+  receiving: "Penerimaan Barang",
+  stock: "Inventory",
+  waste: "Reject",
+  orders: "POS",
+  salesreport: "Penjualan",
+  production: "Produksi",
+  cutting: "Pemeriksaan Buah",
+};
+
 export function workspaceGroups(a) {
   const all = a.backoffice,
     groups =
@@ -67,21 +79,21 @@ export function workspaceGroups(a) {
               },
             ]
           : [
+              { id: "store", label: "Toko", pages: ["storehome"], standalone: true },
               {
-                id: "store",
-                label: "Operasional toko",
-                pages: ["storehome", "receiving", "stock"],
+                id: "store_stock",
+                label: "Stok & Penerimaan",
+                pages: ["receiving", "stock", "waste"],
               },
               {
                 id: "cashier",
                 label: "Kasir",
-                pages: ["shifts", "orders", "storeExpenses"],
+                pages: ["orders", "salesreport", "storeExpenses", "shifts"],
               },
-              { id: "store_reject", label: "Reject toko", pages: ["waste"] },
-              { id: "service", label: "Waitress", pages: ["service"] },
               { id: "kitchen", label: "Kitchen", pages: ["kitchen", "production"] },
-              { id: "cutter", label: "Tukang potong", pages: ["cutting"] },
-              { id: "store_reports", label: "Laporan toko", pages: ["reports"] },
+              { id: "service", label: "Waiters", pages: ["service"] },
+              { id: "cutter", label: "Tukang Potong", pages: ["cutting"] },
+              { id: "store_reports", label: "Manajemen Toko", pages: ["reports"] },
             ];
   const allowed = {
     backoffice: all,
@@ -97,6 +109,7 @@ export function workspaceGroups(a) {
     stock: a.stock || a.produce || a.receive,
     shifts: a.sell,
     orders: a.sell,
+    salesreport: a.sell || a.reports,
     storeExpenses: a.sell && a.cashierExpenses,
     kitchen: a.kitchen,
     production: a.produce,

@@ -11,9 +11,10 @@ import {
 } from "../pos/retry.mjs";
 const a = { workspace: "store", sell: true, cashierExpenses: true };
 assert.deepEqual(visibleSections(a).find((g) => g.id === "cashier").pages, [
-  "shifts",
   "orders",
+  "salesreport",
   "storeExpenses",
+  "shifts",
 ]);
 for (const change of [
   { sell: false },

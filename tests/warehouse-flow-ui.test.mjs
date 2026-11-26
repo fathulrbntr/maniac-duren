@@ -350,7 +350,7 @@ assert.deepEqual(
 const storeGroups = workspaceGroups({ workspace: "store", ...storeAccess });
 assert.deepEqual(
   storeGroups.filter((g) => g.pages.includes("waste")).map((g) => g.label),
-  ["Reject toko"],
+  ["Stok & Penerimaan"],
 );
 const cutter = workspaceGroups({
   workspace: "store",

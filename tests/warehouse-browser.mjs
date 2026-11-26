@@ -165,7 +165,7 @@ try {
     await openSidebar(page);
     const b = page.locator(`#pos-navigation [data-view="${name}"]`);
     const group = b.locator("xpath=ancestor::details");
-    if ((await group.getAttribute("open")) === null)
+    if ((await group.count()) && (await group.getAttribute("open")) === null)
       await group.locator("summary").click();
     await b.click();
   };
@@ -222,6 +222,19 @@ try {
   await login("cashier");
   assert.equal(await page.locator(".nav-item[data-view=pricing]").count(), 0);
   assert.equal(await page.locator(".nav-item[data-view=products]").count(), 0);
+  await nav("salesreport");
+  await page.locator('.shell[data-page="salesreport"] #sales-result').waitFor();
+  assert.equal(
+    await page.locator('#pos-navigation [aria-current="page"]').innerText(),
+    "Penjualan",
+  );
+  await page.reload();
+  await page.locator('.shell[data-page="salesreport"] #sales-result').waitFor();
+  await nav("storehome");
+  assert.equal(
+    await page.locator('#pos-navigation [data-view="storehome"]').getAttribute("title"),
+    "Dashboard",
+  );
   await nav("receiving");
   await page.locator("[data-transfer-search]").fill("SJ-ARN");
   await page.locator("[data-transfer]").click();

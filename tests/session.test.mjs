@@ -34,7 +34,7 @@ test("refresh survives a new page; only tokens, user ID and location are persist
     calls = 0;
   const first = fixture({ storage: disk, now: () => now });
   const saved = first.save(data());
-  first.location(saved.sessionId, "B", "reports");
+  first.location(saved.sessionId, "B", "reports", "store");
   assert(!disk.getItem(first.storageKey).includes("never-store-this"));
   const next = fixture({
     storage: disk,
@@ -53,6 +53,7 @@ test("refresh survives a new page; only tokens, user ID and location are persist
   assert.equal(calls, 1);
   assert.equal(next.read().store, "B");
   assert.equal(next.read().view, "reports");
+  assert.equal(next.read().workspace, "store");
   assert.equal(fixture({ storage: disk }).read().refreshToken, "refresh-2");
 });
 

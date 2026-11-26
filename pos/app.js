@@ -14,7 +14,7 @@ import {
   openDispatch,
   openWarehouseReceipt,
 } from "./warehouse-ui.mjs";
-import { spacesFor, spaceTitles, defaultSpace } from "./workspaces.mjs";
+import { spacesFor, spaceTitles, defaultSpace, storePageTitles } from "./workspaces.mjs";
 import { resetCustomerDisplay } from "./customer-display-channel.mjs";
 import { openFruitTransfer } from "./fruit-transfer-ui.mjs";
 import { crmPage, bindCrm, memberFields, bindMemberPicker } from "./crm-ui.mjs";
@@ -548,12 +548,8 @@ async function restoreSession() {
   try {
     await refresh();
     if (activeSessionId !== saved.sessionId) return;
-    const allowed = visibleSections({
-      ...state.access,
-      cashierExpenses: state.cashierExpenseVersion >= 128 && !state.stockDemo,
-      cashierOwner: state.me?.role === "owner",
-      crmAdmin: ["owner", "manager"].includes(state.me?.role),
-    }).flatMap((group) => group.pages);
+    if (spacesFor(state).includes(saved.workspace)) workspace = saved.workspace;
+    const allowed = visibleSections(workspaceAccess()).flatMap((group) => group.pages);
     view = allowed.includes(saved.view) ? saved.view : defaultView();
     render();
   } catch (error) {
@@ -735,6 +731,9 @@ function accountProfile() {
   return `<div class="account-profile" aria-label="Akun yang login">${photo ? `<img src="${e(photo)}" alt="Foto ${e(accountName)}">` : `<span class="account-avatar" aria-hidden="true">${e(initials)}</span>`}<div><strong>${e(accountName)}</strong><span>${e(role)}</span></div></div>`;
 }
 function shell(body) {
+  const access = workspaceAccess();
+  const pageTitles =
+    access.workspace === "store" ? { ...title, ...storePageTitles } : title;
   const activeLocation = state.stores.find((x) => x.id === store),
     activeIcon = activeLocation?.locationType === "warehouse" ? "warehouse" : "stores";
   const selectableLocations =
@@ -753,11 +752,11 @@ function shell(body) {
         <div class="sidebar-brand-row"><div class="brand"><img src="/assets/logo.png" alt=""><div><strong>Maniac Duren</strong><span>Operasional outlet</span></div></div><button type="button" class="sidebar-toggle" data-sidebar-toggle aria-controls="pos-sidebar" aria-label="Tutup sidebar">${sidebarIcon}</button></div>
         ${workspaceSwitch()}<div class="sidebar-store"><label for="active-store">Lokasi aktif</label><div class="store-select-wrap">${icon(activeIcon)}<select id="active-store" aria-label="Lokasi aktif: branch outlet atau gudang" title="${e(locationLabel(activeLocation))}">${locationOptions(selectableLocations, store)}</select></div></div>
       </div>
-      <nav class="nav" id="pos-navigation" aria-label="Navigasi POS">${navigation(title, view, icon, workspaceAccess(), sidebar.closedGroups)}</nav>
+      <nav class="nav" id="pos-navigation" data-workspace-nav="${e(access.workspace || "")}" aria-label="Navigasi POS">${navigation(pageTitles, view, icon, access, sidebar.closedGroups)}</nav>
       <div class="sidebar-account">${accountProfile()}<button id="logout" class="sidebar-logout" type="button" aria-label="Logout" title="Logout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 4H4v16h5M14 8l4 4-4 4M8 12h10"/></svg><span>Logout</span></button></div>
     </aside>
     <button type="button" class="sidebar-backdrop" data-sidebar-close tabindex="-1" aria-label="Tutup sidebar"></button>
-    <main id="pos-main"><header class="topbar"><div class="workspace-heading"><button id="sidebar-toggle" type="button" class="sidebar-toggle" data-sidebar-toggle aria-controls="pos-sidebar" aria-label="Buka sidebar">${sidebarIcon}</button><div class="workspace-title"><span class="workspace-breadcrumb">${view === "orders" ? "Maniac Duren · Kasir" : "Maniac Duren · " + e(title[view] || "Maniac Duren")}</span><h1>${view === "orders" ? `Selamat datang, <span>${e((state.me?.name || "Kasir").trim().split(/\s+/)[0])}</span>` : e(title[view] || "Maniac Duren")}</h1></div></div><div class="workspace-tools">${installButton()}<span class="workspace-outlet" title="${e(locationLabel(activeLocation))}">${icon(activeIcon)}<span>${e(locationLabel(activeLocation))}</span></span><button type="button" id="stock-demo-toggle" class="stock-demo-toggle" role="switch" aria-label="Mode demo" aria-checked="${mode === "stock-demo"}"><span class="stock-demo-track" aria-hidden="true"></span>Mode demo</button>${themeButton()}</div></header><div class="workspace-content">${mode === "stock-demo" ? '<aside class="stock-demo-banner" role="status"><div><b>MODE DEMO · Stok awal 100</b><p>Data uji hanya di tab ini. Semua penyimpanan demo terpisah dari database asli. Harga jual demo Rp150.000 per satuan; resep mengikuti master.</p><small>Buah: 100 kg + 100 butir. Bahan / produk stok: 100 sesuai satuannya. ${e(itemTypes.recipe)} mengikuti bahan.</small></div><button type="button" id="stock-demo-reset">Reset demo</button></aside>' : ""}${body}<p class="page-foot">Maniac Duren · ${e(locationLabel(activeLocation))}</p></div>${systemDock(view, workspaceAccess())}</main>
+    <main id="pos-main"><header class="topbar"><div class="workspace-heading"><button id="sidebar-toggle" type="button" class="sidebar-toggle" data-sidebar-toggle aria-controls="pos-sidebar" aria-label="Buka sidebar">${sidebarIcon}</button><div class="workspace-title"><span class="workspace-breadcrumb">${view === "orders" ? "Maniac Duren · Kasir" : "Maniac Duren · " + e(pageTitles[view] || "Maniac Duren")}</span><h1>${view === "orders" ? `Selamat datang, <span>${e((state.me?.name || "Kasir").trim().split(/\s+/)[0])}</span>` : e(pageTitles[view] || "Maniac Duren")}</h1></div></div><div class="workspace-tools">${installButton()}<span class="workspace-outlet" title="${e(locationLabel(activeLocation))}">${icon(activeIcon)}<span>${e(locationLabel(activeLocation))}</span></span><button type="button" id="stock-demo-toggle" class="stock-demo-toggle" role="switch" aria-label="Mode demo" aria-checked="${mode === "stock-demo"}"><span class="stock-demo-track" aria-hidden="true"></span>Mode demo</button>${themeButton()}</div></header><div class="workspace-content">${mode === "stock-demo" ? '<aside class="stock-demo-banner" role="status"><div><b>MODE DEMO · Stok awal 100</b><p>Data uji hanya di tab ini. Semua penyimpanan demo terpisah dari database asli. Harga jual demo Rp150.000 per satuan; resep mengikuti master.</p><small>Buah: 100 kg + 100 butir. Bahan / produk stok: 100 sesuai satuannya. ${e(itemTypes.recipe)} mengikuti bahan.</small></div><button type="button" id="stock-demo-reset">Reset demo</button></aside>' : ""}${body}<p class="page-foot">Maniac Duren · ${e(locationLabel(activeLocation))}</p></div>${systemDock(view, access)}</main>
   </div>`;
 }
 function dashboard() {
@@ -857,7 +856,10 @@ function render() {
     if (!permitted.has(view)) view = workspace === "store" ? "storehome" : workspace;
   }
 
-  if (["salesreport", "finance", "batches", "trace"].includes(view)) {
+  if (
+    ["finance", "batches", "trace"].includes(view) ||
+    (view === "salesreport" && workspaceAccess().workspace !== "store")
+  ) {
     selectReportTab(
       {
         salesreport: "summary",
@@ -871,7 +873,7 @@ function render() {
     );
     view = "reports";
   }
-  sessions?.location(activeSessionId, store, view);
+  sessions?.location(activeSessionId, store, view, workspaceAccess().workspace || "");
   sidebar.capture();
   app.innerHTML = shell(
     {

@@ -201,3 +201,19 @@ untuk tampilan, Excel, dan PDF. Filter dan form sumber dana menggunakan
 untuk Back Office. `database/cashier-expenses-128.sql` menggunakan pencatatan pengeluaran
 yang sama dengan laporan arus kas, membatasi akses per cabang, dan menghubungkan
 pengeluaran tunai ke shift milik kasir bila terbuka.
+
+## Sidebar Toko (129)
+
+Di ruang kerja **Toko**, Dashboard berada di atas. Stok & Penerimaan memuat Penerimaan Barang,
+Inventory, dan Reject. Kasir memuat POS, Penjualan, Pengeluaran Toko, dan Shift Kasir.
+Kitchen memuat Kitchen Display dan Produksi. Menu Pelayanan Meja dan Pemeriksaan Buah
+berada di divisi masing-masing. Laporan berada di Manajemen Toko.
+
+`pos/workspaces.mjs` mengatur urutan dan judul menu cabang. `pos/navigation.mjs`
+merender menu yang diizinkan. `pos/operations-ui.mjs` menampilkan Penjualan untuk
+cabang aktif dan periode yang dipilih. Kasir melihat transaksi lunas miliknya.
+Akun dengan akses laporan dapat melihat transaksi lunas seluruh kasir di cabang itu.
+
+Ekstrak patch 129 di folder utama proyek setelah patch 128, kemudian jalankan
+`.\scripts\windows\push-patch-129.cmd` dari PowerShell. Patch ini hanya mengubah
+aplikasi dan tes. Skema database tetap menggunakan patch 128.
