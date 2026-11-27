@@ -298,3 +298,5 @@ Klik kartu buah lalu scan atau ketik nomor barcode pada label. Scan label langsu
 Back Office menampilkan seluruh cabang yang tersedia untuk akun pusat. Pilihan **Lokasi aktif** ada di ruang kerja operasional. Kembali ke **Toko** memulihkan cabang operasional yang dipilih. Filter lokasi di Harga Jual, Harga Modal, Inventory dan Laporan hanya berlaku pada halaman tersebut.
 
 Di **Transfer Stok**, daftar surat jalan menampilkan asal dan tujuan. Saat membuat pengiriman, pilih lokasi asal dan toko tujuan pada formulir. Barcode buah, saldo dan alokasi FIFO diperiksa terhadap lokasi asal. Saat membuka nota supplier, pilih cabang penerima. Metode pembayaran dan jam kerja juga menetapkan cabang pada halaman masing-masing.
+
+`pos/branch-notes-ui.mjs` menangani nota estimasi Back Office, penyiapan toko asal, perbandingan aktual, penerbitan surat jalan, dan konfirmasi pengiriman. `database/branch-transfer-notes-135.sql` mengunci barang saat progres disimpan atau diajukan, serta membukukan stok saat dikirim melalui mutasi batch yang sudah ada. Toko tujuan memakai menu **Terima dari cabang** untuk mengonfirmasi penerimaan.

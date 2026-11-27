@@ -6,6 +6,7 @@ import { pricesForBranch } from "./branch-prices.mjs";
 import { prepareBarcodeInput } from "./barcode-scanner.mjs";
 import { supplierDialog, bindSupplierSelect } from "./supplier-ui.mjs";
 import { commitMutation } from "./data/mutations.mjs";
+import { branchPreparationPage } from "./branch-notes-ui.mjs";
 import { supplyActions, location } from "./warehouse-flow.mjs";
 import {
   supplyHome,
@@ -103,6 +104,7 @@ let officePage = "",
 function workspaceAccess() {
   return {
     ...state.access,
+    branchNotes: state.branchNoteVersion >= 135 && !state.stockDemo,
     branchStock: state.branchStockVersion >= 132 && !state.stockDemo,
     legacyOutbound: !!state.outboundOrders?.length,
     pettyCash: state.pettyCashVersion >= 130 && !state.stockDemo,
@@ -226,6 +228,7 @@ const title = {
   warehouse: "Dashboard Gudang",
   storehome: "Dashboard Toko",
   transfers: "Pengiriman & Tagihan",
+  transferPrep: "Siapkan transfer",
   receiving: "Penerimaan Kiriman",
   pricing: "Harga Jual",
   officeInventory: "Inventory",
@@ -314,7 +317,7 @@ const paths = {
   master: "M5 4h14v16H5z M8 8h8 M8 12h8 M8 16h5",
 };
 const icon = (k) =>
-  `<svg class="icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="${paths[k === "legacyTransfers" ? "transfers" : k === "officeInventory" ? "stock" : k] || paths.master}"/></svg>`;
+  `<svg class="icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="${paths[["legacyTransfers", "transferPrep"].includes(k) ? "transfers" : k === "officeInventory" ? "stock" : k] || paths.master}"/></svg>`;
 const name = (kind, k) => state[kind].find((x) => x.id === k)?.name || "—";
 const short = (k) =>
   k.startsWith("demo") ? k.toUpperCase() : k.slice(0, 8).toUpperCase();
@@ -979,6 +982,7 @@ function render() {
     backoffice: () => supplyHome(state, pageStore, "backoffice"),
     warehouse: () => supplyHome(state, pageStore, "warehouse"),
     storehome: () => supplyHome(state, pageStore, "store"),
+    transferPrep: () => branchPreparationPage(state, pageStore),
     transfers: () => transfersPage(state, pageStore, false, workspace),
     receiving: () => transfersPage(state, pageStore, true),
     legacyTransfers: () => outboundPage(state, pageStore, workspace),

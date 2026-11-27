@@ -103,7 +103,13 @@ export function workspaceGroups(a) {
                 id: "store_stock",
                 label: "Stok & Penerimaan",
                 pages: a.branchStock
-                  ? ["supplierNotes", "receiving", "stock", "waste"]
+                  ? [
+                      "supplierNotes",
+                      "receiving",
+                      ...(a.branchNotes ? ["transferPrep"] : []),
+                      "stock",
+                      "waste",
+                    ]
                   : ["receiving", "stock", "waste"],
               },
               {
@@ -128,6 +134,7 @@ export function workspaceGroups(a) {
     warehouse: all || a.stock,
     storehome: true,
     receiving: a.receive,
+    transferPrep: a.stock,
     service: a.serve,
     cutting: a.cut,
     stock: a.stock || a.produce || a.receive,

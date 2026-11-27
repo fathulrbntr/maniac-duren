@@ -111,6 +111,7 @@ for (const [source, migration] of [
   ["branch-sale-prices-123.sql", "20261123190000_branch_sale_prices_123.sql"],
   ["cash-flow-127.sql", "20261126220000_cash_flow_127.sql"],
   ["office-stock-transfers-133.sql", "20261127102631_office_stock_transfers_133.sql"],
+  ["branch-transfer-notes-135.sql", "20261127131647_branch_transfer_notes_135.sql"],
   ["branch-stock-132.sql", "20261127090000_branch_stock_132.sql"],
   ["outbound-units-131.sql", "20261126234500_outbound_units_131.sql"],
   ["petty-cash-130.sql", "20261126233000_petty_cash_130.sql"],

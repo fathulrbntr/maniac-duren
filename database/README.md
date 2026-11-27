@@ -190,3 +190,5 @@ menggunakan izin lokasi masing-masing. Gunakan migrasi CLI terkait atau SQL ini 
 tanpa reset maupun perubahan data stok.
 
 Patch **134** (`supplier-note-cancel-134.sql`) menambahkan pembatalan nota supplier sebelum stok dibukukan. Pasang setelah 133 melalui migrasi CLI terkait atau SQL ini. Nomor nota dapat dipakai kembali untuk supplier yang sama setelah pembatalan. Riwayat pembatalan menyimpan nota asal, alasan, petugas, waktu dan draf penerimaan.
+
+Patch **135** (`branch-transfer-notes-135.sql`) dipasang setelah 134. Back Office menerbitkan nota estimasi, toko asal mengajukan jumlah aktual, lalu Back Office menyetujui dan menerbitkan surat jalan. Pengiriman membukukan mutasi sesuai barcode dan batch FIFO. Penerimaan memakai surat jalan yang sama. Nota dan surat jalan yang sudah terbit sebelum pembaruan dapat diproses melalui riwayatnya.

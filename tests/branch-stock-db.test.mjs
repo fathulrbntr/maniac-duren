@@ -405,6 +405,157 @@ try {
   console.log(
     "PASS 133: supplier to Cikarang 100 fruit + 10 packs, transfer 30 fruit + 3 packs, receipt, location isolation, retries and no invoice.",
   );
+  await db.exec(fs.readFileSync("database/supplier-note-cancel-134.sql", "utf8"));
+  const staged = fs.readFileSync("database/branch-transfer-notes-135.sql", "utf8");
+  await db.exec(staged);
+  await db.exec(staged);
+  await as(office);
+  const create = {
+    id: id(),
+    storeId: origin,
+    toStoreId: target,
+    senderEmployeeId: sender,
+    lines: [
+      { productId: fruit, qty: 12 },
+      { productId: box, qty: 3 },
+    ],
+  };
+  const noteStatus = async () =>
+    (await read()).branchNotes.find((x) => x.id === create.id);
+  const step = (action, rev, extra = {}) =>
+    mut("branch_note_" + action, {
+      id: id(),
+      noteId: create.id,
+      revision: rev,
+      ...extra,
+    });
+  await assert.rejects(mut("transfer_dispatch", { ...send, id: id() }), /nota transfer/i);
+  await mut("branch_note_create", create);
+  await mut("branch_note_create", create);
+  assert.equal((await noteStatus()).deliveryNo, null);
+  await assert.rejects(step("approve", 0), /status/);
+  await as(receiver);
+  assert.equal(await noteStatus(), undefined);
+  await assert.rejects(step("pack", 0, { barcodes: [], quantities: [] }), /akses/i);
+  await as(sender);
+  await assert.rejects(step("approve", 0), /akses/i);
+  await assert.rejects(
+    step("pack", 0, { barcodes: [labels[0]], quantities: [] }),
+    /Barcode/,
+  );
+  await assert.rejects(
+    step("pack", 0, { barcodes: [labels[70], labels[70]], quantities: [] }),
+    /Barcode/,
+  );
+  const pack = {
+    barcodes: labels.slice(70, 75),
+    quantities: [{ productId: box, qty: 2 }],
+  };
+  await assert.rejects(
+    step("pack", 0, { ...pack, quantities: [{ productId: box, qty: 200 }] }),
+    /melebihi stok/,
+  );
+  const beforeShip = (await read()).lots.find((x) => x.id === lot.id).pieces;
+  await step("pack", 0, pack);
+  assert.equal((await noteStatus()).lines.find((x) => x.kind === "fruit").kg, 10);
+  await assert.rejects(
+    q("update md_pos_fruit_units set status=status where barcode=$1", [labels[70]]),
+    /nota transfer/,
+  );
+  await assert.rejects(
+    q("update md_pos_unit_lots set qty=0 where id=$1", [unit.id]),
+    /dipesan/,
+  );
+  await assert.rejects(step("ship", 1), /status/);
+  await as(office);
+  await step("return", 1);
+  await as(sender);
+  await step("pack", 2, pack);
+  await as(office);
+  await assert.rejects(step("approve", 1), /berubah/);
+  await step("approve", 3);
+  const approved = await noteStatus();
+  assert.match(approved.deliveryNo, /^SJ-CBG-/);
+  assert.equal((await read()).lots.find((x) => x.id === lot.id).pieces, beforeShip);
+  await as(sender);
+  const ship = { id: id(), noteId: create.id, revision: 4 };
+  await mut("branch_note_ship", ship);
+  await mut("branch_note_ship", ship);
+  const sent = await noteStatus();
+  assert.equal(sent.transferStatus, "in_transit");
+  assert.equal((await read()).lots.find((x) => x.id === lot.id).pieces, beforeShip - 5);
+  await as(receiver);
+  await mut("transfer_receive", {
+    id: id(),
+    transferId: sent.transferId,
+    deliveryNo: approved.deliveryNo,
+    confirmed: true,
+    fruitCounts: { [lot.id]: 5 },
+    units: [{ lotId: unit.id, qty: 2 }],
+  });
+  await as(office);
+  assert.equal((await noteStatus()).transferStatus, "received");
+  assert.equal(
+    (await read()).transfers.find((t) => t.id === sent.transferId).invoiceNo,
+    null,
+  );
+  const earlierReceipt = id();
+  const previousDay = (await one("select ($1::date-1)::text d", [day])).d;
+  await mut("receipt_plan_save", {
+    ...note,
+    id: earlierReceipt,
+    invoiceNo: "FIFO-135",
+    date: previousDay,
+    lines: [{ productId: box, purchaseCost: 2000, expectedQty: 1 }],
+  });
+  await mut("receipt_quantity", {
+    id: id(),
+    planId: earlierReceipt,
+    expectedSessionRevision: 0,
+    productId: box,
+    qty: 1,
+  });
+  await mut("receipt_finish", {
+    id: id(),
+    planId: earlierReceipt,
+    expectedSessionRevision: 1,
+    confirmed: true,
+  });
+  const earlierLot = (
+    await one("select id from md_pos_unit_lots where receipt_plan_id=$1", [
+      earlierReceipt,
+    ])
+  ).id;
+  const draftId = id(),
+    otherId = id();
+  for (const noteId of [draftId, otherId])
+    await mut("branch_note_create", { ...create, id: noteId });
+  const holds = { barcodes: [labels[85]], quantities: [{ productId: box, qty: 3 }] };
+  const draftPayload = { id: id(), noteId: draftId, revision: 0, ...holds };
+  await as(sender);
+  await mut("branch_note_draft", draftPayload);
+  await mut("branch_note_draft", draftPayload);
+  const saved = (await read()).branchNotes.find((n) => n.id === draftId);
+  assert.equal(saved.status, "packing");
+  assert.deepEqual(
+    saved.lines.filter((l) => l.kind === "unit").map((l) => [l.sourceLotId, l.qty]),
+    [
+      [earlierLot, 1],
+      [unit.id, 2],
+    ],
+  );
+  await assert.rejects(
+    mut("branch_note_pack", { id: id(), noteId: otherId, revision: 0, ...holds }),
+    /Barcode/,
+  );
+  await as(office);
+  await mut("branch_note_cancel", { id: id(), noteId: draftId, revision: 1 });
+  await as(sender);
+  await mut("branch_note_pack", { id: id(), noteId: otherId, revision: 0, ...holds });
+  assert.equal((await read()).branchNotes.find((n) => n.id === otherId).status, "ready");
+  console.log(
+    "PASS 135: estimate, source packing, stock reservations, approval, actual dispatch and destination receipt.",
+  );
 } finally {
   await db.close();
 }

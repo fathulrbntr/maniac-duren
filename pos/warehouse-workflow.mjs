@@ -74,6 +74,10 @@ export function outboundInventory(s, warehouseId, orderId) {
       )
       .flatMap((o) => o.items.map((item) => item.barcode)),
   );
+  const heldNotes = (s.branchNotes || []).filter(
+    (n) => n.id !== orderId && ["packing", "ready", "approved"].includes(n.status),
+  );
+  for (const n of heldNotes) for (const item of n.items) reserved.add(item.barcode);
   const reopened = new Set(
     (s.receiptPlans || [])
       .filter((p) => p.receivedId && p.receiving && p.receiving.status !== "completed")
@@ -107,6 +111,13 @@ export function outboundInventory(s, warehouseId, orderId) {
     .filter((l) => available.has(l.id))
     .map((l) => ({ ...l, available: available.get(l.id) }));
   const unitReserved = new Map();
+  for (const note of heldNotes) {
+    for (const line of note.lines.filter((l) => l.kind === "unit"))
+      unitReserved.set(
+        line.sourceLotId,
+        (unitReserved.get(line.sourceLotId) || 0) + Number(line.qty),
+      );
+  }
   const units = [];
   if (s.outboundBatchVersion >= 131) {
     for (const order of s.outboundOrders || []) {

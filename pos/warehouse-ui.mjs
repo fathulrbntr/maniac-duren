@@ -1,4 +1,9 @@
 import { bindCostPrices } from "./cost-prices-ui.mjs";
+import {
+  bindBranchNotes,
+  branchNoteList,
+  openBranchEstimate,
+} from "./branch-notes-ui.mjs";
 import { openBranchDispatch } from "./branch-dispatch-ui.mjs";
 import { confirmAction } from "../shared/confirmation.mjs";
 import { depositButtons } from "./cash-deposits-ui.mjs";
@@ -107,6 +112,13 @@ function supplyTasks(s, space) {
           "Terima dari cabang",
           "Cocokkan jumlah fisik dengan surat jalan.",
         ),
+      access.stock &&
+        s.branchNoteVersion >= 135 &&
+        action(
+          "transferPrep",
+          "Siapkan transfer",
+          "Buka nota Back Office, siapkan barang, lalu konfirmasi pengiriman.",
+        ),
       storeStockActions(access),
       access.kitchen && action("kitchen", "Kitchen", "Pesanan yang perlu disiapkan."),
       access.serve && action("service", "Pelayanan meja", "Antar pesanan yang siap."),
@@ -128,9 +140,11 @@ function supplyTasks(s, space) {
       action(
         "transfers",
         s.branchStockVersion >= 132 ? "Transfer Stok" : "Transfer toko & wholesale",
-        s.branchStockVersion >= 132
-          ? "Pilih lokasi asal dan cabang tujuan untuk menerbitkan surat jalan."
-          : "Kelola dokumen pengiriman ke toko dan penjualan grosir.",
+        s.branchNoteVersion >= 135
+          ? "Minta toko menyiapkan barang dan setujui hasil aktualnya."
+          : s.branchStockVersion >= 132
+            ? "Pilih lokasi asal dan cabang tujuan untuk menerbitkan surat jalan."
+            : "Kelola dokumen pengiriman ke toko dan penjualan grosir.",
       ),
       s.branchStockVersion >= 132 &&
         action(
@@ -400,6 +414,7 @@ export function transfersPage(s, store, incoming = false, space) {
     (incoming || space === "backoffice" || space === "store");
   if (!branch && workflowReady(s) && !incoming) return outboundPage(s, store, space);
   if (!branch && space === "backoffice" && !store) store = warehouseId(s);
+  const staged = !incoming && space === "backoffice" && s.branchNoteVersion >= 135;
   const canSend =
     warehouseEnabled(s) &&
     !incoming &&
@@ -411,7 +426,7 @@ export function transfersPage(s, store, incoming = false, space) {
     (s.transfers || []).some((t) => t.targetId === store && t.status === "received")
       ? storeStockActions(s.access)
       : "";
-  return `<section class="supply-workspace">${blocker(s)}<div class="supply-hero"><div><span class="supply-eyebrow">${branch ? "MUTASI ANTARCABANG" : incoming ? "PENERIMAAN TOKO" : "DISTRIBUSI GUDANG"}</span><h2>${incoming ? "Periksa kiriman masuk" : branch ? "Kirim ke cabang" : "Pengiriman & tagihan"}</h2><p>${branch ? (incoming ? "Periksa jumlah barang per batch sebelum mengonfirmasi penerimaan." : "Surat jalan seluruh cabang") : incoming ? "Scan barcode buah dan cocokkan jumlah barang nonbuah per batch dengan surat jalan." : "Setiap kiriman memiliki invoice, surat jalan, dan jejak barcode."}</p></div><div class="toolbar"><button type="button" data-supply-refresh>Perbarui</button>${canSend ? '<button type="button" class="primary" data-transfer-new>+ Buat pengiriman</button>' : ""}</div></div><div class="supply-filters"><input type="search" data-transfer-search placeholder="${branch ? "Cari surat jalan atau cabang…" : "Cari nomor surat jalan, invoice, atau toko…"}" aria-label="Cari kiriman"><select data-transfer-filter aria-label="Status kiriman"><option value="">Semua status</option>${Object.entries(
+  return `<section class="supply-workspace">${blocker(s)}<div class="supply-hero"><div><span class="supply-eyebrow">${branch ? "MUTASI ANTARCABANG" : incoming ? "PENERIMAAN TOKO" : "DISTRIBUSI GUDANG"}</span><h2>${incoming ? "Periksa kiriman masuk" : staged ? "Nota transfer antarcabang" : branch ? "Kirim ke cabang" : "Pengiriman & tagihan"}</h2><p>${branch ? (incoming ? "Periksa jumlah barang per batch sebelum mengonfirmasi penerimaan." : staged ? "Buka nota, periksa hasil penyiapan toko, lalu setujui surat jalan." : "Surat jalan seluruh cabang") : incoming ? "Scan barcode buah dan cocokkan jumlah barang nonbuah per batch dengan surat jalan." : "Setiap kiriman memiliki invoice, surat jalan, dan jejak barcode."}</p></div><div class="toolbar"><button type="button" data-supply-refresh>Perbarui</button>${canSend ? `<button type="button" class="primary" data-transfer-new>${staged ? "+ Nota transfer" : "+ Buat pengiriman"}</button>` : ""}</div></div>${staged ? branchNoteList(s) + "<h3>Surat jalan terkirim</h3>" : ""}<div class="supply-filters"><input type="search" data-transfer-search placeholder="${branch ? "Cari surat jalan atau cabang…" : "Cari nomor surat jalan, invoice, atau toko…"}" aria-label="Cari kiriman"><select data-transfer-filter aria-label="Status kiriman"><option value="">Semua status</option>${Object.entries(
     transferStatus,
   )
     .map(
@@ -495,7 +510,9 @@ export function openDispatch(s, store, ctx) {
       ctx.toast("Transfer stok hanya dapat dibuat di Back Office.");
       return;
     }
-    return openBranchDispatch(s, ctx);
+    return s.branchNoteVersion >= 135
+      ? openBranchEstimate(s, ctx)
+      : openBranchDispatch(s, ctx);
   }
   const source = location(s, store);
   if (source?.locationType !== "warehouse") {
@@ -1021,6 +1038,7 @@ export function bindSupply(s, store, view, ctx) {
         (b.onclick = () =>
           openReceivingSession(ctx.getState(), b.dataset.sessionOpen, ctx)),
     );
+  bindBranchNotes(s, store, ctx);
   bindOutboundPage(s, store, ctx);
   document
     .querySelector("[data-outbound-new]")

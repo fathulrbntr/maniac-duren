@@ -10,8 +10,8 @@ import { field, options } from "./supply-session-ui.mjs";
 import { allocateBranchUnits, branchFruit } from "./warehouse-flow.mjs";
 import { outboundInventory } from "./warehouse-workflow.mjs";
 
-const productLabel = (p) => [p.sku, p.name].filter(Boolean).join(" · ");
-function findProduct(products, input) {
+export const productLabel = (p) => [p.sku, p.name].filter(Boolean).join(" · ");
+export function findProduct(products, input) {
   const key = input.trim().toLowerCase();
   if (!key) return;
   const exact = products.find((p) =>
