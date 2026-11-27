@@ -396,18 +396,31 @@ const ctx = {
   );
   legacy.close();
 }
+const viewOnly = openReceivingSession(s, "plan", ctx, true);
+assert.equal(viewOnly.querySelector(".modal-actions"), null);
+viewOnly.close();
 let d = openReceivingSession(s, "plan", ctx);
 assert(d.querySelector("[data-session-code]"));
 assert(!d.textContent.includes("500.000"));
-await d.querySelector("[data-session-pause]").fire("click");
+const footerButtons = () =>
+  d.querySelectorAll(".modal-actions button").map((button) => button.textContent);
+assert.deepEqual(footerButtons(), ["Jeda", "Selesai"]);
+assert(!d.querySelector("[data-receiving-session] [data-session-finish]"));
+await d.querySelector(".modal-actions [data-session-pause]").fire("click");
 assert.equal(s.receiptPlans[0].receiving.status, "paused");
 assert(!d.querySelector("[data-session-code]"));
-await d.querySelector("[data-session-resume]").fire("click");
+assert.deepEqual(footerButtons(), ["Lanjutkan"]);
+await d.querySelector(".modal-actions [data-session-resume]").fire("click");
 assert.equal(s.receiptPlans[0].receiving.status, "open");
-await d.querySelector("[data-session-finish]").fire("click");
-await new Promise((resolve) => setImmediate(resolve));
+assert.deepEqual(footerButtons(), ["Jeda", "Selesai"]);
+globalThis.confirm = () => false;
+await d.querySelector(".modal-actions [data-session-finish]").fire("click");
+assert.equal(s.receiptPlans[0].receiving.status, "open");
+globalThis.confirm = () => true;
+await d.querySelector(".modal-actions [data-session-finish]").fire("click");
 assert.equal(s.receiptPlans[0].receiving.status, "completed");
 assert(!d.querySelector("[data-session-code]"));
+assert.equal(d.querySelector(".modal-actions"), null);
 d.close();
 d = openSupplierNote(s, s.receiptPlans[0], { ...ctx, workspace: "backoffice" });
 assert(d.querySelector("[data-expected-edit]"));

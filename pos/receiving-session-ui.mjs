@@ -8,14 +8,7 @@ import {
   receiptVariance,
   saveWorkflow,
 } from "./warehouse-workflow.mjs";
-import {
-  field,
-  table,
-  name,
-  sessionDialog,
-  submitSession,
-  bindRecovery,
-} from "./supply-session-ui.mjs";
+import { field, table, name, submitSession, bindRecovery } from "./supply-session-ui.mjs";
 function receivedSummary(p) {
   const units = p.lines.filter((l) => p.expected?.[l.productId]?.unit);
   const result = [];
@@ -165,11 +158,13 @@ export function openReceivingSession(s, pid, ctx, readOnly = false) {
   if (!p) return;
   const bo = backOffice(s, ctx.workspace);
   readOnly ||= bo;
-  const d = sessionDialog(
-    ctx,
-    `Penerimaan · ${p.invoiceNo}`,
+  const d = ctx.modal(
+    `Penerimaan · ${e(p.invoiceNo)}`,
     "<div data-receiving-session><div data-session-header></div><div data-session-detail></div></div>",
   );
+  d.classList.add("supply-modal");
+  d.querySelector("form").onsubmit = (event) => event.preventDefault();
+  const actions = d.querySelector(".modal-actions");
   const body = d.querySelector("[data-receiving-session]");
   const header = body.querySelector("[data-session-header]");
   const detail = body.querySelector("[data-session-detail]");
@@ -213,7 +208,7 @@ export function openReceivingSession(s, pid, ctx, readOnly = false) {
       unitLines = p.lines.filter((l) => p.expected?.[l.productId]?.unit),
       fruit = unitLines.length < p.lines.length;
     header.innerHTML = `<p>${e(name(s, "suppliers", p.supplierId))} · ${e(p.date)}</p><p class="notice">${e(receiptStatuses[status])} · ${receivedSummary(p)}${unitLines.length ? "" : " tersimpan"}</p>${varianceTable(ctx.getState(), p)}${editable ? unitLines.map((l) => `<button type="button" data-session-quantity="${e(l.productId)}">Catat jumlah · ${e(name(s, "products", l.productId))}</button>`).join(" ") : ""}${editable && fruit ? '<div class="supply-scan"><input data-session-code autocomplete="off" maxlength="26" inputmode="numeric" placeholder="Scan barcode buah" aria-label="Scan barcode buah" aria-describedby="form-error"><button type="button" data-session-scan>Simpan scan</button></div>' : ""}`;
-    detail.innerHTML = `${editable && fruit ? '<p class="muted">Tunggu konfirmasi tersimpan sebelum scan buah berikutnya. Barcode menentukan produk dan berat; satu label untuk satu buah.</p>' : ""}<div class="toolbar">${!readOnly ? (status === "paused" ? '<button type="button" data-session-resume>Lanjutkan penerimaan</button>' : editable ? '<button type="button" data-session-pause>Jeda penerimaan</button><button type="button" class="primary" data-session-finish>Selesaikan penerimaan</button>' : "<p>Penerimaan terkunci. Koreksi harus dibuka dari Back Office.</p>") : ""}</div><section ${fruit ? "" : "hidden"} data-receiving-barcodes aria-label="Barcode tersimpan"><h3>Barcode tersimpan (${totals.pieces})</h3>${table(
+    detail.innerHTML = `${editable && fruit ? '<p class="muted">Tunggu konfirmasi tersimpan sebelum scan buah berikutnya. Barcode menentukan produk dan berat; satu label untuk satu buah.</p>' : ""}${!readOnly && status === "completed" ? "<p>Penerimaan terkunci. Koreksi harus dibuka dari Back Office.</p>" : ""}<section ${fruit ? "" : "hidden"} data-receiving-barcodes aria-label="Barcode tersimpan"><h3>Barcode tersimpan (${totals.pieces})</h3>${table(
       ["Barcode", "Produk", "Berat", ...(editable ? ["Aksi"] : [])],
       p.receiving.scans
         .slice()
@@ -274,20 +269,29 @@ export function openReceivingSession(s, pid, ctx, readOnly = false) {
       }
     });
     body.querySelector("[data-session-scan]")?.addEventListener("click", scan);
-    body
-      .querySelector("[data-session-pause]")
-      ?.addEventListener("click", () => perform("receipt_pause"));
-    body
-      .querySelector("[data-session-resume]")
-      ?.addEventListener("click", () => perform("receipt_resume"));
-    body.querySelector("[data-session-finish]")?.addEventListener("click", () => {
-      if (
-        confirm(
-          "Semua barang pada nota sudah diperiksa dan jumlah aktualnya sesuai? Selesaikan penerimaan untuk membukukan stok.",
-        )
-      )
-        perform("receipt_finish", { confirmed: true });
-    });
+    if (editable) {
+      actions.innerHTML =
+        '<button type="button" data-session-pause>Jeda</button><button type="button" class="primary" data-session-finish>Selesai</button>';
+      actions.querySelector("[data-session-pause]").onclick = () =>
+        perform("receipt_pause");
+      actions.querySelector("[data-session-finish]").onclick = () => {
+        if (
+          !working &&
+          confirm(
+            "Semua barang pada nota sudah diperiksa dan jumlah aktualnya sesuai? Selesaikan penerimaan untuk membukukan stok.",
+          )
+        ) {
+          return perform("receipt_finish", { confirmed: true });
+        }
+      };
+    } else if (!readOnly && status === "paused") {
+      actions.innerHTML =
+        '<button type="button" class="primary" data-session-resume>Lanjutkan</button>';
+      actions.querySelector("[data-session-resume]").onclick = () =>
+        perform("receipt_resume");
+    } else {
+      actions.remove();
+    }
     body.querySelectorAll("[data-session-remove]").forEach(
       (b) =>
         (b.onclick = () => {

@@ -207,8 +207,16 @@ try {
     assert.deepEqual(await savedCodes.allTextContents(), newestFirst);
     assert.equal(await scanner.evaluate((el) => document.activeElement === el), true);
   }
-  await page.locator("[data-session-pause]").click();
-  await page.locator("[data-session-resume]").waitFor();
+  const receiptDialog = page
+    .locator("dialog[open]")
+    .filter({ has: page.locator("[data-receiving-session]") });
+  const receiptActions = receiptDialog.locator(".modal-actions");
+  assert.deepEqual(await receiptActions.getByRole("button").allTextContents(), [
+    "Jeda",
+    "Selesai",
+  ]);
+  await receiptActions.getByRole("button", { name: "Jeda", exact: true }).click();
+  await receiptActions.getByRole("button", { name: "Lanjutkan", exact: true }).waitFor();
   await page.reload();
   await page.locator("#pos-main").waitFor();
   await nav("supplierNotes");
@@ -218,10 +226,10 @@ try {
     .filter({ hasText: code(3) })
     .waitFor({ state: "visible" });
   assert.deepEqual(await savedCodes.allTextContents(), newestFirst);
-  await page.locator("[data-session-resume]").click();
-  await page.locator("[data-session-finish]").click();
-  await page.locator("[data-session-code]").waitFor({ state: "detached" });
-  await page.locator("dialog[open] [type=submit]").click();
+  await receiptActions.getByRole("button", { name: "Lanjutkan", exact: true }).click();
+  await receiptActions.getByRole("button", { name: "Selesai", exact: true }).click();
+  await receiptActions.waitFor({ state: "detached" });
+  await receiptDialog.getByRole("button", { name: "Tutup", exact: true }).click();
   await login("owner");
   await openSidebar(page);
   await page.locator("[data-workspace=backoffice]").click();
