@@ -1,3 +1,4 @@
+import { officeInventoryPage, bindOfficeInventory } from "./office-inventory-ui.mjs";
 import { costPricesPage } from "./cost-prices-ui.mjs";
 import { outboundPage } from "./outbound-ui.mjs";
 import { confirmAction, requestReason } from "../shared/confirmation.mjs";
@@ -225,6 +226,7 @@ const title = {
   transfers: "Pengiriman & Tagihan",
   receiving: "Penerimaan Kiriman",
   pricing: "Harga Jual",
+  officeInventory: "Inventory",
   costPrices: "Harga Modal",
   legacyTransfers: "Dokumen distribusi lama",
   supplierNotes: "Nota Supplier",
@@ -310,7 +312,7 @@ const paths = {
   master: "M5 4h14v16H5z M8 8h8 M8 12h8 M8 16h5",
 };
 const icon = (k) =>
-  `<svg class="icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="${paths[k === "legacyTransfers" ? "transfers" : k] || paths.master}"/></svg>`;
+  `<svg class="icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="${paths[k === "legacyTransfers" ? "transfers" : k === "officeInventory" ? "stock" : k] || paths.master}"/></svg>`;
 const name = (kind, k) => state[kind].find((x) => x.id === k)?.name || "—";
 const short = (k) =>
   k.startsWith("demo") ? k.toUpperCase() : k.slice(0, 8).toUpperCase();
@@ -959,6 +961,7 @@ function render() {
       transfers: () => transfersPage(state, store, false, workspace),
       receiving: () => transfersPage(state, store, true),
       legacyTransfers: () => outboundPage(state, store, workspace),
+      officeInventory: () => officeInventoryPage(state, workspace),
       costPrices: () => costPricesPage(state, store, workspace),
       pricing: () => pricingPage(state, store),
       supplierNotes: () => supplierNotesPage(state, store, workspace),
@@ -1200,6 +1203,7 @@ function render() {
     document.querySelector("[data-pt-expense]").onclick = () =>
       expenseDialog(state, store, adminContext, true);
   }
+  if (view === "officeInventory") bindOfficeInventory(state, adminContext);
   if (view === "reports") bindReports(state, store, adminContext);
   if (view === "documents") bindDocuments(state, store, adminContext);
   bindWaste(view, state, store, {

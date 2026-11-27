@@ -91,7 +91,7 @@ export function confirmLeave() {
 export function trackForms() {
   document
     .querySelectorAll(
-      "main form:not(#filters):not(#catalog-filter):not([data-shift-filters])",
+      "main form:not(#filters):not(#catalog-filter):not([data-shift-filters]):not([role=search])",
     )
     .forEach((form) => {
       form.addEventListener("input", () => (form.dataset.dirty = "true"));

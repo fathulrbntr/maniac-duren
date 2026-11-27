@@ -70,6 +70,7 @@ export function workspaceGroups(a) {
               id: "masters",
               label: "Data & administrasi",
               pages: [
+                "officeInventory",
                 "products",
                 "recipes",
                 "suppliers",
@@ -121,6 +122,7 @@ export function workspaceGroups(a) {
     pricing: all,
     supplierNotes: all || a.stock,
     transfers: a.workspace === "backoffice" ? all : a.dispatch,
+    officeInventory: all,
     costPrices: all,
     legacyTransfers: all,
     warehouse: all || a.stock,

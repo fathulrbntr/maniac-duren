@@ -886,3 +886,26 @@
     grid-row: 5;
   }
 }
+
+[data-office-inventory] .panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+  gap: 14px;
+}
+[data-office-inventory] .toolbar {
+  justify-content: space-between;
+}
+[data-office-inventory] .panel :is(h2, p) {
+  margin: 0;
+}
+[data-inv-barcode-form] {
+  display: flex;
+  align-items: end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+[data-inv-barcode-form] label {
+  flex: 1 1 14rem;
+  min-width: 0;
+}

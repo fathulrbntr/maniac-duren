@@ -279,3 +279,8 @@ Saat stok habis, halaman menandai modal batch terakhir. SKU tanpa batch menampil
 Koreksi memakai tindakan owner pada nota supplier. Admin dan owner memilih lokasi asal di **Back Office → Transfer Stok**.
 `database/office-stock-transfers-133.sql` membatasi pengiriman antarlokasi, termasuk pengiriman dokumen transfer lama.
 Cabang tujuan tetap mengonfirmasi penerimaan berdasarkan surat jalan.
+
+### Inventory Back Office
+
+**Data & administrasi → Inventory** menampilkan saldo fisik dan kiriman aktif untuk semua lokasi atau satu lokasi. Kiriman masuk ke kolom dalam perjalanan di lokasi tujuan sampai cabang mengonfirmasi penerimaan. Total mencakup stok di lokasi dan dalam perjalanan satu kali, dengan satuan terpisah.
+`pos/office-inventory.mjs` menggunakan saldo batch, surat jalan dan jurnal stok. **Lihat jejak** menampilkan posisi dan mutasi per SKU, termasuk batch dan nomor dokumen yang tersedia. Scan atau ketik barcode untuk membuka riwayat satu buah.

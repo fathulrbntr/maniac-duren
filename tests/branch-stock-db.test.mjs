@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { randomUUID as id } from "node:crypto";
+import {
+  balanceAt,
+  inventorySnapshot,
+  inventoryHistory,
+  inventoryTotals,
+} from "../pos/office-inventory.mjs";
 import { warehouseDatabase } from "./helpers/warehouse-db.mjs";
 
 const db = await warehouseDatabase();
@@ -180,6 +186,22 @@ try {
   let s = await read();
   assert.equal(s.lots.find((l) => l.id === lot.id).pieces, 70);
   const t = s.transfers.find((t) => t.id === send.id);
+  const moving = inventorySnapshot(s);
+  const fruitInTransit = moving.find((r) => r.product.id === fruit);
+  assert.deepEqual(fruitInTransit.balance, {
+    onHand: 140,
+    pieces: 70,
+    transit: 60,
+    transitPieces: 30,
+  });
+  assert.equal(balanceAt(fruitInTransit, origin).transitPieces, 0);
+  assert.equal(balanceAt(fruitInTransit, target).transitPieces, 30);
+  assert.deepEqual(inventoryTotals(moving).get("pcs"), {
+    onHand: 7,
+    pieces: 0,
+    transit: 3,
+    transitPieces: 0,
+  });
   assert.equal(t.carrier, send.carrier);
   assert.equal(
     (
@@ -222,6 +244,27 @@ try {
   const dest = s.lots.find((l) => l.storeId === target && l.sourceLotId === lot.id);
   assert.equal(dest.pieces, 30);
   assert.equal(dest.kg, 60);
+  const delivered = inventorySnapshot(s);
+  assert.deepEqual(delivered.find((r) => r.product.id === fruit).balance, {
+    onHand: 200,
+    pieces: 100,
+    transit: 0,
+    transitPieces: 0,
+  });
+  assert.equal(inventoryTotals(delivered, target).get("pcs").onHand, 3);
+  const history = inventoryHistory(s, fruit, "");
+  const dispatched = history.find((j) => j.action === "transfer_dispatch");
+  assert.equal(dispatched.pieces, -30);
+  assert.equal(dispatched.reference, t.deliveryNo);
+  assert.equal(dispatched.route, "Cikarang → Harapan Indah");
+  const accepted = inventoryHistory(s, box, target).filter(
+    (j) => j.action === "transfer_receive",
+  );
+  assert.equal(accepted.length, 1);
+  assert.equal(accepted[0].qty, 3);
+  assert.equal(accepted[0].reference, t.deliveryNo);
+  assert.ok(history.some((j) => j.reference === "DIRECT-001" && j.pieces === 100));
+
   assert.equal(dest.unitCost, 50000);
   assert.equal(dest.supplierId, supplier);
   assert.equal(
