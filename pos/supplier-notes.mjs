@@ -35,6 +35,14 @@ export function noteUnitCosts(batch) {
       : null,
   };
 }
+export function fruitBatchCosts(lot) {
+  const perKg = lot.unitCost ?? noteUnitCosts(lot).perKg;
+  const perPiece =
+    perKg != null && lot.receivedKg > 0 && lot.receivedPieces > 0
+      ? (perKg * lot.receivedKg) / lot.receivedPieces
+      : null;
+  return { perKg, perPiece };
+}
 export function noteBalance(note, component) {
   const total =
     component === "shipping"

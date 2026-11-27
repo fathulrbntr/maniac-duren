@@ -182,3 +182,9 @@ masuk saat penerimaan selesai. Mutasi cabang menerbitkan surat jalan, membawa mo
 batch, dan menambah stok tujuan setelah jumlah fisik cocok. Pembayaran supplier
 untuk nota cabang masuk arus kas Retail. Lihat
 [petunjuk patch 132](../docs/PATCH-132-ALUR-CABANG.md).
+
+Patch **133** (`office-stock-transfers-133.sql`) dipasang setelah 132. RPC pengiriman
+antarcabang mewajibkan akses Back Office. Ketentuan ini juga berlaku saat mengirim
+dokumen transfer lama. Penerimaan supplier dan konfirmasi kiriman di toko tetap
+menggunakan izin lokasi masing-masing. Gunakan migrasi CLI terkait atau SQL ini sekali,
+tanpa reset maupun perubahan data stok.

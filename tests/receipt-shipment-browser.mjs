@@ -133,6 +133,7 @@ try {
   await page.evaluate(() => (document.documentElement.dataset.theme = "light"));
   await page.screenshot({ path: "../receipt-light-qa.png" });
   await page.locator(".receipt-shipment-dialog [type=submit]").click();
+  await page.locator(".receipt-shipment-dialog").waitFor({ state: "hidden" });
   const saved = await page.evaluate(() => window.saved);
   assert.equal(saved.length, 1);
   assert.equal(saved[0].action, "receipt_batch");

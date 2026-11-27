@@ -58,7 +58,9 @@ export function workspaceGroups(a) {
                 "backoffice",
                 ...(a.pettyCash ? [] : ["dashboard"]),
                 "supplierNotes",
-                ...(!a.branchStock || a.legacyOutbound ? ["transfers"] : []),
+                "transfers",
+                ...(a.branchStock && a.legacyOutbound ? ["legacyTransfers"] : []),
+                ...(a.branchStock ? ["costPrices"] : []),
                 "pricing",
                 "reports",
                 ...(a.pettyCash ? ["retailFunds"] : ["documents"]),
@@ -100,7 +102,7 @@ export function workspaceGroups(a) {
                 id: "store_stock",
                 label: "Stok & Penerimaan",
                 pages: a.branchStock
-                  ? ["supplierNotes", "transfers", "receiving", "stock", "waste"]
+                  ? ["supplierNotes", "receiving", "stock", "waste"]
                   : ["receiving", "stock", "waste"],
               },
               {
@@ -118,7 +120,9 @@ export function workspaceGroups(a) {
     dashboard: all,
     pricing: all,
     supplierNotes: all || a.stock,
-    transfers: all || (a.branchStock && a.workspace === "store" ? a.stock : a.dispatch),
+    transfers: a.workspace === "backoffice" ? all : a.dispatch,
+    costPrices: all,
+    legacyTransfers: all,
     warehouse: all || a.stock,
     storehome: true,
     receiving: a.receive,

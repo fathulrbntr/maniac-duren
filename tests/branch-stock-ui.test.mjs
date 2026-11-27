@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { workspaceGroups, spacesFor, defaultSpace } from "../pos/workspaces.mjs";
 import { receivingPage } from "../pos/receiving-session-ui.mjs";
-import { transfersPage } from "../pos/warehouse-ui.mjs";
+import { costPricesPage } from "../pos/cost-prices-ui.mjs";
+import { transfersPage, supplyHome } from "../pos/warehouse-ui.mjs";
 import {
   scanForDispatch,
   transferPreview,
@@ -56,9 +57,78 @@ const pages = (workspace, access) =>
   workspaceGroups({ workspace, branchStock: true, ...access }).flatMap(
     (group) => group.pages,
   );
-assert.ok(pages("store", state.access).includes("transfers"));
+assert.ok(!pages("store", state.access).includes("transfers"));
 assert.ok(!pages("store", { receive: true }).includes("transfers"));
-assert.ok(!pages("backoffice", { backoffice: true }).includes("transfers"));
+const bo = { ...state, access: { backoffice: true, stock: true, finance: true } };
+for (const page of ["costPrices", "transfers"]) {
+  assert.ok(pages("backoffice", bo.access).includes(page));
+  assert.ok(!pages("store", bo.access).includes(page));
+}
+assert.ok(pages("store", state.access).includes("receiving"));
+assert.doesNotMatch(supplyHome(state, origin.id, "store"), /Kirim ke cabang/);
+assert.doesNotMatch(costPricesPage(state, origin.id, "backoffice"), /data-cost-prices/);
+assert.equal(costPricesPage(bo, origin.id, "store"), "");
+const costState = {
+  ...bo,
+  suppliers: [{ id: "s", name: "Pemasok" }],
+  lots: [
+    {
+      id: "old",
+      storeId: origin.id,
+      productId: "durian",
+      receivedKg: 10,
+      receivedPieces: 5,
+      unitCost: 50000,
+      kg: 4,
+      pieces: 2,
+      shipmentId: "receipt",
+      supplierId: "s",
+    },
+    {
+      id: "moved",
+      storeId: destination.id,
+      sourceLotId: "old",
+      productId: "durian",
+      receivedKg: 6,
+      receivedPieces: 3,
+      unitCost: 50000,
+      kg: 2,
+      pieces: 1,
+    },
+    {
+      id: "second",
+      storeId: destination.id,
+      productId: "durian",
+      kg: 2,
+      pieces: 1,
+      unitCost: 60000,
+    },
+  ],
+  unitLots: [
+    {
+      id: "pack",
+      storeId: destination.id,
+      productId: "box",
+      unit: "pcs",
+      qty: 3,
+      unitCost: 1200,
+    },
+  ],
+  receiptPlans: [{ id: "plan", receivedId: "receipt", invoiceNo: "SUP-01" }],
+};
+const costPage = costPricesPage(costState, destination.id, "backoffice");
+for (const label of [
+  "50.000",
+  "100.000",
+  "60.000",
+  "1.200",
+  "/pcs",
+  "SUP-01",
+  "Pemasok",
+  'data-cost-note="plan"',
+])
+  assert.ok(costPage.includes(label), label);
+assert.doesNotMatch(costPage, /4 kg · 2 butir/);
 const branchPage = receivingPage(state, origin.id, "store");
 assert.match(branchPage, /SUP-CKR/);
 assert.doesNotMatch(branchPage, /SUP-HI|data-note-new/);
@@ -70,7 +140,9 @@ const officePage = receivingPage(
 assert.match(officePage, /Lokasi penerima/);
 assert.match(officePage, /Harapan Indah/);
 assert.match(officePage, /data-note-new/);
-assert.match(transfersPage(state, origin.id, false, "store"), /data-transfer-new/);
+assert.doesNotMatch(transfersPage(state, origin.id, false, "store"), /data-transfer-new/);
+assert.doesNotMatch(transfersPage(bo, origin.id, false, "store"), /data-transfer-new/);
+assert.match(transfersPage(bo, origin.id, false, "backoffice"), /data-transfer-new/);
 assert.doesNotMatch(
   transfersPage(state, destination.id, true, "store"),
   /data-transfer-new/,

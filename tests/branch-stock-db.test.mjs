@@ -34,6 +34,7 @@ try {
   const origin = id(),
     target = id(),
     office = id(),
+    admin = id(),
     sender = id(),
     receiver = id(),
     supplier = id(),
@@ -45,6 +46,7 @@ try {
   await q("insert into md_pos_suppliers(id,name) values ($1,'Supplier Uji')", [supplier]);
   for (const [user, role, loc] of [
     [office, "owner", origin],
+    [admin, "admin", target],
     [sender, "manager", origin],
     [receiver, "cashier", target],
   ]) {
@@ -146,6 +148,21 @@ try {
     barcodes: labels.slice(0, 30),
     units: [{ lotId: unit.id, qty: 3 }],
   };
+  const transferPolicy = fs.readFileSync(
+    "database/office-stock-transfers-133.sql",
+    "utf8",
+  );
+  const installedRpc = (
+    await one(
+      "select pg_get_functiondef('public.pos_warehouse_mutate(text,jsonb)'::regprocedure) def",
+    )
+  ).def;
+  await db.exec(installedRpc.replace(/\r?\n/g, "\r\n"));
+  await db.exec(transferPolicy);
+  await db.exec(transferPolicy.replace(/\r?\n/g, "\r\n"));
+  await assert.rejects(mut("transfer_dispatch", send), /akses/i);
+  assert.equal((await read()).lots.find((l) => l.id === lot.id).pieces, 100);
+  await as(admin);
   await assert.rejects(
     mut("transfer_dispatch", { ...send, toStoreId: origin }),
     /tujuan/,
@@ -187,6 +204,7 @@ try {
     fruitCounts: { [lot.id]: 30 },
     units: [{ lotId: unit.id, qty: 3 }],
   };
+  await as(sender);
   await assert.rejects(mut("transfer_receive", accept), /akses/);
   await as(receiver);
   await assert.rejects(
@@ -319,8 +337,30 @@ try {
   );
   assert.equal(moved.qty, 2);
   assert.equal(moved.unitCost, 1100);
+  const oldOrder = id(),
+    keeper = id();
+  await q("insert into auth.users values($1,$2)", [keeper, keeper + "@test.local"]);
+  await q("insert into md_pos_staff values($1)", [keeper]);
+  await q(
+    "insert into md_pos_employees(id,user_id,name,role,store_ids) values($1,$1,'Petugas','warehouse',$2)",
+    [keeper, [wh]],
+  );
+  await q(
+    "insert into md_supply.outbound_orders(id,kind,source_id,target_id,rates,payment_mode,carrier,created_by) values($1,'transfer',$2,$3,'[]','pending','Petugas',$4)",
+    [oldOrder, wh, target, office],
+  );
+  const legacyPayload = {
+    id: id(),
+    orderId: oldOrder,
+    expectedRevision: 0,
+    confirmed: true,
+  };
+  await as(keeper);
+  await assert.rejects(mut("outbound_dispatch", legacyPayload), /akses/i);
+  await as(admin);
+  await assert.rejects(mut("outbound_dispatch", legacyPayload), /menerbitkan dokumen/i);
   console.log(
-    "PASS 132: supplier to Cikarang 100 fruit + 10 packs, transfer 30 fruit + 3 packs, receipt, location isolation, retries and no invoice.",
+    "PASS 133: supplier to Cikarang 100 fruit + 10 packs, transfer 30 fruit + 3 packs, receipt, location isolation, retries and no invoice.",
   );
 } finally {
   await db.close();

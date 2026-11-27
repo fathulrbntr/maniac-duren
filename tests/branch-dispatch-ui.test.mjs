@@ -11,6 +11,7 @@ answerConfirmations(document, () => approve);
 const code = (n) => "9201261126" + String(n).padStart(6, "0") + "9913002000";
 const labels = Array.from({ length: 33 }, (_, i) => code(i + 1));
 const state = {
+  access: { backoffice: true },
   branchStockVersion: 132,
   warehouseVersion: 107,
   outboundBatchVersion: 131,
@@ -83,6 +84,7 @@ const state = {
 const modal = makeModal(),
   calls = [];
 const dialog = openDispatch(state, "a", {
+  workspace: "backoffice",
   modal: modal.modal,
   getState: () => state,
   render() {},

@@ -1,3 +1,5 @@
+import { costPricesPage } from "./cost-prices-ui.mjs";
+import { outboundPage } from "./outbound-ui.mjs";
 import { confirmAction, requestReason } from "../shared/confirmation.mjs";
 import { pricesForBranch } from "./branch-prices.mjs";
 import { prepareBarcodeInput } from "./barcode-scanner.mjs";
@@ -223,6 +225,8 @@ const title = {
   transfers: "Pengiriman & Tagihan",
   receiving: "Penerimaan Kiriman",
   pricing: "Harga Jual",
+  costPrices: "Harga Modal",
+  legacyTransfers: "Dokumen distribusi lama",
   supplierNotes: "Nota Supplier",
   service: "Pelayanan Meja",
   cutting: "Tukang Potong",
@@ -263,6 +267,7 @@ const paths = {
   transfers:
     "M2 5h12v12H2z M14 9h4l4 5v3h-8 M5 17a2 2 0 1 0 4 0 2 2 0 0 0-4 0 M16 17a2 2 0 1 0 4 0 2 2 0 0 0-4 0",
   receiving: "M3 13v8h18v-8 M12 3v13 M7 11l5 5 5-5",
+  costPrices: "M4 4h16v16H4z M8 8h8 M8 12h2 M14 12h2 M8 16h2 M14 16h2",
   pricing: "M3 3h8l10 10-8 8L3 11z M7 7h.01 M12 10l5 5 M14 9l-4 6",
   supplierNotes: "M4 3h11l5 5v13H4z M15 3v6h5 M8 13h8 M8 17h5",
   service: "M3 13h18 M5 13a7 7 0 0 1 14 0 M12 4v2 M4 17h16 M8 21h8",
@@ -305,7 +310,7 @@ const paths = {
   master: "M5 4h14v16H5z M8 8h8 M8 12h8 M8 16h5",
 };
 const icon = (k) =>
-  `<svg class="icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="${paths[k] || paths.master}"/></svg>`;
+  `<svg class="icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="${paths[k === "legacyTransfers" ? "transfers" : k] || paths.master}"/></svg>`;
 const name = (kind, k) => state[kind].find((x) => x.id === k)?.name || "—";
 const short = (k) =>
   k.startsWith("demo") ? k.toUpperCase() : k.slice(0, 8).toUpperCase();
@@ -753,6 +758,19 @@ function accountProfile() {
     .toUpperCase();
   return `<div class="account-profile" aria-label="Akun yang login">${photo ? `<img src="${e(photo)}" alt="Foto ${e(accountName)}">` : `<span class="account-avatar" aria-hidden="true">${e(initials)}</span>`}<div><strong>${e(accountName)}</strong><span>${e(role)}</span></div></div>`;
 }
+function workspaceLocations() {
+  if (!state.warehouseVersion || state.stockDemo) return state.stores;
+  if (
+    workspace === "backoffice" &&
+    (!(state.branchStockVersion >= 132) || ["transfers", "costPrices"].includes(view))
+  )
+    return state.stores;
+  return state.stores.filter((x) =>
+    workspace === "warehouse"
+      ? x.locationType === "warehouse"
+      : x.locationType !== "warehouse",
+  );
+}
 function shell(body) {
   const access = workspaceAccess();
   const pageTitles =
@@ -763,7 +781,6 @@ function shell(body) {
           ...(access.branchStock
             ? {
                 supplierNotes: "Terima dari supplier",
-                transfers: "Kirim ke cabang",
                 receiving: "Terima dari cabang",
               }
             : {}),
@@ -771,7 +788,14 @@ function shell(body) {
       : access.pettyCash
         ? {
             ...title,
-            ...(access.branchStock ? { transfers: "Dokumen distribusi lama" } : {}),
+            ...(access.branchStock
+              ? {
+                  transfers:
+                    workspace === "backoffice"
+                      ? "Transfer Stok"
+                      : "Dokumen distribusi lama",
+                }
+              : {}),
             documents: "Arsip dokumen",
             dashboard: "Analisis penjualan",
             backoffice: "Dashboard",
@@ -781,16 +805,7 @@ function shell(body) {
         : title;
   const activeLocation = state.stores.find((x) => x.id === store),
     activeIcon = activeLocation?.locationType === "warehouse" ? "warehouse" : "stores";
-  const selectableLocations =
-    state.warehouseVersion && !state.stockDemo
-      ? state.stores.filter(
-          (x) =>
-            (workspace === "backoffice" && !(state.branchStockVersion >= 132)) ||
-            (workspace === "warehouse"
-              ? x.locationType === "warehouse"
-              : x.locationType !== "warehouse"),
-        )
-      : state.stores;
+  const selectableLocations = workspaceLocations();
   return `<div class="shell ${["products", "stock"].includes(view) ? "inventory-shell" : ""} ${view === "dashboard" ? "dashboard-shell" : ""}" ${sidebar.attributes()} data-page="${e(view)}">
     <aside class="sidebar" id="pos-sidebar" aria-label="Sidebar Maniac Duren">
       <div class="sidebar-header">
@@ -894,13 +909,7 @@ function render() {
       workspace = defaultSpace(state);
       if (view === "dashboard") view = workspace === "store" ? "storehome" : workspace;
     }
-    const locations = state.stores.filter(
-      (x) =>
-        (workspace === "backoffice" && !(state.branchStockVersion >= 132)) ||
-        (workspace === "warehouse"
-          ? x.locationType === "warehouse"
-          : x.locationType !== "warehouse"),
-    );
+    const locations = workspaceLocations();
     if (!locations.some((x) => x.id === store)) store = locations[0]?.id || "";
     const permitted = new Set(visibleSections(workspaceAccess()).flatMap((g) => g.pages));
     if (
@@ -949,6 +958,8 @@ function render() {
       storehome: () => supplyHome(state, store, "store"),
       transfers: () => transfersPage(state, store, false, workspace),
       receiving: () => transfersPage(state, store, true),
+      legacyTransfers: () => outboundPage(state, store, workspace),
+      costPrices: () => costPricesPage(state, store, workspace),
       pricing: () => pricingPage(state, store),
       supplierNotes: () => supplierNotesPage(state, store, workspace),
       service: () => servicePage(state, store),
@@ -1466,6 +1477,7 @@ function addReceipt() {
 function movement() {
   if (state.warehouseVersion && !state.stockDemo)
     return openDispatch(state, store, {
+      workspace,
       modal,
       mutate,
       render,

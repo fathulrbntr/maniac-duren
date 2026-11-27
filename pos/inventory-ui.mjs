@@ -238,11 +238,9 @@ export function inventoryPanel(state, store, filter = {}, mode = "products") {
     warehouse = state.stores.find((x) => x.id === store)?.locationType === "warehouse";
   const stockActions =
     state.branchStockVersion >= 132 && !state.stockDemo && !warehouse
-      ? `${state.access?.stock ? '<button type="button" id="add-receipt" class="inv-add">Terima dari supplier</button><button type="button" id="movement" class="inv-transfer">Kirim ke cabang</button>' : ""}${state.access?.receive ? '<button type="button" data-view="receiving">Terima dari cabang</button>' : ""}`
+      ? `${state.access?.stock ? '<button type="button" id="add-receipt" class="inv-add">Terima dari supplier</button>' : ""}${state.access?.receive ? '<button type="button" data-view="receiving">Terima dari cabang</button>' : ""}`
       : state.branchStockVersion >= 132 && !state.stockDemo && warehouse
-        ? state.access?.stock
-          ? '<button type="button" id="movement" class="inv-transfer">Pindahkan sisa stok ke cabang</button>'
-          : ""
+        ? ""
         : centralized
           ? `${warehouse && state.access?.dispatch ? '<button type="button" id="movement" class="inv-transfer">Kirim ke toko</button>' : ""}${warehouse && state.access?.stock ? '<button type="button" class="inv-add" id="add-receipt">Barang masuk gudang</button>' : ""}${!warehouse && state.access?.receive ? '<button type="button" class="inv-add" data-view="receiving">Terima kiriman</button>' : ""}`
           : '<button type="button" id="movement" class="inv-transfer">Transfer</button><button type="button" class="inv-add" id="add-receipt">' +

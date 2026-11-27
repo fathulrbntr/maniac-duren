@@ -269,3 +269,11 @@ form transfer cabang dengan pengirim dari data karyawan dan pencarian SKU.
 barcode, rincian batch dan dokumen cetak. `database/branch-stock-132.sql`
 menerapkan otorisasi, mutasi stok dan pembayaran supplier cabang di server.
 Lihat [alur dan pemasangan patch 132](PATCH-132-ALUR-CABANG.md).
+
+### Harga modal dan transfer Back Office 133
+
+Menu **Harga Modal** menampilkan biaya per batch di lokasi aktif dari data penerimaan dan stok.
+`pos/cost-prices-ui.mjs` menghubungkan batch dengan nota asal, termasuk batch yang sudah dipindahkan.
+Koreksi memakai tindakan owner pada nota supplier. Admin dan owner memilih lokasi asal di **Back Office → Transfer Stok**.
+`database/office-stock-transfers-133.sql` membatasi pengiriman antarlokasi, termasuk pengiriman dokumen transfer lama.
+Cabang tujuan tetap mengonfirmasi penerimaan berdasarkan surat jalan.

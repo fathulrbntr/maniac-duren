@@ -35,6 +35,7 @@ export function openBranchDispatch(s, origin, ctx) {
   const dialog = ctx.modal(
     "Buat pengiriman toko",
     `
+    <p class="muted">Lokasi asal · <b>${e((s.locations || s.stores).find((l) => l.id === origin)?.name)}</b></p>
     <div class="form-grid">
       ${field("Toko tujuan", `<select name="toStoreId" aria-label="Toko tujuan" required><option value="">Pilih toko</option>${options(destinations(s, origin))}</select>`)}
       ${field("Pengirim", `<select name="senderId" aria-label="Pengirim" required><option value="">Pilih karyawan</option>${options(senders)}</select>`)}

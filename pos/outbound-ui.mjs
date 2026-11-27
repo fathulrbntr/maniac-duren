@@ -1,6 +1,6 @@
 import { confirmAction } from "../shared/confirmation.mjs";
 import { prepareBarcodeInput, readyBarcodeInput } from "./barcode-scanner.mjs";
-import { noteUnitCosts } from "./supplier-notes.mjs";
+import { fruitBatchCosts } from "./supplier-notes.mjs";
 import { escape as e, id, num, money, today } from "./core.mjs";
 import {
   backOffice,
@@ -194,11 +194,7 @@ function batchCostInfo(lot) {
   if (!lot) return "";
   if (lot.available.qty != null)
     return `Modal/${e(lot.unit)} <b>${lot.unitCost == null ? "Belum tersedia" : money(lot.unitCost)}</b><br>Siap dikirim ${num(lot.available.qty)} ${e(lot.unit)}`;
-  const perKg = lot.unitCost ?? noteUnitCosts(lot).perKg;
-  const perPiece =
-    perKg != null && lot.receivedKg > 0 && lot.receivedPieces > 0
-      ? (perKg * lot.receivedKg) / lot.receivedPieces
-      : null;
+  const { perKg, perPiece } = fruitBatchCosts(lot);
   const value = (cost) => (cost == null ? "Belum tersedia" : money(cost));
   return `Modal/kg <b>${value(perKg)}</b> · Modal rata-rata/butir <b>${value(perPiece)}</b><br>Siap dikirim ${num(lot.available.grams / 1000)} kg · ${num(lot.available.pieces)} butir`;
 }
@@ -466,6 +462,7 @@ export function openOutbound(s, oid, ctx) {
   const draw = () => {
     const balance = outboundBalance(o),
       packing = !bo && o.status === "packing",
+      canDispatch = s.branchStockVersion >= 132 && o.kind === "transfer" ? bo : !bo,
       units = o.rates.filter((r) => r.kind === "unit"),
       hasFruit = o.rates.some((r) => r.kind !== "unit");
     body.innerHTML = `<p><b>${o.kind === "transfer" ? "Transfer toko" : "Penjualan wholesale"}</b> · ${e(o.kind === "transfer" ? name(ctx.getState(), "locations", o.targetId) : o.buyer?.name)}</p><p>${e(o.carrier)} · ${e(outboundStatuses[o.status])}</p>${bo ? `<div class="notice">${e(balance.label)}${o.total != null ? ` · Total ${money(balance.total)} · Dibayar ${money(balance.paid)} · Sisa ${money(balance.remaining)}` : ""}</div>` : ""}${table(
@@ -479,7 +476,7 @@ export function openOutbound(s, oid, ctx) {
           : r.sourceLotId || "Mengikuti barcode (dokumen lama)";
         return `<tr><td>${e(name(ctx.getState(), "products", r.productId))}</td><td>${e(batch)}${r.kind === "unit" ? `<small>${num(r.qty)} ${e(r.unit)}</small>` : ""}</td>${bo ? `<td>${money(r.price)} / ${e(r.unit)}</td>` : ""}</tr>`;
       }),
-    )}<p><b>${outboundContents(o)}</b></p>${packing && hasFruit ? '<div class="supply-scan"><input data-outbound-code aria-label="Scan barcode pengiriman" placeholder="Scan barcode barang yang disiapkan" maxlength="26" autocomplete="off"><button type="button" data-outbound-add>Simpan scan</button></div><p class="muted">Scan tersimpan otomatis. Dokumen ini dapat ditutup dan dilanjutkan dari daftar pengiriman.</p>' : ""}<div class="toolbar">${bo && ["packing", "ready"].includes(o.status) ? '<button type="button" data-outbound-edit>Edit dokumen & harga</button>' : ""}${bo && o.status === "ready" ? '<button type="button" data-outbound-repack>Buka ulang penyiapan</button><button type="button" class="primary" data-outbound-issue>Terbitkan invoice & surat jalan</button>' : ""}${packing ? '<button type="button" class="primary" data-outbound-ready>Selesaikan penyiapan</button>' : ""}${!bo && o.status === "approved" ? '<button type="button" class="primary" data-outbound-dispatch>Konfirmasi barang dikirim</button>' : ""}${bo && o.invoiceNo && balance.remaining > 0 && o.status !== "cancelled" ? '<button type="button" data-outbound-pay>Catat pembayaran</button>' : ""}${bo && ["packing", "ready", "approved"].includes(o.status) && !o.paid ? '<button type="button" data-outbound-cancel>Batalkan dokumen</button>' : ""}${o.invoiceNo ? `${bo ? '<button type="button" data-outbound-print="invoice">Cetak invoice</button>' : ""}<button type="button" data-outbound-print="delivery">Cetak surat jalan</button>` : ""}</div>${
+    )}<p><b>${outboundContents(o)}</b></p>${packing && hasFruit ? '<div class="supply-scan"><input data-outbound-code aria-label="Scan barcode pengiriman" placeholder="Scan barcode barang yang disiapkan" maxlength="26" autocomplete="off"><button type="button" data-outbound-add>Simpan scan</button></div><p class="muted">Scan tersimpan otomatis. Dokumen ini dapat ditutup dan dilanjutkan dari daftar pengiriman.</p>' : ""}<div class="toolbar">${bo && ["packing", "ready"].includes(o.status) ? '<button type="button" data-outbound-edit>Edit dokumen & harga</button>' : ""}${bo && o.status === "ready" ? '<button type="button" data-outbound-repack>Buka ulang penyiapan</button><button type="button" class="primary" data-outbound-issue>Terbitkan invoice & surat jalan</button>' : ""}${packing ? '<button type="button" class="primary" data-outbound-ready>Selesaikan penyiapan</button>' : ""}${canDispatch && o.status === "approved" ? '<button type="button" class="primary" data-outbound-dispatch>Konfirmasi barang dikirim</button>' : ""}${bo && o.invoiceNo && balance.remaining > 0 && o.status !== "cancelled" ? '<button type="button" data-outbound-pay>Catat pembayaran</button>' : ""}${bo && ["packing", "ready", "approved"].includes(o.status) && !o.paid ? '<button type="button" data-outbound-cancel>Batalkan dokumen</button>' : ""}${o.invoiceNo ? `${bo ? '<button type="button" data-outbound-print="invoice">Cetak invoice</button>' : ""}<button type="button" data-outbound-print="delivery">Cetak surat jalan</button>` : ""}</div>${
       hasFruit
         ? `<details open><summary>Barcode dalam dokumen</summary>${table(
             ["Barcode", "Produk", "Berat", ...(packing ? ["Aksi"] : [])],
