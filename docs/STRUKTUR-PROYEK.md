@@ -272,8 +272,10 @@ Lihat [alur dan pemasangan patch 132](PATCH-132-ALUR-CABANG.md).
 
 ### Harga modal dan transfer Back Office 133
 
-Menu **Harga Modal** menampilkan biaya per batch di lokasi aktif dari data penerimaan dan stok.
-`pos/cost-prices-ui.mjs` menghubungkan batch dengan nota asal, termasuk batch yang sudah dipindahkan.
+Menu **Harga Modal** menampilkan semua SKU Master Barang, termasuk bahan, produk resep, dan SKU yang belum memiliki batch.
+Pilih cabang, cari nama atau SKU, lalu gunakan **Lihat batch** untuk menelusuri nota asal.
+`pos/cost-prices.mjs` mengelompokkan batch per SKU dan lokasi. Halaman menampilkan rentang modal jika nilai batch yang masih bersisa berbeda.
+Saat stok habis, halaman menandai modal batch terakhir. SKU tanpa batch menampilkan **Belum tersedia**. Harga modal dihitung dari batch dan hanya ditampilkan di halaman ini.
 Koreksi memakai tindakan owner pada nota supplier. Admin dan owner memilih lokasi asal di **Back Office → Transfer Stok**.
 `database/office-stock-transfers-133.sql` membatasi pengiriman antarlokasi, termasuk pengiriman dokumen transfer lama.
 Cabang tujuan tetap mengonfirmasi penerimaan berdasarkan surat jalan.

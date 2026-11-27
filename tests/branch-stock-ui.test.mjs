@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { workspaceGroups, spacesFor, defaultSpace } from "../pos/workspaces.mjs";
 import { receivingPage } from "../pos/receiving-session-ui.mjs";
-import { costPricesPage } from "../pos/cost-prices-ui.mjs";
+import { Node, makeModal } from "./variant-dom.mjs";
+import { bindCostPrices, costPricesPage } from "../pos/cost-prices-ui.mjs";
 import { transfersPage, supplyHome } from "../pos/warehouse-ui.mjs";
 import {
   scanForDispatch,
@@ -116,19 +117,79 @@ const costState = {
   ],
   receiptPlans: [{ id: "plan", receivedId: "receipt", invoiceNo: "SUP-01" }],
 };
-const costPage = costPricesPage(costState, destination.id, "backoffice");
+const noBatch = [
+  { id: "raw", name: "Gula", sku: "BB-GULA", stockUnit: "g", itemType: "raw" },
+  {
+    id: "recipe",
+    name: "Es duren",
+    sku: "ES-MENU",
+    stockUnit: "porsi",
+    itemType: "recipe",
+  },
+];
+costState.products = [...costState.products, ...noBatch];
+const root = new Node("main"),
+  modal = makeModal();
+globalThis.document = { querySelector: (selector) => root.querySelector(selector) };
+root.innerHTML = costPricesPage(costState, destination.id, "backoffice");
+let current = costState;
+const ctx = {
+  workspace: "backoffice",
+  getState: () => current,
+  modal: modal.modal,
+  refresh: async () => {
+    current = {
+      ...current,
+      products: [
+        ...current.products,
+        { id: "new", name: "Gula cair", sku: "BB-GULA-CAIR", stockUnit: "ml" },
+      ],
+    };
+  },
+};
+bindCostPrices(costState, destination.id, ctx);
+const select = root.querySelector("[data-cost-store]"),
+  search = root.querySelector("[data-cost-search]"),
+  list = root.querySelector("[data-cost-rows]");
+assert.equal(select.value, destination.id);
+assert.equal(
+  list.querySelectorAll("[data-cost-product]").length,
+  costState.products.length,
+);
 for (const label of [
   "50.000",
   "100.000",
   "60.000",
   "1.200",
   "/pcs",
-  "SUP-01",
-  "Pemasok",
-  'data-cost-note="plan"',
+  "BB-GULA",
+  "ES-MENU",
+  "Belum tersedia",
 ])
-  assert.ok(costPage.includes(label), label);
-assert.doesNotMatch(costPage, /4 kg · 2 butir/);
+  assert.ok(list.textContent.includes(label), label);
+for (const { id } of noBatch)
+  assert.ok(list.querySelector('[data-cost-detail="' + id + '"]').disabled);
+assert.equal(list.querySelectorAll("input").length, 0);
+list.onclick({ target: list.querySelector('[data-cost-detail="durian"]') });
+for (const label of ["SUP-01", "Pemasok", "50.000", "60.000", "100.000"])
+  assert.ok(modal.latest.textContent.includes(label), label);
+assert.ok(modal.latest.querySelector('[data-cost-note="plan"]'));
+assert.doesNotMatch(modal.latest.textContent, /4 kg · 2 butir/);
+select.value = origin.id;
+await select.fire("change");
+assert.doesNotMatch(list.textContent, /60.000|1.200/);
+search.value = "bb-gula";
+await search.fire("input");
+assert.equal(list.querySelectorAll("[data-cost-product]").length, 1);
+await root.querySelector("[data-cost-refresh]").fire("click");
+assert.equal(select.value, origin.id);
+assert.equal(list.querySelectorAll("[data-cost-product]").length, 2);
+search.value = "SUP-01";
+await search.fire("input");
+assert.equal(list.querySelectorAll("[data-cost-product]").length, 1);
+search.value = "tidak cocok";
+await search.fire("input");
+assert.match(list.textContent, /tidak ditemukan/);
 const branchPage = receivingPage(state, origin.id, "store");
 assert.match(branchPage, /SUP-CKR/);
 assert.doesNotMatch(branchPage, /SUP-HI|data-note-new/);
