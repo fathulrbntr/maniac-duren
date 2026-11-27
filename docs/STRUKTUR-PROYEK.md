@@ -256,3 +256,12 @@ dan harga transfer sebagai modal toko.
 Pasang setelah patch 130. Jalankan `database/outbound-units-131.sql` di Supabase SQL Editor
 atau gunakan migrasi yang sesuai. Ekstrak ZIP di folder proyek. Untuk verifikasi, commit,
 dan push dari PowerShell, jalankan `.\scripts\windows\push-patch-131.cmd`.
+
+### Penerimaan langsung di cabang dan mutasi 132
+
+`pos/receiving-session-ui.mjs` menampilkan nota untuk cabang penerima.
+`pos/warehouse-ui.mjs` menghubungkan pembukaan nota, pemilihan barang kiriman
+dan pemeriksaan jumlah fisik di tujuan. `pos/warehouse-flow.mjs` menangani
+barcode, rincian batch dan dokumen cetak. `database/branch-stock-132.sql`
+menerapkan otorisasi, mutasi stok dan pembayaran supplier cabang di server.
+Lihat [alur dan pemasangan patch 132](PATCH-132-ALUR-CABANG.md).

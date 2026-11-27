@@ -2,7 +2,24 @@ export function spacesFor(state) {
   if (!state.warehouseVersion) return [];
   const spaces = [];
   if (state.access?.backoffice) spaces.push("backoffice");
-  if (state.stores.some((x) => x.locationType === "warehouse")) spaces.push("warehouse");
+  const oldWarehouse = state.stores.find((x) => x.locationType === "warehouse");
+  const hasOldWork =
+    oldWarehouse &&
+    (state.lots?.some((l) => l.storeId === oldWarehouse.id && l.kg > 0) ||
+      state.unitLots?.some((l) => l.storeId === oldWarehouse.id && l.qty > 0) ||
+      state.receiptPlans?.some(
+        (p) => p.storeId === oldWarehouse.id && p.receiving?.status !== "completed",
+      ) ||
+      state.outboundOrders?.some((o) =>
+        ["packing", "ready", "approved"].includes(o.status),
+      ));
+  if (
+    oldWarehouse &&
+    (!(state.branchStockVersion >= 132) ||
+      hasOldWork ||
+      !state.stores.some((x) => x.locationType === "store"))
+  )
+    spaces.push("warehouse");
   if (state.stores.some((x) => x.locationType !== "warehouse")) spaces.push("store");
   return spaces;
 }
@@ -12,11 +29,10 @@ export const spaceTitles = {
   store: "Toko",
 };
 export function defaultSpace(s) {
-  return s.access?.backoffice
-    ? "backoffice"
-    : s.stores.some((x) => x.locationType === "warehouse")
-      ? "warehouse"
-      : "store";
+  const spaces = spacesFor(s);
+  if (s.branchStockVersion >= 132 && !s.access?.backoffice && spaces.includes("store"))
+    return "store";
+  return spaces[0] || "store";
 }
 // Branch terminology applies only in the Toko workspace.
 export const storePageTitles = {
@@ -42,7 +58,7 @@ export function workspaceGroups(a) {
                 "backoffice",
                 ...(a.pettyCash ? [] : ["dashboard"]),
                 "supplierNotes",
-                "transfers",
+                ...(!a.branchStock || a.legacyOutbound ? ["transfers"] : []),
                 "pricing",
                 "reports",
                 ...(a.pettyCash ? ["retailFunds"] : ["documents"]),
@@ -67,7 +83,7 @@ export function workspaceGroups(a) {
           ? [
               {
                 id: "warehouse",
-                label: "Gudang pusat",
+                label: a.branchStock ? "Gudang lama" : "Gudang pusat",
                 pages: [
                   "warehouse",
                   "supplierNotes",
@@ -83,7 +99,9 @@ export function workspaceGroups(a) {
               {
                 id: "store_stock",
                 label: "Stok & Penerimaan",
-                pages: ["receiving", "stock", "waste"],
+                pages: a.branchStock
+                  ? ["supplierNotes", "transfers", "receiving", "stock", "waste"]
+                  : ["receiving", "stock", "waste"],
               },
               {
                 id: "cashier",
@@ -100,7 +118,7 @@ export function workspaceGroups(a) {
     dashboard: all,
     pricing: all,
     supplierNotes: all || a.stock,
-    transfers: all || a.dispatch,
+    transfers: all || (a.branchStock && a.workspace === "store" ? a.stock : a.dispatch),
     warehouse: all || a.stock,
     storehome: true,
     receiving: a.receive,

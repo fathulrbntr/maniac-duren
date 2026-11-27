@@ -58,6 +58,8 @@ export function cashFlowSheets(report, outlet, from, to) {
       total("deposit", column),
       -total("transfer_collection", column),
       -total("retail_expense", column),
+      -total("retail_supplier_invoice", column),
+      -total("retail_supplier_shipping", column),
       -total("petty_disbursement", column),
     );
   const result = [
@@ -82,7 +84,15 @@ export function cashFlowSheets(report, outlet, from, to) {
     ]),
     sheet("PT Retail", [
       ["Setoran dari toko", deposits],
-      ["Pembayaran nota ke PT Distribusi", -transfers],
+      ...(report.branchStockVersion >= 132
+        ? [
+            ["Pembayaran nota supplier cabang", -total("retail_supplier_invoice")],
+            ["Pembayaran ongkir supplier cabang", -total("retail_supplier_shipping")],
+          ]
+        : []),
+      ...(!(report.branchStockVersion >= 132) || transfers
+        ? [["Pembayaran nota ke PT Distribusi", -transfers]]
+        : []),
       ...expenses("retail_expense"),
       ["Total operasional toko dibayar PT Retail", -total("retail_expense")],
       ...(petty ? [["Pencairan petty cash ke toko", -total("petty_disbursement")]] : []),
@@ -146,5 +156,26 @@ export function cashFlowSheets(report, outlet, from, to) {
         "Nilai",
       ),
     );
+  if (
+    report.branchStockVersion >= 132 &&
+    !rows.some(
+      (r) =>
+        [
+          "transfer_collection",
+          "wholesale_collection",
+          "transfer_invoice",
+          "wholesale_invoice",
+          "supplier_invoice",
+          "supplier_shipping",
+          "distribution_expense",
+        ].includes(r.kind) &&
+        (r.amount || r.opening),
+    ) &&
+    !Object.values(report.receivables).some(Boolean)
+  ) {
+    return result.filter(
+      (s) => !["PT Distribusi (Gudang)", "Tagihan PT Distribusi"].includes(s.name),
+    );
+  }
   return result;
 }

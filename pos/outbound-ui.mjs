@@ -105,7 +105,7 @@ export function outboundPage(s, store, space) {
     finance: bo,
     transfers: s.transfers,
   });
-  return `<section class="supply-workspace" data-outbound-page><div class="supply-hero"><div><span class="supply-eyebrow">DISTRIBUSI GUDANG</span><h2>Transfer toko & invoice wholesale</h2><p>${bo ? "Tentukan batch dan harga, lalu terbitkan dokumen setelah gudang memeriksa barang." : "Pindai barcode buah dan cocokkan jumlah fisik nonbuah per batch."}</p></div><div class="toolbar"><button type="button" data-supply-refresh>Perbarui</button>${bo ? '<button type="button" class="primary" data-outbound-new>+ Transaksi baru</button>' : ""}</div></div><section class="panel outbound-filter-panel" aria-label="Filter invoice terbit"><h3>Periode invoice</h3><div class="outbound-filters">${field(
+  return `<section class="supply-workspace" data-outbound-page><div class="supply-hero"><div><span class="supply-eyebrow">DISTRIBUSI GUDANG</span><h2>Transfer toko & invoice wholesale</h2><p>${bo ? "Tentukan batch dan harga, lalu terbitkan dokumen setelah gudang memeriksa barang." : "Pindai barcode buah dan cocokkan jumlah fisik nonbuah per batch."}</p></div><div class="toolbar"><button type="button" data-supply-refresh>Perbarui</button>${bo && !(s.branchStockVersion >= 132) ? '<button type="button" class="primary" data-outbound-new>+ Transaksi baru</button>' : ""}</div></div><section class="panel outbound-filter-panel" aria-label="Filter invoice terbit"><h3>Periode invoice</h3><div class="outbound-filters">${field(
     "Periode",
     `<select data-invoice-period>${Object.entries(invoicePeriods)
       .map(

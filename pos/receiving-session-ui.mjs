@@ -69,11 +69,13 @@ export function varianceTable(s, p) {
   );
 }
 export function receivingPage(s, store, space) {
+  const branch = s.branchStockVersion >= 132;
   const bo = backOffice(s, space),
     plans = (s.receiptPlans || []).filter((p) => bo || p.storeId === store);
-  return `<section class="supply-workspace"><div class="supply-hero"><div><span class="supply-eyebrow">PENERIMAAN SUPPLIER</span><h2>${bo ? "Nota barang masuk gudang" : "Penerimaan & penimbangan"}</h2><p>${bo ? "Catat barang dan jumlah sesuai nota supplier. Stok masuk setelah gudang menyelesaikan penerimaan." : "Pilih nota untuk mencatat jumlah barang dan memindai label buah."}</p></div><div class="toolbar"><button type="button" data-supply-refresh>Perbarui</button>${bo ? '<button type="button" data-legacy-labels>Registrasi barcode stok lama</button><button type="button" class="primary" data-note-new>+ Nota supplier</button>' : ""}</div></div><section class="panel">${table(
+  return `<section class="supply-workspace"><div class="supply-hero"><div><span class="supply-eyebrow">PENERIMAAN SUPPLIER</span><h2>${bo ? (branch ? "Nota supplier cabang" : "Nota barang masuk gudang") : "Penerimaan & penimbangan"}</h2><p>${bo && branch ? "Pilih cabang penerima saat membuka nota supplier." : bo ? "Catat barang dan jumlah sesuai nota supplier. Stok masuk setelah gudang menyelesaikan penerimaan." : "Pilih nota untuk mencatat jumlah barang dan memindai label buah."}</p></div><div class="toolbar"><button type="button" data-supply-refresh>Perbarui</button>${bo ? '<button type="button" data-legacy-labels>Registrasi barcode stok lama</button><button type="button" class="primary" data-note-new>+ Nota supplier</button>' : ""}</div></div><section class="panel">${table(
     [
       "Nota / supplier",
+      ...(bo && branch ? ["Lokasi penerima"] : []),
       "Tanggal",
       ...(bo ? ["Pembayaran nota", "Pembayaran ongkir"] : []),
       "Hasil penerimaan",
@@ -81,7 +83,7 @@ export function receivingPage(s, store, space) {
       "Aksi",
     ],
     plans.map((p) => {
-      return `<tr><td><b>${e(p.invoiceNo)}</b><small>${e(name(s, "suppliers", p.supplierId))}</small></td><td>${e(p.date)}</td>${
+      return `<tr><td><b>${e(p.invoiceNo)}</b><small>${e(name(s, "suppliers", p.supplierId))}</small></td>${bo && branch ? `<td>${e(name(s, "locations", p.storeId))}</td>` : ""}<td>${e(p.date)}</td>${
         bo
           ? ["invoice", "shipping"]
               .map((k) => {
@@ -149,7 +151,7 @@ export function receiptOfficeControls(s, p, d, ctx) {
           "Alasan pembukaan",
           '<textarea name="reason" minlength="5" maxlength="500" required></textarea>',
         ) +
-          "<p>Gudang dapat membetulkan scan. Barang yang sudah berpindah atau terjual tidak dapat dihapus. Batch dibekukan untuk transaksi baru sampai penerimaan diselesaikan kembali.</p>",
+          "<p>Petugas penerimaan dapat membetulkan scan. Barang yang sudah berpindah atau terjual tidak dapat dihapus. Batch dibekukan untuk transaksi baru sampai penerimaan diselesaikan kembali.</p>",
         () => ({}),
       ),
     );

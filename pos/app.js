@@ -91,6 +91,8 @@ let workspace = "";
 function workspaceAccess() {
   return {
     ...state.access,
+    branchStock: state.branchStockVersion >= 132 && !state.stockDemo,
+    legacyOutbound: !!state.outboundOrders?.length,
     pettyCash: state.pettyCashVersion >= 130 && !state.stockDemo,
     cashierExpenses: state.cashierExpenseVersion >= 128 && !state.stockDemo,
     cashierOwner: state.me?.role === "owner",
@@ -107,7 +109,7 @@ function workspaceSwitch() {
       )
         .map(
           (k) =>
-            `<button type="button" data-workspace="${k}" aria-pressed="${workspace === k}">${spaceTitles[k]}</button>`,
+            `<button type="button" data-workspace="${k}" aria-pressed="${workspace === k}">${k === "warehouse" && state.branchStockVersion >= 132 ? "Gudang lama" : spaceTitles[k]}</button>`,
         )
         .join("")}</div>`
     : "";
@@ -748,10 +750,21 @@ function shell(body) {
   const access = workspaceAccess();
   const pageTitles =
     access.workspace === "store"
-      ? { ...title, ...storePageTitles }
+      ? {
+          ...title,
+          ...storePageTitles,
+          ...(access.branchStock
+            ? {
+                supplierNotes: "Terima dari supplier",
+                transfers: "Kirim ke cabang",
+                receiving: "Terima dari cabang",
+              }
+            : {}),
+        }
       : access.pettyCash
         ? {
             ...title,
+            ...(access.branchStock ? { transfers: "Dokumen distribusi lama" } : {}),
             documents: "Arsip dokumen",
             dashboard: "Analisis penjualan",
             backoffice: "Dashboard",
@@ -765,7 +778,7 @@ function shell(body) {
     state.warehouseVersion && !state.stockDemo
       ? state.stores.filter(
           (x) =>
-            workspace === "backoffice" ||
+            (workspace === "backoffice" && !(state.branchStockVersion >= 132)) ||
             (workspace === "warehouse"
               ? x.locationType === "warehouse"
               : x.locationType !== "warehouse"),
@@ -871,7 +884,7 @@ function render() {
     }
     const locations = state.stores.filter(
       (x) =>
-        workspace === "backoffice" ||
+        (workspace === "backoffice" && !(state.branchStockVersion >= 132)) ||
         (workspace === "warehouse"
           ? x.locationType === "warehouse"
           : x.locationType !== "warehouse"),
@@ -1027,7 +1040,7 @@ function render() {
       !state.stockDemo &&
       location(state, store)?.locationType !== "warehouse"
     ) {
-      view = "receiving";
+      view = workspaceAccess().branchStock ? "supplierNotes" : "receiving";
       render();
       return;
     }

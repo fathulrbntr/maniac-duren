@@ -163,7 +163,10 @@ export function bindReports(s, store, ctx) {
       const report = await ctx.rpc("pos_cash_flow_read", { filters: selected });
       if (!result.isConnected || ticket !== requestNumber || tab !== "cashflow") return;
       flowSheets = cashFlowSheets(report, selected.store, selected.from, selected.to);
-      const [shop, retail, distribution, invoices, review] = flowSheets;
+      const [shop, retail] = flowSheets;
+      const distribution = flowSheets.find((x) => x.name === "PT Distribusi (Gudang)");
+      const invoices = flowSheets.find((x) => x.name === "Tagihan PT Distribusi");
+      const review = flowSheets.find((x) => x.name === "Perlu diperiksa");
       const sheetTable = (sheet) =>
         table(
           ["Komponen", "Nilai"],
@@ -174,12 +177,16 @@ export function bindReports(s, store, ctx) {
         );
       const panel = (sheet, extra = "") =>
         `<section class="panel"><h3>${e(sheet.name)}</h3>${sheetTable(sheet)}${extra}</section>`;
-      const invoiceTable = `<h4>Tagihan dan invoice</h4>${sheetTable(invoices)}`;
+      const invoiceTable = invoices
+        ? `<h4>Tagihan dan invoice</h4>${sheetTable(invoices)}`
+        : "";
       result.innerHTML =
-        `<div class="cash-flow-grid">${panel(shop)}${panel(retail)}${panel(distribution, invoiceTable)}</div>` +
+        `<div class="cash-flow-grid">${panel(shop)}${panel(retail)}${distribution ? panel(distribution, invoiceTable) : ""}</div>` +
         (review ? panel(review) : "") +
-        `<p class="muted">Uang kas toko mengikuti transaksi tunai tercatat sejak awal riwayat POS. Uang awal kembalian tidak termasuk. Penjualan nontunai mengikuti pembayaran di kasir. Setoran dan pembayaran nota antarpihak ditampilkan di kedua pihak. Tagihan menjadi arus kas saat dibayar.</p>` +
-        (selected.store
+        (report.branchStockVersion >= 132
+          ? '<p class="muted">Pembayaran nota dan ongkir supplier cabang mengikuti tanggal pembayaran. Mutasi antarcabang hanya memindahkan persediaan.</p>'
+          : `<p class="muted">Uang kas toko mengikuti transaksi tunai tercatat sejak awal riwayat POS. Uang awal kembalian tidak termasuk. Penjualan nontunai mengikuti pembayaran di kasir. Setoran dan pembayaran nota antarpihak ditampilkan di kedua pihak. Tagihan menjadi arus kas saat dibayar.</p>`) +
+        (selected.store && !report.branchStockVersion
           ? '<p class="muted">Filter cabang menampilkan dana terkait toko terpilih. Pilih semua toko untuk melihat wholesale dan pembayaran supplier.</p>'
           : "") +
         (review
@@ -510,9 +517,10 @@ function payerOptions(s, store) {
 }
 export function expenseDialog(s, store, ctx, retailOnly = false) {
   const modern = s.pettyCashVersion >= 130;
-  const locations = retailOnly
-    ? s.stores.filter((t) => t.locationType === "store")
-    : s.stores;
+  const locations =
+    retailOnly || s.branchStockVersion >= 132
+      ? s.stores.filter((t) => t.locationType === "store")
+      : s.stores;
   if (!locations.length) return ctx.toast("Belum ada toko untuk biaya operasional.");
   if (!locations.some((t) => t.id === store)) store = locations[0].id;
   const funding = (key) => {

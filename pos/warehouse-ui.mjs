@@ -45,13 +45,22 @@ const blocker = (s) =>
 function locationStockTable(s) {
   const weight = (kg, pieces) =>
     `<td>${num(kg)} kg<small>${num(pieces)} butir</small></td>`;
-  const rows = locationFruitStock(s).map(
-    (r) => `<tr>
+  const rows = locationFruitStock(s)
+    .filter(
+      (r) =>
+        !(s.branchStockVersion >= 132) ||
+        r.location.locationType !== "warehouse" ||
+        r.readyPieces ||
+        r.rejectPieces ||
+        r.soldPieces,
+    )
+    .map(
+      (r) => `<tr>
     <th scope="row"><b>${e(r.location.name)}</b><small>${r.location.locationType === "warehouse" ? "Gudang pusat" : "Toko"}</small></th>
     ${weight(r.readyKg, r.readyPieces)}${weight(r.soldKg, r.soldPieces)}${weight(r.rejectKg, r.rejectPieces)}
     <td>${num(r.durpas500)} pcs</td><td>${num(r.durpas1000)} pcs</td><td>${num(r.coral)} kg</td><td>${num(r.skinKg)} kg</td>
   </tr>`,
-  );
+    );
   return `<section class="panel location-stock"><h3 id="location-stock-heading">Stok buah per lokasi</h3>
     <div class="table-wrap"><table aria-labelledby="location-stock-heading" aria-describedby="location-stock-help">
     <colgroup span="4"></colgroup><colgroup span="4"></colgroup>
@@ -81,18 +90,52 @@ function storeStockActions(access) {
 
 function supplyTasks(s, space) {
   const access = s.access || {};
+  if (s.branchStockVersion >= 132 && space === "store") {
+    return [
+      access.stock &&
+        action(
+          "supplierNotes",
+          "Terima dari supplier",
+          "Pilih nota untuk cabang ini, lalu timbang dan scan barang.",
+        ),
+      access.stock &&
+        action(
+          "transfers",
+          "Kirim ke cabang",
+          "Pilih cabang tujuan dan siapkan surat jalan.",
+        ),
+      access.receive &&
+        action(
+          "receiving",
+          "Terima dari cabang",
+          "Cocokkan jumlah fisik dengan surat jalan.",
+        ),
+      storeStockActions(access),
+      access.kitchen && action("kitchen", "Kitchen", "Pesanan yang perlu disiapkan."),
+      access.serve && action("service", "Pelayanan meja", "Antar pesanan yang siap."),
+      access.cut &&
+        action("cutting", "Pemeriksaan buah", "Periksa buah untuk pelanggan."),
+    ]
+      .filter(Boolean)
+      .join("");
+  }
   if (space === "backoffice") {
     return [
       action(
         "supplierNotes",
         "Buka nota supplier",
-        "Isi barang, modal dan ongkir untuk penerimaan gudang.",
+        s.branchStockVersion >= 132
+          ? "Pilih cabang penerima, lalu isi barang dan ongkir."
+          : "Isi barang, modal dan ongkir untuk penerimaan gudang.",
       ),
-      action(
-        "transfers",
-        "Transfer toko & wholesale",
-        "Kelola dokumen pengiriman ke toko dan penjualan grosir.",
-      ),
+      (!(s.branchStockVersion >= 132) || s.outboundOrders?.length > 0) &&
+        action(
+          "transfers",
+          s.branchStockVersion >= 132
+            ? "Dokumen distribusi lama"
+            : "Transfer toko & wholesale",
+          "Kelola dokumen pengiriman ke toko dan penjualan grosir.",
+        ),
       workflowReady(s)
         ? action(
             "pricing",
@@ -107,6 +150,30 @@ function supplyTasks(s, space) {
           "Laporan batch supplier",
           "Telusuri posisi stok dan hasil olahan.",
         ),
+    ]
+      .filter(Boolean)
+      .join("");
+  }
+  if (space === "warehouse" && s.branchStockVersion >= 132) {
+    return [
+      access.stock &&
+        action(
+          "stock",
+          "Pindahkan sisa stok ke cabang",
+          "Pilih stok lama yang masih ada, lalu terbitkan surat jalan.",
+        ),
+      access.stock &&
+        s.receiptPlans?.some(
+          (p) => p.storeId === warehouseId(s) && p.receiving?.status !== "completed",
+        ) &&
+        action(
+          "supplierNotes",
+          "Selesaikan penerimaan lama",
+          "Periksa nota gudang yang masih terbuka.",
+        ),
+      (access.dispatch || access.backoffice) &&
+        s.outboundOrders?.length > 0 &&
+        action("transfers", "Dokumen distribusi lama", "Buka dokumen yang sudah dibuat."),
     ]
       .filter(Boolean)
       .join("");
@@ -191,7 +258,9 @@ export function supplyHome(s, store, space) {
     space === "backoffice"
       ? "Back office"
       : space === "warehouse"
-        ? "Gudang pusat"
+        ? s.branchStockVersion >= 132
+          ? "Gudang lama"
+          : "Gudang pusat"
         : "Operasional toko";
   const operational = space === "store" && !s.access?.receive && !s.access?.backoffice;
   const orders = (s.orders || []).filter(
@@ -324,22 +393,25 @@ function transferTable(rows, finance = true) {
     ],
     rows.map(
       (t) =>
-        `<tr><td><b>${e(t.deliveryNo)}</b><small>${e(t.invoiceNo)}</small></td><td>${e(t.destination.name)}<small>${t.items.length} buah · ${t.lines.length} baris batch/produk</small></td><td>${badge(t)}<small>${t.items.filter((i) => i.scannedAt).length}/${t.items.length} barcode diperiksa</small></td>${finance ? `<td>${money(t.total)}<small>Sisa ${money(t.total - t.paid)}</small></td>` : ""}<td><button type="button" data-transfer="${e(t.id)}">Buka</button></td></tr>`,
+        `<tr><td><b>${e(t.deliveryNo)}</b><small>${e(t.invoiceNo)}</small></td><td>${e(t.destination.name)}<small>${t.items.length} buah · ${t.lines.length} baris batch/produk</small></td><td>${badge(t)}<small>${t.invoiceNo === null ? "Mutasi antarcabang" : `${t.items.filter((i) => i.scannedAt).length}/${t.items.length} barcode diperiksa`}</small></td>${finance ? `<td>${money(t.total)}<small>Sisa ${money(t.total - t.paid)}</small></td>` : ""}<td><button type="button" data-transfer="${e(t.id)}">Buka</button></td></tr>`,
     ),
   );
 }
 export function transfersPage(s, store, incoming = false, space) {
-  if (workflowReady(s) && !incoming) return outboundPage(s, store, space);
+  const branch = s.branchStockVersion >= 132 && (incoming || space === "store");
+  if (!branch && workflowReady(s) && !incoming) return outboundPage(s, store, space);
   const canSend =
     warehouseEnabled(s) &&
-    s.access?.dispatch &&
-    location(s, store)?.locationType === "warehouse";
+    !incoming &&
+    (branch
+      ? s.access?.stock && location(s, store)?.locationType === "store"
+      : s.access?.dispatch && location(s, store)?.locationType === "warehouse");
   const afterReceipt =
     incoming &&
     (s.transfers || []).some((t) => t.targetId === store && t.status === "received")
       ? storeStockActions(s.access)
       : "";
-  return `<section class="supply-workspace">${blocker(s)}<div class="supply-hero"><div><span class="supply-eyebrow">${incoming ? "PENERIMAAN TOKO" : "DISTRIBUSI GUDANG"}</span><h2>${incoming ? "Periksa kiriman masuk" : "Pengiriman & tagihan"}</h2><p>${incoming ? "Scan barcode buah dan cocokkan jumlah barang nonbuah per batch dengan surat jalan." : "Setiap kiriman memiliki invoice, surat jalan, dan jejak barcode."}</p></div><div class="toolbar"><button type="button" data-supply-refresh>Perbarui</button>${canSend ? '<button type="button" class="primary" data-transfer-new>+ Buat pengiriman</button>' : ""}</div></div><div class="supply-filters"><input type="search" data-transfer-search placeholder="Cari nomor surat jalan, invoice, atau toko…" aria-label="Cari kiriman"><select data-transfer-filter aria-label="Status kiriman"><option value="">Semua status</option>${Object.entries(
+  return `<section class="supply-workspace">${blocker(s)}<div class="supply-hero"><div><span class="supply-eyebrow">${branch ? "MUTASI ANTARCABANG" : incoming ? "PENERIMAAN TOKO" : "DISTRIBUSI GUDANG"}</span><h2>${incoming ? "Periksa kiriman masuk" : branch ? "Kirim ke cabang" : "Pengiriman & tagihan"}</h2><p>${branch ? (incoming ? "Periksa jumlah barang per batch sebelum mengonfirmasi penerimaan." : "Pindahkan barang dengan surat jalan dari cabang aktif.") : incoming ? "Scan barcode buah dan cocokkan jumlah barang nonbuah per batch dengan surat jalan." : "Setiap kiriman memiliki invoice, surat jalan, dan jejak barcode."}</p></div><div class="toolbar"><button type="button" data-supply-refresh>Perbarui</button>${canSend ? '<button type="button" class="primary" data-transfer-new>+ Buat pengiriman</button>' : ""}</div></div><div class="supply-filters"><input type="search" data-transfer-search placeholder="${branch ? "Cari surat jalan atau cabang…" : "Cari nomor surat jalan, invoice, atau toko…"}" aria-label="Cari kiriman"><select data-transfer-filter aria-label="Status kiriman"><option value="">Semua status</option>${Object.entries(
     transferStatus,
   )
     .map(
@@ -417,11 +489,24 @@ function safeContext(s, ctx) {
 }
 export function openDispatch(s, store, ctx) {
   if (!safeContext(s, ctx)) return;
-  if (location(s, store)?.locationType !== "warehouse") {
-    ctx.toast("Pilih gudang pusat sebagai lokasi aktif.");
+  const branch = s.branchStockVersion >= 132;
+  const source = location(s, store);
+  if (
+    !source ||
+    (branch
+      ? !["store", "warehouse"].includes(source.locationType)
+      : source.locationType !== "warehouse")
+  ) {
+    ctx.toast(
+      branch
+        ? "Pilih cabang asal terlebih dahulu."
+        : "Pilih gudang pusat sebagai lokasi aktif.",
+    );
     return;
   }
-  const targets = (s.locations || s.stores).filter((x) => x.locationType === "store"),
+  const targets = (s.locations || s.stores).filter(
+      (x) => x.locationType === "store" && x.id !== store,
+    ),
     codes = [],
     units = [];
   const d = ctx.modal(
@@ -435,8 +520,8 @@ export function openDispatch(s, store, ctx) {
             `<option value="${e(l.id)}">${e(name(s, "products", l.productId))} · ${num(l.qty)} ${e(l.unit)} · ${e(l.id.slice(0, 8))}</option>`,
         )
         .join("")}</select>`,
-    )}${field("Jumlah", '<input data-unit-qty type="number" min="0.001" step="any">')}</div><button type="button" data-unit-add>Tambah barang</button></details><div class="supply-step"><b>3</b><span>Periksa invoice dan kirim</span></div><div data-dispatch-summary></div>${field("Catatan", '<textarea name="note" maxlength="500" rows="2"></textarea>')}<p class="notice">Saat diterbitkan, stok gudang berkurang dan barang masuk status dalam perjalanan. Stok toko belum bertambah.</p>`,
-    "Terbitkan invoice & kirim",
+    )}${field("Jumlah", '<input data-unit-qty type="number" min="0.001" step="any">')}</div><button type="button" data-unit-add>Tambah barang</button></details><div class="supply-step"><b>3</b><span>${branch ? "Periksa barang dan kirim" : "Periksa invoice dan kirim"}</span></div><div data-dispatch-summary></div>${field("Catatan", '<textarea name="note" maxlength="500" rows="2"></textarea>')}<p class="notice">Stok asal berkurang saat dikirim. Stok tujuan bertambah setelah diterima.</p>`,
+    branch ? "Terbitkan surat jalan dan kirim" : "Terbitkan invoice & kirim",
   );
   d.classList.add("supply-modal");
   const request = id(),
@@ -455,13 +540,15 @@ export function openDispatch(s, store, ctx) {
     const lines = transferPreview(s, codes, units);
     d.querySelector("[data-dispatch-summary]").innerHTML =
       table(
-        ["Barang", "Jumlah", "Tagihan", ""],
+        ["Barang", "Jumlah", ...(branch ? [] : ["Tagihan"]), ""],
         lines.map(
           (x) =>
-            `<tr><td>${e(x.productName)}</td><td>${x.kg !== undefined ? num(x.kg) + " kg / " + x.pieces + " butir" : num(x.qty) + " " + e(x.unit)}</td><td>${money(x.total)}</td><td>${x.kg === undefined ? `<button type="button" data-remove-unit="${e(x.sourceLotId)}">Hapus</button>` : ""}</td></tr>`,
+            `<tr><td>${e(x.productName)}</td><td>${x.kg !== undefined ? num(x.kg) + " kg / " + x.pieces + " butir" : num(x.qty) + " " + e(x.unit)}</td>${branch ? "" : `<td>${money(x.total)}</td>`}<td>${x.kg === undefined ? `<button type="button" data-remove-unit="${e(x.sourceLotId)}">Hapus</button>` : ""}</td></tr>`,
         ),
       ) +
-      `<p class="supply-total">Estimasi tagihan <b>${money(lines.reduce((n, l) => n + l.total, 0))}</b></p>`;
+      (branch
+        ? ""
+        : `<p class="supply-total">Estimasi tagihan <b>${money(lines.reduce((n, l) => n + l.total, 0))}</b></p>`);
     d.querySelector("[type=submit]").disabled = !lines.length;
     d.querySelectorAll("[data-remove-unit]").forEach(
       (b) =>
@@ -531,7 +618,9 @@ export function openDispatch(s, store, ctx) {
     if (!codes.length && !units.length) throw Error("Scan barang terlebih dahulu.");
     if (
       !confirm(
-        "Terbitkan invoice dan surat jalan? Barang yang dipilih akan keluar dari stok gudang.",
+        branch
+          ? "Kirim barang pada daftar ini ke cabang tujuan?"
+          : "Terbitkan invoice dan surat jalan? Barang yang dipilih akan keluar dari stok gudang.",
       )
     )
       return;
@@ -550,7 +639,11 @@ export function openDispatch(s, store, ctx) {
     );
     d.close();
     ctx.render();
-    ctx.toast("Kiriman diterbitkan. Buka detail untuk cetak invoice dan surat jalan.");
+    ctx.toast(
+      branch
+        ? "Mutasi tercatat. Surat jalan siap dicetak."
+        : "Kiriman diterbitkan. Buka detail untuk cetak invoice dan surat jalan.",
+    );
   });
   draw();
   input.focus();
@@ -566,7 +659,9 @@ export function openWarehouseReceipt(s, store, ctx) {
       (workflowReady(s) ? x.receiving?.status !== "completed" : !x.receivedId),
   );
   if (!plans.length) {
-    ctx.toast("Belum ada nota supplier. Admin perlu membuat nota terlebih dahulu.");
+    ctx.toast(
+      "Belum ada nota supplier untuk lokasi ini. Back Office dapat membuka nota terlebih dahulu.",
+    );
     return;
   }
   const d = ctx.modal(
@@ -587,18 +682,31 @@ export function openWarehouseReceipt(s, store, ctx) {
   return d;
 }
 function openTransfer(s, t, ctx, receiving) {
-  const finance = !workflowReady(s) || backOffice(s, ctx.workspace);
+  const internal = s.branchStockVersion >= 132 && t.invoiceNo === null;
+  const finance = !internal && (!workflowReady(s) || backOffice(s, ctx.workspace));
   const canReceive = receiving && s.access?.receive && t.status === "in_transit",
     scanned = t.items.filter((i) => i.scannedAt).length;
   const d = ctx.modal(
     t.deliveryNo,
-    `<div class="supply-detail-head"><div><h3>${e(t.origin.name)} → ${e(t.destination.name)}</h3><p>${e(t.invoiceNo)} · ${e(t.carrier)}</p></div>${badge(t)}</div><div class="toolbar">${finance ? '<button type="button" data-print-invoice>Cetak invoice</button>' : ""}<button type="button" data-print-delivery>Cetak surat jalan</button></div><div class="supply-stats">${finance ? stat("Total tagihan", money(t.total)) + stat("Sisa tagihan", money(t.total - t.paid)) : ""}${t.items.length ? stat("Barcode cocok", scanned + " / " + t.items.length) : ""}</div>${table(
+    `<div class="supply-detail-head"><div><h3>${e(t.origin.name)} → ${e(t.destination.name)}</h3><p>${internal ? "Mutasi antarcabang" : e(t.invoiceNo)} · ${e(t.carrier)}</p></div>${badge(t)}</div><div class="toolbar">${finance ? '<button type="button" data-print-invoice>Cetak invoice</button>' : ""}<button type="button" data-print-delivery>Cetak surat jalan</button></div><div class="supply-stats">${finance ? stat("Total tagihan", money(t.total)) + stat("Sisa tagihan", money(t.total - t.paid)) : ""}${t.items.length && !internal ? stat("Barcode cocok", scanned + " / " + t.items.length) : ""}</div>${table(
       ["Barang / batch", "Jumlah", ...(finance ? ["Harga transfer", "Total"] : [])],
       t.lines.map(
         (l) =>
           `<tr><td>${e(l.productName)}<small>${e(l.supplierName || "—")} · ${e(l.sourceLotId.slice(0, 8))}</small></td><td>${l.kind === "fruit" ? num(l.kg) + " kg / " + l.pieces + " butir" : num(l.qty) + " " + e(l.unit)}</td>${finance ? `<td>${money(l.price)} / ${e(l.unit)}</td><td>${money(l.total)}</td>` : ""}</tr>`,
       ),
-    )}${canReceive && t.items.length ? `<div class="supply-step"><b>1</b><span>Scan ulang barang yang tiba</span></div><div class="supply-scan"><input data-receive-code maxlength="26" autocomplete="off" spellcheck="false" placeholder="Scan barcode penerimaan" aria-label="Scan barcode penerimaan"><button type="button" data-receive-add>Catat scan</button></div><p data-receive-message role="status"></p><p class="notice">Scan tersimpan di server. Seluruh kiriman tetap dalam perjalanan sampai barcode lengkap dan penerimaan dikonfirmasi.</p>` : ""}<div data-receive-list>${t.items.length ? receiptItems(t) : ""}</div>${
+    )}${canReceive && !internal && t.items.length ? `<div class="supply-step"><b>1</b><span>Scan ulang barang yang tiba</span></div><div class="supply-scan"><input data-receive-code maxlength="26" autocomplete="off" spellcheck="false" placeholder="Scan barcode penerimaan" aria-label="Scan barcode penerimaan"><button type="button" data-receive-add>Catat scan</button></div><p data-receive-message role="status"></p><p class="notice">Scan tersimpan di server. Seluruh kiriman tetap dalam perjalanan sampai barcode lengkap dan penerimaan dikonfirmasi.</p>` : ""}<div data-receive-list>${t.items.length ? receiptItems(t, internal) : ""}${
+      canReceive && internal
+        ? t.lines
+            .filter((l) => l.kind === "fruit")
+            .map((l) =>
+              field(
+                `${l.productName} · batch ${l.sourceLotId.slice(0, 8)} · dikirim ${l.pieces} butir`,
+                `<input data-receive-fruit="${e(l.sourceLotId)}" type="number" step="1" min="0" required placeholder="Jumlah butir diterima">`,
+              ),
+            )
+            .join("")
+        : ""
+    }</div>${
       canReceive && t.lines.some((l) => l.kind === "unit")
         ? `<h3>Periksa jumlah barang satuan</h3>${t.lines
             .filter((l) => l.kind === "unit")
@@ -610,7 +718,7 @@ function openTransfer(s, t, ctx, receiving) {
             )
             .join("")}`
         : ""
-    }${canReceive ? '<label class="supply-check"><input type="checkbox" name="confirmed" required> Semua barang sudah diperiksa dan sesuai surat jalan.</label>' : ""}${finance && s.access?.backoffice && t.status !== "cancelled" ? `<div class="toolbar">${t.paid < t.total && !(s.outboundOrders || []).some((o) => o.id === t.id) ? '<button type="button" data-transfer-payment>Catat pembayaran</button>' : ""}${t.status === "in_transit" && t.paid === 0 && scanned === 0 ? '<button type="button" data-transfer-cancel>Batalkan kiriman</button>' : ""}</div>` : ""}<p>${e(t.note || "")}</p>`,
+    }${canReceive ? '<label class="supply-check"><input type="checkbox" name="confirmed" required> Semua barang sudah diperiksa dan sesuai surat jalan.</label>' : ""}${(finance || internal) && s.access?.backoffice && t.status !== "cancelled" ? `<div class="toolbar">${!internal && t.paid < t.total && !(s.outboundOrders || []).some((o) => o.id === t.id) ? '<button type="button" data-transfer-payment>Catat pembayaran</button>' : ""}${t.status === "in_transit" && t.paid === 0 && scanned === 0 ? '<button type="button" data-transfer-cancel>Batalkan kiriman</button>' : ""}</div>` : ""}<p>${e(t.note || "")}</p>`,
     canReceive ? "Konfirmasi penerimaan lengkap" : "Tutup",
   );
   d.classList.add("supply-modal");
@@ -666,7 +774,7 @@ function openTransfer(s, t, ctx, receiving) {
       readyBarcodeInput(input);
     }
   };
-  if (canReceive && t.items.length) {
+  if (canReceive && !internal && t.items.length) {
     prepareBarcodeInput(d.querySelector("[data-receive-code]"));
     d.querySelector("[data-receive-add]").onclick = scan;
     d.querySelector("[data-receive-code]").onkeydown = (ev) => {
@@ -683,7 +791,7 @@ function openTransfer(s, t, ctx, receiving) {
       return;
     }
     if (working) throw Error("Tunggu pencatatan scan selesai.");
-    if (t.items.some((i) => !i.scannedAt))
+    if (!internal && t.items.some((i) => !i.scannedAt))
       throw Error("Masih ada barcode belum dipindai. Stok toko belum bertambah.");
     const units = [...d.querySelectorAll("[data-receive-unit]")].map((x) => ({
       lotId: x.dataset.receiveUnit,
@@ -696,6 +804,16 @@ function openTransfer(s, t, ctx, receiving) {
         transferId: t.id,
         deliveryNo: t.deliveryNo,
         confirmed: f.elements.confirmed.checked,
+        ...(internal
+          ? {
+              fruitCounts: Object.fromEntries(
+                [...d.querySelectorAll("[data-receive-fruit]")].map((input) => [
+                  input.dataset.receiveFruit,
+                  Number(input.value),
+                ]),
+              ),
+            }
+          : {}),
         units,
       },
       { throwOnError: true },
@@ -741,7 +859,7 @@ function openTransfer(s, t, ctx, receiving) {
         "Alasan pembatalan",
         '<textarea name="reason" minlength="5" maxlength="500" required></textarea>',
       ) +
-        '<label class="supply-check"><input type="checkbox" name="returned" required> Seluruh barang telah kembali secara fisik ke gudang.</label>',
+        '<label class="supply-check"><input type="checkbox" name="returned" required> Seluruh barang telah kembali secara fisik ke lokasi asal.</label>',
       "Batalkan & kembalikan stok",
     );
     const eid = id();
@@ -763,16 +881,18 @@ function openTransfer(s, t, ctx, receiving) {
   });
   return d;
 }
-function receiptItems(t) {
-  return `<details ${t.status === "in_transit" ? "open" : ""}><summary>Daftar barcode (${t.items.length})</summary>${table(
+function receiptItems(t, internal = false) {
+  return `<details ${!internal && t.status === "in_transit" ? "open" : ""}><summary>Daftar barcode (${t.items.length})</summary>${table(
     ["Barcode", "Berat", "Pemeriksaan"],
     t.items.map(
       (i) =>
-        `<tr><td><code>${e(i.barcode)}</code></td><td>${num(i.grams / 1000)} kg</td><td>${i.scannedAt ? "✓ Cocok" : "Belum dipindai"}</td></tr>`,
+        `<tr><td><code>${e(i.barcode)}</code></td><td>${num(i.grams / 1000)} kg</td><td>${internal ? (t.status === "received" ? "Diterima" : "Terdaftar") : i.scannedAt ? "✓ Cocok" : "Belum dipindai"}</td></tr>`,
     ),
   )}</details>`;
 }
 function noteDialog(s, ctx) {
+  const branch = s.branchStockVersion >= 132;
+  const branches = (s.locations || s.stores).filter((l) => l.locationType === "store");
   const wh = warehouseId(s),
     products = s.products.filter(
       (p) =>
@@ -783,14 +903,18 @@ function noteDialog(s, ctx) {
           ["kg", "g", "ml", "pcs", "porsi"].includes(p.stockUnit)),
     ),
     rows = [{ productId: products[0]?.id, purchaseCost: "" }];
-  if (!wh || !products.length) {
-    ctx.toast("Lengkapi gudang dan produk terlebih dahulu.");
+  if ((branch ? !branches.length : !wh) || !products.length) {
+    ctx.toast(
+      branch
+        ? "Tambahkan cabang dan produk terlebih dahulu."
+        : "Lengkapi gudang dan produk terlebih dahulu.",
+    );
     return;
   }
   const d = ctx.modal(
-    "Nota supplier ke gudang",
-    `<p><b>${e(location(s, wh)?.name)}</b></p><div class="form-grid">${field("Supplier", `<select name="supplierId" required>${opts(s.suppliers)}</select>`)}${field("Nomor nota supplier", '<input name="invoiceNo" maxlength="100" required>')}${field("Tanggal penerimaan", `<input name="date" type="date" value="${today()}" max="${today()}" required>`)}${field("Ongkir bersama (Rp)", '<input name="shippingCost" type="number" min="0" step="any" value="0" required>')}</div><div data-note-lines></div><button type="button" data-note-add>+ Tambah produk</button><p class="muted">Modal batch dihitung dari nilai barang dan bagian ongkir, dibagi jumlah aktual yang diterima.</p>`,
-    "Simpan nota untuk gudang",
+    branch ? "Buka nota supplier untuk cabang" : "Nota supplier ke gudang",
+    `${branch ? field("Cabang penerima", `<select name="receivingBranch" required><option value="">Pilih cabang penerima</option>${opts(branches)}</select>`) : `<p><b>${e(location(s, wh)?.name)}</b></p>`}<div class="form-grid">${field("Supplier", `<select name="supplierId" required>${opts(s.suppliers)}</select>`)}${field("Nomor nota supplier", '<input name="invoiceNo" maxlength="100" required>')}${field("Tanggal penerimaan", `<input name="date" type="date" value="${today()}" max="${today()}" required>`)}${field("Ongkir bersama (Rp)", '<input name="shippingCost" type="number" min="0" step="any" value="0" required>')}</div><div data-note-lines></div><button type="button" data-note-add>+ Tambah produk</button><p class="muted">Modal batch dihitung dari nilai barang dan bagian ongkir, dibagi jumlah aktual yang diterima.</p>`,
+    branch ? "Simpan nota untuk cabang" : "Simpan nota untuk gudang",
   );
   d.classList.add("supply-modal");
   const list = d.querySelector("[data-note-lines]");
@@ -852,7 +976,7 @@ function noteDialog(s, ctx) {
       "receipt_plan_save",
       {
         id: request,
-        storeId: wh,
+        storeId: branch ? f.elements.receivingBranch.value : wh,
         supplierId: f.elements.supplierId.value,
         invoiceNo: f.elements.invoiceNo.value.trim(),
         date: f.elements.date.value,
@@ -924,7 +1048,9 @@ export function bindSupply(s, store, view, ctx) {
   const incoming = view === "receiving";
   const rows = () =>
     (s.transfers || []).filter((t) =>
-      incoming ? t.targetId === store : s.access?.backoffice || t.sourceId === store,
+      incoming
+        ? t.targetId === store
+        : (s.access?.backoffice && ctx.workspace !== "store") || t.sourceId === store,
     );
   const list = document.querySelector("[data-transfer-list]");
   if (list) {
@@ -944,7 +1070,8 @@ export function bindSupply(s, store, view, ctx) {
                 .toLowerCase()
                 .includes(q)),
         ),
-        !workflowReady(s) || backOffice(s, ctx.workspace),
+        !(s.branchStockVersion >= 132) &&
+          (!workflowReady(s) || backOffice(s, ctx.workspace)),
       );
     };
     document.querySelector("[data-transfer-search]").oninput = draw;
@@ -955,7 +1082,7 @@ export function bindSupply(s, store, view, ctx) {
     const b = ev.target.closest("[data-transfer]");
     if (b) {
       const t = s.transfers.find((t) => t.id === b.dataset.transfer);
-      openTransfer(s, t, ctx, incoming || t.targetId === store);
+      openTransfer(s, t, ctx, (incoming || t.targetId === store) && t.targetId === store);
     }
   });
   document

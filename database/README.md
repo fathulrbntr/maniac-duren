@@ -173,3 +173,12 @@ Setelah patch 130, jalankan `database/outbound-units-131.sql` atau migrasi
 `20261126234500_outbound_units_131.sql`. Perubahan menambahkan reservasi jumlah
 stok per batch ke alur pengiriman toko. Dokumen lama tetap mengikuti rincian
 dan status yang sudah tersimpan.
+
+### Penerimaan supplier cabang dan mutasi 132
+
+Setelah patch 131, jalankan `database/branch-stock-132.sql` atau migrasi
+`20261127090000_branch_stock_132.sql`. Nota baru menunjuk cabang penerima dan stok
+masuk saat penerimaan selesai. Mutasi cabang menerbitkan surat jalan, membawa modal
+batch, dan menambah stok tujuan setelah jumlah fisik cocok. Pembayaran supplier
+untuk nota cabang masuk arus kas Retail. Lihat
+[petunjuk patch 132](../docs/PATCH-132-ALUR-CABANG.md).

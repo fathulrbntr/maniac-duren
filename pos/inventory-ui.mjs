@@ -236,11 +236,18 @@ export function inventoryPanel(state, store, filter = {}, mode = "products") {
   const canManage = !state.access || state.access.master;
   const centralized = state.warehouseVersion && !state.stockDemo,
     warehouse = state.stores.find((x) => x.id === store)?.locationType === "warehouse";
-  const stockActions = centralized
-    ? `${warehouse && state.access?.dispatch ? '<button type="button" id="movement" class="inv-transfer">Kirim ke toko</button>' : ""}${warehouse && state.access?.stock ? '<button type="button" class="inv-add" id="add-receipt">Barang masuk gudang</button>' : ""}${!warehouse && state.access?.receive ? '<button type="button" class="inv-add" data-view="receiving">Terima kiriman</button>' : ""}`
-    : '<button type="button" id="movement" class="inv-transfer">Transfer</button><button type="button" class="inv-add" id="add-receipt">' +
-      icon("plus") +
-      "Barang masuk</button>";
+  const stockActions =
+    state.branchStockVersion >= 132 && !state.stockDemo && !warehouse
+      ? `${state.access?.stock ? '<button type="button" id="add-receipt" class="inv-add">Terima dari supplier</button><button type="button" id="movement" class="inv-transfer">Kirim ke cabang</button>' : ""}${state.access?.receive ? '<button type="button" data-view="receiving">Terima dari cabang</button>' : ""}`
+      : state.branchStockVersion >= 132 && !state.stockDemo && warehouse
+        ? state.access?.stock
+          ? '<button type="button" id="movement" class="inv-transfer">Pindahkan sisa stok ke cabang</button>'
+          : ""
+        : centralized
+          ? `${warehouse && state.access?.dispatch ? '<button type="button" id="movement" class="inv-transfer">Kirim ke toko</button>' : ""}${warehouse && state.access?.stock ? '<button type="button" class="inv-add" id="add-receipt">Barang masuk gudang</button>' : ""}${!warehouse && state.access?.receive ? '<button type="button" class="inv-add" data-view="receiving">Terima kiriman</button>' : ""}`
+          : '<button type="button" id="movement" class="inv-transfer">Transfer</button><button type="button" class="inv-add" id="add-receipt">' +
+            icon("plus") +
+            "Barang masuk</button>";
   return `<section class="inventory-workspace" data-inventory-mode="${mode}">
   <div class="inv-toolbar"><div class="inv-heading"><h2>${mode === "stock" ? "Stok & penerimaan" : "Master Barang"}</h2><p>${mode === "stock" ? "Catat barang datang, periksa hasil timbang, lalu selesaikan penerimaan." : "Kelola produk, varian, harga, dan kategori dalam satu tempat."}</p></div><div class="inv-primary-actions">${mode === "stock" ? stockActions : `<button type="button" class="inv-add" id="add-catalog-product">${icon("plus")}Tambah barang</button>`}</div></div>
   <label class="inv-search">${icon("search")}<input form="catalog-filter" name="query" type="search" value="${e(filter.query || "")}" placeholder="Cari nama, SKU atau barcode…" aria-label="Cari produk"></label>
