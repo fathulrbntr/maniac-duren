@@ -1,8 +1,10 @@
+import { table } from "./supply-session-ui.mjs";
 import { receiptOfficeControls } from "./receiving-session-ui.mjs";
 import { workflowReady } from "./warehouse-workflow.mjs";
 import { escape as e, id, today, money, num } from "./core.mjs";
 import {
   noteBalance,
+  cancellationBlock,
   noteReady,
   noteOwner,
   noteCanPay,
@@ -46,7 +48,9 @@ function saveForm(d, action, p, ctx, payload) {
       d.close();
       ctx.render();
       const state = ctx.getState();
-      const updated = state.receiptPlans?.find((n) => n.id === p.id);
+      const updated =
+        state.receiptPlans?.find((n) => n.id === p.id) ||
+        state.cancelledReceiptPlans?.find((n) => n.id === p.id);
       if (updated) openSupplierNote(state, updated, ctx);
     } catch (error) {
       d.querySelector("#form-error").textContent = error.message;
@@ -91,7 +95,45 @@ function correctionDialog(s, p, ctx) {
     ownerConfirmed: f.elements.confirmed.checked,
   }));
 }
+function archivedDraft(s, p) {
+  const scans = p.receiving?.scans || [];
+  const quantities = Object.entries(p.receiving?.quantities || {});
+  if (!scans.length && !quantities.length) return "";
+  const rows = [
+    ...scans.map(
+      (x) =>
+        `<tr><td>${e(name(s, "products", x.productId))}</td><td>${num(x.grams / 1000)} kg</td><td><code>${e(x.barcode)}</code></td></tr>`,
+    ),
+    ...quantities.map(
+      ([key, x]) =>
+        `<tr><td>${e(name(s, "products", key))}</td><td>${num(x.qty)} ${e(p.expected?.[key]?.unit)}</td><td>—</td></tr>`,
+    ),
+  ];
+  return `<details><summary>Draf penerimaan saat dibatalkan</summary>${table(["Produk", "Jumlah draf", "Barcode"], rows)}</details>`;
+}
+function cancelDialog(p, ctx) {
+  const scans = p.receiving.scans?.length || 0;
+  const quantities = Object.keys(p.receiving.quantities || {}).length;
+  const d = ctx.modal(
+    "Batalkan nota supplier",
+    `<p>Batalkan nota <b>${e(p.invoiceNo)}</b>? Nota akan keluar dari daftar penerimaan dan tagihan aktif.</p>${scans || quantities ? `<p class="notice">Draf penerimaan berisi ${num(scans)} scan buah dan ${num(quantities)} jenis barang satuan. Draf disimpan di riwayat dan barcode dapat dipakai kembali.</p>` : ""}
+    ${field("Alasan pembatalan", '<textarea name="reason" minlength="5" maxlength="500" required></textarea>')}`,
+    "Batalkan nota",
+  );
+  d.classList.add("supply-modal");
+  saveForm(d, "supplier_note_cancel", p, ctx, (f) => ({
+    reason: f.elements.reason.value.trim(),
+    expectedSessionRevision: p.receiving.revision,
+  }));
+}
 export function openSupplierNote(s, p, ctx) {
+  const cancelled = p.cancelled;
+  const canCancel =
+    s.supplierNoteCancelVersion >= 134 &&
+    !s.stockDemo &&
+    s.access?.backoffice &&
+    ctx.workspace === "backoffice";
+  const blocked = canCancel ? cancellationBlock(p) : "";
   const batches =
     [...(s.lots || []), ...(s.unitLots || [])].filter(
       (l) => p.receivedId && l.shipmentId === p.receivedId && !l.sourceLotId,
@@ -119,7 +161,7 @@ export function openSupplierNote(s, p, ctx) {
     .join("");
   const d = ctx.modal(
     "Detail nota supplier",
-    `<div class="note-detail"><header><h3>${e(p.invoiceNo)}</h3><p>${e(name(s, "suppliers", p.supplierId))} · ${e(p.date)}</p><p>${e(name(s, "stores", p.storeId))} · <b>${p.receivedId ? "Sudah diterima" : "Menunggu penerimaan gudang"}</b></p></header>${s.stockDemo ? '<p class="notice">Mode demo aktif. Pembayaran dan koreksi nota hanya tersedia pada data nyata.</p>' : !noteReady(s) ? '<p class="notice">Pasang pembaruan nota supplier 112 untuk mencatat pembayaran dan koreksi owner.</p>' : ""}<div class="note-payment-grid">${paymentCard(s, p, "invoice")}${paymentCard(s, p, "shipping")}</div><h3>Rincian produk</h3><div class="table-wrap"><table><thead><tr><th>Produk</th><th>Total harga nota</th><th>Diterima</th><th>Alokasi ongkir</th><th>${p.lines.some((l) => p.expected?.[l.productId]?.unit) ? "Modal/satuan" : "Modal/kg"}</th><th>Modal/butir</th></tr></thead><tbody>${p.lines
+    `<div class="note-detail"><header><h3>${e(p.invoiceNo)}</h3><p>${e(name(s, "suppliers", p.supplierId))} · ${e(p.date)}</p><p>${e(name(s, "stores", p.storeId))} · <b>${cancelled ? "Dibatalkan" : p.receivedId ? "Sudah diterima" : "Menunggu penerimaan"}</b></p></header>${cancelled ? `<section class="notice"><b>Nota dibatalkan</b><p>${e(stamp(cancelled.at))} · ${e(cancelled.actor || "—")}</p><p>Alasan · ${e(cancelled.reason)}</p></section>${archivedDraft(s, p)}` : canCancel && blocked ? `<p class="muted">Pembatalan nota terkunci. ${e(blocked)}</p>` : ""}${s.stockDemo ? '<p class="notice">Mode demo aktif. Pembayaran dan koreksi nota hanya tersedia pada data nyata.</p>' : !noteReady(s) ? '<p class="notice">Pasang pembaruan nota supplier 112 untuk mencatat pembayaran dan koreksi owner.</p>' : ""}<div class="note-payment-grid">${paymentCard(s, p, "invoice")}${paymentCard(s, p, "shipping")}</div><h3>Rincian produk</h3><div class="table-wrap"><table><thead><tr><th>Produk</th><th>Total harga nota</th><th>Diterima</th><th>Alokasi ongkir</th><th>${p.lines.some((l) => p.expected?.[l.productId]?.unit) ? "Modal/satuan" : "Modal/kg"}</th><th>Modal/butir</th></tr></thead><tbody>${p.lines
       .map((l) => {
         const batch = batches.find((b) => b.productId === l.productId);
         const costs = noteUnitCosts(batch);
@@ -130,7 +172,7 @@ export function openSupplierNote(s, p, ctx) {
       })
       .join(
         "",
-      )}</tbody></table></div><p class="muted">Modal termasuk alokasi ongkir, dibagi berat atau jumlah aktual saat penerimaan. Modal/butir merupakan rata-rata per buah.${p.receivedId ? " Nilai — berarti data modal atau penerimaan belum tersedia untuk akun ini." : " Perhitungan tersedia setelah penerimaan selesai."}</p>${noteOwner(s) ? '<button type="button" data-note-correct>Koreksi harga & ongkir · Owner</button>' : '<p class="muted">Koreksi harga dan ongkir hanya dapat disetujui melalui akun owner.</p>'}<h3>Riwayat pembayaran</h3>${history || '<p class="muted">Belum ada pembayaran yang dicatat.</p>'}<h3>Riwayat koreksi nota</h3>${corrections || '<p class="muted">Belum ada koreksi.</p>'}</div>`,
+      )}</tbody></table></div><p class="muted">Modal termasuk alokasi ongkir, dibagi berat atau jumlah aktual saat penerimaan. Modal/butir merupakan rata-rata per buah.${cancelled ? "" : p.receivedId ? " Nilai — berarti data modal atau penerimaan belum tersedia untuk akun ini." : " Perhitungan tersedia setelah penerimaan selesai."}</p>${cancelled ? "" : noteOwner(s) ? '<button type="button" data-note-correct>Koreksi harga & ongkir · Owner</button>' : '<p class="muted">Koreksi harga dan ongkir hanya dapat disetujui melalui akun owner.</p>'}<h3>Riwayat pembayaran</h3>${history || '<p class="muted">Belum ada pembayaran yang dicatat.</p>'}<h3>Riwayat koreksi nota</h3>${corrections || '<p class="muted">Belum ada koreksi.</p>'}</div>`,
     "Tutup",
   );
   d.classList.add("supply-modal");
@@ -179,6 +221,16 @@ export function openSupplierNote(s, p, ctx) {
         }));
       }),
   );
-  if (workflowReady(s)) receiptOfficeControls(s, p, d, ctx);
+  const footerClose = d.querySelector(".modal-actions .close");
+  if (canCancel && !blocked) {
+    footerClose.setAttribute("class", "danger");
+    footerClose.textContent = "Batalkan nota";
+    footerClose.setAttribute("data-note-cancel", "");
+    footerClose.onclick = () => {
+      d.close();
+      cancelDialog(p, ctx);
+    };
+  } else footerClose?.remove();
+  if (!cancelled && workflowReady(s)) receiptOfficeControls(s, p, d, ctx);
   return d;
 }

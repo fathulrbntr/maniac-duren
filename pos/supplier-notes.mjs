@@ -1,5 +1,6 @@
 import { sumProducts } from "./decimal-totals.mjs";
 export const supplierNoteActions = [
+  "supplier_note_cancel",
   "supplier_note_correct",
   "supplier_note_payment",
   "supplier_note_payment_void",
@@ -43,6 +44,16 @@ export function fruitBatchCosts(lot) {
       : null;
   return { perKg, perPiece };
 }
+export function cancellationBlock(note) {
+  if (note.cancelled) return "Nota sudah dibatalkan.";
+  if (note.receivedId || !["open", "paused"].includes(note.receiving?.status))
+    return "Stok sudah dibukukan atau sesi penerimaan tidak tersedia.";
+  if (note.payments?.some((p) => !p.voided))
+    return "Masih ada pembayaran nota atau ongkir yang aktif.";
+  if (!note.invoiceTracked || (Number(note.shippingCost) > 0 && !note.shippingTracked))
+    return "Pastikan dulu status pembayaran nota dan ongkir.";
+  return "";
+}
 export function noteBalance(note, component) {
   const total =
     component === "shipping"
@@ -53,6 +64,8 @@ export function noteBalance(note, component) {
       .filter((p) => p.component === component && !p.voided)
       .map((p) => [p.amount]),
   );
+  if (note.cancelled)
+    return { total, paid, remaining: 0, status: "cancelled", label: "Dibatalkan" };
   const remaining = sumProducts([[total], [-paid]]);
   const tracked = component === "shipping" ? note.shippingTracked : note.invoiceTracked;
   const status =

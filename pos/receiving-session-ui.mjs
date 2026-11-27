@@ -62,6 +62,17 @@ export function varianceTable(s, p) {
     }),
   );
 }
+function cancelledNotes(s) {
+  const notes = s.cancelledReceiptPlans || [];
+  if (!notes.length) return "";
+  return `<details class="panel"><summary>Nota dibatalkan (${num(notes.length)})</summary>${table(
+    ["Nomor nota / supplier", "Cabang", "Tanggal pembatalan", "Alasan", ""],
+    notes.map(
+      (p) =>
+        `<tr><td><b>${e(p.invoiceNo)}</b><small>${e(name(s, "suppliers", p.supplierId))}</small></td><td>${e(name(s, "locations", p.storeId))}</td><td>${e(new Date(p.cancelled.at).toLocaleDateString("id-ID", { timeZone: "Asia/Jakarta" }))}</td><td>${e(p.cancelled.reason)}</td><td><button type="button" data-note-open="${e(p.id)}">Lihat nota</button></td></tr>`,
+    ),
+  )}</details>`;
+}
 export function receivingPage(s, store, space) {
   const branch = s.branchStockVersion >= 132;
   const bo = backOffice(s, space),
@@ -88,7 +99,7 @@ export function receivingPage(s, store, space) {
           : ""
       }<td>${receivedSummary(p)}</td><td>${e(receiptStatuses[p.receiving?.status] || "Belum dimulai")}</td><td><button type="button" ${bo ? `data-note-open="${e(p.id)}"` : `data-session-open="${e(p.id)}"`}>${bo ? "Buka nota" : p.receiving?.status === "completed" ? "Lihat penerimaan" : "Buka / lanjutkan"}</button></td></tr>`;
     }),
-  )}</section></section>`;
+  )}</section>${bo ? cancelledNotes(s) : ""}</section>`;
 }
 export function receiptOfficeControls(s, p, d, ctx) {
   if (!backOffice(s, ctx.workspace)) return;
@@ -189,6 +200,11 @@ export function openReceivingSession(s, pid, ctx, readOnly = false) {
         ...extra,
       });
       p = ctx.getState().receiptPlans.find((x) => x.id === pid);
+      if (!p) {
+        d.close();
+        ctx.render();
+        return;
+      }
       d.dataset.dirty = "false";
       draw();
       feedback.className = scanning ? "positive" : "error";

@@ -284,3 +284,7 @@ Cabang tujuan tetap mengonfirmasi penerimaan berdasarkan surat jalan.
 
 **Data & administrasi → Inventory** menampilkan saldo fisik dan kiriman aktif untuk semua lokasi atau satu lokasi. Kiriman masuk ke kolom dalam perjalanan di lokasi tujuan sampai cabang mengonfirmasi penerimaan. Total mencakup stok di lokasi dan dalam perjalanan satu kali, dengan satuan terpisah.
 `pos/office-inventory.mjs` menggunakan saldo batch, surat jalan dan jurnal stok. **Lihat jejak** menampilkan posisi dan mutasi per SKU, termasuk batch dan nomor dokumen yang tersedia. Scan atau ketik barcode untuk membuka riwayat satu buah.
+
+### Pembatalan nota supplier
+
+Di **Back Office → Nota Supplier → Buka nota → Batalkan nota**, petugas memasukkan alasan. Nota yang belum dibukukan dan tanpa pembayaran aktif masuk ke **Nota dibatalkan**. Pembatalan menyimpan draf penerimaan dan melepaskan reservasi barcode. Kas, persediaan dan jurnal transaksi dibukukan melalui alur operasional masing-masing. RPC memeriksa ulang revisi nota dan sesi saat transaksi disimpan.

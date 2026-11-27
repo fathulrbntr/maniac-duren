@@ -264,6 +264,51 @@ assert.equal(
   "unavailable finance data is not displayed as zero",
 );
 assert.equal(calls.length, callsBeforeViewing, "opening cost details does not save data");
+const unposted = {
+  ...p,
+  receivedId: null,
+  invoiceTracked: true,
+  shippingTracked: true,
+  receiving: { status: "open", revision: 3, scans: [], quantities: {} },
+};
+const office = { ...ctx, workspace: "backoffice" };
+const capable = {
+  ...detailsState,
+  access: { backoffice: true, finance: true },
+  supplierNoteCancelVersion: 134,
+};
+d = openSupplierNote(capable, unposted, office);
+await d.querySelector("[data-note-cancel]").fire("click");
+set(adapter.latest, "reason", "Nota tertukar");
+await submit();
+assert.equal(calls.at(-1).action, "supplier_note_cancel");
+assert.equal(calls.at(-1).payload.expectedSessionRevision, 3);
+assert.equal(calls.at(-1).payload.reason, "Nota tertukar");
+for (const protectedNote of [
+  p,
+  { ...unposted, payments: [{ amount: 1, component: "shipping" }] },
+  { ...unposted, invoiceTracked: false },
+])
+  assert(
+    !openSupplierNote(capable, protectedNote, office).querySelector("[data-note-cancel]"),
+  );
+assert(
+  !openSupplierNote(capable, unposted, { ...office, workspace: "store" }).querySelector(
+    "[data-note-cancel]",
+  ),
+);
+const archivedNote = {
+  ...unposted,
+  cancelled: { at: "2026-11-27T04:00:00Z", actor: "Admin", reason: "Nota tertukar" },
+};
+d = openSupplierNote(capable, archivedNote, office);
+assert.match(d.textContent, /Nota tertukar/);
+assert(
+  !d.querySelector(
+    "[data-note-pay],[data-note-correct],[data-note-cancel],[data-expected-edit]",
+  ),
+);
+assert.equal(noteBalance(archivedNote, "shipping").remaining, 0);
 console.log(
   "PASS supplier note UI: received detail, separate statuses and forms, legacy unknown, owner gate, escaped content, stable retry/revision, double-submit guard, corrections, payment cancellation, landed cost/kg and cost/piece from original receipt quantities.",
 );

@@ -188,3 +188,5 @@ antarcabang mewajibkan akses Back Office. Ketentuan ini juga berlaku saat mengir
 dokumen transfer lama. Penerimaan supplier dan konfirmasi kiriman di toko tetap
 menggunakan izin lokasi masing-masing. Gunakan migrasi CLI terkait atau SQL ini sekali,
 tanpa reset maupun perubahan data stok.
+
+Patch **134** (`supplier-note-cancel-134.sql`) menambahkan pembatalan nota supplier sebelum stok dibukukan. Pasang setelah 133 melalui migrasi CLI terkait atau SQL ini. Nomor nota dapat dipakai kembali untuk supplier yang sama setelah pembatalan. Riwayat pembatalan menyimpan nota asal, alasan, petugas, waktu dan draf penerimaan.

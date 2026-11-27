@@ -1177,7 +1177,10 @@ export function bindSupply(s, store, view, ctx) {
   document.querySelectorAll("[data-note-open]").forEach((b) => {
     b.onclick = () => {
       const current = ctx.getState?.() || s;
-      const plan = current.receiptPlans.find((p) => p.id === b.dataset.noteOpen);
+      const plan =
+        current.receiptPlans.find((p) => p.id === b.dataset.noteOpen) ||
+        (backOffice(current, ctx.workspace) &&
+          current.cancelledReceiptPlans?.find((p) => p.id === b.dataset.noteOpen));
       if (plan) {
         if (workflowReady(current) && !backOffice(current, ctx.workspace))
           openReceivingSession(current, plan.id, ctx);
