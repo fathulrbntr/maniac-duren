@@ -1,7 +1,9 @@
 const round = (n) => Math.round(n * 1e6) / 1e6;
 export function productStock(s, productId, storeId, dual) {
   const lots = (dual ? s.lots : s.unitLots) || [];
-  const rows = lots.filter((l) => l.productId === productId && l.storeId === storeId);
+  const rows = lots.filter(
+    (l) => l.productId === productId && (storeId === null || l.storeId === storeId),
+  );
   return dual
     ? {
         kg: round(rows.reduce((n, l) => n + l.kg, 0)),

@@ -27,7 +27,10 @@ const destinations = (s, origin) =>
   );
 const employees = (s) => (s.people || s.employees || []).filter((p) => p.id && p.name);
 
-export function openBranchDispatch(s, origin, ctx) {
+export function openBranchDispatch(s, ctx) {
+  const origins = (s.stores || []).filter((l) =>
+    ["store", "warehouse"].includes(l.locationType),
+  );
   const request = id();
   const products = s.products.filter((p) => p.stockUnit === "kg_butir" || scalar(p));
   const listId = "dispatch-products-" + request;
@@ -35,9 +38,9 @@ export function openBranchDispatch(s, origin, ctx) {
   const dialog = ctx.modal(
     "Buat pengiriman toko",
     `
-    <p class="muted">Lokasi asal · <b>${e((s.locations || s.stores).find((l) => l.id === origin)?.name)}</b></p>
     <div class="form-grid">
-      ${field("Toko tujuan", `<select name="toStoreId" aria-label="Toko tujuan" required><option value="">Pilih toko</option>${options(destinations(s, origin))}</select>`)}
+      ${field("Lokasi asal", `<select name="fromStoreId" required><option value="">Pilih lokasi asal</option>${options(origins)}</select>`)}
+      ${field("Toko tujuan", `<select name="toStoreId" aria-label="Toko tujuan" disabled required><option value="">Pilih toko</option></select>`)}
       ${field("Pengirim", `<select name="senderId" aria-label="Pengirim" required><option value="">Pilih karyawan</option>${options(senders)}</select>`)}
     </div>
     <datalist id="${listId}">${products.map((p) => `<option value="${e(productLabel(p))}"></option>`).join("")}</datalist>
@@ -49,11 +52,13 @@ export function openBranchDispatch(s, origin, ctx) {
   );
   dialog.classList.add("supply-modal", "branch-dispatch");
   const form = dialog.querySelector("form");
+  const source = form.elements.namedItem("fromStoreId");
   const target = form.elements.namedItem("toStoreId");
   const sender = form.elements.namedItem("senderId");
   const submit = form.querySelector('[type="submit"]');
   const errorBox = form.querySelector("#form-error");
   const rows = new Set();
+  let origin = "";
   let stock = outboundInventory(s, origin);
   let working = false;
 
@@ -73,7 +78,7 @@ export function openBranchDispatch(s, origin, ctx) {
     return [];
   }
   function refresh() {
-    let valid = Boolean(rows.size && target.value && sender.value);
+    let valid = Boolean(origin && rows.size && target.value && sender.value);
     for (const row of rows) {
       try {
         validate(row);
@@ -87,6 +92,7 @@ export function openBranchDispatch(s, origin, ctx) {
             : "";
       }
     }
+    source.disabled = working || [...rows].some((row) => row.codes.size || row.qty.value);
     submit.disabled = working || !valid;
   }
   function updateStock(row) {
@@ -205,11 +211,27 @@ export function openBranchDispatch(s, origin, ctx) {
       if (!rows.size) addRow(true);
       else refresh();
     };
+    row.productInput.disabled = !origin;
     if (focus) row.productInput.focus();
     refresh();
   }
 
   form.querySelector("[data-add-line]").onclick = () => addRow(true);
+  source.onchange = () => {
+    if (source.disabled) return;
+    const current = ctx.getState();
+    origin = source.value;
+    target.innerHTML =
+      '<option value="">Pilih toko</option>' + options(destinations(current, origin));
+    target.value = "";
+    target.disabled = !origin;
+    stock = outboundInventory(current, origin);
+    for (const row of rows) {
+      row.productInput.disabled = !origin;
+      updateStock(row);
+    }
+    refresh();
+  };
   target.onchange = sender.onchange = refresh;
   form.onsubmit = async (ev) => {
     ev.preventDefault();
@@ -221,6 +243,11 @@ export function openBranchDispatch(s, origin, ctx) {
       if (!(await confirmAction("Kirim barang pada daftar ini ke cabang tujuan?")))
         return;
       const current = ctx.getState();
+      if (
+        !current.access?.backoffice ||
+        !(current.stores || []).some((l) => l.id === origin)
+      )
+        throw Error("Lokasi asal tidak tersedia untuk transfer ini.");
       const employee = employees(current).find((p) => p.id === sender.value);
       if (!employee) throw Error("Pilih karyawan pengirim yang terdaftar.");
       if (!destinations(current, origin).some((l) => l.id === target.value))

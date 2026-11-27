@@ -50,9 +50,10 @@ export function followDashboardStore() {
 const allowed = (s, ...keys) => !s.access || keys.some((k) => s.access[k]);
 const filter = (s, activeStore) => ({
   ...dashboardRange(period, custom),
-  store: allStores
-    ? ""
-    : s.stores.find((x) => x.id === activeStore)?.id || s.stores[0]?.id || "",
+  store:
+    allStores || activeStore === null
+      ? ""
+      : s.stores.find((x) => x.id === activeStore)?.id || s.stores[0]?.id || "",
 });
 const initials = (name) =>
   String(name || "MD")

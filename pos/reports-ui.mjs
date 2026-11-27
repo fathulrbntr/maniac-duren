@@ -29,6 +29,7 @@ const tabs = {
   margin: "HPP & Hasil",
   batches: "Batch supplier",
 };
+let reportScope = "";
 let tab = "summary",
   filters = { ...periodRange("month", today()), store: "", period: "month" },
   page = 0;
@@ -89,6 +90,9 @@ const stat = (name, value) =>
 export function bindReports(s, store, ctx) {
   const $ = (q) => document.querySelector(q),
     result = $("#report-result");
+  const scope = (s.me?.id || "") + ":" + (ctx.workspace || "");
+  if (scope !== reportScope) filters.store = "";
+  reportScope = scope;
   if (
     filters.store &&
     !s.stores.some(
@@ -522,7 +526,8 @@ export function expenseDialog(s, store, ctx, retailOnly = false) {
       ? s.stores.filter((t) => t.locationType === "store")
       : s.stores;
   if (!locations.length) return ctx.toast("Belum ada toko untuk biaya operasional.");
-  if (!locations.some((t) => t.id === store)) store = locations[0].id;
+  if (!locations.some((t) => t.id === store))
+    store = ctx.workspace === "backoffice" ? "" : locations[0].id;
   const funding = (key) => {
     if (!modern) return payerOptions(s, key);
     return locations.find((t) => t.id === key)?.locationType === "warehouse"
@@ -531,7 +536,7 @@ export function expenseDialog(s, store, ctx, retailOnly = false) {
   };
   const d = ctx.modal(
     "Pengeluaran operasional",
-    `<p>Pembelian stok dicatat lewat penerimaan/pembelian barang. Jangan masukkan kembali di sini.</p>${expenseFields(`${field("Tanggal", `<input type="date" name="date" value="${today()}" max="${today()}" required>`)}${field("Toko", `<select name="storeId">${locations.map((t) => `<option value="${e(t.id)}" ${t.id === store ? "selected" : ""}>${e(t.name)}</option>`).join("")}</select>`)}${s.cashFlowVersion >= 127 ? field("Dibayar oleh", `<select name="funding" required>${funding(store)}</select>`) : ""}`)}`,
+    `<p>Pembelian stok dicatat lewat penerimaan/pembelian barang. Jangan masukkan kembali di sini.</p>${expenseFields(`${field("Tanggal", `<input type="date" name="date" value="${today()}" max="${today()}" required>`)}${field("Toko", `<select name="storeId" required>${!store ? '<option value="">Pilih cabang</option>' : ""}${locations.map((t) => `<option value="${e(t.id)}" ${t.id === store ? "selected" : ""}>${e(t.name)}</option>`).join("")}</select>`)}${s.cashFlowVersion >= 127 ? field("Dibayar oleh", `<select name="funding" required>${funding(store)}</select>`) : ""}`)}`,
   );
   const form = d.querySelector("form");
   if (form.elements.funding) {

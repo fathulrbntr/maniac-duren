@@ -273,7 +273,7 @@ Lihat [alur dan pemasangan patch 132](PATCH-132-ALUR-CABANG.md).
 ### Harga modal dan transfer Back Office 133
 
 Menu **Harga Modal** menampilkan semua SKU Master Barang, termasuk bahan, produk resep, dan SKU yang belum memiliki batch.
-Pilih cabang, cari nama atau SKU, lalu gunakan **Lihat batch** untuk menelusuri nota asal.
+Cari nama atau SKU di seluruh cabang, atau filter satu cabang. Gunakan **Lihat batch** untuk melihat lokasi dan nota asal.
 `pos/cost-prices.mjs` mengelompokkan batch per SKU dan lokasi. Halaman menampilkan rentang modal jika nilai batch yang masih bersisa berbeda.
 Saat stok habis, halaman menandai modal batch terakhir. SKU tanpa batch menampilkan **Belum tersedia**. Harga modal dihitung dari batch dan hanya ditampilkan di halaman ini.
 Koreksi memakai tindakan owner pada nota supplier. Admin dan owner memilih lokasi asal di **Back Office → Transfer Stok**.
@@ -292,3 +292,9 @@ Di **Back Office → Nota Supplier → Buka nota → Batalkan nota**, petugas me
 ### Penjualan buah di POS
 
 Klik kartu buah lalu scan atau ketik nomor barcode pada label. Scan label langsung di kolom kasir juga memasukkan buah ke pesanan. Setiap label terdaftar menentukan SKU, batch, supplier, dan berat satu butir. POS memakai harga jual per kg cabang aktif dan membukukan penjualan saat pembayaran.
+
+### Back Office pusat
+
+Back Office menampilkan seluruh cabang yang tersedia untuk akun pusat. Pilihan **Lokasi aktif** ada di ruang kerja operasional. Kembali ke **Toko** memulihkan cabang operasional yang dipilih. Filter lokasi di Harga Jual, Harga Modal, Inventory dan Laporan hanya berlaku pada halaman tersebut.
+
+Di **Transfer Stok**, daftar surat jalan menampilkan asal dan tujuan. Saat membuat pengiriman, pilih lokasi asal dan toko tujuan pada formulir. Barcode buah, saldo dan alokasi FIFO diperiksa terhadap lokasi asal. Saat membuka nota supplier, pilih cabang penerima. Metode pembayaran dan jam kerja juga menetapkan cabang pada halaman masing-masing.

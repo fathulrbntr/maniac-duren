@@ -102,3 +102,19 @@ assert.equal(
     .salePrice,
   70000,
 );
+
+root.innerHTML = branchPricingPage(state, null);
+bindBranchPricing(ctx);
+assert.equal(root.querySelector("[data-retail-store]").value, "");
+const allRows = root.querySelector("[data-retail-rows]");
+for (const shop of [a, b]) {
+  const edit = allRows.querySelector(
+    `[data-edit-retail="pack"][data-price-branch="${shop}"]`,
+  );
+  assert(edit);
+  allRows.listeners.click[0]({ target: edit });
+  assert(
+    modal.latest.textContent.includes(state.locations.find((st) => st.id === shop).name),
+  );
+  modal.latest.close();
+}

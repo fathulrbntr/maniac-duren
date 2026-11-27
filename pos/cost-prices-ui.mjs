@@ -55,6 +55,7 @@ function openBatches(product, batches, shop, ctx) {
   const html = table(
     [
       "Tanggal / batch",
+      "Lokasi",
       "Supplier / nota",
       "Harga modal",
       "Rata-rata per butir",
@@ -65,7 +66,7 @@ function openBatches(product, batches, shop, ctx) {
       const doc = b.noteId
         ? `<button type="button" data-cost-note="${e(b.noteId)}">${e(invoice)}</button>`
         : e(invoice || b.source);
-      return `<tr><td>${e(lot.date || "—")}<small>${e(lot.id.slice(0, 8))}</small></td><td>${e(b.supplier || "—")}<small>${doc}</small></td>
+      return `<tr><td>${e(lot.date || "—")}<small>${e(lot.id.slice(0, 8))}</small></td><td>${e(locations(ctx.getState()).find((l) => l.id === lot.storeId)?.name || "—")}</td><td>${e(b.supplier || "—")}<small>${doc}</small></td>
       <td>${b.price == null ? "—" : money(b.price) + " /" + e(b.unit)}</td><td>${b.perPiece == null ? "—" : money(b.perPiece)}</td>
       <td>${num(b.remaining)} ${e(b.unit)}${lot.kg == null ? "" : " · " + num(lot.pieces) + " butir"}</td></tr>`;
     }),
@@ -73,7 +74,7 @@ function openBatches(product, batches, shop, ctx) {
   const dialog = sessionDialog(
     ctx,
     "Modal per batch · " + product.name,
-    `<p>${e(shop.name)} · ${e(product.sku)}</p>${html}`,
+    `<p>${e(shop?.name || "Semua cabang")} · ${e(product.sku)}</p>${html}`,
   );
   dialog.querySelector(".modal-actions .close")?.remove();
   dialog.querySelectorAll("[data-cost-note]").forEach((button) => {
@@ -93,9 +94,9 @@ export function costPricesPage(s, activeStore, workspace) {
   const shops = locations(s);
   if (!shops.length)
     return '<section class="panel"><p>Belum ada lokasi stok.</p></section>';
-  const selected = shops.find((l) => l.id === activeStore)?.id || shops[0].id;
+  const selected = shops.find((l) => l.id === activeStore)?.id || "";
   return `<section class="supply-workspace" data-cost-prices><section class="panel"><div class="form-grid">
-    ${field("Cabang toko", `<select data-cost-store>${options(shops, selected)}</select>`)}
+    ${field("Cabang toko", `<select data-cost-store><option value="">Semua cabang</option>${options(shops, selected)}</select>`)}
     ${field("Cari produk", '<input type="search" data-cost-search placeholder="Nama produk atau SKU">')}</div>
     <button type="button" data-cost-refresh>Perbarui harga</button>
     <div data-cost-rows>${rows(costCatalog(s, selected))}</div></section></section>`;
@@ -107,7 +108,7 @@ export function bindCostPrices(s, store, ctx) {
     search = root.querySelector("[data-cost-search]"),
     list = root.querySelector("[data-cost-rows]"),
     refresh = root.querySelector("[data-cost-refresh]");
-  let catalog = costCatalog(s, select.value || store);
+  let catalog = costCatalog(s, select.value);
   const draw = () => {
     list.innerHTML = rows(catalog, search.value.trim().toLowerCase());
   };
@@ -118,8 +119,9 @@ export function bindCostPrices(s, store, ctx) {
       return;
     }
     const shops = locations(current);
-    const selected = shops.find((l) => l.id === select.value)?.id || shops[0]?.id;
-    select.innerHTML = options(shops, selected);
+    const selected = shops.find((l) => l.id === select.value)?.id || "";
+    select.innerHTML =
+      '<option value="">Semua cabang</option>' + options(shops, selected);
     select.value = selected || "";
     catalog = costCatalog(current, selected);
     draw();
@@ -143,8 +145,8 @@ export function bindCostPrices(s, store, ctx) {
     const current = ctx.getState();
     if (!id || !current.access?.backoffice || current.stockDemo) return;
     const shop = locations(current).find((x) => x.id === select.value);
-    if (!shop) return;
-    const row = costCatalog(current, shop.id).find((r) => r.product.id === id);
+    if (select.value && !shop) return;
+    const row = costCatalog(current, shop?.id).find((r) => r.product.id === id);
     if (row?.batches.length) openBatches(row.product, row.batches, shop, ctx);
   };
 }

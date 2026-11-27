@@ -69,17 +69,17 @@ export function productDialog({
  <p id="product-photo-help" class="muted">Foto JPG, PNG, atau WebP otomatis diperkecil hingga maksimal 2 MB.</p>
  <p data-product-category-help class="muted"></p>
  <p id="scale-barcode-help" class="muted" hidden>Untuk label timbangan CAS tracking 26 digit / POS KG, isi Barcode dengan Item Code 4 digit, misalnya 0001 untuk Monthong. Pertahankan nol di depan; jangan masukkan seluruh barcode label. Setiap jenis/varian memakai kode barang berbeda; nomor unik tiap buah berasal dari label timbangan. Samakan harga jual per kg dengan timbangan.</p><p class="muted">Harga beli adalah referensi; harga jual berlaku di semua outlet.</p>
- <fieldset class="product-stock-editor"><legend>Qty Stok · ${e(state.stores.find((x) => x.id === store)?.name || "Pilih store dahulu")}</legend><div id="current-stock"></div><label><input type="checkbox" name="adjustStock" ${store ? "" : "disabled"}> ${editing ? "Sesuaikan stok fisik" : "Isi stok awal"}</label><div id="stock-fields" hidden></div></fieldset>
+ <fieldset class="product-stock-editor"><legend>Qty Stok · ${e(state.stores.find((x) => x.id === store)?.name || (store === null ? "Semua cabang" : "Pilih store dahulu"))}</legend><div id="current-stock"></div><label><input type="checkbox" name="adjustStock" ${store ? "" : "disabled"}> ${editing ? "Sesuaikan stok fisik" : "Isi stok awal"}</label><div id="stock-fields" hidden></div></fieldset>
  ${
    editing
      ? `<details><summary>Riwayat penyesuaian stok</summary>${
          (state.stockAdjustments || [])
-           .filter((a) => a.productId === p.id && a.storeId === store)
+           .filter((a) => a.productId === p.id && (store === null || a.storeId === store))
            .slice()
            .reverse()
            .map(
              (a) =>
-               `<p>${e(a.date)} · ${e(a.reason)}<br><small>${e(JSON.stringify(a.before))} → ${e(JSON.stringify(a.after))}</small></p>`,
+               `<p>${store === null ? e(state.stores.find((l) => l.id === a.storeId)?.name || "—") + " · " : ""}${e(a.date)} · ${e(a.reason)}<br><small>${e(JSON.stringify(a.before))} → ${e(JSON.stringify(a.after))}</small></p>`,
            )
            .join("") || '<p class="muted">Belum ada penyesuaian.</p>'
        }</details><button type="button" class="danger" id="delete-product">Hapus produk</button>`

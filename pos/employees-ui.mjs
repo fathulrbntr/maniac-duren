@@ -273,7 +273,7 @@ export function bindEmployees(view, s, store, ctx) {
       name: "",
       role: "staff",
       active: true,
-      store_ids: [store],
+      store_ids: store ? [store] : [],
       permissions: [],
     };
     if (!canEditStaff(s, x.role)) return;

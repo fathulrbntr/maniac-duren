@@ -18,7 +18,7 @@ export function costCatalog(state, storeId) {
   const byProduct = new Map(catalog.map((row) => [row.product.id, row]));
   for (const lot of lots) {
     const row = byProduct.get(lot.productId);
-    if (!row || lot.storeId !== storeId) continue;
+    if (!row || (storeId && lot.storeId !== storeId)) continue;
     let root = lot;
     const seen = new Set([lot.id]);
     while (allLots.has(root.sourceLotId) && !seen.has(root.sourceLotId)) {

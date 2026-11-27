@@ -26,5 +26,5 @@ export async function openSidebar(page) {
   await page
     .locator('#pos-sidebar[aria-hidden="false"]:not([inert])')
     .waitFor({ state: "visible" });
-  await page.locator("#active-store").waitFor({ state: "visible" });
+  await page.locator("#pos-navigation").waitFor({ state: "visible" });
 }

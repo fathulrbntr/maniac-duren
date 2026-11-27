@@ -149,3 +149,52 @@ assert(root.querySelector(".dash-metric").textContent.includes("5.000"));
 console.log(
   "PASS dashboard app integration: session restore, shared outlet selector, all-store scope, local navigation, refresh, demo and live restoration.",
 );
+
+// A saved operating branch must not scope the modern Back Office.
+Object.assign(s, {
+  warehouseVersion: 107,
+  branchStockVersion: 132,
+  branchPricingVersion: 123,
+  pettyCashVersion: 130,
+  warehouseWorkflowVersion: 114,
+  transfers: [],
+});
+Object.assign(s.access, { backoffice: true, attendance: true, receive: true });
+s.stores.forEach((st) => (st.locationType = "store"));
+s.locations = s.stores;
+s.unitLots = s.stores.map((st, i) => ({
+  id: "lot-" + i,
+  storeId: st.id,
+  productId: "water",
+  unit: "pcs",
+  date: today(),
+  qty: i ? 7 : 2,
+}));
+await root.querySelector("#dash-refresh").fire("click");
+const space = async (key) =>
+  root.querySelector(`[data-workspace="${key}"]`).fire("click");
+const go = async (key) =>
+  root.querySelector(`#pos-navigation [data-view="${key}"]`).fire("click");
+await space("store");
+await select("#active-store", "b");
+await space("backoffice");
+assert.equal(root.querySelector("#active-store"), null);
+assert.match(root.querySelector(".workspace-outlet").textContent, /Semua cabang/);
+await go("products");
+assert.match(root.querySelector(".inv-results").textContent, /9 pcs/);
+await go("costPrices");
+assert.equal(root.querySelector("[data-cost-store]").value, "");
+await go("pricing");
+assert.equal(root.querySelector("[data-retail-store]").value, "");
+assert.match(root.querySelector("[data-retail-rows]").textContent, /Outlet A/);
+assert.match(root.querySelector("[data-retail-rows]").textContent, /Outlet B/);
+await select("[data-retail-store]", "a");
+await go("transfers");
+assert(root.querySelector("[data-transfer-new]"));
+assert.doesNotMatch(root.querySelector(".supply-hero").textContent, /Outlet [AB]/);
+await go("payments");
+assert.equal(root.querySelector("#office-branch").value, "");
+await select("#office-branch", "a");
+assert(root.querySelector("#payment-settings-form"));
+await space("store");
+assert.equal(root.querySelector("#active-store").value, "b");

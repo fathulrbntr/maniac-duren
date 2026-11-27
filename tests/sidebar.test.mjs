@@ -252,7 +252,7 @@ for (const config of [
             current.click("[data-sidebar-toggle]");
           },
         };
-      assert.equal(selector, "#active-store");
+      assert.equal(selector, "#pos-navigation");
       return {
         isVisible: async () => {
           const visible = pickerVisible();
@@ -264,7 +264,7 @@ for (const config of [
           assert.equal(
             current.outside.attrs["aria-expanded"],
             "true",
-            "picker cannot be visible before opening the sidebar",
+            "navigation must be expanded before interacting with sidebar controls",
           );
           assert.equal(current.panel.inert, false);
         },

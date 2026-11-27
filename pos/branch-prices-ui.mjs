@@ -7,11 +7,9 @@ const branches = (s) =>
   (s.locations || s.stores || []).filter((st) => st.locationType === "store");
 const displayPrice = (n, u) => (n == null ? "Belum diisi" : `${money(n)} /${e(u)}`);
 function rows(s, branch, query) {
-  if (!branch) return '<p class="muted">Pilih cabang toko untuk melihat harga jual.</p>';
+  const shops = branches(s).filter((shop) => !branch || shop.id === branch);
   const rates = new Map(
-    (s.branchPrices || [])
-      .filter((r) => r.storeId === branch)
-      .map((r) => [r.productId, r]),
+    (s.branchPrices || []).map((row) => [row.storeId + ":" + row.productId, row]),
   );
   const products = (s.products || [])
     .filter(
@@ -26,18 +24,20 @@ function rows(s, branch, query) {
     .sort((a, b) => a.name.localeCompare(b.name, "id"));
   if (!products.length) return '<p class="muted">Produk jual tidak ditemukan.</p>';
   return table(
-    ["Produk", "Harga jual", "Sumber harga", "Aksi"],
-    products.map((p) => {
-      const effective = productWithRate(p, rates.get(p.id));
-      const price =
-        p.stockUnit === "kg_butir"
-          ? displayPrice(effective.priceKg, "kg") +
-            "<small>" +
-            displayPrice(effective.pricePiece, "butir") +
-            "</small>"
-          : displayPrice(effective.salePrice, p.stockUnit);
-      return `<tr><td><b>${e(p.name)}</b><small>${e(p.sku)}</small></td><td>${price}</td><td>${effective === p ? "Master Barang" : "Khusus cabang"}</td><td><button type="button" data-edit-retail="${e(p.id)}">Atur harga</button></td></tr>`;
-    }),
+    ["Produk", "Cabang", "Harga jual", "Sumber harga", "Aksi"],
+    products.flatMap((p) =>
+      shops.map((shop) => {
+        const effective = productWithRate(p, rates.get(shop.id + ":" + p.id));
+        const price =
+          p.stockUnit === "kg_butir"
+            ? displayPrice(effective.priceKg, "kg") +
+              "<small>" +
+              displayPrice(effective.pricePiece, "butir") +
+              "</small>"
+            : displayPrice(effective.salePrice, p.stockUnit);
+        return `<tr><td><b>${e(p.name)}</b><small>${e(p.sku)}</small></td><td>${e(shop.name)}</td><td>${price}</td><td>${effective === p ? "Master Barang" : "Khusus cabang"}</td><td><button type="button" data-edit-retail="${e(p.id)}" data-price-branch="${e(shop.id)}">Atur harga</button></td></tr>`;
+      }),
+    ),
   );
 }
 export function branchPricingPage(state, activeStore) {
@@ -49,7 +49,7 @@ export function branchPricingPage(state, activeStore) {
   if (!shops.length)
     return '<section class="panel"><p>Belum ada cabang toko. Tambahkan cabang melalui pengaturan lokasi.</p></section>';
   const selected = shops.find((s) => s.id === activeStore)?.id || "";
-  return `<section class="supply-workspace" data-branch-pricing><section class="panel"><div class="form-grid">${field("Cabang toko", `<select data-retail-store><option value="">Pilih cabang toko</option>${shops.map((st) => `<option value="${e(st.id)}" ${st.id === selected ? "selected" : ""}>${e(st.name)}</option>`).join("")}</select>`)}${field("Cari produk", '<input type="search" data-retail-search placeholder="Nama produk atau SKU">')}</div><button type="button" data-retail-refresh>Perbarui harga</button><div data-retail-rows>${rows(state, selected, "")}</div></section></section>`;
+  return `<section class="supply-workspace" data-branch-pricing><section class="panel"><div class="form-grid">${field("Cabang toko", `<select data-retail-store><option value="">Semua cabang</option>${shops.map((st) => `<option value="${e(st.id)}" ${st.id === selected ? "selected" : ""}>${e(st.name)}</option>`).join("")}</select>`)}${field("Cari produk", '<input type="search" data-retail-search placeholder="Nama produk atau SKU">')}</div><button type="button" data-retail-refresh>Perbarui harga</button><div data-retail-rows>${rows(state, selected, "")}</div></section></section>`;
 }
 export function bindBranchPricing(ctx) {
   const root = document.querySelector("[data-branch-pricing]");
@@ -74,7 +74,7 @@ export function bindBranchPricing(ctx) {
     const button = event.target.closest("[data-edit-retail]");
     if (!button) return;
     const state = ctx.getState(),
-      shop = branches(state).find((st) => st.id === select.value),
+      shop = branches(state).find((st) => st.id === button.dataset.priceBranch),
       p = state.products.find((item) => item.id === button.dataset.editRetail);
     if (!shop || !p || !categoryEligible(p)) return;
     const row = (state.branchPrices || []).find(

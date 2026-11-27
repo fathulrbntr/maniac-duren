@@ -100,6 +100,14 @@ async function enter(node, value, event = "input") {
   node.value = value;
   await node.fire(event);
 }
+assert.equal(get('[name="fromStoreId"]').value, "");
+assert(get('[name="toStoreId"]').disabled);
+await enter(get('[name="fromStoreId"]'), "b", "change");
+assert.deepEqual(
+  get('[name="toStoreId"]').options.map((o) => o.value),
+  ["", "a"],
+);
+await enter(get('[name="fromStoreId"]'), "a", "change");
 assert.deepEqual(
   get('[name="toStoreId"]').options.map((o) => o.value),
   ["", "b"],

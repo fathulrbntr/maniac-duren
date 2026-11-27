@@ -129,14 +129,14 @@ function supplyTasks(s, space) {
         "transfers",
         s.branchStockVersion >= 132 ? "Transfer Stok" : "Transfer toko & wholesale",
         s.branchStockVersion >= 132
-          ? "Kirim stok dari lokasi aktif ke cabang tujuan dengan satu surat jalan."
+          ? "Pilih lokasi asal dan cabang tujuan untuk menerbitkan surat jalan."
           : "Kelola dokumen pengiriman ke toko dan penjualan grosir.",
       ),
       s.branchStockVersion >= 132 &&
         action(
           "costPrices",
           "Harga Modal",
-          "Periksa modal setiap batch di lokasi aktif.",
+          "Lihat modal per SKU dan batch di seluruh cabang.",
         ),
       workflowReady(s)
         ? action(
@@ -366,7 +366,7 @@ export function supplyHome(s, store, space) {
             `${(s.pettyRequests || []).filter((r) => r.status === "pending").length} pengajuan petty cash menunggu.`,
           )
         : "";
-    return `<section class="supply-workspace">${blocker(s)}<div class="header-row"><h2>${central ? "Dashboard Back Office" : space === "warehouse" ? "Dashboard gudang" : e(location(s, store)?.name || "Dashboard toko")}</h2><button data-supply-refresh>Perbarui</button></div><div class="supply-stats">${posStats}${funds}${deposits ? stat("Tunai belum disetor", money(deposits.pending), "Akumulasi cabang") : ""}${!sales ? stats : ""}</div><div class="supply-task-grid">${supplyTasks(s, space)}${extra}</div>${space === "store" && s.access?.sell ? depositButtons(s, store) : ""}${central ? locationStockTable(s) : ""}${!operational ? `<section class="panel"><h3>Kiriman yang belum diterima</h3>${transferTable(active.slice(0, 8), central)}</section>` : ""}</section>`;
+    return `<section class="supply-workspace">${blocker(s)}<div class="header-row"><h2>${central ? "Dashboard Back Office" : space === "warehouse" ? "Dashboard gudang" : e(location(s, store)?.name || "Dashboard toko")}</h2><button data-supply-refresh>Perbarui</button></div><div class="supply-stats">${posStats}${funds}${deposits ? stat("Tunai belum disetor", money(deposits.pending), "Akumulasi cabang") : ""}${!sales ? stats : ""}</div><div class="supply-task-grid">${supplyTasks(s, space)}${extra}</div>${space === "store" && s.access?.sell ? depositButtons(s, store) : ""}${central ? locationStockTable(s) : ""}${!operational ? `<section class="panel"><h3>Kiriman yang belum diterima</h3>${transferTable(active.slice(0, 8), central && !(s.branchStockVersion >= 132), central)}</section>` : ""}</section>`;
   }
   const desc =
     space === "backoffice"
@@ -378,10 +378,11 @@ export function supplyHome(s, store, space) {
     space === "backoffice" ? locationStockTable(s) : ""
   }${operational ? "" : `<section class="panel"><h3>Kiriman yang belum diterima</h3>${transferTable(active.slice(0, 8), !workflowReady(s) || space === "backoffice")}</section>`}</section>`;
 }
-function transferTable(rows, finance = true) {
+function transferTable(rows, finance = true, showOrigin = false) {
   return table(
     [
       "Nomor dokumen",
+      ...(showOrigin ? ["Asal"] : []),
       "Tujuan / kiriman",
       "Status",
       ...(finance ? ["Tagihan"] : []),
@@ -389,7 +390,7 @@ function transferTable(rows, finance = true) {
     ],
     rows.map(
       (t) =>
-        `<tr><td><b>${e(t.deliveryNo)}</b><small>${e(t.invoiceNo)}</small></td><td>${e(t.destination.name)}<small>${t.items.length} buah · ${t.lines.length} baris batch/produk</small></td><td>${badge(t)}<small>${t.invoiceNo === null ? "Mutasi antarcabang" : `${t.items.filter((i) => i.scannedAt).length}/${t.items.length} barcode diperiksa`}</small></td>${finance ? `<td>${money(t.total)}<small>Sisa ${money(t.total - t.paid)}</small></td>` : ""}<td><button type="button" data-transfer="${e(t.id)}">Buka</button></td></tr>`,
+        `<tr><td><b>${e(t.deliveryNo)}</b><small>${e(t.invoiceNo || "")}</small></td>${showOrigin ? `<td>${e(t.origin?.name || "—")}</td>` : ""}<td>${e(t.destination.name)}<small>${t.items.length} buah · ${t.lines.length} baris batch/produk</small></td><td>${badge(t)}<small>${t.invoiceNo === null ? "Mutasi antarcabang" : `${t.items.filter((i) => i.scannedAt).length}/${t.items.length} barcode diperiksa`}</small></td>${finance ? `<td>${money(t.total)}<small>Sisa ${money(t.total - t.paid)}</small></td>` : ""}<td><button type="button" data-transfer="${e(t.id)}">Buka</button></td></tr>`,
     ),
   );
 }
@@ -398,18 +399,19 @@ export function transfersPage(s, store, incoming = false, space) {
     s.branchStockVersion >= 132 &&
     (incoming || space === "backoffice" || space === "store");
   if (!branch && workflowReady(s) && !incoming) return outboundPage(s, store, space);
+  if (!branch && space === "backoffice" && !store) store = warehouseId(s);
   const canSend =
     warehouseEnabled(s) &&
     !incoming &&
     (branch
-      ? s.access?.backoffice && space === "backoffice" && !!location(s, store)
+      ? s.access?.backoffice && space === "backoffice" && (s.stores || []).length > 0
       : s.access?.dispatch && location(s, store)?.locationType === "warehouse");
   const afterReceipt =
     incoming &&
     (s.transfers || []).some((t) => t.targetId === store && t.status === "received")
       ? storeStockActions(s.access)
       : "";
-  return `<section class="supply-workspace">${blocker(s)}<div class="supply-hero"><div><span class="supply-eyebrow">${branch ? "MUTASI ANTARCABANG" : incoming ? "PENERIMAAN TOKO" : "DISTRIBUSI GUDANG"}</span><h2>${incoming ? "Periksa kiriman masuk" : branch ? "Kirim ke cabang" : "Pengiriman & tagihan"}</h2><p>${branch ? (incoming ? "Periksa jumlah barang per batch sebelum mengonfirmasi penerimaan." : `Lokasi asal · ${e(location(s, store)?.name || "Pilih lokasi aktif")}`) : incoming ? "Scan barcode buah dan cocokkan jumlah barang nonbuah per batch dengan surat jalan." : "Setiap kiriman memiliki invoice, surat jalan, dan jejak barcode."}</p></div><div class="toolbar"><button type="button" data-supply-refresh>Perbarui</button>${canSend ? '<button type="button" class="primary" data-transfer-new>+ Buat pengiriman</button>' : ""}</div></div><div class="supply-filters"><input type="search" data-transfer-search placeholder="${branch ? "Cari surat jalan atau cabang…" : "Cari nomor surat jalan, invoice, atau toko…"}" aria-label="Cari kiriman"><select data-transfer-filter aria-label="Status kiriman"><option value="">Semua status</option>${Object.entries(
+  return `<section class="supply-workspace">${blocker(s)}<div class="supply-hero"><div><span class="supply-eyebrow">${branch ? "MUTASI ANTARCABANG" : incoming ? "PENERIMAAN TOKO" : "DISTRIBUSI GUDANG"}</span><h2>${incoming ? "Periksa kiriman masuk" : branch ? "Kirim ke cabang" : "Pengiriman & tagihan"}</h2><p>${branch ? (incoming ? "Periksa jumlah barang per batch sebelum mengonfirmasi penerimaan." : "Surat jalan seluruh cabang") : incoming ? "Scan barcode buah dan cocokkan jumlah barang nonbuah per batch dengan surat jalan." : "Setiap kiriman memiliki invoice, surat jalan, dan jejak barcode."}</p></div><div class="toolbar"><button type="button" data-supply-refresh>Perbarui</button>${canSend ? '<button type="button" class="primary" data-transfer-new>+ Buat pengiriman</button>' : ""}</div></div><div class="supply-filters"><input type="search" data-transfer-search placeholder="${branch ? "Cari surat jalan atau cabang…" : "Cari nomor surat jalan, invoice, atau toko…"}" aria-label="Cari kiriman"><select data-transfer-filter aria-label="Status kiriman"><option value="">Semua status</option>${Object.entries(
     transferStatus,
   )
     .map(
@@ -488,26 +490,17 @@ function safeContext(s, ctx) {
 export function openDispatch(s, store, ctx) {
   if (!safeContext(s, ctx)) return;
   const branch = s.branchStockVersion >= 132;
-  const source = location(s, store);
-  if (
-    !source ||
-    (branch
-      ? !["store", "warehouse"].includes(source.locationType)
-      : source.locationType !== "warehouse")
-  ) {
-    ctx.toast(
-      branch
-        ? "Pilih cabang asal terlebih dahulu."
-        : "Pilih gudang pusat sebagai lokasi aktif.",
-    );
-    return;
-  }
   if (branch) {
     if (ctx.workspace !== "backoffice" || !s.access?.backoffice) {
       ctx.toast("Transfer stok hanya dapat dibuat di Back Office.");
       return;
     }
-    return openBranchDispatch(s, store, ctx);
+    return openBranchDispatch(s, ctx);
+  }
+  const source = location(s, store);
+  if (source?.locationType !== "warehouse") {
+    ctx.toast("Pilih gudang pusat sebagai lokasi aktif.");
+    return;
   }
   const targets = (s.locations || s.stores).filter(
       (x) => x.locationType === "store" && x.id !== store,
@@ -1070,6 +1063,7 @@ export function bindSupply(s, store, view, ctx) {
         ),
         !(s.branchStockVersion >= 132) &&
           (!workflowReady(s) || backOffice(s, ctx.workspace)),
+        !incoming && backOffice(s, ctx.workspace),
       );
     };
     document.querySelector("[data-transfer-search]").oninput = draw;
@@ -1091,7 +1085,13 @@ export function bindSupply(s, store, view, ctx) {
   });
   document
     .querySelector("[data-transfer-new]")
-    ?.addEventListener("click", () => openDispatch(s, store, ctx));
+    ?.addEventListener("click", () =>
+      openDispatch(
+        ctx.getState(),
+        !store && !(s.branchStockVersion >= 132) ? warehouseId(s) : store,
+        ctx,
+      ),
+    );
   document.querySelectorAll("[data-transfer-price]").forEach(
     (b) =>
       (b.onclick = () => {

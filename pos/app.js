@@ -23,7 +23,7 @@ import { resetCustomerDisplay } from "./customer-display-channel.mjs";
 import { openFruitTransfer } from "./fruit-transfer-ui.mjs";
 import { crmPage, bindCrm, memberFields, bindMemberPicker } from "./crm-ui.mjs";
 import { paymentsPage, bindPayments, paymentOptions } from "./payment-methods-ui.mjs";
-import { requireEnabledPayment } from "./payment-methods.mjs";
+import { availablePayments, requireEnabledPayment } from "./payment-methods.mjs";
 import { validPayment } from "./cashier.mjs";
 import {
   shiftBanner,
@@ -98,6 +98,8 @@ import { catalogPanel, productDialog } from "./catalog-ui.mjs";
 import { storeExpensesPage, bindStoreExpenses } from "./store-expenses-ui.mjs";
 
 let workspace = "";
+let officePage = "",
+  officeBranch = "";
 function workspaceAccess() {
   return {
     ...state.access,
@@ -504,6 +506,7 @@ function resetWorkspace(forget = false) {
   resetCustomerDisplay();
   if (forget) sessions?.clear(activeSessionId || undefined);
   resetDashboard();
+  officePage = officeBranch = "";
   loginAttempt++;
   authBusy = false;
   activeSessionId = "";
@@ -762,16 +765,30 @@ function accountProfile() {
 }
 function workspaceLocations() {
   if (!state.warehouseVersion || state.stockDemo) return state.stores;
-  if (
-    workspace === "backoffice" &&
-    (!(state.branchStockVersion >= 132) || ["transfers", "costPrices"].includes(view))
-  )
-    return state.stores;
+  if (workspace === "backoffice") return state.stores;
   return state.stores.filter((x) =>
     workspace === "warehouse"
       ? x.locationType === "warehouse"
       : x.locationType !== "warehouse",
   );
+}
+function officeBranchPanel(s, page, selected) {
+  const payments = page === "payments";
+  const shops = s.stores.filter((l) => !payments || l.locationType !== "warehouse");
+  const choices = locationOptions(shops, selected);
+  const rows = shops.map((l) => {
+    const hours = s.workHours?.find((h) => h.store_id === l.id);
+    const detail = payments
+      ? availablePayments(s, l.id)
+          .map((m) => m.label)
+          .join(", ")
+      : hours
+        ? hours.start_time.slice(0, 5) + " – " + hours.end_time.slice(0, 5)
+        : "Belum diatur";
+    return `<tr><td>${e(l.name)}</td><td>${e(detail)}</td></tr>`;
+  });
+  return `<section class="panel">${field(payments ? "Atur pembayaran cabang" : "Pilih lokasi absensi", `<select id="office-branch"><option value="">Semua cabang</option>${choices}</select>`)}
+    ${selected ? "" : `<div class="table-wrap"><table><thead><tr><th>Cabang</th><th>${payments ? "Metode pembayaran aktif" : "Jam kerja (WIB)"}</th></tr></thead><tbody>${rows.join("")}</tbody></table></div>`}</section>`;
 }
 function shell(body) {
   const access = workspaceAccess();
@@ -805,24 +822,23 @@ function shell(body) {
             employees: "Akun karyawan",
           }
         : title;
+  const central = access.workspace === "backoffice";
   const activeLocation = state.stores.find((x) => x.id === store),
     activeIcon = activeLocation?.locationType === "warehouse" ? "warehouse" : "stores";
+  const scopeLabel = central ? "Pusat · Semua cabang" : locationLabel(activeLocation);
   const selectableLocations = workspaceLocations();
   return `<div class="shell ${["products", "stock"].includes(view) ? "inventory-shell" : ""} ${view === "dashboard" ? "dashboard-shell" : ""}" ${sidebar.attributes()} data-page="${e(view)}">
     <aside class="sidebar" id="pos-sidebar" aria-label="Sidebar Maniac Duren">
       <div class="sidebar-header">
-        <div class="sidebar-brand-row"><div class="brand"><img src="/assets/logo.png" alt=""><div><strong>Maniac Duren</strong><span>Operasional outlet</span></div></div><button type="button" class="sidebar-toggle" data-sidebar-toggle aria-controls="pos-sidebar" aria-label="Tutup sidebar">${sidebarIcon}</button></div>
-        ${workspaceSwitch()}<div class="sidebar-store"><label for="active-store">Lokasi aktif</label><div class="store-select-wrap">${icon(activeIcon)}<select id="active-store" aria-label="Lokasi aktif: branch outlet atau gudang" title="${e(locationLabel(activeLocation))}">${locationOptions(selectableLocations, store)}</select></div></div>
+        <div class="sidebar-brand-row"><div class="brand"><img src="/assets/logo.png" alt=""><div><strong>Maniac Duren</strong><span>${central ? "Back Office pusat" : "Operasional outlet"}</span></div></div><button type="button" class="sidebar-toggle" data-sidebar-toggle aria-controls="pos-sidebar" aria-label="Tutup sidebar">${sidebarIcon}</button></div>
+        ${workspaceSwitch()}${central ? "" : `<div class="sidebar-store"><label for="active-store">Lokasi aktif</label><div class="store-select-wrap">${icon(activeIcon)}<select id="active-store" aria-label="Lokasi aktif: branch outlet atau gudang" title="${e(locationLabel(activeLocation))}">${locationOptions(selectableLocations, store)}</select></div></div>`}
       </div>
       <nav class="nav" id="pos-navigation" data-workspace-nav="${e(access.workspace || "")}" aria-label="Navigasi POS">${navigation(pageTitles, view, icon, access, sidebar.closedGroups)}</nav>
       <div class="sidebar-account">${accountProfile()}<button id="logout" class="sidebar-logout" type="button" aria-label="Logout" title="Logout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 4H4v16h5M14 8l4 4-4 4M8 12h10"/></svg><span>Logout</span></button></div>
     </aside>
     <button type="button" class="sidebar-backdrop" data-sidebar-close tabindex="-1" aria-label="Tutup sidebar"></button>
-    <main id="pos-main"><header class="topbar"><div class="workspace-heading"><button id="sidebar-toggle" type="button" class="sidebar-toggle" data-sidebar-toggle aria-controls="pos-sidebar" aria-label="Buka sidebar">${sidebarIcon}</button><div class="workspace-title"><span class="workspace-breadcrumb">${view === "orders" ? "Maniac Duren · Kasir" : "Maniac Duren · " + e(pageTitles[view] || "Maniac Duren")}</span><h1>${view === "orders" ? `Selamat datang, <span>${e((state.me?.name || "Kasir").trim().split(/\s+/)[0])}</span>` : e(pageTitles[view] || "Maniac Duren")}</h1></div></div><div class="workspace-tools">${installButton()}<span class="workspace-outlet" title="${e(locationLabel(activeLocation))}">${icon(activeIcon)}<span>${e(locationLabel(activeLocation))}</span></span><button type="button" id="stock-demo-toggle" class="stock-demo-toggle" role="switch" aria-label="Mode demo" aria-checked="${mode === "stock-demo"}"><span class="stock-demo-track" aria-hidden="true"></span>Mode demo</button>${themeButton()}</div></header><div class="workspace-content">${mode === "stock-demo" ? '<aside class="stock-demo-banner" role="status"><div><b>MODE DEMO · Stok awal 100</b><p>Data uji hanya di tab ini. Semua penyimpanan demo terpisah dari database asli. Harga jual demo Rp150.000 per satuan; resep mengikuti master.</p><small>Buah: 100 kg + 100 butir. Bahan / produk stok: 100 sesuai satuannya. ${e(itemTypes.recipe)} mengikuti bahan.</small></div><button type="button" id="stock-demo-reset">Reset demo</button></aside>' : ""}${body}<p class="page-foot">Maniac Duren · ${e(locationLabel(activeLocation))}</p></div>${systemDock(view, access)}</main>
+    <main id="pos-main"><header class="topbar"><div class="workspace-heading"><button id="sidebar-toggle" type="button" class="sidebar-toggle" data-sidebar-toggle aria-controls="pos-sidebar" aria-label="Buka sidebar">${sidebarIcon}</button><div class="workspace-title"><span class="workspace-breadcrumb">${view === "orders" ? "Maniac Duren · Kasir" : "Maniac Duren · " + e(pageTitles[view] || "Maniac Duren")}</span><h1>${view === "orders" ? `Selamat datang, <span>${e((state.me?.name || "Kasir").trim().split(/\s+/)[0])}</span>` : e(pageTitles[view] || "Maniac Duren")}</h1></div></div><div class="workspace-tools">${installButton()}<span class="workspace-outlet" title="${e(scopeLabel)}">${icon(central ? "backoffice" : activeIcon)}<span>${e(scopeLabel)}</span></span><button type="button" id="stock-demo-toggle" class="stock-demo-toggle" role="switch" aria-label="Mode demo" aria-checked="${mode === "stock-demo"}"><span class="stock-demo-track" aria-hidden="true"></span>Mode demo</button>${themeButton()}</div></header><div class="workspace-content">${mode === "stock-demo" ? '<aside class="stock-demo-banner" role="status"><div><b>MODE DEMO · Stok awal 100</b><p>Data uji hanya di tab ini. Semua penyimpanan demo terpisah dari database asli. Harga jual demo Rp150.000 per satuan; resep mengikuti master.</p><small>Buah: 100 kg + 100 butir. Bahan / produk stok: 100 sesuai satuannya. ${e(itemTypes.recipe)} mengikuti bahan.</small></div><button type="button" id="stock-demo-reset">Reset demo</button></aside>' : ""}${body}<p class="page-foot">Maniac Duren · ${e(scopeLabel)}</p></div>${systemDock(view, access)}</main>
   </div>`;
-}
-function dashboard() {
-  return dashboardPage(state, store);
 }
 
 function inventoryTable(lots) {
@@ -870,9 +886,7 @@ function stockHistoryPage() {
     '<tr><td colspan="5" class="empty">Belum ada pergerakan stok.</td></tr>'
   }</tbody></table></div></section>`;
 }
-function productsPage() {
-  return catalogPanel(state.products, catalogFilter, state, store);
-}
+
 function directoryPage(kind) {
   if (kind === "stores") return storesPage(state);
   const isStore = kind === "stores",
@@ -943,43 +957,71 @@ function render() {
     view = "reports";
   }
   sessions?.location(activeSessionId, store, view, workspaceAccess().workspace || "");
+  const central = workspaceAccess().workspace === "backoffice";
+  if (!central || officePage !== view) {
+    officePage = central ? view : "";
+    officeBranch = "";
+  }
+  if (officeBranch && !state.stores.some((l) => l.id === officeBranch)) officeBranch = "";
+  const pageStore = central ? officeBranch || null : store;
+  const chooseBranch = central && ["payments", "attendance"].includes(view);
   sidebar.capture();
+  const pages = {
+    ...Object.fromEntries(
+      opsPages.map((key) => [key, () => opsPage(key, state, pageStore)]),
+    ),
+    crm: () => crmPage(state),
+    payments: () => paymentsPage(state, pageStore),
+    shifts: () => shiftsPage(state, pageStore),
+    retailFunds: () => pettyPanel(state, pageStore, true),
+    storeExpenses: () => storeExpensesPage(state, pageStore),
+    dashboard: () => dashboardPage(state, pageStore),
+    backoffice: () => supplyHome(state, pageStore, "backoffice"),
+    warehouse: () => supplyHome(state, pageStore, "warehouse"),
+    storehome: () => supplyHome(state, pageStore, "store"),
+    transfers: () => transfersPage(state, pageStore, false, workspace),
+    receiving: () => transfersPage(state, pageStore, true),
+    legacyTransfers: () => outboundPage(state, pageStore, workspace),
+    officeInventory: () => officeInventoryPage(state, workspace),
+    costPrices: () => costPricesPage(state, pageStore, workspace),
+    pricing: () => pricingPage(state, pageStore),
+    supplierNotes: () => supplierNotesPage(state, pageStore, workspace),
+    service: () => servicePage(state, pageStore),
+    cutting: () => cuttingPage(state, pageStore),
+    recipes: () => recipesPage(state, pageStore),
+    production: () => productionPage(state, pageStore),
+    cashier,
+    stock: stockPage,
+    waste: () => wastePage(state, pageStore),
+    losses: () => wastePage(state, pageStore),
+    reports: () => reportsPage(state, workspace),
+    documents: () => documentsPage(state, pageStore),
+    products: () => catalogPanel(state.products, catalogFilter, state, pageStore),
+    stores: () => directoryPage("stores"),
+    suppliers: () => directoryPage("suppliers"),
+  };
   app.innerHTML = shell(
-    {
-      ...Object.fromEntries(
-        opsPages.map((key) => [key, () => opsPage(key, state, store)]),
-      ),
-      crm: () => crmPage(state),
-      payments: () => paymentsPage(state, store),
-      shifts: () => shiftsPage(state, store),
-      retailFunds: () => pettyPanel(state, store, true),
-      storeExpenses: () => storeExpensesPage(state, store),
-      dashboard,
-      backoffice: () => supplyHome(state, store, "backoffice"),
-      warehouse: () => supplyHome(state, store, "warehouse"),
-      storehome: () => supplyHome(state, store, "store"),
-      transfers: () => transfersPage(state, store, false, workspace),
-      receiving: () => transfersPage(state, store, true),
-      legacyTransfers: () => outboundPage(state, store, workspace),
-      officeInventory: () => officeInventoryPage(state, workspace),
-      costPrices: () => costPricesPage(state, store, workspace),
-      pricing: () => pricingPage(state, store),
-      supplierNotes: () => supplierNotesPage(state, store, workspace),
-      service: () => servicePage(state, store),
-      cutting: () => cuttingPage(state, store),
-      recipes: () => recipesPage(state, store),
-      production: () => productionPage(state, store),
-      cashier,
-      stock: stockPage,
-      waste: () => wastePage(state, store),
-      losses: () => wastePage(state, store),
-      reports: () => reportsPage(state, workspace),
-      documents: () => documentsPage(state, store),
-      products: productsPage,
-      stores: () => directoryPage("stores"),
-      suppliers: () => directoryPage("suppliers"),
-    }[view](),
+    chooseBranch
+      ? officeBranchPanel(state, view, officeBranch) + (officeBranch ? pages[view]() : "")
+      : pages[view](),
   );
+  const changeOfficeBranch = async (next) => {
+    if (
+      busy ||
+      (next && !state.stores.some((l) => l.id === next)) ||
+      (hasUnsavedForm() && !(await confirmLeave()))
+    )
+      return false;
+    officeBranch = next;
+    followDashboardStore();
+    render();
+    return true;
+  };
+  const picker = document.querySelector("#office-branch");
+  if (picker)
+    picker.onchange = async () => {
+      if (!(await changeOfficeBranch(picker.value))) picker.value = officeBranch;
+    };
   if (view === "orders" || view === "cashier") {
     const banner = document.createElement("div");
     banner.dataset.shiftBanner = "";
@@ -1007,7 +1049,7 @@ function render() {
       return data;
     },
   };
-  bindSupply(state, store, view, {
+  bindSupply(state, pageStore, view, {
     ...shiftContext,
     getState: () => state,
     refresh,
@@ -1031,7 +1073,7 @@ function render() {
       }),
   );
   if (view === "crm") bindCrm(shiftContext);
-  if (view === "payments") bindPayments(shiftContext, store);
+  if (view === "payments") bindPayments(shiftContext, pageStore);
   bindShiftBanner(shiftContext, store);
   if (view === "shifts") bindShiftsPage(shiftContext, store);
   if (view === "storeExpenses") bindStoreExpenses(state, store, shiftContext);
@@ -1084,17 +1126,19 @@ function render() {
     }
     addReceipt();
   });
-  document.querySelector("#active-store").onchange = async (ev) => {
-    if (!(await changeStore(ev.target.value))) ev.target.value = store;
-  };
+  const activePicker = document.querySelector("#active-store");
+  if (activePicker)
+    activePicker.onchange = async (ev) => {
+      if (!(await changeStore(ev.target.value))) ev.target.value = store;
+    };
   if (view === "dashboard")
-    bindDashboard(state, store, {
+    bindDashboard(state, pageStore, {
       ...shiftContext,
       readShifts: shiftContext.readShifts,
       render,
       refresh,
       toast,
-      changeStore,
+      changeStore: central ? changeOfficeBranch : changeStore,
       isBusy: () => busy,
     });
 
@@ -1148,33 +1192,34 @@ function render() {
       }
     };
   }
-  bindOps(view, state, store, {
-    ...storeContext(),
-    refresh,
-    getState: () => state,
-    employeeDocument: (employeeId) =>
-      request("/rest/v1/rpc/pos_employee_document", {
-        employee_id: employeeId,
-      }),
-    createAccount: async (employeeId, password, action = "create") => {
-      if (mode !== "live") throw Error("Akun hanya dapat dibuat saat login database.");
-      await request("/rest/v1/rpc/pos_account_target", {
-        employee_id: employeeId,
-      });
-      if (mode !== "live") throw Error("Akun hanya dapat dibuat saat login database.");
-      const res = await fetch("/api/pos-employee", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: "Bearer " + token,
-        },
-        body: JSON.stringify({ employeeId, password, action }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw Error(data.error || "Gagal membuat akun");
-      return data;
-    },
-  });
+  if (!chooseBranch || officeBranch)
+    bindOps(view, state, pageStore, {
+      ...storeContext(),
+      refresh,
+      getState: () => state,
+      employeeDocument: (employeeId) =>
+        request("/rest/v1/rpc/pos_employee_document", {
+          employee_id: employeeId,
+        }),
+      createAccount: async (employeeId, password, action = "create") => {
+        if (mode !== "live") throw Error("Akun hanya dapat dibuat saat login database.");
+        await request("/rest/v1/rpc/pos_account_target", {
+          employee_id: employeeId,
+        });
+        if (mode !== "live") throw Error("Akun hanya dapat dibuat saat login database.");
+        const res = await fetch("/api/pos-employee", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + token,
+          },
+          body: JSON.stringify({ employeeId, password, action }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw Error(data.error || "Gagal membuat akun");
+        return data;
+      },
+    });
   bindKitchenSound();
   observeKitchen();
   trackForms();
@@ -1199,13 +1244,13 @@ function render() {
     },
   };
   if (view === "retailFunds") {
-    bindPetty(state, store, adminContext);
+    bindPetty(state, pageStore, adminContext);
     document.querySelector("[data-pt-expense]").onclick = () =>
-      expenseDialog(state, store, adminContext, true);
+      expenseDialog(state, pageStore, adminContext, true);
   }
   if (view === "officeInventory") bindOfficeInventory(state, adminContext);
-  if (view === "reports") bindReports(state, store, adminContext);
-  if (view === "documents") bindDocuments(state, store, adminContext);
+  if (view === "reports") bindReports(state, pageStore, adminContext);
+  if (view === "documents") bindDocuments(state, pageStore, adminContext);
   bindWaste(view, state, store, {
     getState: () => state,
     loadRejectEvidence: async (recordId) =>
@@ -1322,14 +1367,14 @@ function render() {
       document.querySelector("#add-catalog-product").onclick = () =>
         productDialog({
           state,
-          store,
+          store: pageStore,
           modal,
           mutate,
           render,
           toast,
           getState: () => state,
         });
-      bindInventory(state, store, catalogFilter, "products", {
+      bindInventory(state, pageStore, catalogFilter, "products", {
         modal,
         mutate,
         render,
@@ -1350,7 +1395,7 @@ function render() {
           productDialog({
             product: state.products.find((p) => p.id === key),
             state,
-            store,
+            store: pageStore,
             modal,
             mutate,
             render,

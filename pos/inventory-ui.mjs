@@ -27,27 +27,35 @@ const options = (values, selected) =>
 const amount = (p) => (isMaterial(p) ? null : isLegacyStock(p) ? p.priceKg : p.salePrice);
 function entries(state, store, mode) {
   if (mode === "stock") state = pricesForBranch(state, store);
-  const available = availableStock(state, store, today());
+  const central = mode === "products" && store === null;
+  const locations = central ? state.stores.map((l) => l.id) : [store];
+  const balances = locations.map((id) => availableStock(state, id, today()));
+  const available = (key, unit) =>
+    balances.reduce(
+      (sum, balance) => sum + Math.max(0, balance.get(key)?.[unit] || 0),
+      0,
+    );
   return (state.products || [])
     .map((p) => ({ ...productDefaults(p), ...(isMaterial(p) ? { category: null } : {}) }))
     .filter((p) => mode !== "stock" || p.itemType !== "recipe")
     .map((p) => {
       const dual = isLegacyStock(p),
         lots = (dual ? state.lots : state.unitLots) || [];
-      const own = lots.filter((l) => l.storeId === store && l.productId === p.id);
+      const own = lots.filter(
+        (l) => (central || l.storeId === store) && l.productId === p.id,
+      );
       const qty = own.reduce((n, l) => n + Number(dual ? l.kg : l.qty), 0),
         pieces = own.reduce((n, l) => n + Number(l.pieces || 0), 0);
       const usable = dual
-        ? own.reduce((n, l) => n + Math.max(0, available.get("lot:" + l.id)?.qty || 0), 0)
-        : Math.max(0, available.get("product:" + p.id)?.qty || 0);
+        ? own.reduce((n, l) => n + available("lot:" + l.id, "qty"), 0)
+        : available("product:" + p.id, "qty");
       const availablePieces = dual
-        ? own.reduce(
-            (n, l) => n + Math.max(0, available.get("lot:" + l.id)?.pieces || 0),
-            0,
-          )
+        ? own.reduce((n, l) => n + available("lot:" + l.id, "pieces"), 0)
         : 0;
       const menu =
-        p.itemType === "recipe" ? menuStatus(state, store, p, [], today()) : null;
+        p.itemType === "recipe"
+          ? { ok: locations.some((id) => menuStatus(state, id, p, [], today()).ok) }
+          : null;
       const ready = menu ? menu.ok : usable > 0 && (!dual || availablePieces > 0);
       return {
         p,
@@ -280,7 +288,7 @@ export function inventoryPanel(state, store, filter = {}, mode = "products") {
    <div class="inv-layout-tools"><div class="inv-view" role="group" aria-label="Tampilan produk">${["list", "grid"].map((v) => `<button type="button" data-inv-view="${v}" class="${(filter.layout || "list") === v ? "selected" : ""}" aria-pressed="${(filter.layout || "list") === v}" aria-label="Tampilan ${v === "list" ? "baris, 3 kartu per baris di desktop" : "kolom, 6 kartu per baris di desktop"}" title="${v === "list" ? "Baris: 3 kartu per baris (desktop)" : "Kolom: 6 kartu per baris (desktop)"}">${icon(v)}<span class="inv-layout-count" aria-hidden="true">${v === "list" ? 3 : 6}</span></button>`).join("")}</div><button type="button" class="inv-reset" data-inv-reset aria-label="Reset filter" title="Reset filter">${icon("reset")}</button></div>
    <details class="inv-advanced" ${filter.expired || filter.minPrice || filter.maxPrice ? "open" : ""}><summary>Filter lainnya</summary><div class="inv-advanced-fields"><label class="inv-check"><input type="checkbox" name="expired" ${filter.expired ? "checked" : ""}><span>Ada stok kedaluwarsa</span></label><div class="inv-price-filters"><label class="inv-price"><span>Rp</span><input type="number" min="0" step="any" name="minPrice" value="${e(filter.minPrice || "")}" placeholder="Harga minimum" aria-label="Harga minimum"></label><label class="inv-price"><span>Rp</span><input type="number" min="0" step="any" name="maxPrice" value="${e(filter.maxPrice || "")}" placeholder="Harga maksimum" aria-label="Harga maksimum"></label></div>${canManage ? '<button type="button" data-inventory-category-add>+ Tambah kategori</button>' : ""}</div></details>
   </form></div>
-  <div class="inv-content"><div class="inv-context"><span>${e((state.stores || []).find((s) => s.id === store)?.name || "Pilih toko")}</span><span data-inv-count aria-live="polite">${shown.length} dari ${rows.length} item</span></div><div class="inv-results ${filter.layout === "grid" ? "is-grid" : ""}">${cards(shown, mode, state)}</div><p class="inv-footnote">${mode === "stock" ? "Stok fisik termasuk barang belum siap dan kedaluwarsa. Tersedia dipakai menghitung tanggal, kondisi buah, kedaluwarsa, serta cadangan pesanan." : `Harga jual berlaku di semua toko. Harga beli merupakan referensi, bukan HPP. Ketersediaan ${e(itemTypes.recipe)} mengikuti bahan siap pakai.`} Filter Habis juga mencakup barang yang belum siap dipakai.</p></div></div>
+  <div class="inv-content"><div class="inv-context"><span>${e((state.stores || []).find((s) => s.id === store)?.name || (mode === "products" && store === null ? "Semua cabang" : "Pilih toko"))}</span><span data-inv-count aria-live="polite">${shown.length} dari ${rows.length} item</span></div><div class="inv-results ${filter.layout === "grid" ? "is-grid" : ""}">${cards(shown, mode, state)}</div><p class="inv-footnote">${mode === "stock" ? "Stok fisik termasuk barang belum siap dan kedaluwarsa. Tersedia dipakai menghitung tanggal, kondisi buah, kedaluwarsa, serta cadangan pesanan." : `Harga jual berlaku di semua toko. Harga beli merupakan referensi, bukan HPP. Ketersediaan ${e(itemTypes.recipe)} mengikuti bahan siap pakai.`} Filter Habis juga mencakup barang yang belum siap dipakai.</p></div></div>
  </section>`;
 }
 export function bindInventory(state, store, filter, mode, ctx) {
