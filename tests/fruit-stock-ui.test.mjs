@@ -1,3 +1,4 @@
+import { answerConfirmations } from "./helpers/confirmation-ui.mjs";
 import assert from "node:assert/strict";
 import { id } from "../pos/core.mjs";
 import { openFruitTransfer } from "../pos/fruit-transfer-ui.mjs";
@@ -39,11 +40,11 @@ for (const n of [500, 501, 502, 503]) {
 const before = {
   document: globalThis.document,
   FormData: globalThis.FormData,
-  confirm: globalThis.confirm,
 };
 globalThis.document = { body: new Node("body"), createElement: (t) => new Node(t) };
 globalThis.FormData = FormDataAdapter;
-globalThis.confirm = () => true;
+let approveDecision = true;
+answerConfirmations(document, () => approveDecision);
 const modal = makeModal(),
   posts = [];
 const ctx = {
@@ -112,14 +113,14 @@ try {
   assert(w.closed);
   assert.equal(posts.length, 0, "Finishing scan only updates draft");
   assert.equal(s.lots.find((l) => l.id === root.id).kg, 6);
-  globalThis.confirm = () => false;
+  approveDecision = false;
   c(d, "lotId").value = other.id;
   await c(d, "lotId").fire("change");
   assert.equal(c(d, "lotId").value, root.id);
   assert.equal(c(d, "kg").value, "2");
   await d.querySelector("form").fire("submit");
   assert.equal(posts.length, 0, "Cancelling final confirmation preserves stock");
-  globalThis.confirm = () => true;
+  approveDecision = true;
   await d.querySelector("form").fire("submit");
   assert(d.closed);
   assert.equal(posts.length, 1);

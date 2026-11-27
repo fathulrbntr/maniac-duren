@@ -1,3 +1,4 @@
+import { acceptConfirmations } from "./helpers/browser-confirmation.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -24,7 +25,7 @@ try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } }),
     errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
-  page.on("dialog", (d) => d.accept());
+  await acceptConfirmations(page);
   await page.exposeFunction("dbRPC", async (name, p) => {
     if (name === "pos_read") return (await db.query("select pos_read() s")).rows[0].s;
     if (name === "pos_mutate_027")

@@ -1,3 +1,4 @@
+import { acceptConfirmations } from "./helpers/browser-confirmation.mjs";
 // Exercises the shipped entry point and its real RPC routing with a local backend fixture.
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -24,7 +25,7 @@ try {
     errors = [],
     calls = [];
   page.on("pageerror", (x) => errors.push(x.message));
-  page.on("dialog", (d) => d.accept());
+  await acceptConfirmations(page);
   await page.route("**/*", async (r) => {
     const u = new URL(r.request().url()),
       reply = (json) => r.fulfill({ json });

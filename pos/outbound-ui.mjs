@@ -1,3 +1,4 @@
+import { confirmAction } from "../shared/confirmation.mjs";
 import { prepareBarcodeInput, readyBarcodeInput } from "./barcode-scanner.mjs";
 import { noteUnitCosts } from "./supplier-notes.mjs";
 import { escape as e, id, num, money, today } from "./core.mjs";
@@ -518,7 +519,7 @@ export function openOutbound(s, oid, ctx) {
           (b.onclick = () =>
             perform("outbound_scan_remove", { barcode: b.dataset.outboundRemove })),
       );
-    body.querySelector("[data-outbound-ready]")?.addEventListener("click", () => {
+    body.querySelector("[data-outbound-ready]")?.addEventListener("click", async () => {
       if (units.length) {
         confirmForm(
           "outbound_ready",
@@ -542,17 +543,19 @@ export function openOutbound(s, oid, ctx) {
         );
         return;
       }
-      if (confirm("Semua barcode untuk pengiriman ini sudah lengkap?"))
+      if (await confirmAction("Semua barcode untuk pengiriman ini sudah lengkap?"))
         perform("outbound_ready");
     });
-    body.querySelector("[data-outbound-dispatch]")?.addEventListener("click", () => {
-      if (
-        confirm(
-          "Barang sesuai dokumen dan sudah diserahkan untuk dikirim? Stok gudang akan berkurang.",
+    body
+      .querySelector("[data-outbound-dispatch]")
+      ?.addEventListener("click", async () => {
+        if (
+          await confirmAction(
+            "Barang sesuai dokumen dan sudah diserahkan untuk dikirim? Stok gudang akan berkurang.",
+          )
         )
-      )
-        perform("outbound_dispatch", { confirmed: true });
-    });
+          perform("outbound_dispatch", { confirmed: true });
+      });
     body.querySelector("[data-outbound-edit]")?.addEventListener("click", () => {
       d.close();
       openOutboundForm(ctx.getState(), o.sourceId, ctx, o);

@@ -1,4 +1,4 @@
-"use strict";
+import { confirmAction } from "../shared/confirmation.mjs";
 const { MenuLogic } = globalThis;
 const KEY = "maniac-duren-menu-draft-v1";
 const form = document.querySelector("#product-form");
@@ -150,12 +150,12 @@ function render() {
     const edit = document.createElement("button");
     edit.textContent = "Edit";
     edit.setAttribute("aria-label", `Edit ${item.name}`);
-    edit.onclick = () => {
+    edit.onclick = async () => {
       if (
         editing &&
-        !confirm(
+        !(await confirmAction(
           "Ganti produk yang sedang diedit? Isian yang belum disimpan akan dibuang.",
-        )
+        ))
       )
         return;
       editing = item.id;
@@ -173,8 +173,8 @@ function render() {
     remove.textContent = "Hapus";
     remove.className = "delete";
     remove.setAttribute("aria-label", `Hapus ${item.name}`);
-    remove.onclick = () => {
-      if (!confirm(`Hapus ${item.name} dari draf menu?`)) return;
+    remove.onclick = async () => {
+      if (!(await confirmAction(`Hapus ${item.name} dari draf menu?`))) return;
       items = items.filter((x) => x.id !== item.id);
       if (editing === item.id) clearForm();
       save();
@@ -232,7 +232,7 @@ document.querySelector("#import").addEventListener("change", async (event) => {
       throw new Error("File terlalu besar. Maksimal 25 MB.");
     const parsed = MenuLogic.documentData(JSON.parse(await file.text()));
     const imported = validate(MenuLogic.migrate(parsed.products));
-    if (!confirm("Ganti seluruh draf dengan menu dari file ini?")) return;
+    if (!(await confirmAction("Ganti seluruh draf dengan menu dari file ini?"))) return;
     items = imported;
     cartEnabled = parsed.cartEnabled;
     clearForm();
@@ -249,7 +249,8 @@ async function published() {
   return loadDocument(await response.json());
 }
 document.querySelector("#reset").onclick = async () => {
-  if (!confirm("Buang draf dan muat ulang menu yang sudah dipublikasikan?")) return;
+  if (!(await confirmAction("Buang draf dan muat ulang menu yang sudah dipublikasikan?")))
+    return;
   try {
     items = await published();
     ready = true;

@@ -1,3 +1,4 @@
+import { confirmAction } from "../shared/confirmation.mjs";
 import { parseTrackingBarcode, checkReceiptLabels } from "./scale-label.mjs";
 import { formSection } from "./workflow-ui.mjs";
 import { escape as e, id, today, num, money } from "./core.mjs";
@@ -102,7 +103,7 @@ export function openWeighingReceipt(state, store, ctx) {
     card.className = "receipt-product";
     card.innerHTML = `<div class="receipt-product-head"><h4 data-line-title></h4><button type="button" data-remove-product class="receipt-remove">Hapus</button></div><div class="form-grid"><label class="field">Produk<select data-product required></select></label><label class="field">Total harga produk di nota (Rp)<input name="purchaseCost" data-purchase type="number" min="0" step="any" required placeholder="0"></label></div><div class="receipt-product-actions"><button type="button" data-weigh-open>Catat timbang aktual</button></div><div data-line-summary class="receipt-line-summary"></div>`;
     list.append(card);
-    card.querySelector("[data-product]").onchange = (ev) => {
+    card.querySelector("[data-product]").onchange = async (ev) => {
       const next = ev.target.value;
       if (lines.some((other) => other !== line && other.productId === next)) {
         syncOptions();
@@ -110,7 +111,9 @@ export function openWeighingReceipt(state, store, ctx) {
       }
       if (
         line.weighings.length &&
-        !confirm("Ganti produk? Catatan timbang dan harga produk ini akan dikosongkan.")
+        !(await confirmAction(
+          "Ganti produk? Catatan timbang dan harga produk ini akan dikosongkan.",
+        ))
       ) {
         syncOptions();
         return;
@@ -126,11 +129,13 @@ export function openWeighingReceipt(state, store, ctx) {
       line.purchaseCost = ev.target.value;
       update();
     };
-    card.querySelector("[data-remove-product]").onclick = () => {
+    card.querySelector("[data-remove-product]").onclick = async () => {
       if (saving || lines.length === 1) return;
       if (
         (line.weighings.length || line.purchaseCost !== "") &&
-        !confirm("Hapus produk beserta harga dan catatan timbangnya dari nota ini?")
+        !(await confirmAction(
+          "Hapus produk beserta harga dan catatan timbangnya dari nota ini?",
+        ))
       )
         return;
       lines.splice(lines.indexOf(line), 1);
@@ -168,9 +173,9 @@ export function openWeighingReceipt(state, store, ctx) {
       const p = payload(),
         t = validateShipment(p, ctx.getState?.() || state);
       if (
-        !confirm(
+        !(await confirmAction(
           `Penurunan barang sudah selesai?\nNota ${p.invoiceNo}\n${lines.length} produk · ${num(t.kg)} kg · ${num(t.pieces)} butir\nTotal modal ${money(t.total)}\nSeluruh produk akan dimasukkan ke stok sekaligus.`,
-        )
+        ))
       )
         return;
       saving = true;
@@ -268,8 +273,8 @@ function openLineWeighing(line, state, lines, d, update) {
     );
     w.querySelectorAll("[data-delete]").forEach(
       (b) =>
-        (b.onclick = () => {
-          if (!confirm("Hapus catatan timbang ini?")) return;
+        (b.onclick = async () => {
+          if (!(await confirmAction("Hapus catatan timbang ini?"))) return;
           rows = rows.filter((r) => r.id !== b.dataset.delete);
           if (editing === b.dataset.delete) reset();
           d.dataset.dirty = "true";
@@ -280,7 +285,7 @@ function openLineWeighing(line, state, lines, d, update) {
     );
   };
   const scan = bindBarcodeInput(scanInput, {
-    onScan: (raw, settings) => {
+    onScan: async (raw, settings) => {
       if (editing || wf.elements.kg.value || wf.elements.pieces.value)
         throw Error(
           "Selesaikan atau batalkan isian manual/koreksi sebelum scan berikutnya.",
@@ -298,9 +303,9 @@ function openLineWeighing(line, state, lines, d, update) {
       if (
         !tracking &&
         rows.some((row) => row.barcode === result.barcode) &&
-        !confirm(
+        !(await confirmAction(
           "Barcode dengan produk dan berat ini sudah dicatat. Lanjut hanya jika ini durian lain dengan berat yang sama. Catat sebagai 1 butir tambahan?",
-        )
+        ))
       )
         return false;
       const next = [
@@ -350,10 +355,10 @@ function openLineWeighing(line, state, lines, d, update) {
       w.querySelector("[data-error]").textContent = err.message;
     }
   };
-  const close = () => {
+  const close = async () => {
     if (
       (editing || wf.elements.kg.value || wf.elements.pieces.value || scanInput.value) &&
-      !confirm("Isian timbang belum dicatat. Tutup popup?")
+      !(await confirmAction("Isian timbang belum dicatat. Tutup popup?"))
     )
       return;
     w.close();

@@ -1,3 +1,4 @@
+import { confirmAction } from "../shared/confirmation.mjs";
 import { prepareBarcodeInput, readyBarcodeInput } from "./barcode-scanner.mjs";
 import { escape as e, id, num, money } from "./core.mjs";
 import { noteBalance } from "./supplier-notes.mjs";
@@ -274,12 +275,12 @@ export function openReceivingSession(s, pid, ctx, readOnly = false) {
         '<button type="button" data-session-pause>Jeda</button><button type="button" class="primary" data-session-finish>Selesai</button>';
       actions.querySelector("[data-session-pause]").onclick = () =>
         perform("receipt_pause");
-      actions.querySelector("[data-session-finish]").onclick = () => {
+      actions.querySelector("[data-session-finish]").onclick = async () => {
         if (
           !working &&
-          confirm(
+          (await confirmAction(
             "Semua barang pada nota sudah diperiksa dan jumlah aktualnya sesuai? Selesaikan penerimaan untuk membukukan stok.",
-          )
+          ))
         ) {
           return perform("receipt_finish", { confirmed: true });
         }
@@ -294,8 +295,8 @@ export function openReceivingSession(s, pid, ctx, readOnly = false) {
     }
     body.querySelectorAll("[data-session-remove]").forEach(
       (b) =>
-        (b.onclick = () => {
-          if (confirm("Hapus scan ini dari daftar penerimaan?"))
+        (b.onclick = async () => {
+          if (await confirmAction("Hapus scan ini dari daftar penerimaan?"))
             perform("receipt_scan_remove", { barcode: b.dataset.sessionRemove });
         }),
     );

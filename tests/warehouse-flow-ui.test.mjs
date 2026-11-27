@@ -1,3 +1,4 @@
+import { answerConfirmations } from "./helpers/confirmation-ui.mjs";
 import assert from "node:assert/strict";
 import { Node, makeModal, FormDataAdapter } from "./variant-dom.mjs";
 import {
@@ -19,7 +20,6 @@ import {
 import { workspaceGroups } from "../pos/workspaces.mjs";
 import { stockReport } from "../pos/reports.mjs";
 import { batchReports } from "../pos/batch-report.mjs";
-globalThis.confirm = () => true;
 globalThis.FormData = FormDataAdapter;
 const match = Node.prototype.matches;
 Node.prototype.matches = function (s) {
@@ -52,6 +52,7 @@ globalThis.document = {
   querySelector: (s) => body.querySelector(s),
   querySelectorAll: (s) => body.querySelectorAll(s),
 };
+answerConfirmations(document);
 const modal = makeModal(),
   calls = [],
   messages = [];

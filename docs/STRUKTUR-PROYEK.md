@@ -32,6 +32,8 @@ Mulai dari tabel berikut ketika mencari kode. Modul fitur tetap menggunakan loka
 
 Akhiran `-ui.mjs` umumnya memuat HTML dan event form; modul tanpa `-ui` memuat perhitungan, payload, atau aturan fitur. `pos/app.js` menghubungkan modul tersebut. Cari nama aksi, misalnya `order_create`, untuk menelusuri form → handler → RPC → SQL → pengujian.
 
+Konfirmasi tindakan di POS dan pengelola menu menggunakan `shared/confirmation.mjs` dan `shared/confirmation.css`. Tunggu hasil `confirmAction` sebelum menyimpan perubahan. Untuk pembatalan yang memerlukan alasan, gunakan `requestReason`.
+
 ## Aturan perubahan berikutnya
 
 1. Pakai URL impor relatif yang sama untuk modul yang sama, tanpa versi query berbeda-beda. Browser menganggap `file.mjs?v=1` dan `file.mjs?v=2` sebagai dua modul berbeda, termasuk state di dalamnya.

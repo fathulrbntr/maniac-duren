@@ -1,3 +1,4 @@
+import { confirmAction } from "../shared/confirmation.mjs";
 import { escape as e, num } from "./core.mjs";
 import { normalizeBarcode, bindBarcodeInput } from "./barcode-scanner.mjs";
 import {
@@ -76,11 +77,13 @@ export function attachFruitScanSelection(
     }
     c(weightName)?.dispatchEvent(new Event("input", { bubbles: true }));
   }
-  source.addEventListener("change", () => {
+  source.addEventListener("change", async () => {
     if (chosen !== source.value) {
       if (
         units.length &&
-        !confirm("Ganti batch asal? Catatan barcode sementara akan dikosongkan.")
+        !(await confirmAction(
+          "Ganti batch asal? Catatan barcode sementara akan dikosongkan.",
+        ))
       ) {
         source.value = chosen;
         return;
@@ -131,12 +134,12 @@ export function attachFruitScanSelection(
       ev.preventDefault();
       return scan();
     };
-    const close = () => {
+    const close = async () => {
       if (
         scanInput.value.trim() &&
-        !confirm(
+        !(await confirmAction(
           "Barcode di kolom scan belum dicatat. Tutup dan abaikan isi kolom tersebut?",
-        )
+        ))
       )
         return;
       child.close();

@@ -1,3 +1,4 @@
+import { confirmAction } from "../shared/confirmation.mjs";
 import { depositButtons } from "./cash-deposits-ui.mjs";
 import { transactions } from "./reports.mjs";
 import { branchPricingPage, bindBranchPricing } from "./branch-prices-ui.mjs";
@@ -617,11 +618,11 @@ export function openDispatch(s, store, ctx) {
   savingForm(d, async (f) => {
     if (!codes.length && !units.length) throw Error("Scan barang terlebih dahulu.");
     if (
-      !confirm(
+      !(await confirmAction(
         branch
           ? "Kirim barang pada daftar ini ke cabang tujuan?"
           : "Terbitkan invoice dan surat jalan? Barang yang dipilih akan keluar dari stok gudang.",
-      )
+      ))
     )
       return;
     await ctx.mutate(

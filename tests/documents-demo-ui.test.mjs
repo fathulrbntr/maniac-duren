@@ -1,3 +1,4 @@
+import { answerConfirmations } from "./helpers/confirmation-ui.mjs";
 import assert from "node:assert/strict";
 import {
   createStockDemo,
@@ -19,13 +20,15 @@ const globals = {
   document: globalThis.document,
   FormData: globalThis.FormData,
   fetch: globalThis.fetch,
-  confirm: globalThis.confirm,
   window: globalThis.window,
 };
 globalThis.document = {
+  body: root,
+  createElement: (tag) => new Node(tag),
   querySelector: (q) => root.querySelector(q),
   querySelectorAll: (q) => root.querySelectorAll(q),
 };
+answerConfirmations(document);
 globalThis.FormData = class extends FormDataAdapter {
   *[Symbol.iterator]() {
     yield* super[Symbol.iterator]();
@@ -36,7 +39,6 @@ globalThis.FormData = class extends FormDataAdapter {
 globalThis.fetch = () => {
   throw Error("Document demo must never access the network");
 };
-globalThis.confirm = () => true;
 globalThis.window = {
   open: () => ({
     document: {

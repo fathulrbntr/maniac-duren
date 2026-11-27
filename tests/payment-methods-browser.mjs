@@ -1,3 +1,4 @@
+import { acceptConfirmations } from "./helpers/browser-confirmation.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -24,7 +25,7 @@ try {
     errors = [],
     calls = [];
   page.on("pageerror", (x) => errors.push(x.message));
-  page.on("dialog", (d) => d.accept());
+  await acceptConfirmations(page);
   await page.route("**/*", async (r) => {
     const u = new URL(r.request().url()),
       reply = (json) => r.fulfill({ json });

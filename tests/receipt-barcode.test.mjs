@@ -1,3 +1,4 @@
+import { answerConfirmations } from "./helpers/confirmation-ui.mjs";
 import assert from "node:assert/strict";
 import { receiptBarcode } from "../pos/receipt-barcode.mjs";
 import { openWeighingReceipt } from "../pos/receipt-weighing.mjs";
@@ -56,7 +57,7 @@ for (const access of [
 
 // Exercise the real receipt and weighing handlers with a small DOM adapter.
 const original = Object.fromEntries(
-  ["document", "localStorage", "confirm"].map((k) => [k, globalThis[k]]),
+  ["document", "localStorage"].map((k) => [k, globalThis[k]]),
 );
 const keys = [
   "elements",
@@ -118,10 +119,10 @@ globalThis.localStorage = {
 };
 let confirmation = false,
   confirms = 0;
-globalThis.confirm = () => {
+answerConfirmations(document, () => {
   confirms++;
   return confirmation;
-};
+});
 const modal = makeModal(),
   writes = [];
 const state = {

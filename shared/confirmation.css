@@ -1,0 +1,82 @@
+dialog.brand-confirmation {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  box-sizing: border-box;
+  width: min(25rem, calc(100% - 2rem));
+  height: fit-content;
+  max-height: calc(100dvh - 2rem);
+  overflow: auto;
+  padding: clamp(1.25rem, 4vw, 2rem);
+  border: 1px solid var(--line, #deded2);
+  border-radius: 18px;
+  color: var(--ink, #19241a);
+  background: var(--surface, #fffdf6);
+  box-shadow: 0 16px 56px #0003;
+  font: 500 1rem/1.5 var(--font-ui, "DM Sans", sans-serif);
+  text-align: center;
+}
+.brand-confirmation::backdrop {
+  background: rgb(12 21 14 / 55%);
+}
+.brand-confirmation form {
+  display: grid;
+  gap: 1.25rem;
+  margin: 0;
+}
+.brand-confirmation img {
+  display: block;
+  box-sizing: content-box;
+  width: 7.5rem;
+  height: auto;
+  padding: 0.625rem 0.875rem;
+  border-radius: 12px;
+  background: #18321e;
+  margin: 0 auto;
+}
+.brand-confirmation p {
+  margin: 0;
+  color: inherit;
+  font: inherit;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+.brand-confirmation textarea {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0.7rem;
+  border-radius: 8px;
+  border: 1px solid var(--line, #c7cbbe);
+  color: inherit;
+  background: var(--surface, #fff);
+  font: inherit;
+  resize: vertical;
+}
+.confirmation-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+.brand-confirmation button {
+  margin: 0;
+  min-height: 44px;
+  padding: 0.55rem 0.75rem;
+  font: inherit;
+  font-weight: 600;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.brand-confirmation [data-cancel] {
+  color: inherit;
+  background: transparent;
+  border: 1px solid var(--line, #c7cbbe);
+}
+.brand-confirmation [data-accept] {
+  background: var(--action-bg, #25622e);
+  color: var(--action-ink, #fff);
+  border: 1px solid transparent;
+}
+.brand-confirmation :focus-visible {
+  outline: 2px solid var(--focus, #25622e);
+  outline-offset: 2px;
+}

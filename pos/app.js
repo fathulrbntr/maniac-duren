@@ -1,3 +1,4 @@
+import { confirmAction, requestReason } from "../shared/confirmation.mjs";
 import { pricesForBranch } from "./branch-prices.mjs";
 import { prepareBarcodeInput } from "./barcode-scanner.mjs";
 import { supplierDialog, bindSupplierSelect } from "./supplier-ui.mjs";
@@ -65,7 +66,13 @@ import {
   locationOptions,
 } from "./store-settings.mjs";
 import { receiptHeader, fillReceiptLogo } from "./store-profile.mjs";
-import { navigation, visibleSections, mayLeave, trackForms } from "./navigation.mjs";
+import {
+  navigation,
+  visibleSections,
+  hasUnsavedForm,
+  confirmLeave,
+  trackForms,
+} from "./navigation.mjs";
 import {
   prepareRetry,
   settleRetry,
@@ -349,28 +356,28 @@ async function switchStockDemo(reset = false) {
     return toast("Tutup pop-up sebelum mengganti mode.");
   if (pendingRetry())
     return toast("Periksa pengiriman yang belum terkonfirmasi sebelum mengganti mode.");
-  if (!mayLeave(false)) return;
-  if (
-    (cart.length || hasOrderDraft()) &&
-    !confirm(
-      "Pergantian mode akan mengosongkan keranjang yang belum disimpan. Lanjutkan?",
-    )
-  )
-    return;
-  if (
-    reset &&
-    !confirm(
-      "Ulangi demo dengan harga Rp150.000 dan stok 100? Semua perubahan demo akan dibuang.",
-    )
-  )
-    return;
   busy = true;
-  stateRevision++;
   const switchingControls = [
     ...document.querySelectorAll("button,input,select,textarea"),
   ].map((node) => ({ node, disabled: node.disabled }));
   switchingControls.forEach(({ node }) => (node.disabled = true));
   try {
+    if (hasUnsavedForm() && !(await confirmLeave())) return;
+    if (
+      (cart.length || hasOrderDraft()) &&
+      !(await confirmAction(
+        "Pergantian mode akan mengosongkan keranjang yang belum disimpan. Lanjutkan?",
+      ))
+    )
+      return;
+    if (
+      reset &&
+      !(await confirmAction(
+        "Ulangi demo dengan harga Rp150.000 dan stok 100? Semua perubahan demo akan dibuang.",
+      ))
+    )
+      return;
+    stateRevision++;
     if (mode === "live" || reset) {
       const engine = await demoEngine();
       const source = reset ? demoSource : state;
@@ -855,8 +862,13 @@ function directoryPage(kind) {
     label = isStore ? "Store" : "Supplier";
   return `<div class="intro"><div><h2>Master ${label}</h2><p class="muted">${isStore ? "Ubah nama toko dan lokasi melalui tombol Edit toko." : "Kelola supplier, nomor telepon, dan alamat."}</p></div><button class="primary" data-master="${kind}">Tambah ${label}</button></div><section class="panel"><div class="table-wrap"><table><thead><tr><th>NAMA</th>${isStore ? "<th>LOKASI</th>" : "<th>NOMOR TELEPON</th><th>ALAMAT</th>"}<th>ACTION</th></tr></thead><tbody>${state[kind].map((p) => `<tr><td><b>${e(p.name)}</b></td>${isStore ? `<td>${e(p.location || "—")}</td>` : `<td>${e(p.phone || "—")}</td><td>${e(p.address || "—")}</td>`}<td><button class="small" data-edit-kind="${kind}" data-edit-id="${e(p.id)}">${icon("edit")}${isStore ? "Edit toko" : "Edit"}</button></td></tr>`).join("") || `<tr><td colspan="${isStore ? 3 : 4}" class="empty">Belum ada ${label.toLowerCase()}.</td></tr>`}</tbody></table></div></section>`;
 }
-function changeStore(next) {
-  if (!state.stores.some((x) => x.id === next) || !mayLeave(busy)) return false;
+async function changeStore(next) {
+  if (
+    !state.stores.some((x) => x.id === next) ||
+    busy ||
+    (hasUnsavedForm() && !(await confirmLeave()))
+  )
+    return false;
   if (next === store) {
     followDashboardStore();
     render();
@@ -864,7 +876,7 @@ function changeStore(next) {
   }
   if (
     (cart.length || hasOrderDraft()) &&
-    !confirm("Ganti toko akan mengosongkan pesanan. Lanjutkan?")
+    !(await confirmAction("Ganti toko akan mengosongkan pesanan. Lanjutkan?"))
   )
     return false;
   resetCustomerDisplay();
@@ -989,11 +1001,13 @@ function render() {
   });
   document.querySelectorAll("[data-workspace]").forEach(
     (b) =>
-      (b.onclick = () => {
-        if (!mayLeave(busy)) return;
+      (b.onclick = async () => {
+        if (busy || (hasUnsavedForm() && !(await confirmLeave()))) return;
         if (
           hasOrderDraft() &&
-          !confirm("Pesanan belum dibayar. Pindah area dan kosongkan keranjang?")
+          !(await confirmAction(
+            "Pesanan belum dibayar. Pindah area dan kosongkan keranjang?",
+          ))
         )
           return;
         clearOrderDraft();
@@ -1025,15 +1039,15 @@ function render() {
     ?.addEventListener("click", () => switchStockDemo(true));
   document.querySelectorAll("[data-view]").forEach(
     (b) =>
-      (b.onclick = () => {
-        if (!mayLeave(busy)) return;
+      (b.onclick = async () => {
+        if (busy || (hasUnsavedForm() && !(await confirmLeave()))) return;
         view = b.dataset.view;
         sidebar.navigate();
         render();
         window.scrollTo?.({ top: 0, left: 0, behavior: "instant" });
       }),
   );
-  document.querySelector("[data-dock-scan]")?.addEventListener("click", () => {
+  document.querySelector("[data-dock-scan]")?.addEventListener("click", async () => {
     if (busy || (state.access && !state.access.stock)) return;
     if (
       state.warehouseVersion &&
@@ -1048,7 +1062,7 @@ function render() {
       toast("Tutup pop-up sebelum scan barcode.");
       return;
     }
-    if (!mayLeave(busy)) return;
+    if (busy || (hasUnsavedForm() && !(await confirmLeave()))) return;
     if (view !== "stock") {
       view = "stock";
       sidebar.navigate();
@@ -1056,8 +1070,8 @@ function render() {
     }
     addReceipt();
   });
-  document.querySelector("#active-store").onchange = (ev) => {
-    if (!changeStore(ev.target.value)) ev.target.value = store;
+  document.querySelector("#active-store").onchange = async (ev) => {
+    if (!(await changeStore(ev.target.value))) ev.target.value = store;
   };
   if (view === "dashboard")
     bindDashboard(state, store, {
@@ -1070,12 +1084,14 @@ function render() {
       isBusy: () => busy,
     });
 
-  document.querySelector("#logout").onclick = () => {
-    if (!mayLeave(busy)) return;
-    if (cart.length && !confirm("Keluar dan kosongkan pesanan?")) return;
+  document.querySelector("#logout").onclick = async () => {
+    if (busy || (hasUnsavedForm() && !(await confirmLeave()))) return;
+    if (cart.length && !(await confirmAction("Keluar dan kosongkan pesanan?"))) return;
     if (
       activeShift(state) &&
-      !confirm("Shift kasir masih terbuka. Logout tidak menutup shift. Tetap keluar?")
+      !(await confirmAction(
+        "Shift kasir masih terbuka. Logout tidak menutup shift. Tetap keluar?",
+      ))
     )
       return;
     resetWorkspace(true);
@@ -1103,7 +1119,9 @@ function render() {
         await refresh();
         if (
           pendingRetry() &&
-          confirm("Kirim ulang data transaksi sebelumnya dengan ID yang sama?")
+          (await confirmAction(
+            "Kirim ulang data transaksi sebelumnya dengan ID yang sama?",
+          ))
         ) {
           if (await mutate(pending.action, { ...pending.payload })) {
             if (pending.action === "sale") cart = [];
@@ -1341,19 +1359,23 @@ function modal(title, body, submitLabel = "Simpan") {
   d.className = "modal";
   d.innerHTML = `<div class="modal-head"><h2>${mode === "stock-demo" ? "DEMO · " : ""}${title}</h2><button type="button" class="close" aria-label="Tutup">×</button></div><form>${body}<p class="error" id="form-error"></p><div class="modal-actions"><button type="button" class="close">Batal</button><button class="primary" type="submit">${submitLabel}</button></div></form>`;
   document.body.append(d);
-  const canClose = () =>
-    !busy &&
-    (d.dataset.dirty !== "true" || confirm("Isian belum disimpan. Tutup form ini?"));
+  const requestClose = async () => {
+    if (busy) return;
+    if (
+      d.dataset.dirty === "true" &&
+      !(await confirmAction("Isian belum disimpan. Tutup form ini?"))
+    )
+      return;
+    if (d.hasAttribute("open")) d.close();
+  };
   d.addEventListener("input", () => (d.dataset.dirty = "true"));
   d.addEventListener("change", () => (d.dataset.dirty = "true"));
-  d.querySelectorAll(".close").forEach(
-    (b) =>
-      (b.onclick = () => {
-        if (canClose()) d.close();
-      }),
-  );
-  d.addEventListener("cancel", (ev) => {
-    if (!canClose()) ev.preventDefault();
+  d.querySelectorAll(".close").forEach((button) => {
+    button.onclick = requestClose;
+  });
+  d.addEventListener("cancel", (event) => {
+    event.preventDefault();
+    requestClose();
   });
   d.addEventListener("close", () => d.remove());
   d.querySelectorAll('select[name="supplierId"]').forEach((select) =>
@@ -1548,7 +1570,7 @@ function receipt(saleId) {
     }
   };
   d.querySelector("#void-sale")?.addEventListener("click", async () => {
-    const reason = prompt("Alasan pembatalan (stok akan dikembalikan):");
+    const reason = await requestReason("Alasan pembatalan (stok akan dikembalikan):");
     if (!reason?.trim()) return;
     if (await mutate("void", { id: id(), saleId, reason })) {
       d.close();

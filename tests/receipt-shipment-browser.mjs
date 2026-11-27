@@ -1,3 +1,4 @@
+import { acceptConfirmations } from "./helpers/browser-confirmation.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -12,7 +13,7 @@ try {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } }),
     errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
-  page.on("dialog", (d) => d.accept());
+  await acceptConfirmations(page);
   await page.route("**/*", (r) => {
     const u = new URL(r.request().url());
     if (u.pathname === "/fixture")

@@ -1,3 +1,4 @@
+import { answerConfirmations } from "./helpers/confirmation-ui.mjs";
 import { pricingPage } from "../pos/warehouse-ui.mjs";
 import assert from "node:assert/strict";
 import { Node, makeModal } from "./variant-dom.mjs";
@@ -144,7 +145,8 @@ globalThis.document = {
   querySelector: (q) => body.querySelector(q),
   querySelectorAll: (q) => body.querySelectorAll(q),
 };
-globalThis.confirm = () => true;
+let approveDecision = true;
+answerConfirmations(document, () => approveDecision);
 const adapter = makeModal();
 let renders = 0;
 const ctx = {
@@ -413,10 +415,10 @@ assert.deepEqual(footerButtons(), ["Lanjutkan"]);
 await d.querySelector(".modal-actions [data-session-resume]").fire("click");
 assert.equal(s.receiptPlans[0].receiving.status, "open");
 assert.deepEqual(footerButtons(), ["Jeda", "Selesai"]);
-globalThis.confirm = () => false;
+approveDecision = false;
 await d.querySelector(".modal-actions [data-session-finish]").fire("click");
 assert.equal(s.receiptPlans[0].receiving.status, "open");
-globalThis.confirm = () => true;
+approveDecision = true;
 await d.querySelector(".modal-actions [data-session-finish]").fire("click");
 assert.equal(s.receiptPlans[0].receiving.status, "completed");
 assert(!d.querySelector("[data-session-code]"));

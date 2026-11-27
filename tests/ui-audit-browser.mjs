@@ -1,3 +1,4 @@
+import { acceptConfirmations } from "./helpers/browser-confirmation.mjs";
 // Real entry point, isolated data, every navigation item and both themes.
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -61,7 +62,7 @@ try {
     missing = [],
     layouts = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  page.on("dialog", (d) => d.accept());
+  await acceptConfirmations(page);
   await page.route("**/*", async (route) => {
     const u = new URL(route.request().url()),
       reply = (json) => route.fulfill({ json });

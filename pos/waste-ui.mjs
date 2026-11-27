@@ -1,3 +1,4 @@
+import { confirmAction } from "../shared/confirmation.mjs";
 import { attachFruitScanSelection } from "./fruit-scan-selection.mjs";
 import { escape as e, num, money, today, id } from "./core.mjs";
 import { bindEvidence } from "./waste-evidence.mjs";
@@ -237,15 +238,15 @@ export function openRejectDialog(kind, s, store, ctx, selected = "") {
       }));
       if (
         p.outputs.every((o) => o.qty === 0) &&
-        !confirm("Semua hasil 0. Catat buah ini sebagai waste total?")
+        !(await confirmAction("Semua hasil 0. Catat buah ini sebagai waste total?"))
       )
         return;
     }
     if (
       scanned.barcodes?.length &&
-      !confirm(
+      !(await confirmAction(
         `Selesaikan pencatatan ${scanned.pieces} butir (${num(scanned.kg)} kg) dari batch ini? Stok dan status buah akan diperbarui.`,
-      )
+      ))
     )
       return;
     saving = true;

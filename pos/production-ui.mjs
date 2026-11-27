@@ -1,5 +1,5 @@
 import { itemTypes } from "./catalog.mjs";
-import { mayLeave } from "./navigation.mjs";
+import { hasUnsavedForm, confirmLeave } from "./navigation.mjs";
 import { escape as e, num, today, id } from "./core.mjs";
 import {
   scalar,
@@ -264,7 +264,7 @@ export function bindProduction(view, s, store, ctx) {
     .querySelector("#production-status")
     ?.addEventListener("change", filterProduction);
   document.querySelector("#refresh-production").onclick = async () => {
-    if (!mayLeave(false)) return;
+    if (hasUnsavedForm() && !(await confirmLeave())) return;
     try {
       await ctx.refresh();
       ctx.render();

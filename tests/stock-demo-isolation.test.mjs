@@ -25,7 +25,7 @@ const source = app
 const pollSource = app.slice(pollBegin);
 const build = new Function(
   "env",
-  `let {commitMutation,applySupplyResponse,supplyActions,state,mode='live',busy=false,document,fetch,config,token='token',refreshToken='',expires=Infinity,store,toast,render,pendingRetry,prepareRetry,settleRetry,reconcileRetry,confirm,mayLeave,hasOrderDraft,clearOrderDraft}=env;
+  `let {commitMutation,applySupplyResponse,supplyActions,state,mode='live',busy=false,document,fetch,config,token='token',refreshToken='',expires=Infinity,store,toast,render,pendingRetry,prepareRetry,settleRetry,reconcileRetry,confirmAction,hasUnsavedForm,confirmLeave,hasOrderDraft,clearOrderDraft}=env;
 let sessions=env.sessions,activeSessionId=sessions.read().sessionId;let reportRefreshPending=false,reportRefreshRevision=0;let stateRevision=0,cart=[],lastSale=null,seenKitchen=new Map(),polling=false,view='kitchen';const observeKitchen=()=>{};let poll;const setInterval=fn=>{poll=fn};
 ${source}\n${pollSource}\nreturn {switchStockDemo,request,refresh,mutate,adminRpc,poll,getState:()=>state,getMode:()=>mode,isBusy:()=>busy};`,
 );
@@ -99,8 +99,9 @@ function harness(options = {}) {
       retry.push(["reconcile"]);
       return false;
     },
-    confirm: () => true,
-    mayLeave: () => true,
+    confirmAction: () => true,
+    hasUnsavedForm: () => false,
+    confirmLeave: () => true,
     hasOrderDraft: () => ui.draft,
     clearOrderDraft: () => {
       ui.clears++;
@@ -230,7 +231,7 @@ assert.equal(blocked.getMode(), "live");
 blocked.ui.dialog = false;
 await blocked.switchStockDemo(true);
 assert.equal(blocked.getMode(), "live");
-const cancelling = harness({ confirm: () => false });
+const cancelling = harness({ confirmAction: () => false });
 cancelling.ui.draft = true;
 await cancelling.switchStockDemo();
 assert.equal(cancelling.getMode(), "live");

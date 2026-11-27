@@ -359,7 +359,7 @@ export function bindDashboard(s, activeStore, ctx) {
     period = ev.target.value;
     ctx.render();
   };
-  $("#dash-store").onchange = (ev) => {
+  $("#dash-store").onchange = async (ev) => {
     if (!canChange()) {
       ev.target.value = filter(s, activeStore).store;
       return;
@@ -367,7 +367,7 @@ export function bindDashboard(s, activeStore, ctx) {
     if (!ev.target.value) {
       allStores = true;
       ctx.render();
-    } else if (!ctx.changeStore(ev.target.value))
+    } else if (!(await ctx.changeStore(ev.target.value)))
       ev.target.value = filter(s, activeStore).store;
   };
   for (const key of ["from", "to"])

@@ -1,3 +1,4 @@
+import { confirmAction } from "../shared/confirmation.mjs";
 import { escape as e, num, today, id } from "./core.mjs";
 import { formSection } from "./workflow-ui.mjs";
 import { attachFruitScanSelection } from "./fruit-scan-selection.mjs";
@@ -39,9 +40,9 @@ export function openFruitTransfer(s, store, ctx) {
       if (p.date < lots.find((l) => l.id === p.lotId).date)
         throw Error("Tanggal transfer tidak boleh sebelum penerimaan batch.");
       if (
-        !confirm(
+        !(await confirmAction(
           `Selesaikan transfer ${p.pieces} butir (${num(p.kg)} kg) ke ${name("stores", p.toStoreId)}? Stok mengikuti batch yang dipilih.`,
-        )
+        ))
       )
         return;
       saving = true;

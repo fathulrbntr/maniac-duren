@@ -1,3 +1,4 @@
+import { confirmAction } from "../shared/confirmation.mjs";
 import { escape as e, id, today, money, num } from "./core.mjs";
 import { transactions, label } from "./reports.mjs";
 import { printWindow, letterheadHTML } from "./report-export.mjs";
@@ -212,9 +213,9 @@ export function bindDocuments(s, store, ctx) {
     "click",
     run(async () => {
       if (
-        !confirm(
+        !(await confirmAction(
           "Buat contoh PO, pembelian, invoice, dan surat jalan untuk toko aktif? Ini menambah 2 unit stok demo dan menjual 1 unit di POS demo.",
-        )
+        ))
       )
         return;
       if (
@@ -277,13 +278,13 @@ export function bindDocuments(s, store, ctx) {
       "click",
       run(async () => {
         if (
-          !confirm(
+          !(await confirmAction(
             d.kind === "PUR" && !["receipt", "unit_receipt"].includes(d.source_type)
               ? "Terbitkan dan masukkan pembelian ke stok?"
               : d.source_type === "transfer"
                 ? "Terbitkan dan pindahkan stok ke toko tujuan?"
                 : "Terbitkan dokumen? Data yang terbit tidak dapat diedit.",
-          )
+          ))
         )
           return;
         if (

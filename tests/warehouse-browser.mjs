@@ -1,3 +1,4 @@
+import { acceptConfirmations } from "./helpers/browser-confirmation.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -78,7 +79,7 @@ try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } }),
     errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
-  page.on("dialog", (d) => d.accept());
+  await acceptConfirmations(page);
   const users = { owner, warehouse: warehouseUser, cashier, waitress, cutter };
   await page.route("**/*", async (r) => {
     const u = new URL(r.request().url()),

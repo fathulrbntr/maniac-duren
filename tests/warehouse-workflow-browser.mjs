@@ -91,7 +91,6 @@ try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } }),
     errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
-  page.on("dialog", (d) => d.accept());
   const users = { owner, warehouse: warehouseUser, cashier, waitress, cutter };
   await page.route("**/*", async (r) => {
     const u = new URL(r.request().url()),
@@ -228,6 +227,18 @@ try {
   assert.deepEqual(await savedCodes.allTextContents(), newestFirst);
   await receiptActions.getByRole("button", { name: "Lanjutkan", exact: true }).click();
   await receiptActions.getByRole("button", { name: "Selesai", exact: true }).click();
+  const decision = page.getByRole("alertdialog", { name: "Konfirmasi tindakan" });
+  await decision.getByRole("img", { name: "Maniac Duren" }).waitFor();
+  const bounds = await decision.boundingBox();
+  const screen = page.viewportSize();
+  assert(Math.abs(bounds.x + bounds.width / 2 - screen.width / 2) < 2);
+  assert(Math.abs(bounds.y + bounds.height / 2 - screen.height / 2) < 2);
+  await page.keyboard.press("Escape");
+  await decision.waitFor({ state: "detached" });
+  await receiptActions.getByRole("button", { name: "Selesai", exact: true }).click();
+  await decision.getByRole("button", { name: "Batal" }).click();
+  await receiptActions.getByRole("button", { name: "Selesai", exact: true }).click();
+  await decision.getByRole("button", { name: "Konfirmasi", exact: true }).click();
   await receiptActions.waitFor({ state: "detached" });
   await receiptDialog.getByRole("button", { name: "Tutup", exact: true }).click();
   await login("owner");
@@ -320,6 +331,7 @@ try {
     document.querySelector("[data-outbound-detail]")?.textContent.includes("1 butir"),
   );
   await page.locator("[data-outbound-ready]").click();
+  await decision.getByRole("button", { name: "Konfirmasi", exact: true }).click();
   await page.locator("[data-outbound-code]").waitFor({ state: "detached" });
   await page.locator("dialog[open] [type=submit]").click();
   await login("owner");
@@ -345,6 +357,7 @@ try {
   await nav("transfers");
   await page.locator("[data-outbound-open]").click();
   await page.locator("[data-outbound-dispatch]").click();
+  await decision.getByRole("button", { name: "Konfirmasi", exact: true }).click();
   await page.locator("[data-outbound-dispatch]").waitFor({ state: "detached" });
   assert.equal(
     (

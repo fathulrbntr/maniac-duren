@@ -1,3 +1,4 @@
+import { answerConfirmations } from "./helpers/confirmation-ui.mjs";
 import assert from "node:assert/strict";
 import { randomUUID as id } from "node:crypto";
 import { emptyState, today } from "../pos/core.mjs";
@@ -73,7 +74,6 @@ const globalBefore = {
   fetch: globalThis.fetch,
   createImageBitmap: globalThis.createImageBitmap,
   FileReader: globalThis.FileReader,
-  confirm: globalThis.confirm,
 };
 globalThis.document = {
   body: new Node("body"),
@@ -81,12 +81,12 @@ globalThis.document = {
   querySelector: (q) => root.querySelector(q),
   querySelectorAll: (q) => root.querySelectorAll(q),
 };
+answerConfirmations(document);
 globalThis.FormData = FormDataAdapter;
 globalThis.fetch = () => {
   throw Error("No network in demo/menu filtering");
 };
 globalThis.createImageBitmap = async () => ({ width: 1, height: 1, close() {} });
-globalThis.confirm = () => true;
 globalThis.FileReader = class {
   readAsDataURL(blob) {
     blob.arrayBuffer().then((b) => {

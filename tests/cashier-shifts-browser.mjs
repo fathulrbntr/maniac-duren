@@ -1,3 +1,4 @@
+import { acceptConfirmations } from "./helpers/browser-confirmation.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -12,7 +13,7 @@ try {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } }),
     errors = [];
   page.on("pageerror", (x) => errors.push(x.message));
-  page.on("dialog", (d) => d.accept());
+  await acceptConfirmations(page);
   const styles = [
     ...fs
       .readFileSync("pos/index.html", "utf8")

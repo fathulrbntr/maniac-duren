@@ -1,3 +1,4 @@
+import { confirmAction } from "../shared/confirmation.mjs";
 import { workspaceGroups } from "./workspaces.mjs";
 // Sidebar grouping only. Existing page IDs, permissions and transaction flow are unchanged.
 export const sections = [
@@ -81,10 +82,11 @@ export function navigation(title, view, icon, access, closedGroups = {}) {
     })
     .join("");
 }
-export function mayLeave(busy) {
-  if (busy) return false;
-  const dirty = document.querySelector('main form[data-dirty="true"]');
-  return !dirty || confirm("Isian belum disimpan. Tinggalkan halaman ini?");
+export function hasUnsavedForm() {
+  return !!document.querySelector('main form[data-dirty="true"]');
+}
+export function confirmLeave() {
+  return confirmAction("Isian belum disimpan. Tinggalkan halaman ini?");
 }
 export function trackForms() {
   document
