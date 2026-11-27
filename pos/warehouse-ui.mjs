@@ -10,7 +10,12 @@ import { depositButtons } from "./cash-deposits-ui.mjs";
 import { transactions } from "./reports.mjs";
 import { branchPricingPage, bindBranchPricing } from "./branch-prices-ui.mjs";
 import { locationFruitStock } from "./dashboard-data.mjs";
-import { prepareBarcodeInput, readyBarcodeInput } from "./barcode-scanner.mjs";
+import {
+  bindBarcodeInput,
+  normalizeBarcode,
+  prepareBarcodeInput,
+  readyBarcodeInput,
+} from "./barcode-scanner.mjs";
 import { workflowReady, backOffice } from "./warehouse-workflow.mjs";
 import { receivingPage, openReceivingSession } from "./receiving-session-ui.mjs";
 import { outboundPage, bindOutboundPage, openOutboundForm } from "./outbound-ui.mjs";
@@ -110,7 +115,7 @@ function supplyTasks(s, space) {
         action(
           "receiving",
           "Terima dari cabang",
-          "Cocokkan jumlah fisik dengan surat jalan.",
+          "Scan ulang setiap buah dan periksa jumlah barang satuan.",
         ),
       access.stock &&
         s.branchNoteVersion >= 135 &&
@@ -426,7 +431,7 @@ export function transfersPage(s, store, incoming = false, space) {
     (s.transfers || []).some((t) => t.targetId === store && t.status === "received")
       ? storeStockActions(s.access)
       : "";
-  return `<section class="supply-workspace">${blocker(s)}<div class="supply-hero"><div><span class="supply-eyebrow">${branch ? "MUTASI ANTARCABANG" : incoming ? "PENERIMAAN TOKO" : "DISTRIBUSI GUDANG"}</span><h2>${incoming ? "Periksa kiriman masuk" : staged ? "Nota transfer antarcabang" : branch ? "Kirim ke cabang" : "Pengiriman & tagihan"}</h2><p>${branch ? (incoming ? "Periksa jumlah barang per batch sebelum mengonfirmasi penerimaan." : staged ? "Buka nota, periksa hasil penyiapan toko, lalu setujui surat jalan." : "Surat jalan seluruh cabang") : incoming ? "Scan barcode buah dan cocokkan jumlah barang nonbuah per batch dengan surat jalan." : "Setiap kiriman memiliki invoice, surat jalan, dan jejak barcode."}</p></div><div class="toolbar"><button type="button" data-supply-refresh>Perbarui</button>${canSend ? `<button type="button" class="primary" data-transfer-new>${staged ? "+ Nota transfer" : "+ Buat pengiriman"}</button>` : ""}</div></div>${staged ? branchNoteList(s) + "<h3>Surat jalan terkirim</h3>" : ""}<div class="supply-filters"><input type="search" data-transfer-search placeholder="${branch ? "Cari surat jalan atau cabang…" : "Cari nomor surat jalan, invoice, atau toko…"}" aria-label="Cari kiriman"><select data-transfer-filter aria-label="Status kiriman"><option value="">Semua status</option>${Object.entries(
+  return `<section class="supply-workspace">${blocker(s)}<div class="supply-hero"><div><span class="supply-eyebrow">${branch ? "MUTASI ANTARCABANG" : incoming ? "PENERIMAAN TOKO" : "DISTRIBUSI GUDANG"}</span><h2>${incoming ? "Periksa kiriman masuk" : staged ? "Nota transfer antarcabang" : branch ? "Kirim ke cabang" : "Pengiriman & tagihan"}</h2><p>${branch ? (incoming ? "Scan ulang setiap buah sesuai surat jalan dan periksa jumlah barang satuan per batch." : staged ? "Buka nota, periksa hasil penyiapan toko, lalu setujui surat jalan." : "Surat jalan seluruh cabang") : incoming ? "Scan barcode buah dan cocokkan jumlah barang nonbuah per batch dengan surat jalan." : "Setiap kiriman memiliki invoice, surat jalan, dan jejak barcode."}</p></div><div class="toolbar"><button type="button" data-supply-refresh>Perbarui</button>${canSend ? `<button type="button" class="primary" data-transfer-new>${staged ? "+ Nota transfer" : "+ Buat pengiriman"}</button>` : ""}</div></div>${staged ? branchNoteList(s) + "<h3>Surat jalan terkirim</h3>" : ""}<div class="supply-filters"><input type="search" data-transfer-search placeholder="${branch ? "Cari surat jalan atau cabang…" : "Cari nomor surat jalan, invoice, atau toko…"}" aria-label="Cari kiriman"><select data-transfer-filter aria-label="Status kiriman"><option value="">Semua status</option>${Object.entries(
     transferStatus,
   )
     .map(
@@ -480,6 +485,7 @@ function savingForm(d, callback) {
     if (saving || !f.reportValidity()) return;
     saving = true;
     const b = f.querySelector("[type=submit]");
+    const initiallyDisabled = b.disabled;
     b.disabled = true;
     try {
       await callback(f);
@@ -487,7 +493,7 @@ function savingForm(d, callback) {
       d.querySelector("#form-error").textContent = err.message;
     } finally {
       saving = false;
-      if (b.isConnected) b.disabled = false;
+      if (b.isConnected) b.disabled = initiallyDisabled;
     }
   };
 }
@@ -691,29 +697,25 @@ export function openWarehouseReceipt(s, store, ctx) {
 function openTransfer(s, t, ctx, receiving) {
   const internal = s.branchStockVersion >= 132 && t.invoiceNo === null;
   const finance = !internal && (!workflowReady(s) || backOffice(s, ctx.workspace));
-  const canReceive = receiving && s.access?.receive && t.status === "in_transit",
-    scanned = t.items.filter((i) => i.scannedAt).length;
+  const canReceive = receiving && s.access?.receive && t.status === "in_transit";
+  const expectedPieces = t.lines.reduce(
+    (sum, l) => sum + (l.kind === "fruit" ? Number(l.pieces) : 0),
+    0,
+  );
+  const matched = () => t.items.filter((i) => i.scannedAt).length;
+  const allScanned = () =>
+    matched() === expectedPieces && t.items.length === expectedPieces;
+  const progress = () => matched() + " / " + expectedPieces;
+  const scanField = canReceive && expectedPieces > 0;
   const d = ctx.modal(
     t.deliveryNo,
-    `<div class="supply-detail-head"><div><h3>${e(t.origin.name)} → ${e(t.destination.name)}</h3><p>${internal ? "Mutasi antarcabang" : e(t.invoiceNo)} · ${e(t.carrier)}</p></div>${badge(t)}</div><div class="toolbar">${finance ? '<button type="button" data-print-invoice>Cetak invoice</button>' : ""}<button type="button" data-print-delivery>Cetak surat jalan</button></div><div class="supply-stats">${finance ? stat("Total tagihan", money(t.total)) + stat("Sisa tagihan", money(t.total - t.paid)) : ""}${t.items.length && !internal ? stat("Barcode cocok", scanned + " / " + t.items.length) : ""}</div>${table(
+    `<div class="supply-detail-head"><div><h3>${e(t.origin.name)} → ${e(t.destination.name)}</h3><p>${internal ? "Mutasi antarcabang" : e(t.invoiceNo)} · ${e(t.carrier)}</p></div>${badge(t)}</div><div class="toolbar">${finance ? '<button type="button" data-print-invoice>Cetak invoice</button>' : ""}<button type="button" data-print-delivery>Cetak surat jalan</button></div><div class="supply-stats">${finance ? stat("Total tagihan", money(t.total)) + stat("Sisa tagihan", money(t.total - t.paid)) : ""}${expectedPieces && (t.status === "in_transit" || matched()) ? `<article class="supply-stat"><span>Barcode cocok</span><strong data-receive-progress>${progress()}</strong></article>` : ""}</div>${table(
       ["Barang / batch", "Jumlah", ...(finance ? ["Harga transfer", "Total"] : [])],
       t.lines.map(
         (l) =>
           `<tr><td>${e(l.productName)}<small>${e(l.supplierName || "—")} · ${e(l.sourceLotId.slice(0, 8))}</small></td><td>${l.kind === "fruit" ? num(l.kg) + " kg / " + l.pieces + " butir" : num(l.qty) + " " + e(l.unit)}</td>${finance ? `<td>${money(l.price)} / ${e(l.unit)}</td><td>${money(l.total)}</td>` : ""}</tr>`,
       ),
-    )}${canReceive && !internal && t.items.length ? `<div class="supply-step"><b>1</b><span>Scan ulang barang yang tiba</span></div><div class="supply-scan"><input data-receive-code maxlength="26" autocomplete="off" spellcheck="false" placeholder="Scan barcode penerimaan" aria-label="Scan barcode penerimaan"><button type="button" data-receive-add>Catat scan</button></div><p data-receive-message role="status"></p><p class="notice">Scan tersimpan di server. Seluruh kiriman tetap dalam perjalanan sampai barcode lengkap dan penerimaan dikonfirmasi.</p>` : ""}<div data-receive-list>${t.items.length ? receiptItems(t, internal) : ""}${
-      canReceive && internal
-        ? t.lines
-            .filter((l) => l.kind === "fruit")
-            .map((l) =>
-              field(
-                `${l.productName} · batch ${l.sourceLotId.slice(0, 8)} · dikirim ${l.pieces} butir`,
-                `<input data-receive-fruit="${e(l.sourceLotId)}" type="number" step="1" min="0" required placeholder="Jumlah butir diterima">`,
-              ),
-            )
-            .join("")
-        : ""
-    }</div>${
+    )}${scanField ? `<div class="supply-step"><b>1</b><span>Scan ulang barang yang tiba</span></div><div class="supply-scan"><input data-receive-code autocomplete="off" spellcheck="false" placeholder="Scan barcode penerimaan" aria-label="Scan barcode penerimaan"><button type="button" data-receive-add>Catat scan</button></div><p data-receive-message role="status"></p><p class="notice">Scan tersimpan di server. Seluruh kiriman tetap dalam perjalanan sampai barcode lengkap dan penerimaan dikonfirmasi.</p>` : ""}<div data-receive-list>${t.items.length ? receiptItems(t) : ""}</div>${
       canReceive && t.lines.some((l) => l.kind === "unit")
         ? `<h3>Periksa jumlah barang satuan</h3>${t.lines
             .filter((l) => l.kind === "unit")
@@ -725,7 +727,7 @@ function openTransfer(s, t, ctx, receiving) {
             )
             .join("")}`
         : ""
-    }${canReceive ? '<label class="supply-check"><input type="checkbox" name="confirmed" required> Semua barang sudah diperiksa dan sesuai surat jalan.</label>' : ""}${(finance || internal) && s.access?.backoffice && t.status !== "cancelled" ? `<div class="toolbar">${!internal && t.paid < t.total && !(s.outboundOrders || []).some((o) => o.id === t.id) ? '<button type="button" data-transfer-payment>Catat pembayaran</button>' : ""}${t.status === "in_transit" && t.paid === 0 && scanned === 0 ? '<button type="button" data-transfer-cancel>Batalkan kiriman</button>' : ""}</div>` : ""}<p>${e(t.note || "")}</p>`,
+    }${canReceive ? '<label class="supply-check"><input type="checkbox" name="confirmed" required> Semua barang sudah diperiksa dan sesuai surat jalan.</label>' : ""}${(finance || internal) && s.access?.backoffice && t.status !== "cancelled" ? `<div class="toolbar">${!internal && t.paid < t.total && !(s.outboundOrders || []).some((o) => o.id === t.id) ? '<button type="button" data-transfer-payment>Catat pembayaran</button>' : ""}${t.status === "in_transit" && t.paid === 0 && matched() === 0 ? '<button type="button" data-transfer-cancel>Batalkan kiriman</button>' : ""}</div>` : ""}<p>${e(t.note || "")}</p>`,
     canReceive ? "Konfirmasi penerimaan lengkap" : "Tutup",
   );
   d.classList.add("supply-modal");
@@ -743,53 +745,51 @@ function openTransfer(s, t, ctx, receiving) {
     print("invoice"),
   );
   d.querySelector("[data-print-delivery]").onclick = () => print("delivery");
-  let working = false,
-    scanId = null,
-    scanCode = null;
-  const scan = async () => {
-    if (working) return;
+  const submit = d.querySelector('[type="submit"]');
+  if (canReceive) submit.disabled = !allScanned();
+  let working = false;
+  if (scanField) {
     const input = d.querySelector("[data-receive-code]"),
-      msg = d.querySelector("[data-receive-message]"),
-      code = input.value.trim();
-    try {
-      scanForReceipt(t, code);
-      if (scanCode !== code) {
-        scanId = id();
-        scanCode = code;
-      }
-      working = true;
-      await ctx.mutate(
-        "transfer_scan",
-        { id: scanId, transferId: t.id, deliveryNo: t.deliveryNo, barcodes: [code] },
-        { throwOnError: true },
-      );
-      t = ctx.getState().transfers.find((x) => x.id === t.id);
-      scanCode = null;
-      input.value = "";
-      msg.textContent = `${t.items.filter((i) => i.scannedAt).length} / ${t.items.length} barcode cocok`;
-      msg.className = "positive";
-      d.querySelector("[data-receive-list]").innerHTML = receiptItems(t);
-      d
-        .querySelector(".supply-stats")
-        .lastElementChild.querySelector("strong").textContent =
-        t.items.filter((i) => i.scannedAt).length + " / " + t.items.length;
-    } catch (err) {
-      msg.textContent = err.message;
-      msg.className = "error";
-    } finally {
-      working = false;
-      readyBarcodeInput(input);
-    }
-  };
-  if (canReceive && !internal && t.items.length) {
-    prepareBarcodeInput(d.querySelector("[data-receive-code]"));
-    d.querySelector("[data-receive-add]").onclick = scan;
-    d.querySelector("[data-receive-code]").onkeydown = (ev) => {
-      if (ev.key === "Enter") {
-        ev.preventDefault();
-        scan();
-      }
-    };
+      msg = d.querySelector("[data-receive-message]");
+    let scanId, lastCode;
+    const add = bindBarcodeInput(input, {
+      async onScan(raw, settings) {
+        const code = scanForReceipt(t, normalizeBarcode(raw, settings));
+        if (lastCode !== code) {
+          scanId = id();
+          lastCode = code;
+        }
+        working = true;
+        try {
+          await ctx.mutate(
+            "transfer_scan",
+            { id: scanId, transferId: t.id, deliveryNo: t.deliveryNo, barcodes: [code] },
+            { throwOnError: true },
+          );
+          t = ctx.getState().transfers.find((x) => x.id === t.id);
+          lastCode = null;
+          msg.textContent = progress() + " barcode cocok";
+          msg.className = "positive";
+          d.querySelector("[data-receive-list]").innerHTML = receiptItems(t);
+          d.querySelector("[data-receive-progress]").textContent = progress();
+          d.querySelector("[data-transfer-cancel]")?.remove();
+          submit.disabled = !allScanned();
+          d.dataset.dirty = String(
+            [...d.querySelectorAll("[data-receive-unit]")].some(
+              (input) => input.value !== "",
+            ) || d.querySelector('[name="confirmed"]').checked,
+          );
+        } finally {
+          working = false;
+        }
+      },
+      onError(message) {
+        msg.textContent = message;
+        msg.className = "error";
+      },
+    });
+    d.querySelector("[data-receive-add]").onclick = add;
+    readyBarcodeInput(input);
   }
   const request = id();
   savingForm(d, async (f) => {
@@ -798,12 +798,19 @@ function openTransfer(s, t, ctx, receiving) {
       return;
     }
     if (working) throw Error("Tunggu pencatatan scan selesai.");
-    if (!internal && t.items.some((i) => !i.scannedAt))
+    if (!allScanned())
       throw Error("Masih ada barcode belum dipindai. Stok toko belum bertambah.");
     const units = [...d.querySelectorAll("[data-receive-unit]")].map((x) => ({
       lotId: x.dataset.receiveUnit,
       qty: Number(x.value),
     }));
+    // Branch databases on 132–135 also require counts per lot. Every item here
+    // already has a persisted destination scan.
+    const fruitCounts = {};
+    if (internal) {
+      for (const item of t.items)
+        fruitCounts[item.sourceLotId] = (fruitCounts[item.sourceLotId] || 0) + 1;
+    }
     await ctx.mutate(
       "transfer_receive",
       {
@@ -811,16 +818,7 @@ function openTransfer(s, t, ctx, receiving) {
         transferId: t.id,
         deliveryNo: t.deliveryNo,
         confirmed: f.elements.confirmed.checked,
-        ...(internal
-          ? {
-              fruitCounts: Object.fromEntries(
-                [...d.querySelectorAll("[data-receive-fruit]")].map((input) => [
-                  input.dataset.receiveFruit,
-                  Number(input.value),
-                ]),
-              ),
-            }
-          : {}),
+        ...(internal ? { fruitCounts } : {}),
         units,
       },
       { throwOnError: true },
@@ -888,12 +886,12 @@ function openTransfer(s, t, ctx, receiving) {
   });
   return d;
 }
-function receiptItems(t, internal = false) {
-  return `<details ${!internal && t.status === "in_transit" ? "open" : ""}><summary>Daftar barcode (${t.items.length})</summary>${table(
+function receiptItems(t) {
+  return `<details ${t.status === "in_transit" ? "open" : ""}><summary>Daftar barcode (${t.items.length})</summary>${table(
     ["Barcode", "Berat", "Pemeriksaan"],
     t.items.map(
       (i) =>
-        `<tr><td><code>${e(i.barcode)}</code></td><td>${num(i.grams / 1000)} kg</td><td>${internal ? (t.status === "received" ? "Diterima" : "Terdaftar") : i.scannedAt ? "✓ Cocok" : "Belum dipindai"}</td></tr>`,
+        `<tr><td><code>${e(i.barcode)}</code></td><td>${num(i.grams / 1000)} kg</td><td>${i.scannedAt ? "✓ Cocok" : t.status === "received" ? "Diterima · tanpa rekaman scan" : "Belum dipindai"}</td></tr>`,
     ),
   )}</details>`;
 }
@@ -1091,9 +1089,11 @@ export function bindSupply(s, store, view, ctx) {
   document.querySelector(".supply-workspace")?.addEventListener("click", (ev) => {
     const b = ev.target.closest("[data-transfer]");
     if (b) {
-      const t = s.transfers.find((t) => t.id === b.dataset.transfer);
+      const current = ctx.getState();
+      const t = current.transfers.find((t) => t.id === b.dataset.transfer);
+      if (!t) return;
       openTransfer(
-        s,
+        current,
         t,
         ctx,
         (incoming || (ctx.workspace !== "backoffice" && t.targetId === store)) &&

@@ -263,7 +263,7 @@ dan push dari PowerShell, jalankan `.\scripts\windows\push-patch-131.cmd`.
 
 `pos/receiving-session-ui.mjs` menampilkan nota untuk cabang penerima.
 `pos/warehouse-ui.mjs` menghubungkan pembukaan nota, pemilihan barang kiriman
-dan pemeriksaan jumlah fisik di tujuan. `pos/branch-dispatch-ui.mjs` memuat
+dan pemeriksaan barang di tujuan. Sejak patch 136, toko tujuan memindai setiap label buah dan mencatat jumlah barang satuan per batch. `pos/branch-dispatch-ui.mjs` memuat
 form transfer cabang dengan pengirim dari data karyawan dan pencarian SKU.
 `pos/warehouse-flow.mjs` menangani alokasi FIFO barang satuan,
 barcode, rincian batch dan dokumen cetak. `database/branch-stock-132.sql`

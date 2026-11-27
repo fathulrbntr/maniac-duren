@@ -252,8 +252,7 @@ try {
     document.querySelector("[data-receive-message]").textContent.includes("1 / 2"),
   );
   await page.locator("[name=confirmed]").check();
-  await page.locator("dialog[open] [type=submit]").click();
-  assert.match(await page.locator("#form-error").innerText(), /belum dipindai/);
+  assert(await page.locator("dialog[open] [type=submit]").isDisabled());
   await page.reload();
   await nav("receiving");
   await page.locator("[data-transfer]").click();

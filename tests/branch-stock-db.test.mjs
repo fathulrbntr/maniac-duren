@@ -484,21 +484,90 @@ try {
   const sent = await noteStatus();
   assert.equal(sent.transferStatus, "in_transit");
   assert.equal((await read()).lots.find((x) => x.id === lot.id).pieces, beforeShip - 5);
-  await as(receiver);
-  await mut("transfer_receive", {
+  // A shipment already in transit when the scan rule is installed uses the same manifest.
+  const destinationScans = fs.readFileSync(
+    "database/branch-receipt-barcode-136.sql",
+    "utf8",
+  );
+  await db.exec(destinationScans);
+  await db.exec(destinationScans);
+  const receiptBase = { transferId: sent.transferId, deliveryNo: approved.deliveryNo };
+  const finish = {
+    ...receiptBase,
     id: id(),
-    transferId: sent.transferId,
-    deliveryNo: approved.deliveryNo,
     confirmed: true,
-    fruitCounts: { [lot.id]: 5 },
     units: [{ lotId: unit.id, qty: 2 }],
-  });
+  };
+  const scan = (...barcodes) =>
+    mut("transfer_scan", { ...receiptBase, id: id(), barcodes });
+  await assert.rejects(scan(labels[70]), /akses/i);
+  await as(receiver);
+  await assert.rejects(
+    mut("transfer_receive", { ...finish, fruitCounts: { [lot.id]: 5 } }),
+    /scan penerimaan/i,
+  );
+  await assert.rejects(scan(labels[0]), /tidak tercantum/);
+  await assert.rejects(scan(labels[70], labels[71]), /satu barcode/);
+  const firstScan = { ...receiptBase, id: id(), barcodes: [labels[70]] };
+  const firstDelta = await mut("transfer_scan", firstScan);
+  assert.deepEqual(await mut("transfer_scan", firstScan), firstDelta);
+  await assert.rejects(scan(labels[70]), /sudah dipindai/);
+  for (const barcode of pack.barcodes.slice(1, -1)) await scan(barcode);
+  await assert.rejects(mut("transfer_receive", finish), /scan penerimaan/i);
+  const partial = (await read()).transfers.find((x) => x.id === sent.transferId);
+  assert.equal(partial.items.filter((i) => i.scannedAt).length, 4);
+  assert.equal(partial.status, "in_transit");
+  assert.equal(
+    (await read()).lots.some(
+      (l) => l.id === partial.lines.find((x) => x.kind === "fruit").targetLotId,
+    ),
+    false,
+  );
+  await scan(pack.barcodes.at(-1));
+  await assert.rejects(
+    mut("transfer_receive", { ...finish, units: [{ lotId: unit.id, qty: 1 }] }),
+    /sesuai surat jalan/,
+  );
+  await mut("transfer_receive", finish);
+  await mut("transfer_receive", finish);
+  const received = (await read()).transfers.find((x) => x.id === sent.transferId);
+  assert.equal(received.items.filter((i) => i.scannedAt).length, 5);
+  assert.deepEqual(
+    received.items.map((i) => i.barcode).sort(),
+    [...pack.barcodes].sort(),
+  );
+  assert.equal(
+    (await read()).lots.find(
+      (l) => l.id === received.lines.find((x) => x.kind === "fruit").targetLotId,
+    ).pieces,
+    5,
+  );
   await as(office);
   assert.equal((await noteStatus()).transferStatus, "received");
   assert.equal(
     (await read()).transfers.find((t) => t.id === sent.transferId).invoiceNo,
     null,
   );
+  const onlyUnits = { ...create, id: id(), lines: [{ productId: box, qty: 1 }] };
+  await mut("branch_note_create", onlyUnits);
+  const unitAction = (action, revision, extra) =>
+    mut("branch_note_" + action, { id: id(), noteId: onlyUnits.id, revision, ...extra });
+  await as(sender);
+  await unitAction("pack", 0, { barcodes: [], quantities: [{ productId: box, qty: 1 }] });
+  await as(office);
+  await unitAction("approve", 1);
+  await as(sender);
+  await unitAction("ship", 2);
+  const unitNote = (await read()).branchNotes.find((n) => n.id === onlyUnits.id);
+  await as(receiver);
+  await mut("transfer_receive", {
+    id: id(),
+    transferId: unitNote.transferId,
+    deliveryNo: unitNote.deliveryNo,
+    confirmed: true,
+    units: [{ lotId: unit.id, qty: 1 }],
+  });
+  await as(office);
   const earlierReceipt = id();
   const previousDay = (await one("select ($1::date-1)::text d", [day])).d;
   await mut("receipt_plan_save", {

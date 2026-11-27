@@ -196,7 +196,12 @@ const t = {
       total: 240000,
     },
   ],
-  items: [1, 2].map((n) => ({ barcode: code(n), grams: 2000, scannedAt: null })),
+  items: [1, 2].map((n) => ({
+    barcode: code(n),
+    sourceLotId: "lot",
+    grams: 2000,
+    scannedAt: null,
+  })),
 };
 s.transfers = [t];
 const mount = (html, view) => {
@@ -224,6 +229,14 @@ assert.equal(calls.length, before);
 assert.match(d.querySelector("[data-receive-message]").textContent, /tidak tercantum/);
 await receive(code(1));
 assert.equal(s.transfers[0].items.filter((i) => i.scannedAt).length, 1);
+d.close();
+await body
+  .querySelector(".supply-workspace")
+  .listeners.click[0]({ target: body.querySelector("[data-transfer]") });
+d = modal.latest;
+assert.equal(d.querySelector("[data-receive-progress]").textContent, "1 / 2");
+assert(d.querySelector('[type="submit"]').disabled);
+d.querySelector('[name="confirmed"]').checked = true;
 await receive(code(1));
 assert.match(d.querySelector("[data-receive-message]").textContent, /sudah dipindai/);
 await receive(code(2));
@@ -232,6 +245,25 @@ assert.equal(calls.at(-1).action, "transfer_receive");
 assert.equal(calls.at(-1).p.deliveryNo, "SJ-001");
 assert.equal(calls.at(-1).p.confirmed, true);
 assert(d.closed);
+const legacy = s;
+s = { ...s, branchStockVersion: 132, transfers: [{ ...t, invoiceNo: null }] };
+mount(transfersPage(s, store, true, "store"), "receiving");
+await body
+  .querySelector(".supply-workspace")
+  .listeners.click[0]({ target: body.querySelector("[data-transfer]") });
+d = modal.latest;
+assert(d.querySelector("[data-receive-code]"));
+assert(!d.querySelector("[data-receive-fruit]"));
+assert(d.querySelector('[type="submit"]').disabled);
+await receive(code(1));
+assert(d.querySelector('[type="submit"]').disabled);
+await receive(code(2));
+assert(!d.querySelector('[type="submit"]').disabled);
+d.querySelector('[name="confirmed"]').checked = true;
+await d.querySelector("form").fire("submit");
+assert.equal(calls.at(-1).action, "transfer_receive");
+assert.deepEqual(calls.at(-1).p.fruitCounts, { lot: 2 });
+s = legacy;
 mount(pricingPage(s), "pricing");
 await body.querySelector("[data-transfer-price]").fire("click");
 d = modal.latest;
