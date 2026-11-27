@@ -230,7 +230,10 @@ try {
   const decision = page.getByRole("alertdialog", { name: "Konfirmasi tindakan" });
   await decision.getByRole("img", { name: "Maniac Duren" }).waitFor();
   const bounds = await decision.boundingBox();
-  const screen = page.viewportSize();
+  const screen = await page.evaluate(() => ({
+    width: document.documentElement.clientWidth,
+    height: document.documentElement.clientHeight,
+  }));
   assert(Math.abs(bounds.x + bounds.width / 2 - screen.width / 2) < 2);
   assert(Math.abs(bounds.y + bounds.height / 2 - screen.height / 2) < 2);
   await page.keyboard.press("Escape");
