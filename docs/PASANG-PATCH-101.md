@@ -36,7 +36,7 @@ Kode `0001` harus sesuai Item Code di timbangan dan hanya digunakan oleh satu pr
 1. Buka **Barang masuk → Catat timbang aktual**. Isi supplier, tanggal barang masuk, nomor nota, harga nota setiap produk, dan ongkir.
 2. Pilih Monthong, buka pencatatan timbang, lalu scan label satu per satu. Setiap barcode baru menambah satu butir dengan berat sesuai label. Scan ulang label yang sama ditolak. Dua label berbeda dengan berat sama tetap dihitung sebagai dua buah.
 3. Konfirmasi penurunan barang selesai dan simpan penerimaan. Baru saat itu stok dan identitas buah masuk database. Modal tetap dihitung dari harga nota dan ongkir dibagi aktual penerimaan.
-4. Di kasir, scan label yang sama. Sistem memilih produk, batch, supplier, dan tanggal penerimaan otomatis. Pilih per kg/per butir lalu Enter untuk menambah ke pesanan. Stok turun setelah transaksi berhasil disimpan, bukan saat scan ke keranjang.
+4. Di kasir, klik kartu buah lalu scan atau ketik nomor barcode. Label juga bisa langsung dipindai di kolom kasir. POS memasukkan satu butir sesuai berat label dan harga jual per kg di cabang. Batch dan supplier mengikuti penerimaan. Stok berkurang saat pembayaran berhasil.
 5. Untuk transfer, reject, pengolahan reject, atau waste buah: scan seluruh buah yang akan ditangani dari satu batch. Berat dan butir mengikuti label. Pengolahan dan waste tetap memakai foto bukti serta hasil aktual seperti sebelumnya.
 6. Di **Laporan → Batch supplier → Telusuri**, bagian **Jejak per buah** menampilkan barcode, berat, status, outlet, dan riwayat kegiatan.
 
@@ -57,7 +57,7 @@ Contoh dari hasil scan:
 | 17–20        | `0001`       | Item Code produk                      |
 | 21–26        | `000228`     | Berat 228 gram / 0,228 kg             |
 
-Format tetap Code128, 26 digit, tanpa menambah digit pemeriksa ke teks scan. Harga diambil dari Master Barang POS; label ini memuat berat, bukan harga. Tanggal label berbeda fungsi dari tanggal penerimaan supplier: asal batch mengikuti penerimaan yang tersimpan.
+Format tetap Code128, 26 digit, tanpa menambah digit pemeriksa ke teks scan. Label memuat berat buah. POS memakai harga khusus cabang jika tersedia atau harga per kg dari Master Barang. Tanggal penerimaan mengikuti catatan batch.
 
 Kombinasi mesin + tanggal + nomor urut tidak boleh dipakai ulang untuk buah lain. Label yang tercetak ulang dengan nomor urut baru adalah identitas baru; operator tetap harus memastikan satu buah tidak diterima dua kali memakai dua label berbeda. Mesin kedua belum diatur dalam pekerjaan ini. Saat digunakan nanti, ID mesin harus berbeda.
 

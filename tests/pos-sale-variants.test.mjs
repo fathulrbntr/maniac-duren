@@ -312,14 +312,13 @@ try {
   assert.equal(cartSize(), 3);
   await choose(cat("Buah"));
   d = await open(fruit[0]);
-  assert(d.querySelector(`[data-sale-variant="${fruit[1].id}"]`).disabled);
-  await pick(d, fruit[0]);
-  await submit(d);
-  assert(!root.querySelector("#order-line"));
-  assert(m.latest.querySelector('[name="receiptDate"]'));
-  assert.match(m.latest.textContent, new RegExp(fruit[0].name));
-  assert.equal(cartSize(), 3, "Fruit still needs actual weight/pieces");
-  m.latest.close();
+  assert.deepEqual(
+    d.querySelectorAll("input,select").map((c) => c.name),
+    ["barcode"],
+  );
+  assert.match(d.textContent, new RegExp(fruit[0].variantGroupName));
+  assert.equal(cartSize(), 3, "A fruit group awaits the individual label");
+  d.close();
   await choose(cat("Makan"));
   d = await open(one[0]);
   assert.equal(

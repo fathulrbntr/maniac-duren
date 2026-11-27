@@ -143,7 +143,7 @@ assert.equal(parseScaleBarcode(ordinary.barcode), null);
 assert.equal(
   barcodeProduct(state, "0001", settings).scale,
   undefined,
-  "A four-digit product scan still opens manual weight entry",
+  "A four-digit master code identifies a fruit SKU without identifying a weighed fruit",
 );
 assert.throws(
   () =>

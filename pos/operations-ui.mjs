@@ -26,6 +26,7 @@ import {
 import { menuCatalogChanged, posProductStatus } from "./pos-categories.mjs";
 import { employeesPage, bindEmployees } from "./employees-ui.mjs";
 import { checkOrder } from "./order-stock.mjs";
+import { fruitSaleLine } from "./fruit-stock.mjs";
 import { fruitSaleDialog } from "./fruit-sale-dialog.mjs";
 import { orderMargins } from "./finance.mjs";
 import { transactions } from "./reports.mjs";
@@ -303,10 +304,7 @@ export function bindOps(view, s, store, ctx) {
     };
     const addDraftLine = (x) => {
       const stock = checkOrder(s, store, [...draft, x], today());
-      if (!stock.ok) {
-        ctx.toast(stock.reason);
-        return false;
-      }
+      if (!stock.ok) return stock;
       const p = s.products.find((p) => p.id === x.productId);
       if (p?.stockUnit !== "kg_butir") {
         const match = draft.find(
@@ -316,7 +314,7 @@ export function bindOps(view, s, store, ctx) {
         else draft.push(x);
       } else draft.push(x);
       showDraft();
-      return true;
+      return stock;
     };
     showDraft();
     document.querySelector("#order-products").addEventListener("stock-refresh", (ev) => {
@@ -326,7 +324,6 @@ export function bindOps(view, s, store, ctx) {
       if (changed) refreshCatalog();
       showDraft();
       variantDialog?.refresh();
-      fruitDialog?.refresh();
       const template = document.createElement("template");
       template.innerHTML = opsPage("orders", s, store);
       const queue = template.content.querySelector(".order-queue");
@@ -337,31 +334,26 @@ export function bindOps(view, s, store, ctx) {
     });
     const scanInput = document.querySelector("#order-scan");
     const scanStatus = document.querySelector("#order-scan-status");
-    const openFruit = (product, scale = null, verifyBarcode) => {
-      if (fruitDialog?.dialog.hasAttribute("open"))
-        throw Error("Selesaikan atau tutup pop-up buah terlebih dahulu.");
+    const scanProduct = (raw, settings) => {
+      s = ctx.getState();
+      return barcodeProduct(s, raw, settings);
+    };
+    const addScannedFruit = (scan) => {
+      const line = fruitSaleLine(s, store, scan);
+      const stock = addDraftLine(line);
+      if (!stock.ok) throw Error(stock.reason);
+      scanStatus.textContent = `Ditambahkan: ${scan.product.name} · ${num(line.kg)} kg · 1 butir · ${nm(s, "suppliers", line.supplierId)}.`;
+    };
+    const openFruit = (name, products) => {
+      if (fruitDialog?.hasAttribute("open")) return false;
       fruitDialog = fruitSaleDialog({
-        productId: product.id,
-        scale,
-        getState: () => ctx.getState?.() || s,
-        getDraft: () => draft,
-        store,
+        name,
+        products,
+        scanProduct,
         modal: ctx.modal,
-        verifyBarcode,
-        onAdd: (line, lot) => {
-          s = ctx.getState?.() || s;
-          if (!addDraftLine(line)) return false;
-          scanStatus.textContent = `Ditambahkan: ${product.name} · ${num(line.kg)} kg · ${line.pieces} butir · ${line.unit === "KG" ? "Per kg" : "Per butir"} · ${lot.date} · ${nm(s, "suppliers", lot.supplierId)}.`;
-          if (scanInput) {
-            scanInput.value = "";
-            scanInput.focus();
-          }
-          return true;
-        },
+        onScan: addScannedFruit,
         onClose: (added) => {
-          if (!added)
-            scanStatus.textContent =
-              "Penjualan buah dibatalkan; belum ditambahkan ke pesanan.";
+          if (!added) scanStatus.textContent = "Penambahan buah dibatalkan.";
           if (scanInput && !scanInput.disabled) scanInput.focus();
         },
       });
@@ -373,38 +365,27 @@ export function bindOps(view, s, store, ctx) {
         ctx.toast(status.reason);
         return false;
       }
-      if (p.stockUnit === "kg_butir") return openFruit(p);
-      return addDraftLine({
+      if (p.stockUnit === "kg_butir") return openFruit(p.name, [p]);
+      const result = addDraftLine({
         productId: p.id,
         qty: 1,
         price: Number(p.salePrice),
       });
+      if (!result.ok) ctx.toast(result.reason);
+      return result.ok;
     };
     if (scanInput) {
       const scan = bindBarcodeInput(scanInput, {
         onScan: (raw, settings) => {
           if (document.querySelector("dialog[open]"))
             throw Error("Tutup pop-up sebelum scan produk berikutnya.");
-          s = ctx.getState?.() || s;
-          const { product, scale } = barcodeProduct(s, raw, settings);
-          if (product.stockUnit === "kg_butir") {
-            openFruit(
-              product,
-              scale,
-              scale
-                ? () => {
-                    const current = barcodeProduct(ctx.getState?.() || s, raw, settings);
-                    if (
-                      current.product.id !== product.id ||
-                      current.scale?.kg !== scale.kg
-                    )
-                      throw Error(
-                        "Pemetaan barcode berubah. Tutup pop-up dan scan ulang.",
-                      );
-                  }
-                : undefined,
-            );
-            scanStatus.textContent = `Terbaca: ${product.name}${scale ? " · " + num(scale.kg) + " kg · 1 butir" : ""}. ${scale?.tracking ? "Batch dan supplier mengikuti barcode. Pilih cara jual lalu Enter." : "Ketik tanggal masuk, lalu Enter untuk lanjut ke supplier dan cara jual."}`;
+          const scanned = scanProduct(raw, settings);
+          const { product, scale } = scanned;
+          if (scale) {
+            addScannedFruit(scanned);
+          } else if (product.stockUnit === "kg_butir") {
+            openFruit(product.name, [product]);
+            scanStatus.textContent = `Scan label pada ${product.name}.`;
           } else {
             if (!selectProduct(product)) {
               scanStatus.textContent =
@@ -426,7 +407,9 @@ export function bindOps(view, s, store, ctx) {
         (x) => x.key === card.dataset.menuKey,
       );
       if (!entry) return;
-      if (entry.hasVariants)
+      if (entry.products.every((p) => p.stockUnit === "kg_butir"))
+        openFruit(entry.name, entry.products);
+      else if (entry.hasVariants)
         variantDialog = posVariantDialog({
           key: entry.key,
           category: activeCategory,
@@ -502,7 +485,7 @@ export function bindOps(view, s, store, ctx) {
     );
     const checkout = saveButton.onclick;
     saveButton.onclick = (ev) => {
-      if (fruitDialog?.dialog.hasAttribute("open")) {
+      if (fruitDialog?.hasAttribute("open")) {
         ctx.toast("Selesaikan atau tutup pop-up buah sebelum pembayaran.");
         return;
       }

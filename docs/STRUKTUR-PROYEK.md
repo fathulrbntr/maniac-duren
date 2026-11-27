@@ -288,3 +288,7 @@ Cabang tujuan tetap mengonfirmasi penerimaan berdasarkan surat jalan.
 ### Pembatalan nota supplier
 
 Di **Back Office → Nota Supplier → Buka nota → Batalkan nota**, petugas memasukkan alasan. Nota yang belum dibukukan dan tanpa pembayaran aktif masuk ke **Nota dibatalkan**. Pembatalan menyimpan draf penerimaan dan melepaskan reservasi barcode. Kas, persediaan dan jurnal transaksi dibukukan melalui alur operasional masing-masing. RPC memeriksa ulang revisi nota dan sesi saat transaksi disimpan.
+
+### Penjualan buah di POS
+
+Klik kartu buah lalu scan atau ketik nomor barcode pada label. Scan label langsung di kolom kasir juga memasukkan buah ke pesanan. Setiap label terdaftar menentukan SKU, batch, supplier, dan berat satu butir. POS memakai harga jual per kg cabang aktif dan membukukan penjualan saat pembayaran.

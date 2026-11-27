@@ -1,313 +1,169 @@
 import assert from "node:assert/strict";
-import {
-  fruitSaleDialog,
-  fruitSaleLots,
-  parseFruitReceiptDate,
-} from "../pos/fruit-sale-dialog.mjs";
+import { barcodeProduct } from "../pos/barcode-scanner.mjs";
+import { pricesForBranch } from "../pos/branch-prices.mjs";
+import { fruitSaleDialog } from "../pos/fruit-sale-dialog.mjs";
+import { fruitSaleLine } from "../pos/fruit-stock.mjs";
+import { checkOrder } from "../pos/order-stock.mjs";
 import { Node, makeModal } from "./variant-dom.mjs";
 import { fixture, day } from "./stock-demo-fixture.mjs";
 
-assert.equal(parseFruitReceiptDate("09102026"), "2026-10-09");
-assert.equal(parseFruitReceiptDate("09/10/2026"), "2026-10-09");
-assert.equal(parseFruitReceiptDate("29022024"), "2024-02-29");
-for (const invalid of [
-  "",
-  "091026",
-  "2026-10-09",
-  "31/11/2026",
-  "29022026",
-  "00012026",
-  "09132026",
-  "091020260",
-  "abcdefgh",
-  "01010000",
-])
-  assert.equal(parseFruitReceiptDate(invalid), null, invalid);
-const typed = (date) => date.split("-").reverse().join("");
 const f = fixture(),
-  fruit = { ...f.fruit, priceKg: 100000, pricePiece: 180000 };
-const previous = "2026-01-01";
-const lot = (id, date, supplierId, extra = {}) => ({
-  id,
-  date,
-  supplierId,
-  storeId: f.store,
-  productId: fruit.id,
-  quality: "ready",
-  kg: 20,
-  pieces: 10,
-  ...extra,
-});
-const s = {
-  ...f.state,
-  products: [fruit],
-  suppliers: [
-    { id: "a", name: "Supplier A" },
-    { id: "b", name: "Supplier B" },
-    { id: "c", name: "Supplier C" },
-  ],
-  orders: [],
-  lots: [
-    lot("old", previous, "a"),
-    lot("new-a", day, "a"),
-    lot("new-a2", day, "a"),
-    lot("new-b", day, "b"),
-    lot("foreign", day, "c", { storeId: f.otherStore }),
-    lot("reject", day, "c", { quality: "reject" }),
-    lot("future", "2999-01-01", "c"),
-  ],
-};
-let draft = [],
-  added = [];
-const m = makeModal(),
-  open = (scale = { kg: 2.414 }, extra = {}) =>
-    fruitSaleDialog({
-      productId: fruit.id,
-      scale,
-      getState: () => s,
-      getDraft: () => draft,
-      store: f.store,
-      modal: m.modal,
-      onAdd: (line) => {
-        added.push(line);
-        draft.push(line);
-        return true;
-      },
-      ...extra,
-    });
-const c = (d, name) => d.querySelector(`[name="${name}"]`);
-const choose = async (d, name, value) => {
-  c(d, name).value = value;
-  await c(d, name).fire(name === "receiptDate" ? "input" : "change");
-};
-const submit = (d) => d.querySelector("form").fire("submit");
-const values = (d, name) =>
-  c(d, name)
-    .options.map((o) => o.value)
-    .filter(Boolean);
-const source = async (d, date = day, batch = "new-b") => {
-  await choose(d, "receiptDate", typed(date));
-  await choose(d, "lotId", batch);
-};
-async function key(d, name, key, extra = {}) {
-  let prevented = false;
-  for (const fn of c(d, name).listeners.keydown || [])
-    await fn({
-      key,
-      code: key === "Enter" ? "NumpadEnter" : key,
-      target: c(d, name),
-      preventDefault() {
-        prevented = true;
-      },
-      stopPropagation() {},
-      ...extra,
-    });
-  return prevented;
-}
-const focused = (d, name) => assert.equal(Node.activeElement, c(d, name));
-
-let ui = open(),
-  d = ui.dialog;
-focused(d, "receiptDate");
-assert(c(d, "lotId").disabled);
-assert.equal(c(d, "receiptDate").attrs.inputmode, "numeric");
-assert.deepEqual(
-  d.querySelectorAll("input,select").map((n) => n.name),
-  ["receiptDate", "lotId", "unit"],
-);
-assert(!c(d, "kg"));
-assert(!c(d, "pieces"), "Scanner quantities are displayed, not re-entered");
-await key(d, "receiptDate", "Enter");
-assert.match(d.querySelector("#form-error").textContent, /8 angka DDMMYYYY/);
-focused(d, "receiptDate");
-assert.equal(added.length, 0);
-await choose(d, "receiptDate", "31022026");
-await key(d, "receiptDate", "Enter");
-focused(d, "receiptDate");
-assert(c(d, "lotId").disabled);
-await choose(d, "receiptDate", "31122999");
-await key(d, "receiptDate", "Enter");
-assert.match(d.querySelector("#form-error").textContent, /Tidak ada stok/);
-focused(d, "receiptDate");
-await choose(d, "receiptDate", typed(previous));
-assert.deepEqual(values(d, "lotId"), ["old"]);
-await key(d, "receiptDate", "Enter");
-assert.equal(c(d, "receiptDate").value, "01/01/2026");
-focused(d, "lotId");
-assert.equal(c(d, "lotId").value, "old");
-await choose(d, "receiptDate", typed(day));
-assert.equal(c(d, "lotId").value, "", "New date clears old supplier/batch");
-assert.deepEqual(values(d, "lotId"), ["new-a", "new-a2", "new-b"]);
-await key(d, "receiptDate", "Enter", { repeat: true });
-assert.equal(c(d, "lotId").value, "", "Held Enter does not advance");
-await key(d, "receiptDate", "Enter", { isComposing: true });
-assert.equal(c(d, "lotId").value, "");
-await key(d, "receiptDate", "Enter");
-focused(d, "lotId");
-assert.equal(c(d, "lotId").value, "new-a");
-await c(d, "receiptDate").fire("change");
-assert.equal(
-  c(d, "lotId").value,
-  "new-a",
-  "Blur after formatting date must not clear the supplier",
-);
-await key(d, "lotId", "ArrowDown");
-assert.equal(
-  c(d, "lotId").value,
-  "new-a2",
-  "Same-date receipts stay separate in supplier choices",
-);
-await key(d, "lotId", "ArrowDown");
-assert.equal(c(d, "lotId").value, "new-b");
-await key(d, "lotId", "ArrowDown");
-assert.equal(c(d, "lotId").value, "new-b", "Arrows stop at list edge");
-await key(d, "lotId", "Enter");
-focused(d, "unit");
-assert.equal(added.length, 0);
-await key(d, "unit", "ArrowDown");
-assert.equal(c(d, "unit").value, "BUTIR");
-assert.match(d.querySelector("[data-fruit-total]").textContent, /180.000/);
-await key(d, "unit", "Enter", { repeat: true });
-assert.equal(added.length, 0);
-await key(d, "unit", "Enter", { ctrlKey: true });
-assert.equal(added.length, 0);
-const snapshot = JSON.stringify(s);
-await key(d, "unit", "Enter");
-await key(d, "unit", "Enter");
-await submit(d);
-assert.equal(added.length, 1);
-assert.deepEqual(added[0], {
-  productId: fruit.id,
-  lotId: "new-b",
-  supplierId: "b",
-  unit: "BUTIR",
-  kg: 2.414,
-  pieces: 1,
-  qty: 1,
-  price: 180000,
-});
-assert.equal(JSON.stringify(s), snapshot);
-
-// Numpad flow defaults to KG; opening the next scan starts with a blank date.
-draft = [];
-ui = open();
-d = ui.dialog;
-focused(d, "receiptDate");
-assert.equal(c(d, "receiptDate").value, "");
-await choose(d, "receiptDate", typed(day));
-await key(d, "receiptDate", "Enter");
-await key(d, "lotId", "Enter");
-await key(d, "unit", "ArrowDown");
-await key(d, "unit", "ArrowUp");
-await key(d, "unit", "Enter");
-assert.equal(added.at(-1).qty, 2.414);
-assert.equal(added.at(-1).unit, "KG");
-// Clicking the submit button and changing controls with a mouse still work.
-draft = [];
-ui = open();
-d = ui.dialog;
-await source(d);
-c(d, "lotId").value = "old";
-const beforeForged = added.length;
-await submit(d);
-assert.equal(added.length, beforeForged);
-assert.match(d.querySelector("#form-error").textContent, /Pilih supplier/);
-await source(d);
-await submit(d);
-assert.equal(added.length, beforeForged + 1);
-
-// Manual input advances through actual kg and fruit count before submitting.
-draft = [];
-ui = open(null);
-d = ui.dialog;
-await source(d);
-await key(d, "lotId", "Enter");
-await key(d, "unit", "ArrowDown");
-await key(d, "unit", "Enter");
-focused(d, "kg");
-await key(d, "kg", "Enter");
-focused(d, "kg");
-assert.match(d.querySelector("#form-error").textContent, /berat buah positif/);
-c(d, "kg").value = "5.5";
-await key(d, "kg", "Enter");
-focused(d, "pieces");
-assert(c(d, "pieces").textSelected);
-c(d, "pieces").value = "1.5";
-await key(d, "pieces", "Enter");
-assert.match(d.querySelector("#form-error").textContent, /butir bulat/);
-c(d, "pieces").value = "2";
-await key(d, "pieces", "Enter");
-assert.equal(added.at(-1).qty, 2);
-assert.equal(added.at(-1).kg, 5.5);
-assert.equal(added.at(-1).price, 180000);
-
-// Stock is checked again on submit, including reservations and items in cart.
-draft = [];
-ui = open();
-d = ui.dialog;
-await source(d);
-const target = s.lots.find((l) => l.id === "new-b");
-target.kg = 1;
-const before = added.length;
-await key(d, "unit", "Enter");
-assert.equal(added.length, before);
-assert.match(d.querySelector("#form-error").textContent, /Stok kurang/);
-target.kg = 20;
-s.orders = [
+  s = f.state,
+  other = { ...f.fruit, id: "other-fruit", name: "Bawor", barcode: "0002" };
+const a = "92010711260000680001000228",
+  b = "92010711260000690001000228";
+Object.assign(f.fruit, { barcode: "0001", priceKg: 90000 });
+s.products.push(other);
+const first = s.lots[0];
+first.supplierId = "supplier-one";
+const batch = { ...first, id: "second-lot", supplierId: "supplier-two" };
+s.lots.push(batch);
+s.fruitTrackingVersion = 101;
+s.warehouseVersion = 107;
+s.branchPrices = [
   {
-    store_id: f.store,
-    status: "queued",
-    reserved: { "lot:new-b": { qty: 19, pieces: 9 } },
+    storeId: f.store,
+    productId: f.fruit.id,
+    stockUnit: "kg_butir",
+    priceKg: 150000,
+    pricePiece: 200000,
   },
 ];
-await submit(d);
-assert.equal(added.length, before);
-s.orders = [];
-draft = [{ productId: fruit.id, lotId: "new-b", kg: 19, pieces: 9 }];
-await submit(d);
-assert.equal(added.length, before);
-draft = [];
-target.quality = "reject";
-ui.refresh();
-assert.equal(
-  c(d, "lotId").value,
-  "",
-  "Polling never replaces unavailable selection with another supplier",
-);
-await key(d, "unit", "Enter");
-assert.equal(added.length, before);
-target.quality = "ready";
-d.close();
-
-// Price changes and barcode remapping still require review.
-ui = open();
-d = ui.dialog;
-await source(d);
-fruit.priceKg = 110000;
-await key(d, "unit", "Enter");
-assert.match(d.querySelector("#form-error").textContent, /Harga jual berubah/);
-assert.equal(added.length, before);
-await key(d, "unit", "Enter");
-assert.equal(added.at(-1).price, 110000);
-draft = [];
-ui = open(
-  { kg: 3.032 },
-  {
-    verifyBarcode: () => {
-      throw Error("Pemetaan barcode berubah");
+s.fruitUnits = [a, b].map((barcode) => ({
+  barcode,
+  storeId: f.store,
+  productId: f.fruit.id,
+  lotId: batch.id,
+  grams: 228,
+  status: "available",
+}));
+const cart = [],
+  m = makeModal();
+const open = (products = [f.fruit]) =>
+  fruitSaleDialog({
+    name: products[0].name,
+    products,
+    modal: m.modal,
+    scanProduct: (raw, settings) =>
+      barcodeProduct(pricesForBranch(s, f.store), raw, settings),
+    onScan: (scan) => {
+      const line = fruitSaleLine(s, f.store, scan);
+      const stock = checkOrder(s, f.store, [...cart, line], day);
+      if (!stock.ok) throw Error(stock.reason);
+      cart.push(line);
     },
-  },
+  });
+const field = (d) => d.querySelector('[name="barcode"]');
+const submit = (d) => d.querySelector("form").fire("submit");
+async function key(d, key, extra = {}) {
+  for (const fn of field(d).listeners.keydown)
+    await fn({ key, preventDefault() {}, ...extra });
+}
+async function rejects(d, code, message) {
+  const before = cart.length;
+  field(d).value = code;
+  await submit(d);
+  assert(d.hasAttribute("open"));
+  assert.equal(Node.activeElement, field(d));
+  assert.match(d.querySelector("#form-error").textContent, message);
+  assert.equal(cart.length, before);
+}
+
+let d = open();
+assert.deepEqual(
+  d.querySelectorAll("input,select,textarea").map((x) => x.name),
+  ["barcode"],
 );
-d = ui.dialog;
-await source(d);
+assert.equal(Node.activeElement, field(d));
+await rejects(d, "", /kosong/);
+await rejects(d, "0001", /label buah/);
+await rejects(d, a.slice(0, -1), /26 digit/);
+await rejects(d, "2100010030320", /26 digit/);
+await rejects(d, a.replace("000068", "000999"), /belum tercatat/);
+await rejects(d, a.replace("0001" + "000228", "0002" + "000228"), /Barcode milik Bawor/);
+const unit = s.fruitUnits[0];
+unit.storeId = f.otherStore;
+await rejects(d, a, /outlet lain/);
+unit.storeId = f.store;
+for (const status of ["sold", "in_transit", "reject"]) {
+  unit.status = status;
+  await rejects(d, a, /berstatus/);
+}
+unit.status = "available";
+unit.grams = 300;
+await rejects(d, a, /berat/);
+unit.grams = 228;
+batch.quality = "reject";
+await rejects(d, a, /Stok kurang/);
+batch.quality = "ready";
+s.orders.push({
+  store_id: f.store,
+  status: "queued",
+  reserved: { ["lot:" + batch.id]: { qty: batch.kg, pieces: batch.pieces } },
+});
+await rejects(d, a, /Stok kurang/);
+s.orders.pop();
+s.branchPrices[0].priceKg = 0;
+await rejects(d, a, /Harga jual per kg/);
+s.branchPrices[0].priceKg = 160000;
+const before = structuredClone(s);
+field(d).value = a;
+await key(d, "Enter", { repeat: true });
+await key(d, "Enter", { isComposing: true });
+assert.equal(cart.length, 0);
+await key(d, "Enter");
 await submit(d);
-assert.match(d.querySelector("#form-error").textContent, /Pemetaan barcode/);
+assert.equal(cart.length, 1);
+assert.deepEqual(cart[0], {
+  productId: f.fruit.id,
+  lotId: batch.id,
+  supplierId: batch.supplierId,
+  unit: "KG",
+  kg: 0.228,
+  pieces: 1,
+  qty: 0.228,
+  price: 160000,
+  barcode: a,
+});
+assert.deepEqual(s, before);
+d = open();
+await rejects(d, a, /sudah ada/);
+field(d).value = b;
 d.close();
-const after = added.length;
-await key(d, "unit", "Enter");
 await submit(d);
-assert.equal(added.length, after, "Closed/cancelled popup cannot add an item");
-assert.equal(fruitSaleLots(s, f.store, fruit.id, []).length, 4);
+assert.equal(cart.length, 1);
+d = open([other, f.fruit]);
+field(d).value = b;
+await submit(d);
+assert.equal(cart[1].barcode, b);
+s.warehouseVersion = null;
+const legacy = barcodeProduct(s, "2100010030320");
+assert.throws(
+  () => fruitSaleLine(s, f.store, legacy),
+  /Batch asal tidak dapat ditentukan/,
+);
+
+const settings = { scanner: { prefix: "MD:", suffix: "#", terminator: "Tab" } };
+globalThis.localStorage = { getItem: () => JSON.stringify(settings) };
+try {
+  cart.length = 0;
+  d = open();
+  field(d).value = "MD:" + a + "#";
+  await key(d, "Tab");
+  assert.equal(cart[0].barcode, a);
+  d = open();
+  field(d).value = b;
+  await key(d, "Enter");
+  assert.equal(cart[1].barcode, b);
+  settings.scanner.enabled = false;
+  cart.length = 0;
+  d = open();
+  field(d).value = a;
+  await submit(d);
+  assert.equal(cart[0].barcode, a);
+} finally {
+  delete globalThis.localStorage;
+}
 console.log(
-  "PASS keyboard fruit popup: DDMMYYYY/leap-date validation, numpad Enter/focus, arrow supplier/receipt and unit selection, repeat/IME guards, immediate cart add, automatic scan quantities, manual keyboard flow, exact batch, stock/price/remapping guards and cancel/double submit.",
+  "PASS barcode-only fruit sale, branch pricing, tracked origin and availability, manual/scanner input, one fruit per scan, cancel and duplicate protection.",
 );

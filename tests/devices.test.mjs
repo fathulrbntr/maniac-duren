@@ -252,10 +252,12 @@ try {
   clearOrderDraft();
   render();
   await scan("FRUIT001");
-  assert(!hasOrderDraft(), "Ordinary fruit barcode opens a manual popup");
+  assert(!hasOrderDraft(), "A fruit SKU opens the label entry popup");
   assert(!root.querySelector("#order-line"));
-  assert(modal.latest.querySelector('[name="kg"]'));
-  assert.equal(modal.latest.querySelector('[name="kg"]').value, "");
+  assert.deepEqual(
+    modal.latest.querySelectorAll("input,select").map((c) => c.name),
+    ["barcode"],
+  );
   modal.latest.close();
   const manualDialog = modal.latest;
   await scan("0012345");
@@ -314,7 +316,7 @@ try {
   assert.match(printing.printed.at(-1).css, /size: 58mm/);
   assert.equal(actions.length, 1, "Manual reprint must not post another transaction");
   modal.latest.close();
-  // Scanned fruit opens date -> supplier -> unit; Numpad Enter adds it to the cart.
+  // Scanning adds one weighed fruit. Typing a master code asks for its label.
   const fruit = state.products.find((p) => p.id === f.fruit.id);
   fruit.barcode = "0001";
   fruit.priceKg = 100000;
@@ -338,42 +340,24 @@ try {
   assert.equal(actions.length, beforeActions);
   view = "orders";
   render();
-  const chooseFruit = async (unit = "KG") => {
-    const d = modal.latest,
-      control = (name) => d.querySelector(`[name="${name}"]`);
-    assert(!control("kg"));
-    assert(!control("pieces"));
-    assert(control("lotId").disabled);
-    assert(control("receiptDate").focused);
-    control("receiptDate").value = fruitLot.date.split("-").reverse().join("");
-    await control("receiptDate").fire("input");
-    await key(control("receiptDate"), "Enter", { code: "NumpadEnter" });
-    assert(control("lotId").focused);
-    assert.equal(control("lotId").value, fruitLot.id);
-    await key(control("lotId"), "Enter", { code: "NumpadEnter" });
-    assert(control("unit").focused);
-    if (unit === "BUTIR") await key(control("unit"), "ArrowDown");
-    await key(control("unit"), "Enter", { code: "NumpadEnter" });
-    return d;
-  };
-  await scan("2100010030320");
-  assert(!hasOrderDraft());
-  assert(!root.querySelector("#order-line"));
-  assert(modal.latest.hasAttribute("open"));
+  await scan("0001");
   const pending = modal.latest;
+  assert(pending.hasAttribute("open"));
+  assert(!hasOrderDraft());
   await scan("2100010024145");
   assert.equal(modal.latest, pending);
   assert.match(root.querySelector("#order-scan-status").textContent, /Tutup pop-up/);
-  const first = await chooseFruit();
-  await first.querySelector("form").fire("submit");
-  assert(hasOrderDraft());
+  const label = pending.querySelector('[name="barcode"]');
+  label.value = "2100010030320";
+  await key(label, "Enter", { code: "NumpadEnter" });
+  assert(!pending.hasAttribute("open"));
+  await pending.querySelector("form").fire("submit");
   assert.equal(
     root.querySelector("#order-draft").querySelectorAll(".order-cart-line").length,
     1,
   );
   await scan("2100010024145");
-  assert(modal.latest.hasAttribute("open"), "Every scan asks sale unit and origin");
-  await chooseFruit("BUTIR");
+  assert(!modal.latest.hasAttribute("open"));
   assert.equal(JSON.stringify(state), beforeTest);
   assert.equal(
     root.querySelector("#order-draft").querySelectorAll(".order-cart-line").length,
@@ -393,19 +377,18 @@ try {
       .payload.lines.map((l) => [l.lotId, l.unit, l.kg, l.pieces, l.qty, l.price]),
     [
       [fruitLot.id, "KG", 3.032, 1, 3.032, 100000],
-      [fruitLot.id, "BUTIR", 2.414, 1, 1, 180000],
+      [fruitLot.id, "KG", 2.414, 1, 2.414, 100000],
     ],
   );
   const sold = state.lots.find((l) => l.id === fruitLot.id);
   assert(Math.abs(sold.kg - (initialKg - 5.446)) < 1e-8);
   assert.equal(sold.pieces, initialPieces - 2);
-  assert.equal(state.orders.at(-1).total, 483200);
+  assert.equal(state.orders.at(-1).total, 544600);
   assert(!hasOrderDraft());
   modal.latest.close();
   render();
   // KG QRIS still uses exact decimal total after the new popup.
   await scan("2100010024145");
-  await chooseFruit("KG");
   await root.querySelector("#save-order").fire("click");
   modal.latest.querySelector('[name="payment"]').value = "QRIS";
   await modal.latest.querySelector('[name="payment"]').fire("change");
@@ -418,7 +401,8 @@ try {
   modal.latest.close();
   render();
   const preserved = JSON.stringify(state);
-  await scan("2100010030320");
+  await scan("0001");
+  modal.latest.querySelector('[name="barcode"]').value = "2100010030320";
   modal.latest.close();
   assert(!hasOrderDraft());
   assert.equal(JSON.stringify(state), preserved);
@@ -431,7 +415,7 @@ try {
   assert(root.querySelector("#order-scan").disabled);
   assert(root.querySelector("#order-scan-add").disabled);
   console.log(
-    "PASS device settings and CAS POS: harmless scanner/print tests, local settings, exact variants, framing, fruit modal, date/supplier origin, kg/piece mixed sale, automatic label quantities, exact QRIS, invalid barcode rejection, correct 5.446 kg / 2 fruit deduction, cancel without sale, repeat/IME, auto-print off and manual reprint. No physical hardware/render test.",
+    "PASS device settings and CAS POS: harmless scanner/print tests, local settings, exact variants, framing, fruit modal, automatic origin and per-kg sale, automatic label quantities, exact QRIS, invalid barcode rejection, correct 5.446 kg / 2 fruit deduction, cancel without sale, repeat/IME, auto-print off and manual reprint. No physical hardware/render test.",
   );
 } finally {
   clearOrderDraft();

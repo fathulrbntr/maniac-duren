@@ -12,9 +12,8 @@ import {
   applyStockDemoAction,
   readStockDemo,
 } from "../pos/stock-demo.mjs";
-import { fruitSaleDialog } from "../pos/fruit-sale-dialog.mjs";
+import { fruitSaleLine } from "../pos/fruit-stock.mjs";
 import { fixture, day } from "./stock-demo-fixture.mjs";
-import { Node, makeModal } from "./variant-dom.mjs";
 const a = "92010711260000680001000228",
   b = "92010711260000690001000228";
 assert.deepEqual(parseTrackingBarcode(a), {
@@ -97,29 +96,10 @@ assert.throws(
     ]),
   /catatan manual/,
 );
-let draft = [];
-const m = makeModal();
-const open = () =>
-  fruitSaleDialog({
-    productId: f.fruit.id,
-    scale: parseTrackingBarcode(a),
-    getState: () => s,
-    getDraft: () => draft,
-    store: f.store,
-    modal: m.modal,
-    onAdd: (line) => draft.push(line),
-  });
-const ui = open(),
-  d = ui.dialog,
-  c = (name) => d.querySelector(`[name="${name}"]`);
-assert.equal(c("lotId").value, batch.lines[0].id);
-assert(c("lotId").disabled);
-assert(c("receiptDate").readOnly);
-assert.equal(Node.activeElement, c("unit"));
-await d.querySelector("form").fire("submit");
-assert.equal(draft.length, 1);
+const draft = [fruitSaleLine(s, f.store, barcodeProduct(s, a))];
+assert.equal(draft[0].lotId, batch.lines[0].id);
+assert.equal(draft[0].supplierId, batch.supplierId);
 assert.equal(draft[0].barcode, a);
-assert.throws(open, /sudah ada/);
 assert.throws(() => checkTrackedLines(s, f.store, [draft[0], draft[0]]), /sudah ada/);
 assert.throws(
   () => checkTrackedLines(s, f.store, [{ ...draft[0], barcode: undefined }]),

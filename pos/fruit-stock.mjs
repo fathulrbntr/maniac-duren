@@ -1,6 +1,47 @@
+import { today } from "./core.mjs";
 import { parseTrackingBarcode, trackedFruit } from "./scale-label.mjs";
 
 export const fruitLot = (state, lotId) => (state.lots || []).find((l) => l.id === lotId);
+export function fruitSaleLine(state, store, { code, product, scale }) {
+  let lot;
+  if (scale.tracking) {
+    const unit = trackedFruit(state, code, store);
+    lot = fruitLot(state, unit.lotId);
+    if (!lot || lot.storeId !== store || lot.productId !== product.id)
+      throw Error("Batch asal buah tidak sesuai dengan stok cabang.");
+  } else {
+    if (state.warehouseVersion && !state.stockDemo)
+      throw Error("Gunakan barcode buah 26 digit yang terdaftar saat penerimaan.");
+    // Old scale labels carry only a product and weight. Never guess between batches.
+    const date = today();
+    const candidates = state.lots.filter(
+      (l) =>
+        l.storeId === store &&
+        l.productId === product.id &&
+        l.quality === "ready" &&
+        l.date <= date &&
+        l.kg > 0 &&
+        l.pieces > 0,
+    );
+    if (candidates.length !== 1)
+      throw Error(
+        "Batch asal tidak dapat ditentukan dari label lama. Gunakan barcode buah 26 digit.",
+      );
+    [lot] = candidates;
+  }
+  if (!lot.supplierId) throw Error("Supplier batch buah belum tercatat.");
+  return {
+    productId: product.id,
+    lotId: lot.id,
+    supplierId: lot.supplierId,
+    unit: "KG",
+    kg: scale.kg,
+    pieces: 1,
+    qty: scale.kg,
+    price: Number(product.priceKg),
+    ...(scale.tracking ? { barcode: code } : {}),
+  };
+}
 export function stockScanCandidate(state, code, store, lotId, states) {
   const parsed = parseTrackingBarcode(code);
   if (!parsed) throw Error("Gunakan label tracking buah 26 digit dengan awalan 92.");
