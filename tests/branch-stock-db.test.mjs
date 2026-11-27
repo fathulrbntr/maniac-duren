@@ -141,7 +141,8 @@ try {
     id: id(),
     storeId: origin,
     toStoreId: target,
-    carrier: "Petugas cabang",
+    senderEmployeeId: sender,
+    carrier: state.people.find((p) => p.id === sender).name,
     barcodes: labels.slice(0, 30),
     units: [{ lotId: unit.id, qty: 3 }],
   };
@@ -162,6 +163,16 @@ try {
   let s = await read();
   assert.equal(s.lots.find((l) => l.id === lot.id).pieces, 70);
   const t = s.transfers.find((t) => t.id === send.id);
+  assert.equal(t.carrier, send.carrier);
+  assert.equal(
+    (
+      await one(
+        "select request->>'senderEmployeeId' emp from md_supply.events where id=$1",
+        [send.id],
+      )
+    ).emp,
+    sender,
+  );
   assert.equal(t.invoiceNo, null);
   assert.match(t.deliveryNo, /^SJ-CBG-/);
   assert.equal(t.items.length, 30);

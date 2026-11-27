@@ -66,7 +66,7 @@ export function receiptVariance(p, productId) {
   };
 }
 // Reservations on the document being edited remain available to its own rows.
-export function outboundBatches(s, warehouseId, orderId) {
+export function outboundInventory(s, warehouseId, orderId) {
   const reserved = new Set(
     (s.outboundOrders || [])
       .filter(
@@ -82,29 +82,29 @@ export function outboundBatches(s, warehouseId, orderId) {
   const blockedRoots = new Set(
     (s.lots || []).filter((l) => reopened.has(l.shipmentId)).map((l) => l.id),
   );
+  const readyLots = (s.lots || []).filter(
+    (l) => l.storeId === warehouseId && l.quality === "ready" && l.kg > 0 && l.pieces > 0,
+  );
+  const readyIds = new Set(readyLots.map((l) => l.id));
+  const fruitByBarcode = new Map();
   const available = new Map();
   for (const u of s.fruitUnits || []) {
     if (
       u.storeId !== warehouseId ||
       u.status !== "available" ||
+      !readyIds.has(u.lotId) ||
       reserved.has(u.barcode) ||
       blockedRoots.has(u.receiptLotId)
     )
       continue;
+    fruitByBarcode.set(u.barcode, u);
     const qty = available.get(u.lotId) || { grams: 0, pieces: 0 };
     qty.grams += Number(u.grams);
     qty.pieces++;
     available.set(u.lotId, qty);
   }
-  const fruit = (s.lots || [])
-    .filter(
-      (l) =>
-        l.storeId === warehouseId &&
-        l.quality === "ready" &&
-        l.kg > 0 &&
-        l.pieces > 0 &&
-        available.has(l.id),
-    )
+  const fruit = readyLots
+    .filter((l) => available.has(l.id))
     .map((l) => ({ ...l, available: available.get(l.id) }));
   const unitReserved = new Map();
   const units = [];
@@ -135,9 +135,13 @@ export function outboundBatches(s, warehouseId, orderId) {
         units.push({ ...lot, available: { qty } });
     }
   }
-  return [...fruit, ...units].sort(
+  const batches = [...fruit, ...units].sort(
     (a, b) => String(a.date).localeCompare(String(b.date)) || a.id.localeCompare(b.id),
   );
+  return { batches, fruitByBarcode };
+}
+export function outboundBatches(s, warehouseId, orderId) {
+  return outboundInventory(s, warehouseId, orderId).batches;
 }
 export function outboundRateRows(order) {
   return order.rates.flatMap((r) => {

@@ -1,3 +1,4 @@
+import { openBranchDispatch } from "./branch-dispatch-ui.mjs";
 import { confirmAction } from "../shared/confirmation.mjs";
 import { depositButtons } from "./cash-deposits-ui.mjs";
 import { transactions } from "./reports.mjs";
@@ -505,6 +506,7 @@ export function openDispatch(s, store, ctx) {
     );
     return;
   }
+  if (branch) return openBranchDispatch(s, store, ctx);
   const targets = (s.locations || s.stores).filter(
       (x) => x.locationType === "store" && x.id !== store,
     ),
@@ -521,8 +523,8 @@ export function openDispatch(s, store, ctx) {
             `<option value="${e(l.id)}">${e(name(s, "products", l.productId))} · ${num(l.qty)} ${e(l.unit)} · ${e(l.id.slice(0, 8))}</option>`,
         )
         .join("")}</select>`,
-    )}${field("Jumlah", '<input data-unit-qty type="number" min="0.001" step="any">')}</div><button type="button" data-unit-add>Tambah barang</button></details><div class="supply-step"><b>3</b><span>${branch ? "Periksa barang dan kirim" : "Periksa invoice dan kirim"}</span></div><div data-dispatch-summary></div>${field("Catatan", '<textarea name="note" maxlength="500" rows="2"></textarea>')}<p class="notice">Stok asal berkurang saat dikirim. Stok tujuan bertambah setelah diterima.</p>`,
-    branch ? "Terbitkan surat jalan dan kirim" : "Terbitkan invoice & kirim",
+    )}${field("Jumlah", '<input data-unit-qty type="number" min="0.001" step="any">')}</div><button type="button" data-unit-add>Tambah barang</button></details><div class="supply-step"><b>3</b><span>Periksa invoice dan kirim</span></div><div data-dispatch-summary></div>${field("Catatan", '<textarea name="note" maxlength="500" rows="2"></textarea>')}<p class="notice">Stok asal berkurang saat dikirim. Stok tujuan bertambah setelah diterima.</p>`,
+    "Terbitkan invoice & kirim",
   );
   d.classList.add("supply-modal");
   const request = id(),
@@ -541,15 +543,13 @@ export function openDispatch(s, store, ctx) {
     const lines = transferPreview(s, codes, units);
     d.querySelector("[data-dispatch-summary]").innerHTML =
       table(
-        ["Barang", "Jumlah", ...(branch ? [] : ["Tagihan"]), ""],
+        ["Barang", "Jumlah", "Tagihan", ""],
         lines.map(
           (x) =>
-            `<tr><td>${e(x.productName)}</td><td>${x.kg !== undefined ? num(x.kg) + " kg / " + x.pieces + " butir" : num(x.qty) + " " + e(x.unit)}</td>${branch ? "" : `<td>${money(x.total)}</td>`}<td>${x.kg === undefined ? `<button type="button" data-remove-unit="${e(x.sourceLotId)}">Hapus</button>` : ""}</td></tr>`,
+            `<tr><td>${e(x.productName)}</td><td>${x.kg !== undefined ? num(x.kg) + " kg / " + x.pieces + " butir" : num(x.qty) + " " + e(x.unit)}</td><td>${money(x.total)}</td><td>${x.kg === undefined ? `<button type="button" data-remove-unit="${e(x.sourceLotId)}">Hapus</button>` : ""}</td></tr>`,
         ),
       ) +
-      (branch
-        ? ""
-        : `<p class="supply-total">Estimasi tagihan <b>${money(lines.reduce((n, l) => n + l.total, 0))}</b></p>`);
+      `<p class="supply-total">Estimasi tagihan <b>${money(lines.reduce((n, l) => n + l.total, 0))}</b></p>`;
     d.querySelector("[type=submit]").disabled = !lines.length;
     d.querySelectorAll("[data-remove-unit]").forEach(
       (b) =>
@@ -619,9 +619,7 @@ export function openDispatch(s, store, ctx) {
     if (!codes.length && !units.length) throw Error("Scan barang terlebih dahulu.");
     if (
       !(await confirmAction(
-        branch
-          ? "Kirim barang pada daftar ini ke cabang tujuan?"
-          : "Terbitkan invoice dan surat jalan? Barang yang dipilih akan keluar dari stok gudang.",
+        "Terbitkan invoice dan surat jalan? Barang yang dipilih akan keluar dari stok gudang.",
       ))
     )
       return;
@@ -640,11 +638,7 @@ export function openDispatch(s, store, ctx) {
     );
     d.close();
     ctx.render();
-    ctx.toast(
-      branch
-        ? "Mutasi tercatat. Surat jalan siap dicetak."
-        : "Kiriman diterbitkan. Buka detail untuk cetak invoice dan surat jalan.",
-    );
+    ctx.toast("Kiriman diterbitkan. Buka detail untuk cetak invoice dan surat jalan.");
   });
   draw();
   input.focus();

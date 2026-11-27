@@ -263,7 +263,9 @@ dan push dari PowerShell, jalankan `.\scripts\windows\push-patch-131.cmd`.
 
 `pos/receiving-session-ui.mjs` menampilkan nota untuk cabang penerima.
 `pos/warehouse-ui.mjs` menghubungkan pembukaan nota, pemilihan barang kiriman
-dan pemeriksaan jumlah fisik di tujuan. `pos/warehouse-flow.mjs` menangani
+dan pemeriksaan jumlah fisik di tujuan. `pos/branch-dispatch-ui.mjs` memuat
+form transfer cabang dengan pengirim dari data karyawan dan pencarian SKU.
+`pos/warehouse-flow.mjs` menangani alokasi FIFO barang satuan,
 barcode, rincian batch dan dokumen cetak. `database/branch-stock-132.sql`
 menerapkan otorisasi, mutasi stok dan pembayaran supplier cabang di server.
 Lihat [alur dan pemasangan patch 132](PATCH-132-ALUR-CABANG.md).
