@@ -449,9 +449,6 @@ td {
 .product-entry-modal .product-photo-controls > b {
   font-size: var(--text-dialog-label);
 }
-.product-entry-modal .product-photo-editor {
-  grid-template-columns: minmax(0, 148px) minmax(0, 1fr);
-}
 .product-entry-modal .product-upload {
   font-size: var(--text-control);
 }
@@ -1055,12 +1052,6 @@ tbody tr:hover {
   outline-color: var(--focus);
 }
 @media (max-width: 700px) {
-  .product-entry-modal .product-photo-editor {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .product-entry-modal .product-photo-frame {
-    width: min(100%, 120px);
-  }
   .dash-section-head h2,
   .dash-metric h2 {
     font-size: var(--text-md);
@@ -1078,12 +1069,6 @@ tbody tr:hover {
   }
 }
 @media (max-width: 480px) {
-  .product-entry-modal .product-photo-editor {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  }
-  .product-entry-modal .product-photo-frame {
-    width: 100%;
-  }
   .report-actions button {
     padding: 10px 8px;
     font-size: var(--text-xs);

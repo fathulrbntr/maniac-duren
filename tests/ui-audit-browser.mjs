@@ -210,6 +210,29 @@ try {
         await productDialog.evaluate((el) => el.scrollWidth <= el.clientWidth + 1),
         `product dialog overflow ${width}`,
       );
+      const fields = await productDialog.evaluate((el) =>
+        ["itemType", "stockUnit", "sku", "barcode", "priceKg", "pricePiece"].map(
+          (name) => {
+            const { left, top, width } = el
+              .querySelector(`[name="${name}"]`)
+              .getBoundingClientRect();
+            return { left, top, width };
+          },
+        ),
+      );
+      const [type, unit, sku, barcode, kg, piece] = fields;
+      if (width > 640) {
+        assert.deepEqual([sku.left, kg.left], [type.left, type.left]);
+        assert.deepEqual([barcode.left, piece.left], [unit.left, unit.left]);
+        assert.equal(sku.top, barcode.top);
+        assert.equal(kg.top, piece.top);
+        assert(fields.every((field) => Math.abs(field.width - type.width) < 1));
+      } else {
+        assert(
+          fields.every((field) => field.left === type.left && field.width === type.width),
+        );
+        assert(fields.every((field, i) => i === 0 || field.top > fields[i - 1].top));
+      }
       await productDialog.getByRole("button", { name: "Tutup", exact: true }).click();
       await productDialog.waitFor({ state: "hidden" });
       await nav("stock");
