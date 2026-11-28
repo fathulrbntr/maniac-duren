@@ -203,7 +203,7 @@ select:focus-visible {
 button,
 .button {
   border: 1px solid var(--line);
-  background: var(--surface);
+  background: var(--glass-control, var(--surface));
   padding: 11px 17px;
   border-radius: 9px;
   color: var(--ink);
@@ -1776,7 +1776,7 @@ h4 {
 }
 button,
 .button {
-  background: var(--surface);
+  background: var(--glass-control, var(--surface));
   border-color: var(--line);
   color: var(--ink);
   border-radius: 10px;

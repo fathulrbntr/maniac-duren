@@ -101,7 +101,7 @@
   padding: 16px;
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: var(--surface);
+  background: var(--glass-sheet);
 }
 .device-settings-actions p {
   margin: 0;

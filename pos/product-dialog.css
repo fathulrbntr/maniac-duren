@@ -3,7 +3,7 @@
   --product-row-gap: 16px;
   --product-column-gap: 24px;
   --product-panel: var(--surface);
-  --product-input: var(--surface-soft);
+  --product-input: var(--glass-field);
   --product-text: var(--ink);
   --product-muted: var(--muted);
   --product-action: var(--action-bg);
@@ -14,7 +14,7 @@
   padding: 24px;
   border: 1px solid var(--line);
   border-radius: var(--radius-modal);
-  background: var(--product-panel);
+  background: var(--glass-sheet);
   color: var(--product-text);
   overflow: auto;
   container-type: inline-size;

@@ -31,7 +31,7 @@
   padding: 18px;
   border: 1px solid var(--line);
   border-radius: var(--radius-card);
-  background: var(--surface);
+  background: var(--glass-panel);
 }
 .receipt-product-head {
   margin-bottom: 14px;
@@ -103,7 +103,7 @@
   margin-top: 24px;
 }
 .receipt-total {
-  background: var(--surface-soft);
+  background: var(--glass-panel);
   border-color: var(--line);
 }
 .receipt-grand-total {
@@ -157,7 +157,7 @@
   margin: 16px 0;
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: var(--surface-soft);
+  background: var(--glass-panel);
 }
 .weigh-scan-controls {
   display: flex;
@@ -212,7 +212,7 @@
   padding: 16px;
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: var(--surface-soft);
+  background: var(--glass-panel);
 }
 .fruit-scan-selection[hidden] {
   display: none;

@@ -24,28 +24,10 @@
   overflow: hidden;
   border-radius: 24px;
   padding: clamp(20px, 4vw, 40px) clamp(18px, 4vw, 42px) 58px;
-  color: #fff;
-  background: linear-gradient(112deg, #174838, #216852 68%, #377365);
-}
-.home-hero::after {
-  content: "";
-  position: absolute;
-  z-index: -1;
-  pointer-events: none;
-  width: 68%;
-  height: 180%;
-  right: -15%;
-  top: -42%;
-  transform: rotate(-18deg);
-  background: repeating-radial-gradient(
-    ellipse at 75% 24%,
-    transparent 0 18px,
-    #ffffff0d 19px 20px,
-    transparent 21px 28px
-  );
-}
-:root[data-theme="dark"] .home-hero {
-  background: linear-gradient(112deg, #19382f, #225343 68%, #31574e);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  background: var(--glass-hero);
+  box-shadow: var(--glass-shadow);
 }
 .home-hero-meta,
 .home-context > span,
@@ -63,7 +45,7 @@
 }
 .home-hero-meta {
   font-size: var(--text-sm);
-  color: #ecf5e9;
+  color: var(--ink);
 }
 .home-hero-meta .account-profile {
   padding: 0;
@@ -74,22 +56,22 @@
 .home-hero-meta .account-avatar {
   width: 44px;
   height: 44px;
-  border: 1px solid #ffffff73;
+  border: 1px solid var(--line);
   border-radius: 50%;
   object-fit: cover;
 }
 .home-hero-meta .account-avatar {
   display: grid;
   place-items: center;
-  color: #164827;
-  background: #e5f2df;
+  color: var(--action-bg);
+  background: var(--surface-raised);
   font-size: var(--text-md);
 }
 .home-hero-meta .account-profile strong,
 .home-hero-meta .account-profile div span {
   white-space: normal;
   overflow-wrap: anywhere;
-  color: #fff;
+  color: var(--ink);
 }
 .home-hero-meta .account-profile strong {
   font-size: var(--text-md);
@@ -98,7 +80,7 @@
 .home-hero-meta .account-profile div span,
 .home-context time {
   font-size: var(--text-xs);
-  color: #e0efdf;
+  color: var(--muted);
 }
 .home-context {
   display: grid;
@@ -134,7 +116,7 @@
 .home-summary h2 {
   font-size: var(--text-sm);
   font-weight: 600;
-  color: #e0efdf;
+  color: var(--muted);
 }
 .home-value-row {
   flex-wrap: wrap;
@@ -146,20 +128,20 @@
   overflow-wrap: anywhere;
 }
 .home-summary p {
-  color: #e0efdf;
+  color: var(--muted);
   font-size: var(--text-sm);
   margin-top: 6px;
 }
 .home-hero button {
-  color: #fff;
-  background: #ffffff0e;
-  border: 1px solid #ffffff59;
+  color: var(--ink);
+  background: var(--glass-control);
+  border: 1px solid var(--line);
 }
 .home-hero button:hover {
-  background: #ffffff28;
+  background: var(--hover);
 }
 .home-hero button:focus-visible {
-  outline-color: white;
+  outline-color: var(--focus);
   outline-offset: -3px;
 }
 .home-hero [data-home-eye] {
@@ -254,15 +236,16 @@
   width: 46px;
   height: 46px;
   border-radius: 15px;
-  background: var(--success-bg);
+  background: var(--success-bg) var(--glass-glint);
+  box-shadow: inset 0 1px 0 var(--glass-rim);
   color: var(--success);
 }
 .home-tile:is(:nth-child(4n + 2), :nth-child(4n + 4)) .home-tile-icon {
-  background: var(--warning-bg);
+  background: var(--warning-bg) var(--glass-glint);
   color: var(--warning);
 }
 .home-tile:nth-child(4n + 3) .home-tile-icon {
-  background: var(--info-bg);
+  background: var(--info-bg) var(--glass-glint);
   color: var(--info);
 }
 .home-tile.home-all .home-tile-icon {
@@ -320,7 +303,8 @@
   }
   .home-body {
     border-radius: 24px 24px 0 0;
-    background: var(--bg);
+    background: transparent;
+    margin-top: 0;
     padding: 14px 16px 0;
     gap: 12px;
   }
@@ -338,8 +322,8 @@
     font-size: var(--text-xs);
   }
   .home-hero {
-    border-radius: 0;
-    padding-bottom: 44px;
+    margin: 12px 16px 0;
+    padding-bottom: 20px;
   }
   .home-hero-body {
     display: grid;
@@ -438,7 +422,7 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   margin: 20px 0 0;
   padding-top: 16px;
-  border-top: 1px solid #ffffff45;
+  border-top: 1px solid var(--line);
 }
 .home-financials > div {
   min-width: 0;
@@ -448,11 +432,11 @@
   padding-left: 0;
 }
 .home-financials > div + div {
-  border-left: 1px solid #ffffff45;
+  border-left: 1px solid var(--line);
 }
 .home-financials dt {
   font-size: var(--text-sm);
-  color: #e0efdf;
+  color: var(--muted);
 }
 .home-financials dd {
   margin: 4px 0 0;

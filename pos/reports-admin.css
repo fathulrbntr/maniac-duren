@@ -75,7 +75,8 @@
   gap: 24px;
   flex-wrap: wrap;
   padding: 14px;
-  background: var(--surface-soft);
+  background: var(--glass-panel);
+  box-shadow: var(--glass-shadow);
   border-radius: 12px;
 }
 .doc-summary b {
@@ -344,7 +345,8 @@
 .report-tab-group {
   min-width: 0;
   padding: 14px;
-  background: var(--surface);
+  background: var(--glass-panel);
+  box-shadow: var(--glass-shadow);
   border: 1px solid var(--line);
   border-radius: var(--radius-card);
 }

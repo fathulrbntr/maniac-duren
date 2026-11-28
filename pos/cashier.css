@@ -18,6 +18,7 @@
 .order-screen .order-catalog {
   container: catalog / inline-size;
   background: transparent;
+  box-shadow: none;
   padding: 0;
   border: 0;
   border-radius: 0;
@@ -46,7 +47,7 @@
   gap: 10px;
   flex: 0 1 280px;
   min-width: 170px;
-  background: var(--surface-soft);
+  background: var(--glass-control);
   border: 1px solid var(--line);
   border-radius: var(--radius-control);
   padding: 0 12px;
@@ -76,7 +77,8 @@
   column-gap: 16px;
   row-gap: 6px;
   align-items: center;
-  background: var(--surface);
+  background: var(--glass-panel);
+  box-shadow: var(--glass-shadow);
   border: 1px solid var(--line);
   border-radius: var(--radius-control);
   padding: 12px 14px;
@@ -159,7 +161,7 @@
   line-height: 20px;
   border: 1px solid var(--action-bg);
   border-radius: var(--radius-pill);
-  background: var(--surface-soft);
+  background: var(--glass-control);
   color: var(--action-bg);
 }
 .order-category span {
@@ -177,7 +179,7 @@
   background: var(--surface-raised);
 }
 .order-category.selected {
-  background: var(--action-bg);
+  background: var(--action-bg) var(--glass-action);
   border-color: var(--action-bg);
   color: var(--action-ink);
 }
@@ -271,7 +273,7 @@
   min-height: 42px;
   flex: none;
   padding: 10px;
-  background: var(--surface-soft);
+  background: var(--glass-control);
   color: var(--ink);
   border: 1px solid transparent;
   border-radius: var(--radius-control);
@@ -477,7 +479,7 @@
 .order-checkout-footer {
   flex: none;
   padding: 0;
-  background: var(--surface);
+  background: transparent;
   border: 0;
 }
 .order-bill {

@@ -45,7 +45,7 @@
 }
 .deposit-balance {
   padding: 14px 16px;
-  background: var(--surface-soft);
+  background: var(--glass-hero);
   border: 1px solid var(--line);
   border-radius: var(--radius-control);
   margin: 16px 0;

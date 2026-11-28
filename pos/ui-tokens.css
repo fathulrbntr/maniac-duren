@@ -74,20 +74,48 @@
   --backdrop: #0009;
   --shadow: 0 8px 32px #0000000d;
   --ui-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24'%3E%3Cpath d='m6 9 6 6 6-6' fill='none' stroke='%236d7075' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  --glass-mint: #bfdfcf;
-  --glass-blue: #cddceb;
-  --glass-rim: #ffffffaf;
-  --glass-shade: #173e3010;
+  --glass-mint: #a9d8c5;
+  --glass-blue: #bfd6e4;
+  --glass-rim: #ffffffcc;
+  --glass-shade: #214b3c16;
   --glass-wash:
-    radial-gradient(ellipse 54rem 24rem at 8% 0%, var(--glass-mint), transparent 76%),
-    radial-gradient(ellipse 46rem 27rem at 92% 0%, var(--glass-blue), transparent 80%);
+    radial-gradient(ellipse 59rem 33rem at 2% 0, var(--glass-mint), transparent 75%),
+    radial-gradient(
+      ellipse 54rem 46rem at 100% 14rem,
+      var(--glass-blue),
+      transparent 78%
+    ),
+    linear-gradient(
+      155deg,
+      transparent 36%,
+      color-mix(in srgb, var(--glass-mint) 23%, transparent)
+    );
   --glass-panel: linear-gradient(
-    125deg,
-    color-mix(in srgb, var(--surface) 89%, transparent),
-    color-mix(in srgb, var(--surface) 68%, transparent)
+    138deg,
+    color-mix(in srgb, var(--surface-soft) 94%, transparent),
+    color-mix(in srgb, var(--surface) 82%, transparent) 46%,
+    color-mix(in srgb, var(--surface) 69%, var(--glass-blue)) 100%
   );
-  --glass-chrome: color-mix(in srgb, var(--surface) 84%, transparent);
-  --glass-shadow: inset 0 1px 0 var(--glass-rim), 0 5px 18px var(--glass-shade);
+  --glass-hero: linear-gradient(
+    116deg,
+    color-mix(in srgb, var(--surface) 65%, var(--glass-mint)),
+    color-mix(in srgb, var(--surface) 86%, transparent) 55%,
+    color-mix(in srgb, var(--surface) 47%, var(--glass-blue))
+  );
+  --glass-control: linear-gradient(
+    165deg,
+    color-mix(in srgb, var(--surface-soft) 92%, transparent),
+    color-mix(in srgb, var(--surface) 80%, var(--glass-mint))
+  );
+  --glass-field: color-mix(in srgb, var(--surface-soft) 82%, var(--glass-mint));
+  --glass-sheet: var(--glass-panel) var(--surface);
+  --glass-chrome: color-mix(in srgb, var(--surface) 83%, transparent);
+  --glass-shadow: inset 0 1px 0 var(--glass-rim), 0 5px 20px var(--glass-shade);
+  --glass-glint: linear-gradient(
+    150deg,
+    color-mix(in srgb, var(--glass-rim) 38%, transparent),
+    transparent 60%
+  );
   --glass-action: linear-gradient(
     155deg,
     color-mix(in srgb, var(--action-bg) 92%, white),
@@ -112,8 +140,8 @@
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --glass-mint: #284b40;
-  --glass-blue: #303f55;
+  --glass-mint: #305c4d;
+  --glass-blue: #394b62;
   --glass-rim: #d7f3e42a;
   --glass-shade: #0003;
   --bg: #14211f;
@@ -154,11 +182,19 @@
     --radius-modal: 16px;
   }
 }
-@media (prefers-reduced-transparency: reduce), (forced-colors: active) {
+@media (prefers-reduced-transparency: reduce),
+  (prefers-contrast: more),
+  (forced-colors: active),
+  print {
   :root,
   :root[data-theme="dark"] {
     --glass-wash: none;
     --glass-panel: var(--surface);
+    --glass-hero: var(--surface-raised);
+    --glass-control: var(--surface-soft);
+    --glass-field: var(--surface-soft);
+    --glass-sheet: var(--surface);
+    --glass-glint: none;
     --glass-chrome: var(--surface);
     --glass-blur: none;
     --glass-shadow: none;

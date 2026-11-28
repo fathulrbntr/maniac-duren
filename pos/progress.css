@@ -31,6 +31,10 @@ tr[data-progress] > td {
 tr[data-progress] > td:first-child {
   box-shadow: inset 3px 0 var(--progress-ink);
 }
+/* Keep the workflow tint visible beneath the highlight on status cards. */
+:is(article, .note-payment-card, .shift-banner, .home-work-card)[data-progress] {
+  background-image: var(--glass-glint);
+}
 .progress-badge {
   display: inline-flex;
   align-items: center;

@@ -9,7 +9,8 @@
   min-width: 0;
 }
 .payment-group {
-  background: var(--surface);
+  background: var(--glass-panel);
+  box-shadow: var(--glass-shadow);
   border: 1px solid var(--line);
   border-radius: var(--radius-card);
   margin-bottom: 18px;
@@ -147,7 +148,7 @@
 .payment-note {
   padding: 18px 20px;
   border: 1px solid var(--line);
-  background: var(--surface-soft);
+  background: var(--glass-control);
   border-radius: var(--radius-control);
   color: var(--muted);
   font-size: var(--text-sm);
@@ -161,7 +162,7 @@
   position: sticky;
   bottom: 0;
   padding: 18px 0;
-  background: var(--bg, var(--surface));
+  background: var(--glass-sheet);
   z-index: 2;
 }
 .payment-save span {

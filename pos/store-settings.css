@@ -111,7 +111,8 @@
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: var(--surface);
+  background: var(--glass-panel);
+  box-shadow: var(--glass-shadow);
 }
 .location-section-head {
   display: flex;
