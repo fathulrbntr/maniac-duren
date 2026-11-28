@@ -211,6 +211,7 @@ button,
 .header-row > button,
 .toolbar button,
 .team-actions button,
+.employee-more button,
 .intro-actions button,
 .report-actions button,
 .doc-toolbar button,
@@ -675,7 +676,12 @@ input[type="radio"] {
 .report-actions,
 .doc-toolbar {
   gap: 8px;
-  align-items: center;
+}
+.intro-actions,
+.doc-toolbar,
+.team-actions,
+.toolbar:where(:not(:has(> :not(button, .button)))) {
+  align-items: stretch;
 }
 .toolbar {
   min-width: 0;
@@ -1048,7 +1054,7 @@ tbody tr:hover {
     display: grid;
     width: 100%;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: stretch;
+    grid-auto-rows: 1fr;
   }
   .intro-actions > :last-child:nth-child(odd) {
     grid-column: 1 / -1;
@@ -1110,14 +1116,6 @@ tbody tr:hover {
     flex: 1 1 0;
   }
 }
-@media (max-width: 480px) {
-  .report-actions button {
-    padding: 10px 8px;
-    font-size: var(--text-xs);
-    white-space: normal;
-  }
-}
-
 /* Common visual language for every screen; feature-specific layouts stay intact. */
 button,
 .button {

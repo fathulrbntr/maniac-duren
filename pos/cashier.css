@@ -849,7 +849,7 @@
 
 /* Shift controls stay available without displacing the catalog. */
 .shell[data-page="orders"] .shift-banner {
-  padding: 12px 16px;
+  padding-block: 12px;
   margin-bottom: 20px;
   gap: 12px;
 }
@@ -859,24 +859,4 @@
 }
 .shell[data-page="orders"] .shift-banner b {
   font-size: 13px;
-}
-.shell[data-page="orders"] .shift-banner button {
-  font-size: 12px;
-  padding: 10px 12px;
-}
-@media (max-width: 760px) {
-  .shell[data-page="orders"] .shift-banner {
-    flex-wrap: wrap;
-  }
-  .shell[data-page="orders"] .shift-banner > div:last-child {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    width: 100%;
-  }
-  .shell[data-page="orders"] .shift-banner button {
-    flex: 1;
-    width: auto;
-    min-width: 0;
-  }
 }

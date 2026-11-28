@@ -475,7 +475,10 @@
   bottom: 100%;
   display: grid;
   gap: 6px;
+  grid-auto-rows: 1fr;
+  width: max-content;
   min-width: 165px;
+  max-width: min(16rem, calc(100vw - 3rem));
   padding: 10px;
   border: 1px solid var(--line);
   border-radius: 10px;

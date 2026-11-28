@@ -11,6 +11,41 @@ import {
   applyStockDemoAction,
   readStockDemo,
 } from "../pos/stock-demo.mjs";
+async function assertAlignedActions(group, { shift = false } = {}) {
+  const buttons = await group.locator("button:visible").evaluateAll((nodes) =>
+    nodes.map((button) => {
+      const box = button.getBoundingClientRect();
+      const style = getComputedStyle(button);
+      return {
+        top: box.top,
+        height: box.height,
+        width: box.width,
+        radius: style.borderRadius,
+        fits:
+          button.scrollWidth <= button.clientWidth + 1 &&
+          button.scrollHeight <= button.clientHeight + 1,
+      };
+    }),
+  );
+  assert(buttons.length >= 2, `Missing actions in ${group}`);
+  const [first] = buttons;
+  for (const item of buttons) {
+    assert(item.height >= 44 && item.fits, `Small or clipped action in ${group}`);
+    assert.equal(item.radius, first.radius);
+    assert(
+      Math.abs(item.height - first.height) < 1,
+      `Unequal action heights in ${group}`,
+    );
+    if (shift) {
+      assert.equal(item.top, first.top);
+      assert(Math.abs(item.width - first.width) < 1, "Unequal shift button widths");
+    }
+  }
+  if (shift) {
+    assert.equal(buttons.length, 3);
+    assert(first.height <= 48, "Oversized shift actions");
+  }
+}
 const f = fixture();
 Object.assign(
   f.state.access,
@@ -156,7 +191,7 @@ try {
   for (const theme of ["light", "dark"]) {
     if ((await page.evaluate(() => document.documentElement.dataset.theme)) !== theme)
       await page.locator("[data-theme-toggle]").click();
-    for (const width of [1600, 1024, 900, 901, 390, 360, 1600]) {
+    for (const width of [1600, 1024, 900, 901, 390, 360, 320, 1600]) {
       step = { phase: "resize", theme, width, view: "dashboard" };
       console.log(`UI audit 117C: theme=${theme} width=${width}`);
       await page.setViewportSize({ width, height: 1000 });
@@ -168,6 +203,23 @@ try {
           mainWidth: document.querySelector("main").clientWidth,
           mainScroll: document.querySelector("main").scrollWidth,
         }));
+        if (view === "orders" || view === "shifts")
+          await assertAlignedActions(page.locator(".shift-banner-actions"), {
+            shift: true,
+          });
+        if (width <= 390) {
+          if (view === "reports")
+            await assertAlignedActions(page.locator(".report-heading .report-actions"));
+          if (view === "documents")
+            for (const group of await page.locator(".doc-toolbar").all())
+              await assertAlignedActions(group);
+          if (view === "employees") {
+            const menu = page.locator(".employee-more").first();
+            await menu.locator("summary").click();
+            await assertAlignedActions(menu);
+            await menu.locator("summary").click();
+          }
+        }
         if (view === "orders" && [1600, 360].includes(width)) {
           const card = page.locator("#order-products .order-product:visible").first();
           const geometry = await card.evaluate((el) => {
@@ -522,7 +574,7 @@ try {
   assert.deepEqual(missing, []);
   fs.writeFileSync(path.join(output, "layouts.json"), JSON.stringify(layouts, null, 2));
   console.log(
-    `PASS UI audit: ${views.length} menus × 7 viewport steps × 2 themes, breakpoint round trips, product/receipt dialogs, session reload, unique module URLs, supplier note, receiving, payment, correction, transfer, expense and recipe dialogs, and 5 back-office layouts at 320/390/768/1280px.`,
+    `PASS UI audit: ${views.length} menus × 8 viewport steps × 2 themes, aligned action buttons, breakpoint round trips, product/receipt dialogs, session reload, unique module URLs, supplier note, receiving, payment, correction, transfer, expense and recipe dialogs, and 5 back-office layouts at 320/390/768/1280px.`,
   );
 } catch (error) {
   // Preserve the exact phase and state; a click timeout alone cannot distinguish
