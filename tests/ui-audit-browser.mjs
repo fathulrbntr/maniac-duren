@@ -472,6 +472,7 @@ try {
   origin.locationType = destination.locationType = "store";
   const item = state.products.find((product) => product.stockUnit === "pcs");
   const fruit = state.products.find((product) => product.stockUnit === "kg_butir");
+  item.barcode = "4006381333931";
   item.name = "Crystalyn kemasan " + "A".repeat(50);
   Object.assign(state, {
     supplierNotesVersion: 112,
@@ -702,6 +703,81 @@ try {
     if (await page.locator('.shell[data-mobile-open="true"]').count())
       await page.locator("#pos-sidebar [data-sidebar-toggle]").click();
   };
+  const scan = dock.getByRole("button", { name: "Pindai barang" });
+  const bounds = await scan.boundingBox();
+  assert(Math.abs(bounds.x + bounds.width / 2 - 160) < 2);
+  assert(bounds.y + bounds.height <= 844);
+  const lookup = page.getByRole("dialog", { name: "Pindai barang" });
+  await page.evaluate((bits) => {
+    Object.defineProperty(navigator.mediaDevices, "getUserMedia", {
+      configurable: true,
+      value: async () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = 500;
+        canvas.height = 160;
+        const ctx = canvas.getContext("2d");
+        const media = canvas.captureStream(12);
+        const [track] = media.getVideoTracks();
+        window.lookupTestTrack = track;
+        const paint = () => {
+          ctx.fillStyle = "white";
+          ctx.fillRect(0, 0, 500, 160);
+          ctx.fillStyle = "black";
+          [...bits].forEach((bit, i) => {
+            if (bit === "1") ctx.fillRect(60 + i * 4, 18, 4, 124);
+          });
+        };
+        paint();
+        const timer = setInterval(() => {
+          if (track.readyState === "ended") clearInterval(timer);
+          else paint();
+        }, 80);
+        return media;
+      },
+    });
+  }, "10100011010100111010111101111010001001011001101010100001010000101000010111010010000101100110101");
+  await scan.click();
+  await lookup.getByRole("heading", { name: item.name }).waitFor({ timeout: 12000 });
+  assert.equal(await lookup.getByLabel("Barcode atau SKU").inputValue(), item.barcode);
+  assert.equal(await page.evaluate(() => window.lookupTestTrack.readyState), "ended");
+  await page.evaluate(() =>
+    Object.defineProperty(navigator.mediaDevices, "getUserMedia", {
+      configurable: true,
+      value: async () => {
+        throw new DOMException("Denied", "NotAllowedError");
+      },
+    }),
+  );
+  await lookup.getByRole("button", { name: "Pindai lagi" }).click();
+  await lookup.getByText(/Akses kamera belum diizinkan/).waitFor();
+  const codeInput = lookup.getByLabel("Barcode atau SKU");
+  await codeInput.fill("barang-tidak-dikenal");
+  await codeInput.press("Enter");
+  await lookup.getByText(/Barang tidak ditemukan/).waitFor();
+  await codeInput.fill(fruit.sku);
+  await lookup.getByRole("button", { name: "Cari", exact: true }).click();
+  await lookup.getByRole("heading", { name: fruit.name }).waitFor();
+  await lookup.getByRole("button", { name: "Tutup", exact: true }).click();
+  assert(await page.locator('.shell[data-page="retailFunds"]').isVisible());
+  // Android can resolve camera permission after the dialog has already closed.
+  await page.evaluate(() =>
+    Object.defineProperty(navigator.mediaDevices, "getUserMedia", {
+      configurable: true,
+      value: () =>
+        new Promise((resolve) => {
+          window.resolveLookupCamera = () => {
+            const media = document.createElement("canvas").captureStream();
+            window.lookupTestTrack = media.getVideoTracks()[0];
+            resolve(media);
+          };
+        }),
+    }),
+  );
+  await scan.click();
+  await lookup.getByText("Menyiapkan kamera…").waitFor();
+  await lookup.getByRole("button", { name: "Tutup", exact: true }).click();
+  await page.evaluate(() => window.resolveLookupCamera());
+  await page.waitForFunction(() => window.lookupTestTrack.readyState === "ended");
   await configure.click();
   await editor.locator('input[value="supplierNotes"]').check();
   await applyDock.click();
@@ -712,7 +788,9 @@ try {
     await input.check();
   await applyDock.click();
   assert(
-    await dock.locator(".dock-pages").evaluate((el) => el.scrollWidth > el.clientWidth),
+    await dock
+      .locator("[data-dock-right]")
+      .evaluate((el) => el.scrollWidth > el.clientWidth),
   );
   const lastShortcut = dock.locator(".dock-pages [data-view]").last();
   const lastView = await lastShortcut.getAttribute("data-view");

@@ -24,6 +24,21 @@ export function normalizeBarcode(raw, settings = readDeviceSettings()) {
   if (!code || code.length > 80) throw Error("Kode produk harus berisi 1–80 karakter.");
   return code; // Keep leading zeroes; barcode is an identifier, never a number.
 }
+export function catalogCodeProduct(products, code) {
+  let matches = products.filter((p) => String(p.barcode || "").trim() === code);
+  if (!matches.length)
+    matches = products.filter(
+      (p) =>
+        String(p.sku || "")
+          .trim()
+          .toLowerCase() === code.toLowerCase(),
+    );
+  if (matches.length > 1)
+    throw Error(
+      "Kode dipakai lebih dari satu produk. Perbaiki barcode/SKU di Master Barang.",
+    );
+  return matches[0];
+}
 export function barcodeProduct(state, raw, settings = readDeviceSettings()) {
   const code = normalizeBarcode(raw, settings);
   const products = state.products || [];
@@ -59,28 +74,16 @@ export function barcodeProduct(state, raw, settings = readDeviceSettings()) {
       );
     return { code, product, scale };
   }
-  let matches = products.filter((p) => String(p.barcode || "").trim() === code);
-  if (!matches.length)
-    matches = products.filter(
-      (p) =>
-        String(p.sku || "")
-          .trim()
-          .toLowerCase() === code.toLowerCase(),
-    );
-  if (matches.length > 1)
-    throw Error(
-      "Kode dipakai lebih dari satu produk. Perbaiki barcode/SKU di Master Barang.",
-    );
-  if (!matches.length) {
+  const match = catalogCodeProduct(products, code);
+  if (!match) {
     if (/^14\d{11}$/.test(code))
       throw Error(
         "Label timbangan lama berawalan 14 belum didukung. Cetak ulang dengan format POS KG berawalan 21.",
       );
     throw Error("Barcode/SKU belum terdaftar di Master Barang.");
   }
-  if (!posVisible(matches[0]))
-    throw Error("Produk ini adalah bahan dan tidak dijual di POS.");
-  return { code, product: matches[0] };
+  if (!posVisible(match)) throw Error("Produk ini adalah bahan dan tidak dijual di POS.");
+  return { code, product: match };
 }
 // Confirmed CAS CL5200-30B format: 21 + IIII + WWWWWW + C.
 // Six weight digits are grams; the final digit is the EAN-13 checksum.

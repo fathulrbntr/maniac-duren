@@ -54,6 +54,7 @@ test("dock preferences isolate accounts and discard duplicate or inaccessible pa
       { userId },
     );
     assert.equal(root.querySelectorAll("[data-dock-settings]").length, 1);
+    assert.equal(root.querySelectorAll("[data-item-lookup]").length, 1);
     return root
       .querySelectorAll(".dock-pages button")
       .map((button) => button.dataset.view);
