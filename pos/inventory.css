@@ -259,7 +259,7 @@
   border-radius: 12px;
   background: var(--inv-field);
 }
-.inv-layout-count {
+.inv-filter-toggle {
   display: none;
 }
 .inventory-workspace .inv-view button,
@@ -382,6 +382,14 @@
   gap: 12px;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 330px), 1fr));
   align-items: start;
+}
+.inv-results:not(:has(.inv-variant-group[open])) {
+  align-items: stretch;
+}
+.inv-card-container > .inv-card,
+.inv-catalog-card > .inv-variant-group:not([open]),
+.inv-variant-group:not([open]) > summary {
+  height: 100%;
 }
 .inv-catalog-card,
 .inv-card-container {
@@ -669,9 +677,6 @@
   font-size: 14px;
   margin-bottom: 16px;
 }
-.inv-layout-count {
-  font-size: 12px;
-}
 @media (min-width: 1100px) {
   .inventory-workspace {
     max-width: none;
@@ -683,9 +688,9 @@
   }
   .inv-filters {
     position: sticky;
-    top: 16px;
+    top: 96px;
     padding: 16px;
-    max-height: calc(100dvh - 32px);
+    max-height: calc(100dvh - 112px);
     overflow: auto;
     scrollbar-width: thin;
   }
@@ -697,20 +702,12 @@
   .inv-price-filters {
     grid-template-columns: minmax(0, 1fr);
   }
-  .inv-content {
-    overflow-x: auto;
-    scrollbar-width: thin;
-    padding-bottom: 8px;
-  }
   .inv-results {
-    grid-template-columns: repeat(3, minmax(260px, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 12px;
   }
   .inv-results.is-grid {
-    grid-template-columns: repeat(6, minmax(176px, 1fr));
-  }
-  .inv-layout-count {
-    display: inline;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
   }
   .inv-view {
     display: flex;
@@ -786,15 +783,44 @@
     gap: 8px;
   }
   .inventory-workspace .inv-status-filters button {
-    min-height: 48px;
-    padding: 12px;
+    min-height: var(--control-height);
+    min-width: 0;
+    gap: 4px;
+    padding: 8px;
     font-size: 13px;
+    flex-wrap: wrap;
   }
   .inv-filters {
-    padding: 16px;
+    padding: 0 12px;
+  }
+  .inventory-workspace .inv-filter-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-height: var(--control-height);
+    padding: 8px 4px;
+    border: 0;
+    background: transparent;
+    font-size: var(--text-body);
+    font-weight: var(--weight-semibold);
+  }
+  .inv-filter-toggle::after {
+    content: "";
+    width: 16px;
+    height: 16px;
+    background: var(--ui-chevron) center / contain no-repeat;
+  }
+  .inv-filter-toggle[aria-expanded="true"]::after {
+    transform: rotate(180deg);
+  }
+  .inv-filter-toggle[aria-expanded="false"] + form {
+    display: none;
   }
   .inv-filters form {
-    gap: 16px 12px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    padding: 8px 0 12px;
   }
   .inv-card,
   .inv-variant-group > summary {
@@ -802,48 +828,41 @@
     gap: 14px 8px;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 90px;
   }
+  .inv-layout-tools {
+    justify-content: space-between;
+  }
+  .inv-advanced > summary {
+    min-height: var(--control-height);
+    align-content: center;
+  }
   .inv-card-top {
-    grid-template-columns: 80px minmax(0, 1fr);
+    min-height: 0;
+    grid-template-columns: 72px minmax(0, 1fr);
     gap: 12px;
   }
   .inv-photo,
   .inv-summary-photo {
-    width: 80px;
-    height: 80px;
+    width: 72px;
+    height: 72px;
   }
   .inv-context {
     flex-wrap: wrap;
   }
 }
-@media (max-width: 380px) {
-  .inv-filters form {
-    grid-template-columns: minmax(0, 1fr);
+/* The results area also narrows when the sidebar opens on a laptop. */
+@container inventory-results (max-width: 760px) {
+  .inv-results {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
   }
-  .inv-card,
-  .inv-variant-group > summary {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  }
-  .inv-summary-metric[data-card-buy],
-  .inv-card > .inv-secondary {
-    grid-column: 1/-1;
-  }
-  .inv-summary-metric[data-card-sale],
-  .inv-card > .inv-metric:not(.inv-secondary) {
-    grid-column: 1;
-    grid-row: 3;
-  }
-  .inventory-workspace .inv-more,
-  .inventory-workspace .inv-add-first-variant {
-    grid-column: 2;
-    grid-row: 3;
-  }
-  .inv-stock-details {
-    grid-row: 4;
+}
+@container inventory-results (max-width: 1120px) {
+  .inv-results.is-grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 10rem), 1fr));
   }
 }
 
 /* Narrow cards keep currency values intact and move actions onto a full row. */
-@container inventory-card (max-width:340px) {
+@container inventory-card (max-width:420px) {
   .inv-results .inv-card,
   .inv-results .inv-variant-group > summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -868,6 +887,22 @@
   }
 }
 @container inventory-card (max-width:220px) {
+  .inv-results.is-grid .inv-card-top {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .inv-results.is-grid :is(.inv-photo, .inv-summary-photo) {
+    width: 56px;
+    height: 56px;
+  }
+  .inv-results.is-grid :is(.inv-summary-metric, .inv-metric) {
+    min-height: 0;
+  }
+  .inv-results.is-grid :is(.inv-copy, .inv-summary-copy) {
+    width: 100%;
+    min-height: 0;
+  }
   .inv-results .inv-summary-metric[data-card-buy],
   .inv-results .inv-card > .inv-secondary {
     grid-column: 1/-1;

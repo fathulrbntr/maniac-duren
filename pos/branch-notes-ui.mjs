@@ -7,7 +7,7 @@ import {
 import { productLabel, findProduct } from "./branch-dispatch-ui.mjs";
 import { escape as e, num, id } from "./core.mjs";
 import { quantity, scalar } from "./production.mjs";
-import { field, options, table } from "./supply-session-ui.mjs";
+import { field, options, recordTable, table } from "./supply-session-ui.mjs";
 import { outboundInventory } from "./warehouse-workflow.mjs";
 import { transferStatus } from "./warehouse-flow.mjs";
 
@@ -25,12 +25,15 @@ const btn = (key, label) =>
 
 export function branchNoteList(s, store) {
   const notes = (s.branchNotes || []).filter((n) => !store || n.sourceId === store);
-  return `<section class="panel">${table(
+  return `<section class="panel">${recordTable(
     ["Nota transfer", "Toko asal → tujuan", "Status", "Surat jalan", "Aksi"],
-    notes.map(
-      (n) =>
-        `<tr><td><b>${e(n.number)}</b></td><td>${e(n.origin.name)} → ${e(n.destination.name)}</td><td>${e(statusLabel(n))}</td><td>${e(n.deliveryNo || "—")}</td><td><button type="button" data-branch-note="${e(n.id)}">${store && n.status === "packing" ? "Siapkan barang" : "Buka nota"}</button></td></tr>`,
-    ),
+    notes.map((n) => [
+      `<b>${e(n.number)}</b>`,
+      `${e(n.origin.name)} → ${e(n.destination.name)}`,
+      e(statusLabel(n)),
+      e(n.deliveryNo || "—"),
+      `<button type="button" data-branch-note="${e(n.id)}">${store && n.status === "packing" ? "Siapkan barang" : "Buka nota"}</button>`,
+    ]),
   )}</section>`;
 }
 export function branchPreparationPage(s, store) {

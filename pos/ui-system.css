@@ -207,6 +207,8 @@ button,
   border-radius: var(--radius-pill);
   font-weight: var(--weight-semibold);
 }
+.supply-hero > button,
+.header-row > button,
 .toolbar button,
 .team-actions button,
 .intro-actions button,
@@ -216,7 +218,8 @@ button,
 .inventory-workspace .inv-add,
 .inventory-workspace .inv-transfer {
   min-height: var(--control-height);
-  padding: 10px 16px;
+  padding: 9px 16px;
+  line-height: 1.4;
   font-size: var(--text-body);
   border-radius: var(--radius-pill);
 }
@@ -606,17 +609,21 @@ input[type="radio"] {
 }
 .shell .sidebar-toggle,
 .shell .sidebar-logout {
-  min-height: 40px;
-  height: 40px;
-  width: 40px;
-  flex-basis: 40px;
+  min-height: var(--control-height);
+  height: var(--control-height);
+  width: var(--control-height);
+  flex-basis: var(--control-height);
   padding: 9px;
 }
 .shell .topbar .theme-toggle,
 .shell .topbar .stock-demo-toggle {
-  min-height: 40px;
-  height: 40px;
-  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--control-height);
+  min-width: var(--control-height);
+  height: var(--control-height);
+  border-radius: var(--radius-control);
 }
 .shell .workspace-tools {
   gap: 10px;
@@ -648,7 +655,7 @@ input[type="radio"] {
 .card-heading {
   gap: 16px;
 }
-.header-row h3,
+.header-row :is(h2, h3),
 .section-heading h3,
 .card-heading h3 {
   margin: 0;
@@ -659,6 +666,26 @@ input[type="radio"] {
 .doc-toolbar {
   gap: 8px;
   align-items: center;
+}
+.toolbar {
+  min-width: 0;
+}
+.toolbar > :is(input:not([type="checkbox"], [type="radio"]), select) {
+  max-width: 100%;
+  min-width: 0;
+}
+.filter-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(9rem, 1fr);
+  margin-bottom: 16px;
+}
+.filter-toolbar > :is(input, select) {
+  width: 100%;
+}
+@media (max-width: 540px) {
+  .filter-toolbar {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 .toolbar input,
 .toolbar select,
@@ -991,9 +1018,6 @@ tbody tr:hover {
   .form-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .table-wrap table {
-    min-width: 560px;
-  }
   .receipt-print table,
   .store-receipt-preview table {
     min-width: 0;
@@ -1011,11 +1035,19 @@ tbody tr:hover {
     padding: 10px 12px;
   }
   .intro-actions {
+    display: grid;
     width: 100%;
-    justify-content: flex-start;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
   }
-  .intro-actions button {
-    flex: 1 1 auto;
+  .intro-actions > :last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+  .header-row:has(> button) {
+    flex-wrap: wrap;
+  }
+  .panel > .header-row > button {
+    width: 100%;
   }
   .shell .workspace-tools {
     gap: 6px;
@@ -1180,8 +1212,8 @@ select:not([multiple]):not([size]),
   }
   .shell .topbar .stock-demo-toggle {
     font-size: 0;
-    width: 46px;
-    padding: 10px;
+    width: var(--control-height);
+    padding: 6px;
     gap: 0;
   }
   .shell .topbar .stock-demo-toggle .stock-demo-track {

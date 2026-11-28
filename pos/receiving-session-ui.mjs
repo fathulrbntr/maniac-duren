@@ -9,7 +9,14 @@ import {
   receiptVariance,
   saveWorkflow,
 } from "./warehouse-workflow.mjs";
-import { field, table, name, submitSession, bindRecovery } from "./supply-session-ui.mjs";
+import {
+  field,
+  recordTable,
+  table,
+  name,
+  submitSession,
+  bindRecovery,
+} from "./supply-session-ui.mjs";
 function receivedSummary(p) {
   const units = p.lines.filter((l) => p.expected?.[l.productId]?.unit);
   const result = [];
@@ -77,7 +84,7 @@ export function receivingPage(s, store, space) {
   const branch = s.branchStockVersion >= 132;
   const bo = backOffice(s, space),
     plans = (s.receiptPlans || []).filter((p) => bo || p.storeId === store);
-  return `<section class="supply-workspace"><div class="supply-hero"><div><span class="supply-eyebrow">PENERIMAAN SUPPLIER</span><h2>${bo ? (branch ? "Nota supplier cabang" : "Nota barang masuk gudang") : "Penerimaan & penimbangan"}</h2><p>${bo && branch ? "Pilih cabang penerima saat membuka nota supplier." : bo ? "Catat barang dan jumlah sesuai nota supplier. Stok masuk setelah gudang menyelesaikan penerimaan." : "Pilih nota untuk mencatat jumlah barang dan memindai label buah."}</p></div><div class="toolbar"><button type="button" data-supply-refresh>Perbarui</button>${bo ? '<button type="button" data-legacy-labels>Registrasi barcode stok lama</button><button type="button" class="primary" data-note-new>+ Nota supplier</button>' : ""}</div></div><section class="panel">${table(
+  return `<section class="supply-workspace"><div class="supply-hero"><div><span class="supply-eyebrow">PENERIMAAN SUPPLIER</span><h2>${bo ? (branch ? "Nota supplier cabang" : "Nota barang masuk gudang") : "Penerimaan & penimbangan"}</h2><p>${bo && branch ? "Pilih cabang penerima saat membuka nota supplier." : bo ? "Catat barang dan jumlah sesuai nota supplier. Stok masuk setelah gudang menyelesaikan penerimaan." : "Pilih nota untuk mencatat jumlah barang dan memindai label buah."}</p></div><div class="toolbar"><button type="button" data-supply-refresh>Perbarui</button>${bo ? '<button type="button" data-legacy-labels>Registrasi barcode stok lama</button><button type="button" class="primary" data-note-new>+ Nota supplier</button>' : ""}</div></div><section class="panel">${recordTable(
     [
       "Nota / supplier",
       ...(bo && branch ? ["Lokasi penerima"] : []),
@@ -87,18 +94,20 @@ export function receivingPage(s, store, space) {
       "Penerimaan",
       "Aksi",
     ],
-    plans.map((p) => {
-      return `<tr><td><b>${e(p.invoiceNo)}</b><small>${e(name(s, "suppliers", p.supplierId))}</small></td>${bo && branch ? `<td>${e(name(s, "locations", p.storeId))}</td>` : ""}<td>${e(p.date)}</td>${
-        bo
-          ? ["invoice", "shipping"]
-              .map((k) => {
-                const b = noteBalance(p, k);
-                return `<td>${money(b.total)}<small>${e(b.label)}</small></td>`;
-              })
-              .join("")
-          : ""
-      }<td>${receivedSummary(p)}</td><td>${e(receiptStatuses[p.receiving?.status] || "Belum dimulai")}</td><td><button type="button" ${bo ? `data-note-open="${e(p.id)}"` : `data-session-open="${e(p.id)}"`}>${bo ? "Buka nota" : p.receiving?.status === "completed" ? "Lihat penerimaan" : "Buka / lanjutkan"}</button></td></tr>`;
-    }),
+    plans.map((p) => [
+      `<b>${e(p.invoiceNo)}</b><small>${e(name(s, "suppliers", p.supplierId))}</small>`,
+      ...(bo && branch ? [e(name(s, "locations", p.storeId))] : []),
+      e(p.date),
+      ...(bo
+        ? ["invoice", "shipping"].map((k) => {
+            const balance = noteBalance(p, k);
+            return `${money(balance.total)}<small>${e(balance.label)}</small>`;
+          })
+        : []),
+      receivedSummary(p),
+      e(receiptStatuses[p.receiving?.status] || "Belum dimulai"),
+      `<button type="button" ${bo ? `data-note-open="${e(p.id)}"` : `data-session-open="${e(p.id)}"`}>${bo ? "Buka nota" : p.receiving?.status === "completed" ? "Lihat penerimaan" : "Buka / lanjutkan"}</button>`,
+    ]),
   )}</section>${bo ? cancelledNotes(s) : ""}</section>`;
 }
 export function receiptOfficeControls(s, p, d, ctx) {

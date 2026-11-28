@@ -66,5 +66,5 @@ export function systemDock(view, access) {
   );
   if (!items.length) return "";
   const current = ["cashier", "shifts"].includes(view) ? "orders" : view;
-  return `<nav class="system-dock" aria-label="Alur kerja operasional" style="--dock-columns:${items.length};--dock-width:${items.length * 56 + 12}px">${items.map(({ page, action, label, path }) => `<button type="button" ${action === "scan" ? "data-dock-scan" : `data-view="${page}"`} aria-label="${label}" title="${label}" ${!action && page === current ? 'aria-current="page"' : ""}><svg class="system-dock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="${path}"/></svg></button>`).join("")}</nav>`;
+  return `<nav class="system-dock" aria-label="Alur kerja operasional">${items.map(({ page, action, label, path }) => `<button type="button" ${action === "scan" ? "data-dock-scan" : `data-view="${page}"`} aria-label="${label}" title="${label}" ${!action && page === current ? 'aria-current="page"' : ""}><svg class="system-dock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="${path}"/></svg></button>`).join("")}</nav>`;
 }

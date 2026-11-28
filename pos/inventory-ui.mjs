@@ -267,7 +267,7 @@ export function inventoryPanel(state, store, filter = {}, mode = "products") {
         `<button type="button" data-inv-status="${key}" class="${(filter.status || "") === key ? "selected" : ""}" aria-pressed="${(filter.status || "") === key}"><span>${label}</span><b>${key === "" ? rows.length : rows.filter((x) => (key === "ready" ? x.ready : !x.ready)).length}</b></button>`,
     )
     .join("")}</div>
-  <div class="inv-layout"><div class="inv-filters"><form id="catalog-filter">
+  <div class="inv-layout"><div class="inv-filters"><button type="button" class="inv-filter-toggle" aria-controls="catalog-filter" aria-expanded="${Boolean(filter.filtersOpen)}">Filter dan tampilan</button><form id="catalog-filter">
    <label class="inv-filter-section"><span class="inv-label">JENIS ITEM</span><select name="itemType"><option value="">Semua jenis item</option>${options(
      Object.entries(itemTypes).filter(([k]) => mode !== "stock" || k !== "recipe"),
      filter.itemType,
@@ -285,7 +285,7 @@ export function inventoryPanel(state, store, filter = {}, mode = "products") {
      cats.map((c) => [c.id, c.name]),
      selectedCategory,
    )}</select></div>
-   <div class="inv-layout-tools"><div class="inv-view" role="group" aria-label="Tampilan produk">${["list", "grid"].map((v) => `<button type="button" data-inv-view="${v}" class="${(filter.layout || "list") === v ? "selected" : ""}" aria-pressed="${(filter.layout || "list") === v}" aria-label="Tampilan ${v === "list" ? "baris, 3 kartu per baris di desktop" : "kolom, 6 kartu per baris di desktop"}" title="${v === "list" ? "Baris: 3 kartu per baris (desktop)" : "Kolom: 6 kartu per baris (desktop)"}">${icon(v)}<span class="inv-layout-count" aria-hidden="true">${v === "list" ? 3 : 6}</span></button>`).join("")}</div><button type="button" class="inv-reset" data-inv-reset aria-label="Reset filter" title="Reset filter">${icon("reset")}</button></div>
+   <div class="inv-layout-tools"><div class="inv-view" role="group" aria-label="Tampilan produk">${["list", "grid"].map((v) => `<button type="button" data-inv-view="${v}" class="${(filter.layout || "list") === v ? "selected" : ""}" aria-pressed="${(filter.layout || "list") === v}" aria-label="Tampilan ${v === "list" ? "daftar" : "kisi ringkas"}" title="${v === "list" ? "Tampilan daftar" : "Tampilan kisi ringkas"}">${icon(v)}</button>`).join("")}</div><button type="button" class="inv-reset" data-inv-reset aria-label="Reset filter" title="Reset filter">${icon("reset")}</button></div>
    <details class="inv-advanced" ${filter.expired || filter.minPrice || filter.maxPrice ? "open" : ""}><summary>Filter lainnya</summary><div class="inv-advanced-fields"><label class="inv-check"><input type="checkbox" name="expired" ${filter.expired ? "checked" : ""}><span>Ada stok kedaluwarsa</span></label><div class="inv-price-filters"><label class="inv-price"><span>Rp</span><input type="number" min="0" step="any" name="minPrice" value="${e(filter.minPrice || "")}" placeholder="Harga minimum" aria-label="Harga minimum"></label><label class="inv-price"><span>Rp</span><input type="number" min="0" step="any" name="maxPrice" value="${e(filter.maxPrice || "")}" placeholder="Harga maksimum" aria-label="Harga maksimum"></label></div>${canManage ? '<button type="button" data-inventory-category-add>+ Tambah kategori</button>' : ""}</div></details>
   </form></div>
   <div class="inv-content"><div class="inv-context"><span>${e((state.stores || []).find((s) => s.id === store)?.name || (mode === "products" && store === null ? "Semua cabang" : "Pilih toko"))}</span><span data-inv-count aria-live="polite">${shown.length} dari ${rows.length} item</span></div><div class="inv-results ${filter.layout === "grid" ? "is-grid" : ""}">${cards(shown, mode, state)}</div><p class="inv-footnote">${mode === "stock" ? "Stok fisik termasuk barang belum siap dan kedaluwarsa. Tersedia dipakai menghitung tanggal, kondisi buah, kedaluwarsa, serta cadangan pesanan." : `Harga jual berlaku di semua toko. Harga beli merupakan referensi, bukan HPP. Ketersediaan ${e(itemTypes.recipe)} mengikuti bahan siap pakai.`} Filter Habis juga mencakup barang yang belum siap dipakai.</p></div></div>
@@ -312,6 +312,11 @@ export function bindInventory(state, store, filter, mode, ctx) {
     Object.assign(filter, f, { expired: form.elements.expired.checked });
     draw();
   };
+  const toggle = root.querySelector(".inv-filter-toggle");
+  toggle?.addEventListener("click", () => {
+    filter.filtersOpen = !filter.filtersOpen;
+    toggle.setAttribute("aria-expanded", String(filter.filtersOpen));
+  });
   form.onsubmit = (ev) => {
     ev.preventDefault();
     update();
@@ -354,7 +359,8 @@ export function bindInventory(state, store, filter, mode, ctx) {
       });
     }
     if (ev.target.closest("[data-inv-reset]")) {
-      for (const k of Object.keys(filter)) if (k !== "layout") delete filter[k];
+      for (const k of Object.keys(filter))
+        if (k !== "layout" && k !== "filtersOpen") delete filter[k];
       form.reset();
       root.querySelectorAll("input").forEach((i) => {
         if (i.type === "checkbox") i.checked = false;

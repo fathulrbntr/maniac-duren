@@ -4,6 +4,7 @@ import {
   branchNoteList,
   openBranchEstimate,
 } from "./branch-notes-ui.mjs";
+import { recordTable, table } from "./supply-session-ui.mjs";
 import { openBranchDispatch } from "./branch-dispatch-ui.mjs";
 import { confirmAction } from "../shared/confirmation.mjs";
 import { depositButtons } from "./cash-deposits-ui.mjs";
@@ -41,8 +42,6 @@ const opts = (xs, value = "") =>
         `<option value="${e(x.id)}" ${x.id === value ? "selected" : ""}>${e(x.name)}</option>`,
     )
     .join("");
-const table = (headers, rows) =>
-  `<div class="table-wrap"><table><thead><tr>${headers.map((x) => `<th>${x}</th>`).join("")}</tr></thead><tbody>${rows.join("") || `<tr><td colspan="${headers.length}" class="empty">Belum ada data.</td></tr>`}</tbody></table></div>`;
 const stat = (label, value, hint = "") =>
   `<article class="supply-stat"><span>${e(label)}</span><strong>${e(value)}</strong><small>${e(hint)}</small></article>`;
 const action = (view, label, description) =>
@@ -398,7 +397,7 @@ export function supplyHome(s, store, space) {
   }${operational ? "" : `<section class="panel"><h3>Kiriman yang belum diterima</h3>${transferTable(active.slice(0, 8), !workflowReady(s) || space === "backoffice")}</section>`}</section>`;
 }
 function transferTable(rows, finance = true, showOrigin = false) {
-  return table(
+  return recordTable(
     [
       "Nomor dokumen",
       ...(showOrigin ? ["Asal"] : []),
@@ -407,10 +406,16 @@ function transferTable(rows, finance = true, showOrigin = false) {
       ...(finance ? ["Tagihan"] : []),
       "Aksi",
     ],
-    rows.map(
-      (t) =>
-        `<tr><td><b>${e(t.deliveryNo)}</b><small>${e(t.invoiceNo || "")}</small></td>${showOrigin ? `<td>${e(t.origin?.name || "—")}</td>` : ""}<td>${e(t.destination.name)}<small>${t.items.length} buah · ${t.lines.length} baris batch/produk</small></td><td>${badge(t)}<small>${t.invoiceNo === null ? "Mutasi antarcabang" : `${t.items.filter((i) => i.scannedAt).length}/${t.items.length} barcode diperiksa`}</small></td>${finance ? `<td>${money(t.total)}<small>Sisa ${money(t.total - t.paid)}</small></td>` : ""}<td><button type="button" data-transfer="${e(t.id)}">Buka</button></td></tr>`,
-    ),
+    rows.map((t) => [
+      `<b>${e(t.deliveryNo)}</b><small>${e(t.invoiceNo || "")}</small>`,
+      ...(showOrigin ? [e(t.origin?.name || "—")] : []),
+      `${e(t.destination.name)}<small>${t.items.length} buah · ${t.lines.length} baris batch/produk</small>`,
+      `${badge(t)}<small>${t.invoiceNo === null ? "Mutasi antarcabang" : `${t.items.filter((i) => i.scannedAt).length}/${t.items.length} barcode diperiksa`}</small>`,
+      ...(finance
+        ? [`${money(t.total)}<small>Sisa ${money(t.total - t.paid)}</small>`]
+        : []),
+      `<button type="button" data-transfer="${e(t.id)}">Buka</button>`,
+    ]),
   );
 }
 export function transfersPage(s, store, incoming = false, space) {
