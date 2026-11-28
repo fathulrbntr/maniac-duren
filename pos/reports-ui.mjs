@@ -269,9 +269,11 @@ export function bindReports(s, store, ctx) {
       result.innerHTML =
         `<div class="cash-flow-grid">${panel(shop)}${panel(retail)}${distribution ? panel(distribution, invoiceTable) : ""}</div>` +
         (review ? panel(review) : "") +
-        (report.branchStockVersion >= 132
-          ? '<p class="muted">Pembayaran nota dan ongkir supplier cabang mengikuti tanggal pembayaran. Mutasi antarcabang hanya memindahkan persediaan.</p>'
-          : `<p class="muted">Uang kas toko mengikuti transaksi tunai tercatat sejak awal riwayat POS. Uang awal kembalian tidak termasuk. Penjualan nontunai mengikuti pembayaran di kasir. Setoran dan pembayaran nota antarpihak ditampilkan di kedua pihak. Tagihan menjadi arus kas saat dibayar.</p>`) +
+        (report.turnoverDepositVersion >= 138
+          ? '<p class="muted">Saldo setoran cabang adalah omzet tunai dan nontunai setelah pengembalian dana, dikurangi setoran ke PT Retail. Saldo positif masih harus disetor. Petty cash dan biaya operasional dicatat terpisah.</p>'
+          : report.branchStockVersion >= 132
+            ? '<p class="muted">Pembayaran nota dan ongkir supplier cabang mengikuti tanggal pembayaran. Mutasi antarcabang hanya memindahkan persediaan.</p>'
+            : `<p class="muted">Uang kas toko mengikuti transaksi tunai tercatat sejak awal riwayat POS. Uang awal kembalian tidak termasuk. Penjualan nontunai mengikuti pembayaran di kasir. Setoran dan pembayaran nota antarpihak ditampilkan di kedua pihak. Tagihan menjadi arus kas saat dibayar.</p>`) +
         (selected.store && !report.branchStockVersion
           ? '<p class="muted">Filter cabang menampilkan dana terkait toko terpilih. Pilih semua toko untuk melihat wholesale dan pembayaran supplier.</p>'
           : "") +

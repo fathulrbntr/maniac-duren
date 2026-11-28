@@ -12,7 +12,10 @@ const validNumber = (v) =>
   v !== null && v !== undefined && v !== "" && Number.isFinite(Number(v));
 export function depositTotals(s, store = "", rows = s.cashDepositSummary) {
   if (!(s.cashDepositVersion >= 92) || !Array.isArray(rows)) return null;
-  const stores = s.stores.filter((x) => (!store || x.id === store) && scoped(s, x.id));
+  const stores = s.stores.filter(
+    (x) =>
+      x.locationType !== "warehouse" && (!store || x.id === store) && scoped(s, x.id),
+  );
   if (!stores.length) return null;
   const values = stores.map((x) => rows.find((r) => r.storeId === x.id));
   if (
@@ -21,12 +24,16 @@ export function depositTotals(s, store = "", rows = s.cashDepositSummary) {
     )
   )
     return null;
-  return Object.fromEntries(
-    ["netCash", "deposited", "pending", "count"].map((key) => [
-      key,
-      sumProducts(values.map((r) => [r[key] || 0])),
-    ]),
-  );
+  const sum = (key) => sumProducts(values.map((r) => [r[key]]));
+  const current = values.every((r) => validNumber(r.netSales));
+  return {
+    netCash: sum("netCash"),
+    netSales: current ? sum("netSales") : null,
+    salesToday: values.every((r) => validNumber(r.salesToday)) ? sum("salesToday") : null,
+    deposited: sum("deposited"),
+    pending: current ? sum("pending") : null,
+    count: sumProducts(values.map((r) => [r.count || 0])),
+  };
 }
 // A branch with excess deposits needs reconciliation and does not settle another branch's cash.
 export function outstandingBranchCash(s, stores) {
@@ -37,13 +44,17 @@ export function outstandingBranchCash(s, stores) {
       return {
         name: st.name,
         pending: totals?.pending ?? null,
+        salesToday: totals?.salesToday ?? null,
         deposited: totals?.deposited ?? null,
       };
     });
   const complete = branches.length > 0 && branches.every((b) => b.pending !== null);
   return {
     branches,
-    deposited: complete ? sumProducts(branches.map((b) => [b.deposited])) : null,
+    deposited:
+      branches.length && branches.every((b) => b.deposited !== null)
+        ? sumProducts(branches.map((b) => [b.deposited]))
+        : null,
     total: complete ? sumProducts(branches.map((b) => [Math.max(b.pending, 0)])) : null,
   };
 }
@@ -86,34 +97,67 @@ export function validateDepositInput(p) {
 export function refreshDepositDemo(s, now = new Date().toISOString()) {
   s.cashDepositVersion = 92;
   s.cashDepositToday = day(now);
+  const orderIds = new Set((s.orders || []).map((o) => o.id));
+  const refundDays = new Map();
+  for (const ev of s.events || []) {
+    if (["order_cancel", "order_void", "void"].includes(ev.action))
+      refundDays.set(ev.payload?.orderId || ev.payload?.saleId, ev.business_date);
+  }
   s.cashDepositSummary = s.stores
-    .filter((st) => scoped(s, st.id))
+    .filter((st) => scoped(s, st.id) && st.locationType !== "warehouse")
     .map((st) => {
-      const orders = (s.orders || []).filter(
-        (o) =>
+      const movements = [];
+      const sale = (date, payment, total, refunded, refundDate) => {
+        if (!date || date > s.cashDepositToday) return;
+        movements.push({ date, payment, amount: total });
+        if (refunded && (!refundDate || refundDate <= s.cashDepositToday))
+          movements.push({ date: refundDate, payment, amount: -total });
+      };
+      for (const o of s.orders || []) {
+        const refunded = o.payment_status === "refunded";
+        if (
           o.store_id === st.id &&
-          o.payment === "Tunai" &&
-          o.payment_status === "paid" &&
-          o.status !== "cancelled",
-      );
-      const orderIds = new Set((s.orders || []).map((o) => o.id));
-      const sales = (s.sales || []).filter(
-        (o) =>
-          o.storeId === st.id &&
-          o.payment === "Tunai" &&
-          !o.voided &&
-          !orderIds.has(o.id),
-      );
+          (refunded || (o.payment_status === "paid" && o.status !== "cancelled"))
+        )
+          sale(
+            o.paid_date || o.business_date,
+            o.payment,
+            o.total,
+            refunded,
+            o.void_meta?.date || refundDays.get(o.id),
+          );
+      }
+      for (const item of s.sales || []) {
+        if (
+          item.storeId === st.id &&
+          item.sourceType !== "wholesale" &&
+          !orderIds.has(item.id)
+        )
+          sale(
+            item.date,
+            item.payment,
+            item.total,
+            item.voided,
+            refundDays.get(item.id) ||
+              item.voidDate ||
+              (item.voidedAt && day(item.voidedAt)),
+          );
+      }
       const deposits = (s.cashDeposits || []).filter(
         (x) => x.storeId === st.id && !x.voidedAt,
       );
-      const netCash = sumProducts([...orders, ...sales].map((x) => [x.total])),
+      const sum = (rows) => sumProducts(rows.map((x) => [x.amount]));
+      const netSales = sum(movements),
+        salesToday = sum(movements.filter((x) => x.date === s.cashDepositToday)),
+        netCash = sum(movements.filter((x) => x.payment === "Tunai")),
         deposited = sumProducts(deposits.map((x) => [x.amount]));
       return {
         storeId: st.id,
         netCash,
+        netSales,
+        salesToday,
         deposited,
-        pending: sumProducts([[netCash], [-deposited]]),
+        pending: sumProducts([[netSales], [-deposited]]),
         count: deposits.length,
       };
     });
@@ -130,8 +174,8 @@ export function mutateDepositDemo(s, action, p, now = new Date().toISOString()) 
       throw Error("Hak akses setoran outlet tidak tersedia");
     const input = validateDepositInput(p),
       summary = depositTotals(s, p.storeId);
-    if (!summary || input.amount > summary.pending)
-      throw Error("Setoran melebihi cash yang belum disetor. Perbarui saldo.");
+    if (!summary || summary.pending == null || input.amount > summary.pending)
+      throw Error("Setoran melebihi omzet yang belum disetor. Perbarui saldo.");
     s.cashDeposits.push({
       id: p.id,
       storeId: p.storeId,

@@ -159,8 +159,22 @@ Object.assign(s, {
   retailBalance: 7500,
   cashDepositVersion: 92,
   cashDepositSummary: [
-    { storeId: "a", netCash: 18000, deposited: 8000, pending: 10000 },
-    { storeId: "b", netCash: 27000, deposited: 4000, pending: 23000 },
+    {
+      storeId: "a",
+      netCash: 8000,
+      netSales: 18000,
+      salesToday: 12000,
+      deposited: 8000,
+      pending: 10000,
+    },
+    {
+      storeId: "b",
+      netCash: 4000,
+      netSales: 27000,
+      salesToday: 6000,
+      deposited: 4000,
+      pending: 23000,
+    },
   ],
   branchPricingVersion: 123,
   pettyCashVersion: 130,
@@ -205,6 +219,7 @@ await select("#active-store", "b");
 await space("backoffice");
 assert(root.querySelector(".home-page"));
 assert.match(root.querySelector(".home-received").textContent, /12\.000/);
+assert.match(root.querySelector(".home-deposit-head").textContent, /Omzet belum disetor/);
 assert.match(root.querySelector(".home-deposit-head").textContent, /33\.000/);
 assert.match(root.querySelector("#home-headline").textContent, /Saldo perusahaan/);
 assert.match(root.querySelector(".home-value").textContent, /7\.500/);

@@ -19,6 +19,7 @@ try {
     await db.exec(readFile(patch));
   const owner = id(),
     worker = id(),
+    otherCashier = id(),
     store = id(),
     other = id();
   const [{ id: wh }] = await query(
@@ -31,6 +32,7 @@ try {
   for (const [actor, role, location] of [
     [owner, "owner", store],
     [worker, "warehouse", wh],
+    [otherCashier, "cashier", other],
   ]) {
     await query("insert into auth.users values($1,$2)", [actor, actor + "@example.test"]);
     await query("insert into public.md_pos_staff values($1)", [actor]);
@@ -207,6 +209,119 @@ try {
   assert.equal(
     (await query("select public.pos_deposit_summary($1) x", [store]))[0].x.pending,
     550,
+  );
+  for (const patch of [
+    "cashier-expenses-128",
+    "petty-cash-130",
+    "outbound-units-131",
+    "branch-stock-132",
+    "office-stock-transfers-133",
+    "supplier-note-cancel-134",
+    "branch-transfer-notes-135",
+    "branch-receipt-barcode-136",
+    "supplier-note-proof-137",
+  ])
+    await db.exec(readFile(patch));
+  const companyBalance = async () =>
+    (await query("select (public.pos_read()->>'retailBalance')::numeric balance"))[0]
+      .balance;
+  const startingBalance = Number(await companyBalance());
+  await db.exec(readFile("branch-turnover-deposits-138"));
+  await db.exec(readFile("branch-turnover-deposits-138"));
+  const summary = async (outlet) =>
+    (await query("select public.pos_deposit_summary($1) as totals", [outlet]))[0].totals;
+  const currentDay = (
+    await query("select (now() at time zone 'Asia/Jakarta')::date::text as date")
+  )[0].date;
+  const addSale = (outlet, method, amount, wholesale = null, actor = owner) =>
+    query(
+      "insert into public.md_pos_sales(id, store_id, sale_date, payment, paid, total, change, created_by, wholesale_order_id) values($1,$2,$3,$4,$5,$5,0,$6,$7)",
+      [id(), outlet, currentDay, method, amount, actor, wholesale],
+    );
+  assert.equal(
+    (await summary(store)).pending,
+    600,
+    "net sales less existing deposit, excluding operating expenses",
+  );
+  await query(
+    "insert into public.md_pos_payment_settings(store_id,revision,config,updated_by,event_id) values($1,1,jsonb_set(public.pos_payment_defaults(),'{groups,card}','true'),$2,$3)",
+    [store, owner, id()],
+  );
+  await addSale(store, "Kartu Debit", 100);
+  await addSale(store, "Kartu Kredit", 200);
+  await addSale(store, "Transfer", 500);
+  await addSale(store, "QRIS", 300);
+  await addSale(store, "Transfer", 400, docs.wholesale);
+  await as(otherCashier);
+  await mut(
+    "cashier_shift_open",
+    { id: id(), storeId: other, openingCash: 0 },
+    "pos_cashier_shift_mutate",
+  );
+  await addSale(other, "QRIS", 50, null, otherCashier);
+  await as(owner);
+  const before = await summary(store);
+  assert.deepEqual(
+    [
+      before.netCash,
+      before.salesToday,
+      before.netSales,
+      before.deposited,
+      before.pending,
+    ],
+    [1000, 1100, 2100, 400, 1700],
+  );
+  const deposit = {
+    id: id(),
+    storeId: store,
+    amount: 1600,
+    bank: "BCA",
+    proof:
+      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Zl1sAAAAASUVORK5CYII=",
+  };
+  const remit = (data) => mut("cash_deposit_save", data, "pos_cash_deposit_mutate");
+  assert.equal(Number(await companyBalance()), startingBalance);
+  await remit(deposit);
+  await remit(deposit);
+  assert.equal(Number(await companyBalance()), startingBalance + 1600);
+  await assert.rejects(remit({ ...deposit, id: id(), amount: 101 }), /melebihi omzet/);
+  await assert.rejects(remit({ ...deposit, id: id(), storeId: wh }), /cabang toko/);
+  assert.equal((await summary(store)).pending, 100);
+  assert.equal((await summary(other)).pending, 50);
+  const current = await read(currentDay, currentDay, store);
+  assert.equal(current.turnoverDepositVersion, 138);
+  const [shop, pt] = cashFlowSheets(current, store, currentDay, currentDay);
+  assert.equal(
+    shop.rows.find(([label]) => label.startsWith("Omzet wajib setor"))[1],
+    1100,
+  );
+  assert.equal(shop.rows.at(-1)[1], 100);
+  assert.equal(pt.rows.find(([label]) => label === "Setoran dari toko")[1], 1600);
+  const february = cashFlowSheets(
+    await read("2026-02-01", "2026-02-28", store),
+    store,
+    "2026-02-01",
+    "2026-02-28",
+  );
+  assert.equal(
+    february[0].rows.find(([label]) => label.startsWith("Omzet wajib setor"))[1],
+    -70,
+    "later QRIS refund reduces turnover on its own date",
+  );
+  await mut(
+    "cash_deposit_void",
+    { id: id(), depositId: deposit.id, reason: "Setoran keliru" },
+    "pos_cash_deposit_mutate",
+  );
+  assert.equal((await summary(store)).pending, 1700);
+  assert.equal(Number(await companyBalance()), startingBalance);
+  assert.equal(
+    (
+      await query(
+        "select has_function_privilege('authenticated','public.pos_branch_sale_movements(uuid,date)','execute') allowed",
+      )
+    )[0].allowed,
+    false,
   );
   await as(worker);
   await assert.rejects(read(), /Hak akses/);

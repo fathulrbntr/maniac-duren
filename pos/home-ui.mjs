@@ -84,9 +84,9 @@ function branchDeposits(s, cash, central, store, hidden) {
         .join("")
     : "";
   return `<section class="home-panel home-deposits" aria-labelledby="home-deposits">
-    <div class="home-deposit-head"><h2 id="home-deposits">${central ? "Tunai belum disetor" : "Setoran cabang"}</h2>
+    <div class="home-deposit-head"><h2 id="home-deposits">${central ? "Omzet belum disetor" : "Setoran cabang"}</h2>
     ${central ? `<strong>${maskedAmount(cash.total, hidden)}</strong>` : ""}</div>
-    ${central ? (rows ? `<dl aria-label="Tunai belum disetor per cabang">${rows}</dl>` : "<p>Belum ada cabang.</p>") : ""}
+    ${central ? (rows ? `<dl aria-label="Omzet belum disetor per cabang">${rows}</dl>` : "<p>Belum ada cabang.</p>") : `<dl><div><dt>Omzet hari ini</dt><dd>${maskedAmount(cash.branches[0]?.salesToday, hidden)}</dd></div></dl>`}
     ${buttons}
   </section>`;
 }
@@ -150,13 +150,13 @@ export function homePage(s, store, access, titles, locations, hidden) {
         : "Operasional toko";
   if (cash) {
     const amount = showCompany ? s.retailBalance : cash.branches[0]?.pending;
-    heading = showCompany ? "Saldo perusahaan" : "Tunai cabang belum disetor";
+    heading = showCompany ? "Saldo perusahaan" : "Omzet cabang belum disetor";
     value = balanceText(amount);
     detail = showCompany
       ? "Dana yang tersedia di PT Retail setelah pengeluaran."
       : amount < 0
         ? "Periksa selisih pada riwayat setoran."
-        : "Akumulasi penjualan tunai setelah setoran tercatat.";
+        : "Penjualan tunai dan nontunai setelah pengembalian dana, dikurangi setoran ke PT.";
   } else if (queues.length) {
     const [, task, count] = queues.find(([, , amount]) => amount > 0) || queues[0];
     heading = task;

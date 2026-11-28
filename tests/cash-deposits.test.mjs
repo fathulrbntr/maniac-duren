@@ -49,12 +49,14 @@ function setup() {
     p: { id: id(), storeId: f.store, amount: "50000", bank: "Bank Mandiri", proof },
   };
 }
-test("cash balance uses net cash sale, not tendered amount, QRIS, opening float or expenses; deposits do not alter sales or profit", () => {
+test("branch deposits include net cash and QRIS sales, exclude change and opening float, and preserve sales and profit", () => {
   const { s, p, store } = setup(),
     before = structuredClone(s),
     next = apply(s, "cash_deposit_save", p);
-  assert.equal(depositTotals(s, store).pending, 150000);
-  assert.equal(depositTotals(next, store).pending, 100000);
+  assert.equal(depositTotals(s, store).pending, 300000);
+  assert.equal(depositTotals(next, store).pending, 250000);
+  assert.equal(depositTotals(s, store).netCash, 150000);
+  assert.equal(depositTotals(s, store).salesToday, 300000);
   assert.equal(depositTotals(next, store).deposited, 50000);
   assert.equal(next.cashDeposits[0].cashierName, s.me.name);
   assert.equal(next.cashDeposits[0].date, today());
@@ -71,7 +73,7 @@ test("cash balance uses net cash sale, not tendered amount, QRIS, opening float 
 });
 test("locked date, amount and proof are validated independently of the rendered form", () => {
   const { s, p } = setup();
-  for (const amount of [0, -1, "", null, "bad", Infinity, 0.5, 150001])
+  for (const amount of [0, -1, "", null, "bad", Infinity, 0.5, 300001])
     assert.throws(
       () => apply(s, "cash_deposit_save", { ...p, amount }),
       /setoran|saldo|Rupiah/i,
@@ -92,6 +94,7 @@ test("locked date, amount and proof are validated independently of the rendered 
   assert.throws(() => validateDepositInput({ ...p, bank: "x" }), /bank/);
   assert.throws(() => validateDepositInput({ ...p, bank: "Bank\nX" }), /bank/);
   const copy = structuredClone(s);
+  copy.orders.forEach((o) => (o.paid_date = "2026-11-05"));
   mutateDepositDemo(copy, "cash_deposit_save", p, "2026-11-05T17:01:00Z");
   assert.equal(copy.cashDeposits[0].date, "2026-11-06", "date assigned in WIB, not UTC");
 });
@@ -106,7 +109,7 @@ test("finance-only void preserves proof, restores balance, and leaves an audit t
   };
   assert.throws(() => apply(cashier, "cash_deposit_void", voided), /pengelola/);
   s = apply(s, "cash_deposit_void", voided);
-  assert.equal(depositTotals(s, store).pending, 150000);
+  assert.equal(depositTotals(s, store).pending, 300000);
   assert.equal(s.cashDepositProofs[p.id], proof);
   assert(s.cashDeposits[0].voidedAt);
   assert.equal(s.cashDeposits[0].voidReason, voided.reason);
@@ -114,7 +117,7 @@ test("finance-only void preserves proof, restores balance, and leaves an audit t
 });
 test("refund after deposit shows a negative balance instead of hiding a reconciliation deficit", () => {
   let { s, p, store, order } = setup();
-  s = apply(s, "cash_deposit_save", { ...p, amount: 150000 });
+  s = apply(s, "cash_deposit_save", { ...p, amount: 300000 });
   const request = {
     id: id(),
     storeId: store,
@@ -176,7 +179,7 @@ test("history date filter does not reset lifetime pending balance and paging use
   });
   assert.equal(data.rows.length, 21);
   assert.equal(data.periodDeposited, 25000);
-  assert.equal(depositTotals(s, store, data.summary).pending, 125000);
+  assert.equal(depositTotals(s, store, data.summary).pending, 275000);
   const more = readDepositsDemo(s, { storeId: store, offset: 20 });
   assert.equal(more.rows.length, 5);
   assert(!data.rows.slice(0, 20).some((x) => more.rows.some((y) => x.id === y.id)));
@@ -187,6 +190,11 @@ test("summary does not convert missing installation or outlet totals into false 
   const { s, store } = setup();
   assert.equal(depositTotals({ ...s, cashDepositVersion: 0 }, store), null);
   assert.equal(depositTotals({ ...s, cashDepositSummary: [] }, store), null);
+  const legacy = depositTotals(s, store, [
+    { storeId: store, netCash: 75, deposited: 30, pending: 45 },
+  ]);
+  assert.equal(legacy.pending, null);
+  assert.equal(legacy.deposited, 30);
 });
 test("uncertain deposit writes keep one operation ID and reconcile with server event ids", () => {
   let { s, p } = setup();
@@ -226,7 +234,8 @@ test("popup locks server date, requires an image, sends no editable date/identit
     form = d.querySelector("form");
   assert(d.querySelector('[name="depositDate"]').hasAttribute("readonly"));
   assert.equal(d.querySelector('[name="depositDate"]').value, "2026-11-06");
-  d.querySelector('[name="amount"]').value = "50000";
+  assert.equal(d.querySelector('[name="amount"]').attrs.max, "300000");
+  d.querySelector('[name="amount"]').value = "220000";
   d.querySelector('[name="bank"]').value = "Mandiri";
   await form.fire("submit");
   assert.equal(sends, 0);
@@ -253,9 +262,9 @@ test("Beranda separates actual deposits and outstanding branch cash across all d
     access: { finance: true },
     cashDepositVersion: 92,
     cashDepositSummary: [
-      { storeId: "a", netCash: 75, deposited: 50, pending: 25 },
-      { storeId: "b", netCash: 70, deposited: 80, pending: -10 },
-      { storeId: "wh", netCash: 500, deposited: 400, pending: 100 },
+      { storeId: "a", netCash: 15, netSales: 75, deposited: 50, pending: 25 },
+      { storeId: "b", netCash: 40, netSales: 70, deposited: 80, pending: -10 },
+      { storeId: "wh", netCash: 0, netSales: 500, deposited: 400, pending: 100 },
     ],
   };
   const totals = outstandingBranchCash(state, stores);

@@ -28,15 +28,21 @@ const bankNames = [
 ];
 export function depositButtons(s, store = "") {
   if (!ready(s) || !canReadDeposits(s)) return "";
-  return `<div class="cash-deposit-actions">${store && canRecordDeposit(s) ? `<button type="button" data-cash-deposit="${e(store)}">Setoran tunai</button>` : ""}<button type="button" data-deposit-history="${e(store)}">Riwayat setoran</button></div>`;
+  return `<div class="cash-deposit-actions">${store && s.stores.some((x) => x.id === store && x.locationType !== "warehouse") && canRecordDeposit(s) ? `<button type="button" data-cash-deposit="${e(store)}">Setor omzet</button>` : ""}<button type="button" data-deposit-history="${e(store)}">Riwayat setoran</button></div>`;
 }
 export function depositPanel(s, store = "") {
   if (!canReadDeposits(s)) return "";
   if (!ready(s))
-    return '<p class="dash-note">Ringkasan setoran tunai belum aktif. Hubungi admin untuk mengaktifkan fitur ini.</p>';
+    return '<p class="dash-note">Ringkasan setoran cabang belum aktif. Hubungi admin untuk mengaktifkan fitur ini.</p>';
   const v = depositTotals(s, store),
     fmt = (x) => (x == null ? "Belum tersedia" : money(x));
-  return `<section class="cash-deposit-panel" aria-label="Setoran tunai"><div class="dash-section-head"><div><h2>Setoran tunai</h2><p>Saldo akumulasi outlet saat ini · tidak dibatasi filter tanggal penjualan</p></div>${depositButtons(s, store)}</div><div class="dash-metrics"><article class="dash-metric"><h2>Cash belum disetor</h2><strong class="dash-metric-value">${fmt(v?.pending)}</strong><p class="dash-metric-note">Penjualan tunai setelah refund ${s.pettyCashVersion >= 130 ? "− biaya tunai historis dari kas toko " : s.cashFlowVersion >= 127 && !s.stockDemo ? "− pengeluaran tunai dari dana toko " : ""}− setoran tercatat</p>${v?.pending < 0 ? '<p class="cash-deposit-warning">Saldo negatif: periksa refund setelah setoran atau koreksi setoran yang keliru.</p>' : ""}</article><article class="dash-metric"><h2>Cash sudah disetor</h2><strong class="dash-metric-value">${fmt(v?.deposited)}</strong><p class="dash-metric-note">${v ? v.count : 0} setoran aktif · berdasarkan bukti yang diunggah kasir</p></article></div><p class="dash-note">Uang awal kembalian dan petty cash tidak termasuk saldo setoran. Setoran tidak mengubah omzet atau profit.</p></section>`;
+  return `<section class="cash-deposit-panel" aria-label="Setoran omzet cabang">
+    <div class="dash-section-head"><div><h2>Setoran omzet cabang</h2><p>Penjualan tunai dan nontunai setelah pengembalian dana.</p></div>${depositButtons(s, store)}</div>
+    <div class="dash-metrics">
+      <article class="dash-metric"><h2>Omzet hari ini</h2><strong class="dash-metric-value">${fmt(v?.salesToday)}</strong><p class="dash-metric-note">Berdasarkan tanggal pembayaran dan pengembalian dana (WIB).</p></article>
+      <article class="dash-metric"><h2>Omzet belum disetor</h2><strong class="dash-metric-value">${fmt(v?.pending)}</strong><p class="dash-metric-note">Akumulasi omzet dikurangi setoran yang sudah tercatat.</p>${v?.pending < 0 ? '<p class="cash-deposit-warning">Saldo negatif. Periksa pengembalian dana atau koreksi setoran.</p>' : ""}</article>
+      <article class="dash-metric"><h2>Sudah disetor ke PT</h2><strong class="dash-metric-value">${fmt(v?.deposited)}</strong><p class="dash-metric-note">${v?.count ?? 0} setoran aktif</p></article>
+    </div></section>`;
 }
 const fail = (d, error) => {
   const el = d.querySelector("#form-error");
@@ -68,17 +74,26 @@ export function bindDeposits(ctx, root = document) {
 }
 export async function openDepositDialog(ctx, store) {
   const s = ctx.getState();
-  if (!ready(s) || !canRecordDeposit(s) || !s.stores.some((x) => x.id === store))
+  if (
+    !ready(s) ||
+    !canRecordDeposit(s) ||
+    !s.stores.some((x) => x.id === store && x.locationType !== "warehouse")
+  )
     throw Error("Setoran belum tersedia untuk outlet ini.");
   const data = await ctx.readCashDeposits({ storeId: store }),
     balance = depositTotals(s, store, data.summary);
   if (!balance || !/^\d{4}-\d{2}-\d{2}$/.test(data.serverDate || ""))
     throw Error("Saldo atau tanggal server belum tersedia. Perbarui halaman.");
-  if (balance.pending < 1)
-    throw Error("Tidak ada cash yang dapat disetor pada outlet ini.");
+  if (balance.pending == null)
+    throw Error(
+      "Perhitungan omzet cabang belum tersedia. Perbarui POS sebelum mencatat setoran.",
+    );
+  if (balance.pending < 0)
+    throw Error("Ada selisih setoran. Periksa riwayat setoran cabang.");
+  if (balance.pending < 1) throw Error("Seluruh omzet cabang sudah disetor.");
   const d = ctx.modal(
-    "Input setoran tunai",
-    `<p><b>${e(s.stores.find((x) => x.id === store).name)}</b><br>Kasir: ${e(s.me?.name)}</p><div class="deposit-balance">Cash belum disetor <strong>${money(balance.pending)}</strong></div><div class="form-grid">${field("Tanggal setor · otomatis WIB", `<input name="depositDate" type="date" value="${e(data.serverDate)}" readonly aria-readonly="true">`)}${field("Nilai setoran (Rp)", `<input name="amount" type="number" inputmode="numeric" min="1" max="${Math.floor(balance.pending)}" step="1" required placeholder="Masukkan nilai setoran">`)}</div>${field("Bank tujuan setor", `<input name="bank" list="deposit-bank-list" required minlength="2" maxlength="80" autocomplete="off" placeholder="Contoh: Bank Mandiri"><datalist id="deposit-bank-list">${bankNames.map((b) => `<option value="${e(b)}"></option>`).join("")}</datalist>`)}${field("Bukti struk setoran bank · wajib", '<input name="proof" type="file" accept="image/jpeg,image/png,image/webp" required>')}<p class="muted">JPG, PNG, atau WebP, maksimal 2 MB. Pastikan tanggal, bank, dan nominal pada struk terbaca.</p><p data-proof-status role="status"></p><img data-proof-preview class="deposit-proof-preview" alt="Pratinjau struk setoran" hidden><p class="muted">Tanggal mengikuti waktu server saat disimpan. Catat setelah uang disetor ke bank. Untuk uang dari laci aktif, selesaikan penghitungan/tutup kasir terlebih dahulu.</p>`,
+    "Setor omzet cabang",
+    `<p><b>${e(s.stores.find((x) => x.id === store).name)}</b><br>Kasir: ${e(s.me?.name)}</p><dl class="deposit-balance"><div><dt>Omzet hari ini</dt><dd>${balance.salesToday == null ? "Belum tersedia" : money(balance.salesToday)}</dd></div><div><dt>Total belum disetor</dt><dd>${money(balance.pending)}</dd></div></dl><div class="form-grid">${field("Tanggal setor · otomatis WIB", `<input name="depositDate" type="date" value="${e(data.serverDate)}" readonly aria-readonly="true">`)}${field("Nilai setoran (Rp)", `<input name="amount" type="number" inputmode="numeric" min="1" max="${Math.floor(balance.pending)}" step="1" required placeholder="Masukkan nilai setoran">`)}</div>${field("Bank tujuan PT", `<input name="bank" list="deposit-bank-list" required minlength="2" maxlength="80" autocomplete="off" placeholder="Contoh: Bank Mandiri"><datalist id="deposit-bank-list">${bankNames.map((b) => `<option value="${e(b)}"></option>`).join("")}</datalist>`)}${field("Bukti transfer atau slip setoran · wajib", '<input name="proof" type="file" accept="image/jpeg,image/png,image/webp" required>')}<p class="muted">JPG, PNG, atau WebP, maksimal 2 MB. Pastikan tanggal, bank, dan nominal pada bukti terbaca.</p><p data-proof-status role="status"></p><img data-proof-preview class="deposit-proof-preview" alt="Pratinjau bukti setoran" hidden><p class="muted">Catat jumlah yang sudah masuk ke rekening PT. Jika menyetor uang dari laci kasir, tutup dan hitung laci terlebih dahulu.</p>`,
   );
   d.classList.add("cash-deposit-dialog");
   const form = d.querySelector("form"),
@@ -113,7 +128,7 @@ export async function openDepositDialog(ctx, store) {
         !input.size
       )
         throw Error("Pilih gambar JPG, PNG, atau WebP maksimal 2 MB.");
-      status.textContent = "Menyiapkan bukti struk…";
+      status.textContent = "Menyiapkan bukti setoran…";
       const result = await (
         ctx.compressDepositProof || ((f) => compressPhoto(f, "bankReceipt"))
       )(input);
@@ -155,7 +170,7 @@ export async function openDepositDialog(ctx, store) {
       await ctx.mutate("cash_deposit_save", payload, { throwOnError: true });
       d.close();
       ctx.render();
-      ctx.toast("Setoran tunai tersimpan. Saldo dashboard diperbarui.");
+      ctx.toast("Setoran omzet tersimpan. Saldo cabang diperbarui.");
     } catch (x) {
       fail(d, x);
     } finally {
@@ -169,7 +184,7 @@ export async function showDepositHistory(ctx, store = "") {
   const s = ctx.getState();
   if (!ready(s) || !canReadDeposits(s)) throw Error("Riwayat setoran belum tersedia.");
   const d = ctx.modal(
-    "Riwayat setoran tunai",
+    "Riwayat setoran cabang",
     `<div class="deposit-history-filters">${field("Dari tanggal", `<input type="date" data-deposit-from value="${today().slice(0, 8)}01">`)}${field("Sampai tanggal", `<input type="date" data-deposit-to value="${today()}">`)}<button type="button" data-deposits-filter>Tampilkan</button></div><p data-deposits-status role="status">Memuat setoran…</p><div data-deposit-rows></div><div class="shift-pager"><button type="button" data-deposit-prev disabled>Sebelumnya</button><span data-deposit-page>Halaman 1</span><button type="button" data-deposit-next disabled>Berikutnya</button></div>`,
     "Selesai",
   );
@@ -256,7 +271,7 @@ export async function showDepositProof(ctx, key) {
     !r ||
     !/^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(data.proof || "")
   )
-    throw Error("Bukti struk belum tersedia.");
+    throw Error("Bukti setoran belum tersedia.");
   const d = ctx.modal(
     "Bukti setoran bank",
     `<p><b>${money(r.amount)}</b> · ${e(r.bank)}<br>${e(r.cashierName)} · ${e(time(r.createdAt))}${r.voidedAt ? `<br>Dibatalkan oleh ${e(r.voidedName)}: ${e(r.voidReason)}` : ""}</p><img class="deposit-proof-full" src="${e(data.proof)}" alt="Struk bukti setoran bank">`,

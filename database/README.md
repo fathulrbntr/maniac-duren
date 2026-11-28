@@ -196,3 +196,5 @@ Patch **135** (`branch-transfer-notes-135.sql`) dipasang setelah 134. Back Offic
 Patch **136** (`branch-receipt-barcode-136.sql`) mewajibkan toko tujuan memindai ulang setiap buah pada surat jalan antarcabang, termasuk kiriman yang masih dalam perjalanan saat patch dipasang. Setiap scan yang cocok tersimpan pada dokumen. Konfirmasi akhir memeriksa barcode, berat dan jumlah per batch serta jumlah barang satuan, lalu membukukan stok tujuan dalam satu transaksi.
 
 Patch **137** (`supplier-note-proof-137.sql`) dipasang setelah 136. POS memberikan nomor `NS-YYYYMM-NNNNNN` saat nota disimpan. Urutan berlaku lintas cabang dan bulan. Foto nota opsional tersimpan bersama nota dan dapat dibuka dari detail nota oleh Back Office.
+
+Patch **138** (`branch-turnover-deposits-138.sql`) dipasang setelah 137. Beranda, validasi setoran dan laporan arus kas memakai penjualan lunas cabang dari seluruh metode pembayaran. Pengembalian dana mengurangi omzet pada tanggal pengembalian. Sisa kewajiban menghitung seluruh riwayat penjualan dikurangi setoran aktif. Petty cash dan biaya operasional memiliki pencatatan tersendiri. Migrasi ini tidak membuat setoran atau memindahkan uang.
