@@ -88,7 +88,10 @@ const browser = await chromium.launch({
   args: ["--no-sandbox", "--disable-dev-shm-usage"],
 });
 try {
-  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } }),
+  const page = await browser.newPage({
+      viewport: { width: 1440, height: 1000 },
+      hasTouch: true,
+    }),
     errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   const users = { owner, warehouse: warehouseUser, cashier, waitress, cutter };
@@ -291,7 +294,15 @@ try {
   const settled = summary.locator('[data-balance="settled"]');
   assert.match(await debt.innerText(), /200\.000/);
   assert.equal(await settled.isVisible(), false);
-  await summary.getByText("Lunas", { exact: true }).click();
+  const lunas = summary.getByText("Lunas", { exact: true });
+  const tapHighlight = (el) => getComputedStyle(el).webkitTapHighlightColor;
+  for (const control of [
+    lunas,
+    page.locator("[data-note-new]"),
+    page.locator(".dock-lens"),
+  ])
+    assert.equal(await control.evaluate(tapHighlight), "rgba(0, 0, 0, 0)");
+  await lunas.tap();
   assert.equal(await summary.getByRole("radio", { name: "Lunas" }).isChecked(), true);
   assert.match(await settled.innerText(), /0 nota lunas/);
   assert.equal(await debt.isVisible(), false);
@@ -302,6 +313,12 @@ try {
   await summary.getByRole("radio", { name: "Lunas" }).focus();
   await page.keyboard.press("ArrowLeft");
   assert.equal(await debt.isVisible(), true);
+  assert.equal(
+    await summary
+      .getByText("Tagihan", { exact: true })
+      .evaluate((el) => getComputedStyle(el).outlineStyle),
+    "solid",
+  );
   const totals = summary.locator(".note-totals > div");
   assert.match(await totals.filter({ hasText: "Total nota" }).innerText(), /1 nota/);
   assert.match(
