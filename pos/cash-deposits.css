@@ -49,10 +49,19 @@
   border: 1px solid var(--line);
   border-radius: var(--radius-control);
   margin: 16px 0;
+  display: grid;
+  gap: 8px;
+}
+.deposit-balance > div {
   display: flex;
   gap: 12px;
   justify-content: space-between;
   flex-wrap: wrap;
+}
+.deposit-balance dd {
+  margin: 0;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 .cash-deposit-dialog .field {
   margin: 14px 0;

@@ -135,6 +135,13 @@ try {
     if (u.pathname.startsWith("/backend/rest/v1/rpc/")) {
       const name = u.pathname.split("/").at(-1),
         p = route.request().postDataJSON();
+      if (name === "pos_cash_deposits_read" && state.branchStockVersion >= 132)
+        return reply({
+          summary: state.cashDepositSummary.filter(
+            (row) => row.storeId === p.filters.storeId,
+          ),
+          serverDate: "2026-11-28",
+        });
       if (name === "pos_supplier_note_proof")
         return reply(proofByPlan.get(p.plan_id) || null);
       if (name === "pos_warehouse_mutate" && p.action === "receipt_plan_save") {
@@ -477,7 +484,9 @@ try {
     cashDepositVersion: 92,
     cashDepositSummary: state.stores.map((st) => ({
       storeId: st.id,
-      netCash: st.id === origin.id ? 1450000 : 500000,
+      netCash: st.id === origin.id ? 200000 : 100000,
+      netSales: st.id === origin.id ? 1450000 : 500000,
+      salesToday: st.id === origin.id ? 250000 : 120000,
       deposited: st.id === origin.id ? 1000000 : 500000,
       pending: st.id === origin.id ? 450000 : 0,
       count: 1,
@@ -568,6 +577,7 @@ try {
   step.phase = "operational report handoffs";
   await nav("home");
   assert.match(await page.locator(".home-value").innerText(), /775\.000/);
+  assert.match(await page.locator("#home-deposits").innerText(), /Omzet belum disetor/);
   assert.match(await page.locator(".home-deposit-head").innerText(), /450\.000/);
   for (const width of [320, 390, 768, 1280]) {
     await page.setViewportSize({ width, height: 844 });
@@ -677,6 +687,22 @@ try {
     ),
   );
   await switchSpace("store");
+  await nav("home");
+  await openSidebar(page);
+  await page.locator("#active-store").selectOption(origin.id);
+  if (await page.locator('.shell[data-mobile-open="true"]').count())
+    await page.locator("#pos-sidebar [data-sidebar-toggle]").click();
+  assert.match(await page.locator(".home-deposits").innerText(), /Omzet hari ini/);
+  await page.getByRole("button", { name: "Setor omzet", exact: true }).click();
+  const depositDialog = page.locator("dialog.cash-deposit-dialog[open]");
+  await depositDialog.waitFor();
+  assert.match(await depositDialog.locator(".deposit-balance").innerText(), /250\.000/);
+  assert.equal(
+    await depositDialog.locator('[name="amount"]').getAttribute("max"),
+    "450000",
+  );
+  assert(await depositDialog.evaluate((el) => el.scrollWidth <= el.clientWidth + 1));
+  await depositDialog.getByRole("button", { name: "Batal", exact: true }).click();
   await nav("cutting");
   await page.locator('[data-cut-form] [name="tableNo"]').fill("Meja 8");
   await configure.click();

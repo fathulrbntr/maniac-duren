@@ -19,13 +19,17 @@ export function cashFlowSheets(report, outlet, from, to) {
         .map((r) => [r[column]]),
     );
   const add = (...values) => sumProducts(values.map((n) => [n]));
+  const allMethods = report.turnoverDepositVersion >= 138;
+  const turnover = (column) => add(total("sale", column), -total("refund", column));
   const cashChange = (column) =>
-    add(
-      total("sale", column, true),
-      -total("refund", column, true),
-      -total("store_expense", column, true),
-      -total("deposit", column),
-    );
+    allMethods
+      ? add(turnover(column), -total("deposit", column))
+      : add(
+          total("sale", column, true),
+          -total("refund", column, true),
+          -total("store_expense", column, true),
+          -total("deposit", column),
+        );
   const expenses = (kind) => {
     const categories = [
       ...new Set(
@@ -78,9 +82,17 @@ export function cashFlowSheets(report, outlet, from, to) {
             ["Saldo akhir petty cash", add(movement("opening"), movement("amount"))],
           ]
         : []),
+      ...(allMethods ? [["Omzet wajib setor pada periode ini", turnover("amount")]] : []),
       ["Setoran ke PT Retail", -deposits],
-      ["Uang kas tercatat sebelum " + from, opening],
-      ["Uang kas tercatat sampai " + to, add(opening, cashChange("amount"))],
+      [
+        (allMethods ? "Saldo setoran cabang sebelum " : "Uang kas tercatat sebelum ") +
+          from,
+        opening,
+      ],
+      [
+        (allMethods ? "Saldo setoran cabang sampai " : "Uang kas tercatat sampai ") + to,
+        add(opening, cashChange("amount")),
+      ],
     ]),
     sheet("PT Retail", [
       ["Setoran dari toko", deposits],
