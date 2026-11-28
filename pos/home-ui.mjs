@@ -87,7 +87,7 @@ function branchDeposits(s, cash, central, store, hidden) {
         .join("")
     : "";
   return `<section class="home-panel home-deposits" aria-labelledby="home-deposits">
-    <h2 id="home-deposits">${central ? "Belum disetor per cabang" : "Setoran cabang"}</h2>
+    <h3 id="home-deposits">${central ? "Belum disetor per cabang" : "Setoran cabang"}</h3>
     ${central ? (rows ? `<dl aria-label="Omzet belum disetor per cabang">${rows}</dl>` : "<p>Belum ada cabang.</p>") : `<dl><div><dt>Omzet hari ini</dt><dd>${maskedAmount(cash.branches[0]?.salesToday, hidden)}</dd></div></dl>`}
     ${buttons}
   </section>`;
@@ -165,6 +165,13 @@ export function homePage(s, store, access, titles, locations, hidden) {
     value = num(count);
     detail = place;
   }
+  const deposits = cash ? branchDeposits(s, cash, showCompany, store, hidden) : "";
+  const queueCards = queues
+    .map(
+      ([id, text, count]) =>
+        `<button type="button" data-view="${e(id)}" class="home-work-card"><span class="home-work-top">${pageIcon(id)}${arrow}</span><strong>${num(count)}</strong><span>${e(text)}</span></button>`,
+    )
+    .join("");
   const figures = showCompany
     ? [
         ["Belum disetor", cash.total],
@@ -193,7 +200,7 @@ export function homePage(s, store, access, titles, locations, hidden) {
       }</div>
       ${figures.length ? `<dl class="home-financials" aria-label="Ringkasan keuangan seluruh cabang">${figures.map(([label, amount]) => `<div><dt>${e(label)}</dt><dd>${maskedAmount(amount, hidden)}</dd></div>`).join("")}</dl>` : ""}
     </section>
-    <div class="home-body">${cash ? branchDeposits(s, cash, showCompany, store, hidden) : ""}<section class="home-panel home-shortcuts" aria-labelledby="home-shortcuts"><h2 id="home-shortcuts">Akses cepat</h2><div class="home-grid">${visible.map((id) => tile(id, label(id))).join("")}${toggle}</div>${
+    <div class="home-body"><section class="home-panel home-shortcuts" aria-labelledby="home-shortcuts"><h2 id="home-shortcuts">Akses cepat</h2><div class="home-grid">${visible.map((id) => tile(id, label(id))).join("")}${toggle}</div>${
       overflow
         ? `<div class="home-grid home-extra" id="home-extra" hidden>${menu
             .slice(7)
@@ -202,7 +209,14 @@ export function homePage(s, store, access, titles, locations, hidden) {
         : ""
     }</section>
     ${locations.length ? `<div class="home-scope">${dashboardStorePicker(s, store, space, locations)}</div>` : ""}
-    ${queues.length ? `<section class="home-work" aria-labelledby="home-work"><h2 id="home-work">Perlu ditindaklanjuti</h2><div class="home-work-grid">${queues.map(([id, text, count]) => `<button type="button" data-view="${e(id)}" class="home-work-card"><span class="home-work-top">${pageIcon(id)}${arrow}</span><strong>${num(count)}</strong><span>${e(text)}</span></button>`).join("")}</div></section>` : ""}
+    ${
+      queueCards || deposits
+        ? `<section class="home-work" aria-labelledby="home-work"><h2 id="home-work">Perlu ditindaklanjuti</h2>
+      ${queueCards ? `<div class="home-work-grid">${queueCards}</div>` : ""}
+      ${deposits}
+    </section>`
+        : ""
+    }
     </div></div>`;
 }
 

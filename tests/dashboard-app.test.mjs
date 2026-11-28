@@ -245,7 +245,7 @@ assert(!root.querySelector(".dash-workspace .account-profile"));
 assert.match(root.querySelector("#home-headline").textContent, /Saldo perusahaan/);
 assert.match(root.querySelector(".home-value").textContent, /7\.500/);
 assert.match(
-  root.querySelector(".home-deposits").textContent,
+  root.querySelector(".home-work .home-deposits").textContent,
   /Outlet A.*10\.000.*Outlet B.*23\.000/s,
 );
 await select("#dash-store", "b");
