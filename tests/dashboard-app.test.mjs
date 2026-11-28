@@ -109,6 +109,8 @@ globalThis.fetch = async (endpoint) => {
   throw Error("Unexpected network request: " + endpoint);
 };
 await import("../pos/app.js?dashboard-integration");
+assert(root.querySelector(".home-page"));
+await root.querySelector('#pos-navigation [data-view="dashboard"]').fire("click");
 assert(root.querySelector(".dashboard-shell"));
 assert(root.querySelector(".system-dock"));
 assert.equal(reads, 1);

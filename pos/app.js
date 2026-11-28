@@ -4,6 +4,7 @@ import { outboundPage } from "./outbound-ui.mjs";
 import { confirmAction, requestReason } from "../shared/confirmation.mjs";
 import { pricesForBranch } from "./branch-prices.mjs";
 import { prepareBarcodeInput } from "./barcode-scanner.mjs";
+import { createBackNavigation } from "./back-navigation.mjs";
 import { homePage, bindHome } from "./home-ui.mjs";
 import { supplierDialog, bindSupplierSelect } from "./supplier-ui.mjs";
 import { commitMutation } from "./data/mutations.mjs";
@@ -231,13 +232,56 @@ const name = (kind, k) => state[kind].find((x) => x.id === k)?.name || "—";
 const short = (k) =>
   k.startsWith("demo") ? k.toUpperCase() : k.slice(0, 8).toUpperCase();
 const field = (label, html) => `<div class="field"><label>${label}</label>${html}</div>`;
-function toast(text) {
+function toast(text, duration = 5000) {
   const t = document.querySelector("#toast");
   t.textContent = (mode === "stock-demo" ? "Demo · " : "") + text;
   t.style.display = "block";
   clearTimeout(toast.timer);
-  toast.timer = setTimeout(() => (t.style.display = "none"), 5000);
+  toast.timer = setTimeout(() => (t.style.display = "none"), duration);
 }
+const backNavigation = createBackNavigation({
+  atHome: () =>
+    (!activeSessionId || view === "home") &&
+    !busy &&
+    !authBusy &&
+    !startupBusy &&
+    !document.querySelector('dialog[open], .shell[data-mobile-open="true"]'),
+  returnHome: async () => {
+    if (busy || authBusy || startupBusy) return toast("Tunggu proses selesai.");
+    if (!activeSessionId) return;
+    const sessionId = activeSessionId;
+    if (sessions?.read()?.sessionId !== sessionId)
+      return handleSessionStorage({ key: null });
+    const confirmation = document.querySelector("dialog.brand-confirmation[open]");
+    if (confirmation) {
+      confirmation.querySelector("[data-cancel]")?.click();
+      return;
+    }
+    if (
+      (hasUnsavedForm() || document.querySelector('dialog[open][data-dirty="true"]')) &&
+      !(await confirmLeave())
+    )
+      return;
+    if (busy || sessionId !== activeSessionId) return;
+    document.querySelectorAll("dialog[open]").forEach((dialog) => dialog.close());
+    view = "home";
+    sidebar.navigate();
+    render();
+    window.scrollTo?.({ top: 0, left: 0, behavior: "instant" });
+  },
+  warnExit: (duration) => {
+    toast(
+      (cart.length || hasOrderDraft() ? "Ada pesanan belum dibayar. " : "") +
+        "Tekan Kembali sekali lagi untuk keluar.",
+      duration,
+    );
+    const warningTimer = toast.timer;
+    return () => {
+      if (toast.timer === warningTimer)
+        document.querySelector("#toast").style.display = "none";
+    };
+  },
+});
 let stockDemoModule,
   demoSource = null;
 const demoEngine = () =>
@@ -416,6 +460,7 @@ async function request(path, body, auth = true, allowDemoRead = false) {
   }
 }
 function resetWorkspace(forget = false) {
+  backNavigation.stop();
   resetCustomerDisplay();
   if (forget) sessions?.clear(activeSessionId || undefined);
   resetDashboard();
@@ -485,13 +530,7 @@ async function restoreSession() {
     workspace = spacesFor(state).includes(saved.workspace)
       ? saved.workspace
       : defaultSpace(state);
-    const allowed = visibleSections(workspaceAccess()).flatMap((group) => group.pages);
-    const archiveView =
-      workspace === "backoffice" &&
-      workspaceAccess().pettyCash &&
-      state.access?.backoffice &&
-      saved.view === "documents";
-    view = allowed.includes(saved.view) || archiveView ? saved.view : "home";
+    view = "home";
     render();
   } catch (error) {
     if (activeSessionId !== saved.sessionId) return;
@@ -584,6 +623,7 @@ async function mutate(action, payload, { throwOnError = false } = {}) {
 function login(message = "") {
   sidebar.reset();
   app.innerHTML = `<div class="auth auth-workspace">${themeButton("auth-theme")}<section class="auth-form"><div><img class="auth-logo" src="/assets/logo.png" alt="Maniac Duren"><h1>Selamat datang kembali</h1><p class="muted auth-intro">Masuk untuk mengelola outlet Maniac Duren.</p>${config.configured ? "" : `<div class="notice">Akses POS belum tersedia. Hubungi pengelola.</div>`}<form id="login-form">${field("Email, username, atau nomor telepon", '<input name="identifier" required autocomplete="username" placeholder="Masukkan akun Anda">')}${field("Password", '<input name="password" type="password" required autocomplete="current-password" placeholder="Masukkan password">')}<p class="error" id="login-error" role="alert">${e(message)}</p><button class="primary full" type="submit" ${config.configured ? "" : "disabled"}>Masuk</button>${sessionProgress("Memeriksa akun…", true)}</form>${installButton()}<a class="auth-back" href="/">Kembali ke website</a></div></section></div>`;
+  backNavigation.sync();
   syncThemeControls();
   bindInstall();
   document.querySelector("#login-form").onsubmit = async (ev) => {
@@ -1062,6 +1102,7 @@ function render() {
   syncThemeControls();
   bindInstall();
   sidebar.mount();
+  backNavigation.sync();
   document
     .querySelector("#stock-demo-toggle")
     ?.addEventListener("click", () => switchStockDemo());

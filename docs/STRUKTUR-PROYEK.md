@@ -41,7 +41,7 @@ Beranda POS (`pos/home-ui.mjs`, `pos/home.css`) terbuka setelah login dan saat b
 Dashboard Back Office dan toko menggunakan ringkasan di `pos/dashboard-ui.mjs`.
 `pos/warehouse-ui.mjs` melengkapinya dengan tindak lanjut, saldo, dan pintasan sesuai area kerja.
 Back Office dapat memilih semua lokasi atau satu cabang. Dashboard toko mengikuti cabang aktif.
-Saat sesi dipulihkan, POS membuka kembali halaman terakhir yang masih boleh diakses.
+Saat POS dibuka atau dimuat ulang, sesi yang masih aktif membuka Beranda dengan area kerja dan lokasi tersimpan. Tombol Kembali membawa pengguna ke Beranda. Dari Beranda, dua kali Kembali dalam 2,5 detik keluar dari POS dengan sesi tetap tersimpan. Navigasi perangkat dan browser ditangani di `pos/back-navigation.mjs`.
 
 ## Aturan perubahan berikutnya
 
