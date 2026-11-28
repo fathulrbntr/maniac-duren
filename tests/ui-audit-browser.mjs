@@ -513,6 +513,7 @@ try {
   await page.setViewportSize({ width: 320, height: 844 });
   const dock = page.locator(".system-dock");
   const configure = dock.getByRole("button", { name: "Atur dock" });
+  assert.equal(await configure.innerText(), "");
   const editor = page.getByRole("dialog", { name: "Atur dock" });
   const applyDock = editor.getByRole("button", { name: "Simpan", exact: true });
   const switchSpace = async (space) => {
