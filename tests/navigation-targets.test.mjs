@@ -29,6 +29,41 @@ test("sidebar and dock share destinations but each scoped target is unique", () 
   }
 });
 
+test("dock preferences isolate accounts and discard duplicate or inaccessible pages", (t) => {
+  const entries = new Map([
+    [
+      "maniac-pos-dock-v1:cut1:store",
+      '["cutting","cutting","retailFunds","scan","unknown"]',
+    ],
+    ["maniac-pos-dock-v1:cut2:store", "[]"],
+  ]);
+  const original = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    value: { getItem: (key) => entries.get(key) ?? null },
+  });
+  t.after(() => {
+    if (original) Object.defineProperty(globalThis, "localStorage", original);
+    else delete globalThis.localStorage;
+  });
+  const root = new Node("body");
+  function shortcuts(userId, cut) {
+    root.innerHTML = systemDock(
+      "orders",
+      { workspace: "store", sell: true, cut },
+      { userId },
+    );
+    assert.equal(root.querySelectorAll("[data-dock-settings]").length, 1);
+    return root
+      .querySelectorAll(".dock-pages button")
+      .map((button) => button.dataset.view);
+  }
+  assert.deepEqual(shortcuts("cut1", true), ["cutting"]);
+  assert.deepEqual(shortcuts("cut1", false), []);
+  assert.deepEqual(shortcuts("cut2", true), []);
+  assert(shortcuts("other", true).includes("orders"));
+});
+
 test("browser navigation locators do not collide when the sidebar and dock coexist", () => {
   const root = shell(),
     failures = [];
