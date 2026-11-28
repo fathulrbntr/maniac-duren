@@ -172,11 +172,41 @@ try {
   await page.goto("https://test.invalid/pos/");
   await page.locator("#login-form").waitFor();
   assert.equal(await page.locator("html").getAttribute("data-theme"), "light");
+  const logoPixels = await page.locator(".auth-logo").evaluate(async (logo) => {
+    const manifestUrl = document.querySelector('link[rel="manifest"]').href;
+    const { icons } = await (await fetch(manifestUrl)).json();
+    const sources = [
+      logo.currentSrc,
+      ...icons.map((icon) => new URL(icon.src, manifestUrl).href),
+    ];
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = 32;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    return Promise.all(
+      sources.map(async (src) => {
+        const img = new Image();
+        img.src = src;
+        await img.decode();
+        ctx.clearRect(0, 0, 32, 32);
+        ctx.drawImage(img, 0, 0, 32, 32);
+        const alpha = ctx.getImageData(0, 0, 32, 32).data.filter((_, i) => i % 4 === 3);
+        return { src, transparent: alpha.includes(0), artwork: alpha.includes(255) };
+      }),
+    );
+  });
+  for (const { src, transparent, artwork } of logoPixels) {
+    assert(
+      transparent && artwork,
+      `Expected visible artwork on a transparent canvas: ${src}`,
+    );
+  }
   const menuBrand = await page.evaluate(async () => {
     await document.fonts.ready;
     const loaded = [...document.fonts].filter((face) => face.status === "loaded");
     return {
       background: getComputedStyle(document.body).backgroundColor,
+      logoBackground: getComputedStyle(document.querySelector(".auth-logo"))
+        .backgroundColor,
       action: getComputedStyle(document.querySelector("#login-form .primary"))
         .backgroundColor,
       fonts: loaded.map((face) => face.family.replaceAll('"', "")).sort(),
@@ -184,6 +214,7 @@ try {
   });
   assert.deepEqual(menuBrand, {
     background: "rgb(243, 240, 223)",
+    logoBackground: "rgba(0, 0, 0, 0)",
     action: "rgb(20, 99, 33)",
     fonts: ["DM Sans", "Manrope"],
   });
