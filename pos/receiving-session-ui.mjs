@@ -1,7 +1,7 @@
 import { confirmAction } from "../shared/confirmation.mjs";
 import { prepareBarcodeInput, readyBarcodeInput } from "./barcode-scanner.mjs";
 import { escape as e, id, num, money } from "./core.mjs";
-import { noteBalance } from "./supplier-notes.mjs";
+import { noteBalance, supplierNoteSummary } from "./supplier-notes.mjs";
 import { pageIcon } from "./navigation.mjs";
 import {
   backOffice,
@@ -111,11 +111,29 @@ function cancelledNotes(s) {
     ),
   )}</details>`;
 }
+export function supplierNoteSummaryPanel(plans) {
+  const { total, inTransit, payable, settled, unclassified } = supplierNoteSummary(plans);
+  const card = (label, metric, stage, countFirst = false) => {
+    const count = `${num(metric.count)} nota`;
+    const amount = metric.amount == null ? "Nilai belum tersedia" : money(metric.amount);
+    return `<article class="supply-stat"${stage ? ` data-progress="${stage}"` : ""}><span>${label}</span><strong>${countFirst ? count : amount}</strong><small>${countFirst ? amount : count}</small></article>`;
+  };
+  return `<section class="note-summary" aria-labelledby="note-summary-title">
+    <header><h3 id="note-summary-title">Ringkasan nota</h3><small>Nilai barang di luar ongkir</small></header>
+    <div class="supply-stats note-summary-grid">
+      ${card("Total nota", total, "", true)}
+      ${card("Dalam perjalanan", inTransit, "active", true)}
+      ${card("Tagihan", payable, "pending")}
+      ${card("Lunas", settled, "done")}
+    </div>
+    ${unclassified ? `<small>Tagihan dan Lunas hanya mencakup nota dengan data pembayaran lengkap. Periksa ${num(unclassified)} nota lainnya.</small>` : ""}
+  </section>`;
+}
 export function receivingPage(s, store, space) {
   const branch = s.branchStockVersion >= 132;
   const bo = backOffice(s, space),
     plans = (s.receiptPlans || []).filter((p) => bo || p.storeId === store);
-  return `<section class="supply-workspace"><div class="supply-hero"><div><span class="supply-eyebrow">PENERIMAAN SUPPLIER</span><h2>${bo ? (branch ? "Nota supplier cabang" : "Nota barang masuk gudang") : "Penerimaan & penimbangan"}</h2><p>${bo && branch ? "Pilih cabang penerima saat membuka nota supplier." : bo ? "Catat barang dan jumlah sesuai nota supplier. Stok masuk setelah gudang menyelesaikan penerimaan." : "Pilih nota untuk mencatat jumlah barang dan memindai label buah."}</p></div><div class="toolbar"><button type="button" data-supply-refresh>Perbarui</button>${bo ? '<button type="button" data-legacy-labels>Registrasi barcode stok lama</button><button type="button" class="primary" data-note-new>+ Nota supplier</button>' : ""}</div></div><section class="panel">${recordTable(
+  return `<section class="supply-workspace"><div class="supply-hero"><div><span class="supply-eyebrow">PENERIMAAN SUPPLIER</span><h2>${bo ? (branch ? "Nota supplier cabang" : "Nota barang masuk gudang") : "Penerimaan & penimbangan"}</h2><p>${bo && branch ? "Pilih cabang penerima saat membuka nota supplier." : bo ? "Catat barang dan jumlah sesuai nota supplier. Stok masuk setelah gudang menyelesaikan penerimaan." : "Pilih nota untuk mencatat jumlah barang dan memindai label buah."}</p></div><div class="toolbar"><button type="button" data-supply-refresh>Perbarui</button>${bo ? '<button type="button" data-legacy-labels>Registrasi barcode stok lama</button><button type="button" class="primary" data-note-new>+ Nota supplier</button>' : ""}</div></div>${bo ? supplierNoteSummaryPanel(plans) : ""}<section class="panel">${recordTable(
     [
       "Nota / supplier",
       ...(bo && branch ? ["Lokasi penerima"] : []),

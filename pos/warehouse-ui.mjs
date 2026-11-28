@@ -24,7 +24,11 @@ import {
   receiptProgress,
   shipmentProgress,
 } from "./warehouse-workflow.mjs";
-import { receivingPage, openReceivingSession } from "./receiving-session-ui.mjs";
+import {
+  receivingPage,
+  openReceivingSession,
+  supplierNoteSummaryPanel,
+} from "./receiving-session-ui.mjs";
 import { outboundPage, bindOutboundPage, openOutboundForm } from "./outbound-ui.mjs";
 import { escape as e, id, today, num, money } from "./core.mjs";
 import {
@@ -471,7 +475,7 @@ export function supplierNotesPage(s, store, space) {
       (p) =>
         p.storeId === (location(s, store)?.locationType === "warehouse" ? store : wh),
     );
-  return `<section class="supply-workspace">${blocker(s)}<div class="supply-hero"><div><span class="supply-eyebrow">PENERIMAAN SUPPLIER</span><h2>Nota barang masuk gudang</h2><p>Admin mengisi harga nota dan ongkir. Petugas gudang memilih nota lalu scan seluruh buah.</p></div><div class="toolbar"><button type="button" data-supply-refresh>Perbarui</button>${s.access?.backoffice ? `<button type="button" data-legacy-labels>Registrasi barcode stok lama</button><button type="button" class="primary" data-note-new ${warehouseEnabled(s) ? "" : "disabled"}>+ Nota supplier</button>` : ""}</div></div><section class="panel">${table(
+  return `<section class="supply-workspace">${blocker(s)}<div class="supply-hero"><div><span class="supply-eyebrow">PENERIMAAN SUPPLIER</span><h2>Nota barang masuk gudang</h2><p>Admin mengisi harga nota dan ongkir. Petugas gudang memilih nota lalu scan seluruh buah.</p></div><div class="toolbar"><button type="button" data-supply-refresh>Perbarui</button>${s.access?.backoffice ? `<button type="button" data-legacy-labels>Registrasi barcode stok lama</button><button type="button" class="primary" data-note-new ${warehouseEnabled(s) ? "" : "disabled"}>+ Nota supplier</button>` : ""}</div></div>${backOffice(s, space) && !s.stockDemo ? supplierNoteSummaryPanel(plans) : ""}<section class="panel">${table(
     [
       "Nota / supplier",
       "Tanggal",
