@@ -51,7 +51,7 @@ import {
 import { documentsPage, bindDocuments } from "./documents-ui.mjs";
 import { variantGroupDialog, productVariantDialog } from "./variant-editor.mjs";
 import { createSidebarController, sidebarIcon } from "./sidebar.mjs";
-import { systemDock } from "./system-dock.mjs";
+import { systemDock, bindDockSettings } from "./system-dock.mjs";
 import { installMoneyInputs } from "./money-input.mjs";
 import { openWeighingReceipt, showWeighingHistory } from "./receipt-weighing.mjs";
 import { inventoryPanel, bindInventory } from "./inventory-ui.mjs";
@@ -72,6 +72,8 @@ import {
 import { receiptHeader, fillReceiptLogo } from "./store-profile.mjs";
 import {
   navigation,
+  pageTitles as title,
+  pageIcon as icon,
   visibleSections,
   hasUnsavedForm,
   confirmLeave,
@@ -223,101 +225,6 @@ let state = emptyState(),
   busy = false,
   lastSale = null;
 const app = document.querySelector("#app");
-const title = {
-  backoffice: "Dashboard Back Office",
-  warehouse: "Dashboard Gudang",
-  storehome: "Dashboard Toko",
-  transfers: "Pengiriman & Tagihan",
-  transferPrep: "Siapkan transfer",
-  receiving: "Penerimaan Kiriman",
-  pricing: "Harga Jual",
-  officeInventory: "Inventory",
-  costPrices: "Harga Modal",
-  legacyTransfers: "Dokumen distribusi lama",
-  supplierNotes: "Nota Supplier",
-  service: "Pelayanan Meja",
-  cutting: "Tukang Potong",
-  crm: "Member & Poin",
-  payments: "Metode Pembayaran",
-  shifts: "Shift Kasir",
-  retailFunds: "Keuangan PT Retail",
-  storeExpenses: "Pengeluaran Toko",
-  devices: "Printer & Scanner",
-  discounts: "Diskon & Persetujuan",
-  dashboard: "Dashboard",
-  orders: "Kasir / POS",
-  kitchen: "Kitchen Display",
-  products: "Master Barang",
-  stock: "Stok & Penerimaan",
-  losses: "Reject & Waste",
-  waste: "Reject & Waste",
-  batches: "Laporan Batch Supplier",
-  recipes: "Master Resep",
-  production: "Produksi & Persiapan",
-  finance: "Petty Cash & Keuangan",
-  salesreport: "Laporan Penjualan",
-  trace: "Jejak Stok & Produksi",
-  reports: "Laporan",
-  documents: "Admin Dokumen",
-  employees: "Karyawan & Akses",
-  attendance: "Absensi",
-  stores: "Branch Outlet & Gudang",
-  suppliers: "Supplier",
-  guide: "Panduan",
-  cashier: "Kasir buah cepat",
-};
-const paths = {
-  backoffice: "M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z",
-  warehouse: "M3 10l9-6 9 6v11H3z M8 21V12h8v9 M8 16h8",
-  storehome:
-    "M3 9l2-6h14l2 6 M3 9v3a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0V9 M5 15v6h14v-6",
-  transfers:
-    "M2 5h12v12H2z M14 9h4l4 5v3h-8 M5 17a2 2 0 1 0 4 0 2 2 0 0 0-4 0 M16 17a2 2 0 1 0 4 0 2 2 0 0 0-4 0",
-  receiving: "M3 13v8h18v-8 M12 3v13 M7 11l5 5 5-5",
-  costPrices: "M4 4h16v16H4z M8 8h8 M8 12h2 M14 12h2 M8 16h2 M14 16h2",
-  pricing: "M3 3h8l10 10-8 8L3 11z M7 7h.01 M12 10l5 5 M14 9l-4 6",
-  supplierNotes: "M4 3h11l5 5v13H4z M15 3v6h5 M8 13h8 M8 17h5",
-  service: "M3 13h18 M5 13a7 7 0 0 1 14 0 M12 4v2 M4 17h16 M8 21h8",
-  cutting: "M3 21l6-6 M7 13l4 4 10-10V3z",
-
-  crm: "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0 M20 8v6 M17 11h6",
-  payments: "M3 5h18v14H3z M3 10h18 M6 15h5",
-  storeExpenses: "M4 6h16v14H4z M4 6l11-3v3 M11 13h6 M14 10l3 3-3 3",
-  shifts: "M4 4h16v16H4z M8 8h8 M8 12h3 M15 12v5 M12 15h6",
-  retailFunds: "M3 7h18v13H3z M3 7l14-4v4 M15 12h6v5h-6z",
-  documents: "M4 3h11l5 5v13H4z M15 3v6h5 M8 13h8 M8 17h5",
-  devices: "M6 9V3h12v6 M6 17H3V9h18v8h-3 M6 14h12v7H6z M17 12h1",
-  discounts:
-    "M19 5L5 19 M7 7h.01 M17 17h.01 M9 7a2 2 0 1 1-4 0 2 2 0 0 1 4 0 M19 17a2 2 0 1 1-4 0 2 2 0 0 1 4 0",
-  dashboard: "M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z",
-  orders: "M7 4H5v17l3-2 4 2 4-2 3 2V4h-2 M9 3h6v4H9z M8 11h8 M8 15h5",
-  kitchen: "M4 4h16v17H4z M8 2v4 M16 2v4 M8 10h8 M8 14h8 M8 18h4",
-  cashier: "M4 3h16v13H4z M8 20h8 M12 16v4 M7 7h10 M7 11h4",
-  stock: "M3 7l9-4 9 4-9 4z M3 7v10l9 4 9-4V7 M12 11v10 M7 5l10 5",
-  production:
-    "M5 10h14v5a6 6 0 0 1-6 6h-2a6 6 0 0 1-6-6z M2 11h3 M19 11h3 M8 3v3 M12 2v4 M16 3v3",
-  waste: "M8 4l3-2 3 5 M11 2L6 10 M20 11l1 4-6 1 M21 15l-5-8 M11 21l-4-1 2-5 M7 20h9",
-  losses: "M3 5h18 M5 5l1 16h12l1-16 M9 5V2h6v3 M10 9v8 M14 9v8",
-  salesreport: "M5 3h14v18l-3-2-4 2-4-2-3 2z M8 7h8 M8 11h8 M8 15h3",
-  finance: "M3 6h18v14H3z M3 6l14-3v3 M15 11h6v5h-6z M17 13h1",
-  trace: "M5 3h10v6H5z M5 15h10v6H5z M10 9v6 M15 6h4v12h-4",
-  batches: "M3 7l9-4 9 4-9 4z M3 7v10l9 4 9-4V7 M12 11v10",
-  reports: "M4 20V4 M4 20h17 M8 16v-5 M13 16V7 M18 16v-9",
-  employees:
-    "M9 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8 M2 21v-3a6 6 0 0 1 12 0v3 M17 4a4 4 0 0 1 0 8 M18 15a5 5 0 0 1 4 5v1",
-  attendance: "M5 4h14v17H5z M8 2v4 M16 2v4 M5 9h14 M8 15l3 3 5-6",
-  guide: "M12 5c-3-2-7-2-10-1v16c3-1 7-1 10 1 3-2 7-2 10-1V4c-3-1-7-1-10 1z M12 5v16",
-  products: "M3 3h8l10 10-8 8L3 11z M7 7h.01",
-  recipes: "M4 3h13v18H4z M7 3v18 M10 7h4 M10 11h4 M10 15h3 M17 6h3v12h-3",
-  stores:
-    "M3 9l2-6h14l2 6 M3 9v3a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0V9z M5 15v6h14v-6 M10 21v-5h4v5",
-  suppliers:
-    "M2 5h12v12H2z M14 9h4l4 5v3h-8 M5 17a2 2 0 1 0 4 0 2 2 0 0 0-4 0 M16 17a2 2 0 1 0 4 0 2 2 0 0 0-4 0",
-  edit: "M14 4l6 6 M3 21l5-1L21 7l-5-5L3 15z",
-  master: "M5 4h14v16H5z M8 8h8 M8 12h8 M8 16h5",
-};
-const icon = (k) =>
-  `<svg class="icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="${paths[["legacyTransfers", "transferPrep"].includes(k) ? "transfers" : k === "officeInventory" ? "stock" : k] || paths.master}"/></svg>`;
 const name = (kind, k) => state[kind].find((x) => x.id === k)?.name || "—";
 const short = (k) =>
   k.startsWith("demo") ? k.toUpperCase() : k.slice(0, 8).toUpperCase();
@@ -803,37 +710,39 @@ function officeBranchPanel(s, page, selected) {
   return `<section class="panel">${field(payments ? "Atur pembayaran cabang" : "Pilih lokasi absensi", `<select id="office-branch"><option value="">Semua cabang</option>${choices}</select>`)}
     ${selected ? "" : `<div class="table-wrap"><table><thead><tr><th>Cabang</th><th>${payments ? "Metode pembayaran aktif" : "Jam kerja (WIB)"}</th></tr></thead><tbody>${rows.join("")}</tbody></table></div>`}</section>`;
 }
-function shell(body) {
-  const access = workspaceAccess();
-  const pageTitles =
-    access.workspace === "store"
+function workspaceTitles(access) {
+  return access.workspace === "store"
+    ? {
+        ...title,
+        ...storePageTitles,
+        ...(access.branchStock
+          ? {
+              supplierNotes: "Terima dari supplier",
+              receiving: "Terima dari cabang",
+            }
+          : {}),
+      }
+    : access.pettyCash
       ? {
           ...title,
-          ...storePageTitles,
           ...(access.branchStock
             ? {
-                supplierNotes: "Terima dari supplier",
-                receiving: "Terima dari cabang",
+                transfers:
+                  workspace === "backoffice"
+                    ? "Transfer Stok"
+                    : "Dokumen distribusi lama",
               }
             : {}),
+          documents: "Arsip dokumen",
+          backoffice: "Dashboard",
+          products: "Master barang",
+          employees: "Akun karyawan",
         }
-      : access.pettyCash
-        ? {
-            ...title,
-            ...(access.branchStock
-              ? {
-                  transfers:
-                    workspace === "backoffice"
-                      ? "Transfer Stok"
-                      : "Dokumen distribusi lama",
-                }
-              : {}),
-            documents: "Arsip dokumen",
-            backoffice: "Dashboard",
-            products: "Master barang",
-            employees: "Akun karyawan",
-          }
-        : title;
+      : title;
+}
+
+function shell(body, access, dockOptions) {
+  const pageTitles = dockOptions.titles;
   const central = access.workspace === "backoffice";
   const activeLocation = state.stores.find((x) => x.id === store),
     activeIcon = activeLocation?.locationType === "warehouse" ? "warehouse" : "stores";
@@ -849,7 +758,7 @@ function shell(body) {
       <div class="sidebar-account">${accountProfile()}<button id="logout" class="sidebar-logout" type="button" aria-label="Logout" title="Logout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 4H4v16h5M14 8l4 4-4 4M8 12h10"/></svg><span>Logout</span></button></div>
     </aside>
     <button type="button" class="sidebar-backdrop" data-sidebar-close tabindex="-1" aria-label="Tutup sidebar"></button>
-    <main id="pos-main"><header class="topbar"><div class="workspace-heading"><button id="sidebar-toggle" type="button" class="sidebar-toggle" data-sidebar-toggle aria-controls="pos-sidebar" aria-label="Buka sidebar">${sidebarIcon}</button><div class="workspace-title"><span class="workspace-breadcrumb">Maniac Duren</span><h1>${view === "orders" ? `Selamat datang, <span>${e((state.me?.name || "Kasir").trim().split(/\s+/)[0])}</span>` : e(pageTitles[view] || "Maniac Duren")}</h1></div></div><div class="workspace-tools">${installButton()}<span class="workspace-outlet" title="${e(scopeLabel)}">${icon(central ? "backoffice" : activeIcon)}<span>${e(scopeLabel)}</span></span><button type="button" id="stock-demo-toggle" class="stock-demo-toggle" role="switch" aria-label="Mode demo" aria-checked="${mode === "stock-demo"}"><span class="stock-demo-track" aria-hidden="true"></span>Mode demo</button>${themeButton()}</div>${systemDock(view, access)}</header><div class="workspace-content">${mode === "stock-demo" ? '<aside class="stock-demo-banner" role="status"><div><b>MODE DEMO · Stok awal 100</b><p>Data uji hanya di tab ini. Semua penyimpanan demo terpisah dari database asli. Harga jual demo Rp150.000 per satuan; resep mengikuti master.</p><small>Buah: 100 kg + 100 butir. Bahan / produk stok: 100 sesuai satuannya. ${e(itemTypes.recipe)} mengikuti bahan.</small></div><button type="button" id="stock-demo-reset">Reset demo</button></aside>' : ""}${body}<p class="page-foot">Maniac Duren · ${e(scopeLabel)}</p></div></main>
+    <main id="pos-main"><header class="topbar"><div class="workspace-heading"><button id="sidebar-toggle" type="button" class="sidebar-toggle" data-sidebar-toggle aria-controls="pos-sidebar" aria-label="Buka sidebar">${sidebarIcon}</button><div class="workspace-title"><span class="workspace-breadcrumb">Maniac Duren</span><h1>${view === "orders" ? `Selamat datang, <span>${e((state.me?.name || "Kasir").trim().split(/\s+/)[0])}</span>` : e(pageTitles[view] || "Maniac Duren")}</h1></div></div><div class="workspace-tools">${installButton()}<span class="workspace-outlet" title="${e(scopeLabel)}">${icon(central ? "backoffice" : activeIcon)}<span>${e(scopeLabel)}</span></span><button type="button" id="stock-demo-toggle" class="stock-demo-toggle" role="switch" aria-label="Mode demo" aria-checked="${mode === "stock-demo"}"><span class="stock-demo-track" aria-hidden="true"></span>Mode demo</button>${themeButton()}</div></header><div class="workspace-content">${mode === "stock-demo" ? '<aside class="stock-demo-banner" role="status"><div><b>MODE DEMO · Stok awal 100</b><p>Data uji hanya di tab ini. Semua penyimpanan demo terpisah dari database asli. Harga jual demo Rp150.000 per satuan; resep mengikuti master.</p><small>Buah: 100 kg + 100 butir. Bahan / produk stok: 100 sesuai satuannya. ${e(itemTypes.recipe)} mengikuti bahan.</small></div><button type="button" id="stock-demo-reset">Reset demo</button></aside>' : ""}${body}<p class="page-foot">Maniac Duren · ${e(scopeLabel)}</p></div>${systemDock(view, access, dockOptions)}</main>
   </div>`;
 }
 
@@ -929,6 +838,48 @@ async function changeStore(next) {
   followDashboardStore();
   render();
   return true;
+}
+
+function bindPageNavigation(root) {
+  root.querySelectorAll("[data-view]").forEach(
+    (b) =>
+      (b.onclick = async () => {
+        if (busy || (hasUnsavedForm() && !(await confirmLeave()))) return;
+        if (
+          view === "backoffice" &&
+          b.dataset.view === "officeInventory" &&
+          b.closest(".dash-workspace")
+        )
+          officePage = "officeInventory";
+        view = b.dataset.view;
+        sidebar.navigate();
+        render();
+        window.scrollTo?.({ top: 0, left: 0, behavior: "instant" });
+      }),
+  );
+  root.querySelector("[data-dock-scan]")?.addEventListener("click", async () => {
+    if (busy || (state.access && !state.access.stock)) return;
+    if (document.querySelector("dialog[open]")) {
+      toast("Tutup pop-up sebelum scan barcode.");
+      return;
+    }
+    if (hasUnsavedForm() && !(await confirmLeave())) return;
+    if (
+      state.warehouseVersion &&
+      !state.stockDemo &&
+      location(state, store)?.locationType !== "warehouse"
+    ) {
+      view = workspaceAccess().branchStock ? "supplierNotes" : "receiving";
+      render();
+      return;
+    }
+    if (view !== "stock") {
+      view = "stock";
+      sidebar.navigate();
+      render();
+    }
+    addReceipt();
+  });
 }
 
 function render() {
@@ -1011,10 +962,18 @@ function render() {
     stores: () => directoryPage("stores"),
     suppliers: () => directoryPage("suppliers"),
   };
+  const access = workspaceAccess();
+  const dockOptions = {
+    titles: workspaceTitles(access),
+    userId: state.me?.id || state.me?.user_id,
+    demo: !!state.stockDemo,
+  };
   app.innerHTML = shell(
     chooseBranch
       ? officeBranchPanel(state, view, officeBranch) + (officeBranch ? pages[view]() : "")
       : pages[view](),
+    access,
+    dockOptions,
   );
   const changeOfficeBranch = async (next) => {
     if (
@@ -1105,44 +1064,11 @@ function render() {
   document
     .querySelector("#stock-demo-reset")
     ?.addEventListener("click", () => switchStockDemo(true));
-  document.querySelectorAll("[data-view]").forEach(
-    (b) =>
-      (b.onclick = async () => {
-        if (busy || (hasUnsavedForm() && !(await confirmLeave()))) return;
-        if (
-          view === "backoffice" &&
-          b.dataset.view === "officeInventory" &&
-          b.closest(".dash-workspace")
-        )
-          officePage = "officeInventory";
-        view = b.dataset.view;
-        sidebar.navigate();
-        render();
-        window.scrollTo?.({ top: 0, left: 0, behavior: "instant" });
-      }),
-  );
-  document.querySelector("[data-dock-scan]")?.addEventListener("click", async () => {
-    if (busy || (state.access && !state.access.stock)) return;
-    if (
-      state.warehouseVersion &&
-      !state.stockDemo &&
-      location(state, store)?.locationType !== "warehouse"
-    ) {
-      view = workspaceAccess().branchStock ? "supplierNotes" : "receiving";
-      render();
-      return;
-    }
-    if (document.querySelector("dialog[open]")) {
-      toast("Tutup pop-up sebelum scan barcode.");
-      return;
-    }
-    if (busy || (hasUnsavedForm() && !(await confirmLeave()))) return;
-    if (view !== "stock") {
-      view = "stock";
-      sidebar.navigate();
-      render();
-    }
-    addReceipt();
+  bindPageNavigation(document);
+  bindDockSettings(view, access, dockOptions, {
+    modal,
+    bindNavigation: bindPageNavigation,
+    toast,
   });
   const activePicker = document.querySelector("#active-store");
   if (activePicker)

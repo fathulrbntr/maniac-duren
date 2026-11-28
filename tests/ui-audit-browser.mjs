@@ -504,10 +504,95 @@ try {
     ],
   });
   state.access.backoffice = true;
+  state.access.cut = true;
   await page.reload();
   await page
     .locator('#pos-navigation [data-view="retailFunds"]')
     .waitFor({ state: "attached" });
+  step.phase = "bottom dock preferences";
+  await page.setViewportSize({ width: 320, height: 844 });
+  const dock = page.locator(".system-dock");
+  const configure = dock.getByRole("button", { name: "Atur dock" });
+  const editor = page.getByRole("dialog", { name: "Atur dock" });
+  const applyDock = editor.getByRole("button", { name: "Simpan", exact: true });
+  const switchSpace = async (space) => {
+    await openSidebar(page);
+    await page.locator(`[data-workspace="${space}"]`).click();
+    if (await page.locator('.shell[data-mobile-open="true"]').count())
+      await page.locator("#pos-sidebar [data-sidebar-toggle]").click();
+  };
+  await configure.click();
+  await editor.locator('input[value="supplierNotes"]').check();
+  await applyDock.click();
+  await dock.locator('[data-view="supplierNotes"]').click();
+  await page.locator('.shell[data-page="supplierNotes"]').waitFor();
+  await configure.click();
+  for (const input of await editor.locator('input[name="shortcut"]').all())
+    await input.check();
+  await applyDock.click();
+  assert(
+    await dock.locator(".dock-pages").evaluate((el) => el.scrollWidth > el.clientWidth),
+  );
+  const lastShortcut = dock.locator(".dock-pages [data-view]").last();
+  const lastView = await lastShortcut.getAttribute("data-view");
+  await lastShortcut.click();
+  await page.locator(`.shell[data-page="${lastView}"]`).waitFor();
+  assert(
+    await lastShortcut.evaluate((button) => {
+      const icon = button.getBoundingClientRect();
+      const track = button.parentElement.getBoundingClientRect();
+      return icon.left >= track.left - 1 && icon.right <= track.right + 1;
+    }),
+  );
+  assert(
+    await configure.evaluate(
+      (button) => button.getBoundingClientRect().right <= innerWidth,
+    ),
+  );
+  await switchSpace("store");
+  await nav("cutting");
+  await page.locator('[data-cut-form] [name="tableNo"]').fill("Meja 8");
+  await configure.click();
+  assert.equal(await editor.locator('input[value="retailFunds"]').count(), 0);
+  for (const input of await editor.locator('input[name="shortcut"]').all())
+    await input.uncheck();
+  await editor.locator('input[value="cutting"]').check();
+  await applyDock.click();
+  assert.equal(
+    await page.locator('[data-cut-form] [name="tableNo"]').inputValue(),
+    "Meja 8",
+  );
+  assert.equal(await dock.locator("[data-view]").count(), 1);
+  assert.equal(
+    await dock.locator('[aria-current="page"]').getAttribute("data-view"),
+    "cutting",
+  );
+  await page.evaluate(() =>
+    window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "instant" }),
+  );
+  assert(
+    await page.evaluate(
+      () =>
+        document.querySelector(".page-foot").getBoundingClientRect().bottom <=
+        document.querySelector(".system-dock").getBoundingClientRect().top,
+    ),
+  );
+  await page.reload();
+  await dock.locator('[data-view="cutting"]').waitFor();
+  await configure.click();
+  await editor.locator('input[value="cutting"]').uncheck();
+  await editor.getByRole("button", { name: "Batal", exact: true }).click();
+  await editor.waitFor({ state: "hidden" });
+  assert.equal(await dock.locator("[data-view]").count(), 1);
+  await configure.click();
+  await editor.locator('input[value="cutting"]').uncheck();
+  await applyDock.click();
+  assert.equal(await dock.locator("[data-view]").count(), 0);
+  await configure.click();
+  await editor.locator('input[value="orders"]').check();
+  await applyDock.click();
+  await switchSpace("backoffice");
+  await dock.locator('[data-view="supplierNotes"]').waitFor();
   const dialog = page.locator("dialog[open]");
   const assertDialogFits = async (view, width) => {
     const dimensions = await dialog.evaluate((el) => {
@@ -570,11 +655,21 @@ try {
                   parseFloat(getComputedStyle(toolbar.parentElement).paddingLeft) -
                   parseFloat(getComputedStyle(toolbar.parentElement).paddingRight)),
             ) < 2,
-          dockInHeader: !!document.querySelector(".topbar .system-dock"),
+          dockAtBottom:
+            Math.abs(
+              document.querySelector("#pos-main > .system-dock").getBoundingClientRect()
+                .bottom - innerHeight,
+            ) < 2,
+          dockClearance:
+            parseFloat(getComputedStyle(content).paddingBottom) >=
+            document.querySelector(".system-dock").offsetHeight,
         };
       });
       assert(geometry.fits, `${view} overflows at ${width}px`);
-      assert(geometry.dockInHeader);
+      assert(
+        geometry.dockAtBottom && geometry.dockClearance,
+        "Dock fits below content at " + width,
+      );
       assert(geometry.actionHeights.every((h) => h >= 44));
       if (width <= 540 && geometry.actionHeights.length > 1)
         assert(
