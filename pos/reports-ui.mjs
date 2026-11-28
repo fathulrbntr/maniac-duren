@@ -79,7 +79,7 @@ export function reportsPage(s, workspace) {
     .join("");
   const archive =
     grouped && workspace === "backoffice" && s.access?.backoffice
-      ? '<button data-view="documents">Arsip dokumen</button><button data-view="dashboard">Analisis penjualan</button>'
+      ? '<button data-view="documents">Arsip dokumen</button><button data-view="backoffice">Dashboard</button>'
       : "";
   return `<div class="intro report-heading"><div><h2>Laporan</h2><p class="muted">Penjualan, pergerakan barang, dan biaya dalam satu tempat.</p></div><div class="toolbar report-actions">${archive}<button type="button" id="report-refresh">Perbarui</button><button type="button" id="report-excel">Excel (.xlsx)</button><button type="button" id="report-pdf">PDF / Cetak A4</button></div></div><nav class="report-tabs" aria-label="Jenis laporan">${nav}</nav><section class="panel" id="report-filters" ${tab === "batches" ? "hidden" : ""}><div class="report-filter-grid">${field("Periode", `<select id="report-period"><option value="day">Hari ini</option><option value="week">Minggu ini (Senin–Minggu)</option><option value="month">Bulan ini</option><option value="custom">Custom periode</option></select>`)}${field("Dari", '<input id="report-from" type="date" required>')}${field("Sampai", '<input id="report-to" type="date" required>')}${field("Toko", `<select id="report-store">${options({ stores })}</select>`)}</div><p id="report-error" class="error" role="alert"></p></section><div id="report-result"></div>`;
 }

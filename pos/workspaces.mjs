@@ -56,7 +56,6 @@ export function workspaceGroups(a) {
               label: "Back office",
               pages: [
                 "backoffice",
-                ...(a.pettyCash ? [] : ["dashboard"]),
                 "supplierNotes",
                 "transfers",
                 ...(a.branchStock && a.legacyOutbound ? ["legacyTransfers"] : []),
@@ -124,7 +123,6 @@ export function workspaceGroups(a) {
             ];
   const allowed = {
     backoffice: all,
-    dashboard: all,
     pricing: all,
     supplierNotes: all || a.stock,
     transfers: a.workspace === "backoffice" ? all : a.dispatch,

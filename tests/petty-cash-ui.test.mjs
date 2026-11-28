@@ -57,10 +57,13 @@ assert.match(crmPage(s), /crm-new/);
 const archive = documentsPage(s, "a");
 assert.match(archive, /Arsip dokumen/);
 assert.doesNotMatch(archive, /data-new-document|Buat contoh dokumen/);
+html.innerHTML = supplyHome(s, "a", "backoffice");
+assert.match(html.querySelector(".dash-summary-metrics").textContent, /Omzet.*120\.000/);
 assert.match(
-  supplyHome(s, "a", "backoffice"),
-  /Omzet hari ini[\s\S]*120.000[\s\S]*Saldo PT Retail/,
+  html.querySelector(".dash-operations").textContent,
+  /Saldo PT Retail.*700\.000/,
 );
+assert.match(html.querySelector(".dash-pending").textContent, /Pengajuan petty cash0/);
 assert.doesNotMatch(supplyHome(s, "a", "store"), /Saldo PT Retail/);
 const storeForm = storeExpensesPage(s, "a");
 assert.match(storeForm, /data-petty-action="petty_request"/);

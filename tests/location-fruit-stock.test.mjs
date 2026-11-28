@@ -131,7 +131,7 @@ test("location stock keeps balances, net whole-fruit sales and first-stage proce
 
 test("Back Office renders each location with its own packaging and weight units", () => {
   const root = new Node();
-  root.innerHTML = supplyHome(fixture, "shop", "backoffice");
+  root.innerHTML = supplyHome(fixture, null, "backoffice");
   const table = root.querySelector(".location-stock table");
   assert(table);
   assert.deepEqual(
@@ -162,5 +162,9 @@ test("Back Office renders each location with its own packaging and weight units"
       "4,25 kg",
     ],
   );
+  root.innerHTML = supplyHome(fixture, "shop", "backoffice");
+  const selected = root.querySelectorAll(".location-stock tbody tr");
+  assert.equal(selected.length, 1);
+  assert.equal(selected[0].querySelector("th b").textContent, locations[1].name);
   assert(!supplyHome(fixture, "shop", "store").includes("location-stock-heading"));
 });

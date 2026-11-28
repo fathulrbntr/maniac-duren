@@ -34,6 +34,11 @@ Akhiran `-ui.mjs` umumnya memuat HTML dan event form; modul tanpa `-ui` memuat p
 
 Konfirmasi tindakan di POS dan pengelola menu menggunakan `shared/confirmation.mjs` dan `shared/confirmation.css`. Tunggu hasil `confirmAction` sebelum menyimpan perubahan. Untuk pembatalan yang memerlukan alasan, gunakan `requestReason`.
 
+Dashboard utama Back Office dan toko menggunakan ringkasan di `pos/dashboard-ui.mjs`.
+`pos/warehouse-ui.mjs` melengkapinya dengan tindak lanjut, saldo, dan pintasan sesuai area kerja.
+Back Office dapat memilih semua lokasi atau satu cabang. Dashboard toko mengikuti cabang aktif.
+Saat sesi dipulihkan, POS membuka kembali halaman terakhir yang masih boleh diakses.
+
 ## Aturan perubahan berikutnya
 
 1. Pakai URL impor relatif yang sama untuk modul yang sama, tanpa versi query berbeda-beda. Browser menganggap `file.mjs?v=1` dan `file.mjs?v=2` sebagai dua modul berbeda, termasuk state di dalamnya.

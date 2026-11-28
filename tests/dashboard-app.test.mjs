@@ -157,6 +157,23 @@ Object.assign(s, {
   branchPricingVersion: 123,
   pettyCashVersion: 130,
   warehouseWorkflowVersion: 114,
+  branchNoteVersion: 135,
+  receiptPlans: [
+    { storeId: "a", receiving: { status: "completed" } },
+    { storeId: "b", receiving: { status: "paused" } },
+  ],
+  branchNotes: [
+    {
+      id: "n-1",
+      number: "NT-1",
+      sourceId: "b",
+      targetId: "a",
+      origin: { name: "Outlet B" },
+      destination: { name: "Outlet A" },
+      status: "ready",
+    },
+  ],
+  pettyRequests: [{ store_id: "b", status: "pending" }],
   transfers: [],
 });
 Object.assign(s.access, { backoffice: true, attendance: true, receive: true });
@@ -178,6 +195,30 @@ const go = async (key) =>
 await space("store");
 await select("#active-store", "b");
 await space("backoffice");
+assert.equal(root.querySelector("#dash-store").value, "");
+assert.equal(root.querySelectorAll('#pos-navigation [data-view="dashboard"]').length, 0);
+const pending = () => root.querySelector(".dash-pending").textContent;
+assert.match(
+  pending(),
+  /Nota menunggu penerimaan1.*Transfer menunggu persetujuan1.*Pengajuan petty cash1/,
+);
+await select("#dash-store", "a");
+assert.match(
+  pending(),
+  /Nota menunggu penerimaan0.*Transfer menunggu persetujuan1.*Pengajuan petty cash0/,
+);
+await root.querySelector('[data-dash-tab="stock"]').fire("click");
+assert.equal(
+  root.querySelector(".dash-stock-panel .dash-link").dataset.view,
+  "officeInventory",
+);
+await root.querySelector(".dash-stock-panel .dash-link").fire("click");
+assert.equal(root.querySelector("[data-inv-place]").value, "a");
+await go("backoffice");
+await select("#dash-store", "");
+assert.match(pending(), /Nota menunggu penerimaan1/);
+await root.querySelector(".dash-stock-panel .dash-link").fire("click");
+assert(root.querySelector("[data-office-inventory]"));
 assert.equal(root.querySelector("#active-store"), null);
 assert.match(root.querySelector(".workspace-outlet").textContent, /Semua cabang/);
 await go("products");
@@ -198,3 +239,10 @@ await select("#office-branch", "a");
 assert(root.querySelector("#payment-settings-form"));
 await space("store");
 assert.equal(root.querySelector("#active-store").value, "b");
+
+assert.equal(root.querySelector("#dash-store").value, "b");
+assert.doesNotMatch(root.querySelector("#dash-store").textContent, /Semua toko/);
+assert.doesNotMatch(
+  root.querySelector(".dash-operations").textContent,
+  /Saldo PT Retail/,
+);

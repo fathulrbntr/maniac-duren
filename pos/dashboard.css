@@ -219,6 +219,7 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 .dash-metric {
+  container-type: inline-size;
   min-width: 0;
   padding: 16px;
   border: 1px solid var(--line);
@@ -258,8 +259,33 @@
   font-weight: 600;
   letter-spacing: -0.5px;
   font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
   margin: 0;
+}
+.dash-metric[data-wide-value] .dash-metric-value {
+  font-size: clamp(12px, var(--dash-value-size), 1.6rem);
+}
+.dash-operations {
+  margin-top: 1rem;
+}
+.dash-pending h2,
+.dash-operations > h2 {
+  font-size: var(--text-lg);
+  margin: 0;
+}
+.dash-queue {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+.dash-queue button {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 44px;
+  gap: 12px;
+  text-align: start;
 }
 .dash-metric:first-child .dash-metric-icon {
   background: var(--surface-raised);
@@ -890,10 +916,14 @@
     width: 100%;
     gap: 2px;
   }
-  .dash-tabs button {
+  .dash-workspace .dash-tabs {
+    gap: 2px;
+  }
+  .dash-workspace .dash-tabs button {
+    min-width: 0;
     padding: 9px 2px;
-    min-height: 40px;
-    font-size: 11px;
+    min-height: 44px;
+    font-size: 12px;
   }
   .dash-period-row {
     flex-wrap: wrap;
@@ -901,9 +931,19 @@
   }
   .dash-period-row > div {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 40px minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) 44px minmax(0, 1fr);
     width: 100%;
     gap: 6px;
+  }
+  .dash-period-row > div:has(.dash-refresh:first-child) {
+    grid-template-columns: 44px minmax(0, 1fr);
+  }
+  .dash-period-row :is(button, select) {
+    height: 44px;
+    min-height: 44px;
+  }
+  .dash-period-row .dash-refresh {
+    width: 44px;
   }
   .dash-period {
     width: auto;
@@ -917,6 +957,9 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
   }
+  .dash-metrics > .dash-metric:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
   .dash-metric {
     padding: 12px;
   }
@@ -925,6 +968,7 @@
   }
   .dash-metric-heading {
     gap: 7px;
+    min-height: 2.75rem;
     align-items: flex-start;
     margin-bottom: 10px;
   }

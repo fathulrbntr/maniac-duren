@@ -117,7 +117,7 @@ export function officeInventoryPage(s, workspace) {
     <div data-inv-rows></div></section></section>`;
 }
 
-export function bindOfficeInventory(s, ctx) {
+export function bindOfficeInventory(s, ctx, initialPlace = "") {
   const root = document.querySelector("[data-office-inventory]");
   if (!root || !allowed(s, ctx.workspace)) return;
   const place = root.querySelector("[data-inv-place]"),
@@ -157,20 +157,19 @@ export function bindOfficeInventory(s, ctx) {
       : '<p class="muted">Belum ada stok di lokasi atau dalam perjalanan.</p>';
     drawList();
   }
-  function load(state) {
+  function load(state, selected = place.value) {
     if (!allowed(state, ctx.workspace)) {
       root.replaceChildren();
       return;
     }
     s = state;
     rows = inventorySnapshot(s);
-    const selected = place.value;
     place.innerHTML =
       '<option value="">Semua lokasi</option>' +
       options(s.locations || s.stores || [], selected);
     draw();
   }
-  load(s);
+  load(s, initialPlace);
   place.onchange = draw;
   search.oninput = drawList;
   list.onclick = (ev) => {
