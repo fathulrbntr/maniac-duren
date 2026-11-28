@@ -82,14 +82,14 @@ function projectionHTML(s, r) {
     ),
   )}`;
 }
-export function batchReportPage(s, store = "") {
-  return `<section class="reject-workspace"><div class="intro"><div><h2>Laporan batch supplier</h2><p class="muted">Dari penerimaan buah sampai stok turunannya habis. Rentang tanggal mengikuti tanggal penerimaan.</p></div><button id="batch-refresh">Perbarui</button></div><div class="toolbar"><select id="batch-outlet" aria-label="Outlet"><option value="">Semua outlet yang dapat diakses</option>${s.stores.map((st) => `<option value="${e(st.id)}" ${st.id === store ? "selected" : ""}>${e(st.name)}</option>`).join("")}</select><select id="batch-supplier" aria-label="Supplier"><option value="">Semua supplier</option>${s.suppliers.map((p) => `<option value="${e(p.id)}">${e(p.name)}</option>`).join("")}</select><select id="batch-status" aria-label="Status batch"><option value="">Semua status</option>${Object.entries(
+export function batchReportPage(s, store = "", fixedLocation = false) {
+  return `<section class="reject-workspace"><div class="intro"><div><h2>Laporan batch supplier</h2><p class="muted">Dari penerimaan buah sampai stok turunannya habis. Rentang tanggal mengikuti tanggal penerimaan.</p></div></div><div class="toolbar"><select id="batch-outlet" aria-label="Outlet" ${fixedLocation ? "disabled" : ""}><option value="">Semua outlet yang dapat diakses</option>${s.stores.map((st) => `<option value="${e(st.id)}" ${st.id === store ? "selected" : ""}>${e(st.name)}</option>`).join("")}</select><select id="batch-supplier" aria-label="Supplier"><option value="">Semua supplier</option>${s.suppliers.map((p) => `<option value="${e(p.id)}">${e(p.name)}</option>`).join("")}</select><select id="batch-status" aria-label="Status batch"><option value="">Semua status</option>${Object.entries(
     states,
   )
     .map(([k, v]) => `<option value="${k}">${v}</option>`)
     .join(
       "",
-    )}</select><label>Dari <input id="batch-from" type="date"></label><label>Sampai <input id="batch-to" type="date"></label><input id="batch-search" type="search" placeholder="Cari buah atau catatan nota…" aria-label="Cari batch"></div><p class="batch-sync muted" data-batch-sync role="status"></p><div id="batch-profit-summary"></div><div id="batch-results"></div><div class="reject-pagination"><button type="button" id="batch-prev">Sebelumnya</button><span id="batch-count"></span><button type="button" id="batch-next">Berikutnya</button></div></section>`;
+    )}</select><label>Dari <input id="batch-from" type="date"></label><label>Sampai <input id="batch-to" type="date"></label><input id="batch-search" type="search" placeholder="Cari buah atau catatan nota…" aria-label="Cari batch"></div><p id="batch-range-error" role="alert" class="error"></p><p class="batch-sync muted" data-batch-sync role="status"></p><div id="batch-profit-summary"></div><div id="batch-results"></div><div class="reject-pagination"><button type="button" id="batch-prev">Sebelumnya</button><span id="batch-count"></span><button type="button" id="batch-next">Berikutnya</button></div></section>`;
 }
 export function bindBatchReport(s, store, ctx) {
   let reports = batchReports(s),
@@ -273,13 +273,6 @@ export function bindBatchReport(s, store, ctx) {
   document.querySelector("#batch-next").onclick = () => {
     page++;
     render();
-  };
-  document.querySelector("#batch-refresh").onclick = async () => {
-    try {
-      await ctx.refreshBatch();
-    } catch (err) {
-      ctx.toast(err.message);
-    }
   };
   render();
 }

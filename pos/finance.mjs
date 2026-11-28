@@ -47,3 +47,77 @@ export function orderMargins(state, orders) {
     }),
   );
 }
+
+export const finite = (v) =>
+  v !== null && v !== undefined && v !== "" && Number.isFinite(Number(v));
+export const amount = (v) => (finite(v) ? Number(v) : null);
+export const cost = (v) => (finite(v) && Number(v) >= 0 ? Number(v) : null);
+export const sum = (rows) => rows.reduce((a, v) => a + (v ?? 0), 0);
+export const complete = (values) =>
+  values.every((v) => v !== null) ? sum(values) : null;
+function lineCost(s, t, line) {
+  if (t.kind === "sale") {
+    const lot = (s.lots || []).find((l) => l.id === line.lotId),
+      unitCost = cost(lot?.unitCost),
+      kg = cost(line.kg);
+    return unitCost === null || kg === null ? null : unitCost * kg;
+  }
+  // Never value historical consumption at today's master price.
+  if (!line.lineId) return null;
+  const used = (t.order.consumption || []).filter((c) => c.lineId === line.lineId);
+  if (!used.length) return null;
+  return complete(
+    used.map((c) =>
+      cost(c.qty) === null || cost(c.unitCost) === null
+        ? null
+        : Number(c.qty) * Number(c.unitCost),
+    ),
+  );
+}
+export function financialSummary(s, f, tx) {
+  const places = new Set((s.stores || []).map((row) => row.id));
+  const scope = (store) => places.has(store) && (!f.store || store === f.store);
+  const inRange = (date) => date && date >= f.from && date <= f.to;
+  const events = new Map((s.events || []).map((event) => [event.id, event]));
+  const total = sum(tx.map((t) => t.total));
+  const lines = tx.flatMap((t) =>
+    t.lines.length
+      ? t.lines.map((line) => ({ transaction: t, line, cost: lineCost(s, t, line) }))
+      : [{ transaction: t, line: null, cost: null }],
+  );
+  const costs = lines.map((entry) => entry.cost);
+  const lossRows = (s.money || []).filter(
+    (x) => x.category === "loss" && scope(x.store_id),
+  );
+  const undatedLoss = lossRows.filter(
+    (x) => !events.get(x.event_id)?.business_date,
+  ).length;
+  const losses = lossRows.filter((x) => inRange(events.get(x.event_id)?.business_date));
+  const expenses = (s.expenses || []).filter(
+    (x) => !x.voided && scope(x.store_id) && inRange(x.date),
+  );
+  const cogs = complete(costs),
+    loss = undatedLoss ? null : complete(losses.map((x) => amount(x.cost))),
+    operating = complete(expenses.map((x) => cost(x.amount)));
+  const gross = cogs === null ? null : total - cogs,
+    result = [cogs, loss, operating].some((x) => x === null)
+      ? null
+      : total - cogs - loss - operating;
+  return {
+    lines,
+    totals: {
+      cogs,
+      knownCogs: sum(costs),
+      unknownCogs: costs.filter((x) => x === null).length,
+      loss,
+      knownLoss: sum(losses.map((x) => amount(x.cost))),
+      unknownLoss: undatedLoss + losses.filter((x) => !finite(x.cost)).length,
+      losses,
+      operating,
+      expenses,
+      gross,
+      result,
+      unknownOperating: expenses.filter((x) => cost(x.amount) === null).length,
+    },
+  };
+}

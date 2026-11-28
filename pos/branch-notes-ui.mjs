@@ -24,7 +24,12 @@ const btn = (key, label) =>
   `<button type="button" data-note-action="${key}">${label}</button>`;
 
 export function branchNoteList(s, store) {
-  const notes = (s.branchNotes || []).filter((n) => !store || n.sourceId === store);
+  const priority = store ? ["approved", "packing"] : ["ready"];
+  const notes = (s.branchNotes || [])
+    .filter((n) => !store || n.sourceId === store)
+    .sort(
+      (a, b) => Number(priority.includes(b.status)) - Number(priority.includes(a.status)),
+    );
   return `<section class="panel">${recordTable(
     ["Nota transfer", "Toko asal → tujuan", "Status", "Surat jalan", "Aksi"],
     notes.map((n) => [
@@ -32,7 +37,7 @@ export function branchNoteList(s, store) {
       `${e(n.origin.name)} → ${e(n.destination.name)}`,
       e(statusLabel(n)),
       e(n.deliveryNo || "—"),
-      `<button type="button" data-branch-note="${e(n.id)}">${store && n.status === "packing" ? "Siapkan barang" : "Buka nota"}</button>`,
+      `<button type="button" data-branch-note="${e(n.id)}">${store && n.status === "packing" ? "Siapkan barang" : store && n.status === "approved" ? "Proses pengiriman" : "Buka nota"}</button>`,
     ]),
   )}</section>`;
 }

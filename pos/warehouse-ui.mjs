@@ -1,3 +1,4 @@
+import { serviceOrders } from "./order-stock.mjs";
 import { bindCostPrices } from "./cost-prices-ui.mjs";
 import {
   bindBranchNotes,
@@ -44,8 +45,8 @@ const opts = (xs, value = "") =>
     .join("");
 const stat = (label, value, hint = "") =>
   `<article class="supply-stat"><span>${e(label)}</span><strong>${e(value)}</strong><small>${e(hint)}</small></article>`;
-const action = (view, label, description) =>
-  `<button type="button" class="supply-task" data-view="${view}"><span>${e(label)}</span><small>${e(description)}</small><svg class="supply-task-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M7 17 17 7M7 7h10v10"/></svg></button>`;
+const action = (view, label, description, report = "") =>
+  `<button type="button" class="supply-task" data-view="${view}" ${report ? `data-open-report="${report}"` : ""}><span>${e(label)}</span><small>${e(description)}</small><svg class="supply-task-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M7 17 17 7M7 7h10v10"/></svg></button>`;
 const badge = (t) =>
   `<span class="supply-badge ${e(t.status)}">${e(transferStatus[t.status])}</span>`;
 const blocker = (s) =>
@@ -165,11 +166,13 @@ function supplyTasks(s, space) {
           )
         : action("pricing", "Harga transfer", "Atur harga distribusi ke toko."),
       action("products", "Master barang", "Kelola produk, varian dan harga dasar."),
-      (access.reports || access.trace) &&
+      (access.trace || access.finance) &&
+        (access.reports || access.trace) &&
         action(
           "reports",
           "Laporan batch supplier",
           "Telusuri posisi stok dan hasil olahan.",
+          "batches",
         ),
     ]
       .filter(Boolean)
@@ -288,12 +291,7 @@ export function supplyHome(s, store, space) {
           : "Gudang pusat"
         : "Operasional toko";
   const operational = space === "store" && !s.access?.receive && !s.access?.backoffice;
-  const orders = (s.orders || []).filter(
-    (o) =>
-      o.store_id === store &&
-      o.payment_status === "paid" &&
-      ["queued", "preparing", "ready"].includes(o.status),
-  );
+  const orders = serviceOrders(s, store);
   const stats = operational
     ? s.access?.cut
       ? stat(
@@ -1016,13 +1014,8 @@ function noteDialog(s, ctx) {
   return d;
 }
 export function servicePage(s, store) {
-  const orders = (s.orders || []).filter(
-    (o) =>
-      o.store_id === store &&
-      o.payment_status === "paid" &&
-      ["queued", "preparing", "ready"].includes(o.status),
-  );
-  return `<section class="supply-workspace"><div class="supply-hero"><div><span class="supply-eyebrow">TOKO / WAITRESS</span><h2>Pelayanan meja</h2><p>Pantau pesanan lunas, cek nomor meja, lalu tandai selesai setelah diantar.</p></div><button type="button" data-supply-refresh>Perbarui</button></div><div class="supply-task-grid">${orders.map((o) => `<article class="panel supply-order"><span class="supply-badge">${e({ queued: "Menunggu kitchen", preparing: "Sedang dibuat", ready: "Siap diantar" }[o.status])}</span><h3>Meja ${e(o.table_no || o.tableNo || "—")}</h3><p>${e(o.note || "")}</p><ul>${o.lines.map((l) => `<li>${e(name(s, "products", l.productId))} × ${num(l.qty)}</li>`).join("")}</ul><button type="button" data-service-complete="${e(o.id)}" ${o.status === "ready" ? "" : "disabled"}>Sudah diantar</button></article>`).join("") || '<div class="panel empty">Belum ada pesanan untuk diantar.</div>'}</div></section>`;
+  const orders = serviceOrders(s, store);
+  return `<section class="supply-workspace"><div class="supply-hero"><div><span class="supply-eyebrow">TOKO / PELAYANAN</span><h2>Pelayanan meja</h2><p>Pantau pesanan lunas, cek nomor meja, lalu tandai selesai setelah diantar.</p></div><button type="button" data-supply-refresh>Perbarui</button></div><div class="supply-task-grid">${orders.map((o) => `<article class="panel supply-order"><span class="supply-badge">${e({ queued: "Menunggu kitchen", preparing: "Sedang dibuat", ready: "Siap diantar" }[o.status])}</span><h3>Meja ${e(o.table_no || o.tableNo || "—")}</h3><p>${e(o.note || "")}</p><ul>${o.lines.map((l) => `<li>${e(name(s, "products", l.productId))} × ${num(l.qty)}</li>`).join("")}</ul><button type="button" data-service-complete="${e(o.id)}" ${o.status === "ready" ? "" : "disabled"}>Sudah diantar</button></article>`).join("") || '<div class="panel empty">Belum ada pesanan untuk diantar.</div>'}</div></section>`;
 }
 export function cuttingPage(s, store) {
   const checks = (s.cutChecks || []).filter((c) => c.storeId === store);
