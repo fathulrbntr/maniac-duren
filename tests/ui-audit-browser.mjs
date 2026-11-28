@@ -299,7 +299,7 @@ try {
     await openSidebar(page);
     const button = page.locator(`#pos-navigation [data-view="${view}"]`);
     await page.locator("#pos-sidebar").waitFor({ state: "visible" });
-    if (!(await button.evaluate((el) => el.closest("details").open)))
+    if (await button.evaluate((el) => el.closest("details")?.open === false))
       await button.locator("xpath=ancestor::details/summary").click();
     await button.click();
     await page.locator(`.shell[data-page="${view}"] #pos-main`).waitFor();
