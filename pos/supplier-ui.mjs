@@ -9,7 +9,6 @@ export function supplierDialog(ctx, onSaved = () => {}) {
   const d = ctx.modal(
     "Tambah supplier baru",
     '<label class="field">Nama supplier<input name="name" required maxlength="100" autocomplete="organization"></label><label class="field">Nomor telepon (opsional)<input name="phone" type="tel" maxlength="40" placeholder="08… atau +62…"></label><label class="field">Alamat supplier (opsional)<textarea name="address" maxlength="300" rows="3"></textarea></label>',
-    "Simpan supplier",
   );
   d.dataset.supplierEditor = "";
   const form = d.querySelector("form"),

@@ -247,7 +247,7 @@ export function openReceivingSession(s, pid, ctx, readOnly = false) {
       totals = receiptTotals(p),
       unitLines = p.lines.filter((l) => p.expected?.[l.productId]?.unit),
       fruit = unitLines.length < p.lines.length;
-    header.innerHTML = `<p>${e(name(s, "suppliers", p.supplierId))} · ${e(p.date)}</p><p class="notice">${e(receiptStatuses[status])} · ${receivedSummary(p)}${unitLines.length ? "" : " tersimpan"}</p>${varianceTable(ctx.getState(), p)}${editable ? unitLines.map((l) => `<button type="button" data-session-quantity="${e(l.productId)}">Catat jumlah · ${e(name(s, "products", l.productId))}</button>`).join(" ") : ""}${editable && fruit ? '<div class="supply-scan"><input data-session-code autocomplete="off" maxlength="26" inputmode="numeric" placeholder="Scan barcode buah" aria-label="Scan barcode buah" aria-describedby="form-error"><button type="button" data-session-scan>Simpan scan</button></div>' : ""}`;
+    header.innerHTML = `<p>${e(name(s, "suppliers", p.supplierId))} · ${e(p.date)}</p><p class="notice">${e(receiptStatuses[status])} · ${receivedSummary(p)}${unitLines.length ? "" : " tersimpan"}</p>${varianceTable(ctx.getState(), p)}${editable ? unitLines.map((l) => `<button type="button" data-session-quantity="${e(l.productId)}">Catat jumlah · ${e(name(s, "products", l.productId))}</button>`).join(" ") : ""}${editable && fruit ? '<div class="supply-scan"><input data-session-code autocomplete="off" maxlength="26" inputmode="numeric" placeholder="Scan barcode buah" aria-label="Scan barcode buah" aria-describedby="form-error"><button type="button" data-session-scan>Simpan</button></div>' : ""}`;
     detail.innerHTML = `${editable && fruit ? '<p class="muted">Tunggu konfirmasi tersimpan sebelum scan buah berikutnya. Barcode menentukan produk dan berat; satu label untuk satu buah.</p>' : ""}${!readOnly && status === "completed" ? "<p>Penerimaan terkunci. Koreksi harus dibuka dari Back Office.</p>" : ""}<section ${fruit ? "" : "hidden"} data-receiving-barcodes aria-label="Barcode tersimpan"><h3>Barcode tersimpan (${totals.pieces})</h3>${recordTable(
       ["Barcode", "Produk", "Berat", ...(editable ? ["Aksi"] : [])],
       p.receiving.scans
@@ -281,7 +281,6 @@ export function openReceivingSession(s, pid, ctx, readOnly = false) {
               "Kedaluwarsa (opsional)",
               `<input type="date" name="expiry" min="${e(p.date)}" value="${e(saved?.expiry || "")}">`,
             ),
-          "Simpan jumlah",
         );
         next.classList.add("supply-modal");
         const refreshRecovery = bindRecovery(next, ctx, pid, reopen);

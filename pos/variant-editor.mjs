@@ -214,7 +214,6 @@ export function variantGroupDialog({ groupId, state, modal, mutate, render, toas
   const d = modal(
     "Tambah varian",
     `<p><b>${e(first.variantGroupName)}</b></p><p class="muted">Tambahkan nilai pada pilihan di bawah. Varian yang sudah ada tetap disertakan.</p>${variantEditorMarkup()}`,
-    "Simpan varian baru",
   );
   d.classList.add("product-modal", "variants-modal");
   const error = (message) => (d.querySelector("#form-error").textContent = message);
@@ -267,7 +266,6 @@ export function productVariantDialog({ productId, state, modal, mutate, render, 
   const d = modal(
     "Tambah varian",
     `${field("Nama kelompok barang", `<input data-variant-group-name value="${e(source.name)}" maxlength="100" required>`)}<p class="variant-notice"><b>${e(source.name)}</b> menjadi varian pertama. Tentukan pilihannya di “Varian barang saat ini”, lalu isi varian baru.</p>${variantEditorMarkup()}`,
-    "Simpan varian baru",
   );
   d.classList.add("product-modal", "variants-modal");
   const error = (message) => (d.querySelector("#form-error").textContent = message);

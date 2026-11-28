@@ -257,7 +257,7 @@ try {
   const editor = page.locator("dialog[open]");
   await editor.locator('[name="priceKg"]').fill("107000");
   await editor.locator('[name="pricePiece"]').fill("163000");
-  await editor.getByRole("button", { name: "Simpan harga" }).click();
+  await editor.getByRole("button", { name: "Simpan", exact: true }).click();
   await priceRow.filter({ hasText: "Khusus cabang" }).waitFor();
   assert.match(await priceRow.innerText(), /107\.000/);
   await outlet.selectOption(otherStore);

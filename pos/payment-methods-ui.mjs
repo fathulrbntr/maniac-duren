@@ -44,7 +44,7 @@ export function paymentsPage(s, store) {
     )
     .join(
       "",
-    )}<aside class="payment-note">Pembayaran non-tunai dikonfirmasi kasir setelah memeriksa aplikasi / mesin EDC. Pengaturan ini tidak menghubungkan akun, memverifikasi dana, atau mengatur pencairan otomatis. Transaksi QRIS cukup dicatat satu kali sebagai QRIS, meskipun pelanggan membayar memakai e-wallet.</aside><p id="payment-settings-error" class="error" role="alert"></p><footer class="payment-save"><span data-payment-count></span><button type="submit" class="primary">Simpan pengaturan</button></footer></fieldset></form></section>`;
+    )}<aside class="payment-note">Pembayaran non-tunai dikonfirmasi kasir setelah memeriksa aplikasi / mesin EDC. Pengaturan ini tidak menghubungkan akun, memverifikasi dana, atau mengatur pencairan otomatis. Transaksi QRIS cukup dicatat satu kali sebagai QRIS, meskipun pelanggan membayar memakai e-wallet.</aside><p id="payment-settings-error" class="error" role="alert"></p><footer class="payment-save"><span data-payment-count></span><button type="submit" class="primary">Simpan</button></footer></fieldset></form></section>`;
 }
 export function bindPayments(ctx, store) {
   const s = ctx.getState(),

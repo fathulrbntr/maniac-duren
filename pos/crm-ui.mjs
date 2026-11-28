@@ -30,7 +30,6 @@ export function memberDialog(ctx, member, onSaved) {
   const d = ctx.modal(
     member ? "Ubah member" : "Tambah member",
     `<p class="muted">Nama dan nomor telepon wajib. Email boleh dikosongkan.</p>${field("Nama customer", `<input name="name" value="${e(m.name)}" minlength="2" maxlength="100" autocomplete="name" required>`)}${field("Nomor telepon / WhatsApp", `<input name="phone" value="${e(m.phone)}" type="tel" maxlength="30" placeholder="081234567890" autocomplete="tel" required>`)}${field("Alamat email (opsional)", `<input name="email" type="email" value="${e(m.email)}" maxlength="254" autocomplete="email">`)}<label class="crm-consent"><input name="waOptIn" type="checkbox" ${m.waOptIn ? "checked" : ""}><span>${consentText}</span></label><p class="muted">Centang hanya setelah pelanggan menyatakan setuju. Persetujuan dicatat beserta waktu dan petugas.</p>${member ? `<label class="crm-consent"><input name="active" type="checkbox" ${m.active ? "checked" : ""}><span>Member aktif</span></label>` : ""}`,
-    "Simpan member",
   );
   let saving = false;
   const f = d.querySelector("form");
@@ -191,7 +190,6 @@ function ruleDialog(ctx, productId) {
   const d = ctx.modal(
     "Atur poin produk",
     `<h3>${e(p.name)}</h3>${field("Poin setiap kelipatan", `<input name="points" type="number" min="0" max="1000000" step="1" value="${r.points}" required>`)}${field("Jumlah produk", `<input name="stepQty" type="number" min="0.000001" max="1000000" step="any" value="${r.stepQty}" required>`)}${field("Satuan perhitungan", `<select name="unit">${(p.stockUnit === "kg_butir" ? ["kg", "butir"] : [p.stockUnit]).map((u) => `<option value="${e(u)}" ${u === r.unit ? "selected" : ""}>${e(u)}</option>`).join("")}</select>`)}<label class="crm-consent"><input name="active" type="checkbox" ${r.active ? "checked" : ""}><span>Aturan aktif</span></label><p class="muted">Buah dihitung dari berat aktual / jumlah butir, termasuk saat cara jualnya berbeda. Aturan baru berlaku untuk pembayaran berikutnya.</p>`,
-    "Simpan aturan",
   );
   let saving = false;
   const eventId = id();

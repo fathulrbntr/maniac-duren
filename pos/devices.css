@@ -110,6 +110,7 @@
 }
 .device-settings-actions > div {
   display: flex;
+  align-items: stretch;
   gap: 8px;
   flex-shrink: 0;
 }
@@ -148,6 +149,7 @@
     flex-direction: column;
   }
   .device-settings-actions > div {
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

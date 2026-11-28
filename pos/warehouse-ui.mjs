@@ -723,7 +723,7 @@ function openTransfer(s, t, ctx, receiving) {
           : `${num(l.qty)} ${e(l.unit)}`,
         ...(finance ? [`${money(l.price)} / ${e(l.unit)}`, money(l.total)] : []),
       ]),
-    )}${scanField ? `<div class="supply-step"><b>1</b><span>Scan ulang barang yang tiba</span></div><div class="supply-scan"><input data-receive-code autocomplete="off" spellcheck="false" placeholder="Scan barcode penerimaan" aria-label="Scan barcode penerimaan"><button type="button" data-receive-add>Catat scan</button></div><p data-receive-message role="status"></p><p class="notice">Scan tersimpan di server. Seluruh kiriman tetap dalam perjalanan sampai barcode lengkap dan penerimaan dikonfirmasi.</p>` : ""}<div data-receive-list>${t.items.length ? receiptItems(t) : ""}</div>${
+    )}${scanField ? `<div class="supply-step"><b>1</b><span>Scan ulang barang yang tiba</span></div><div class="supply-scan"><input data-receive-code autocomplete="off" spellcheck="false" placeholder="Scan barcode penerimaan" aria-label="Scan barcode penerimaan"><button type="button" data-receive-add>Simpan</button></div><p data-receive-message role="status"></p><p class="notice">Scan tersimpan di server. Seluruh kiriman tetap dalam perjalanan sampai barcode lengkap dan penerimaan dikonfirmasi.</p>` : ""}<div data-receive-list>${t.items.length ? receiptItems(t) : ""}</div>${
       canReceive && t.lines.some((l) => l.kind === "unit")
         ? `<h3>Periksa jumlah barang satuan</h3>${t.lines
             .filter((l) => l.kind === "unit")
@@ -846,7 +846,6 @@ function openTransfer(s, t, ctx, receiving) {
           "Referensi pembayaran",
           '<input name="reference" minlength="3" maxlength="150" required>',
         ),
-      "Simpan pembayaran",
     );
     const eid = id();
     savingForm(m, async (f) => {
@@ -932,7 +931,6 @@ function noteDialog(s, ctx) {
   const d = ctx.modal(
     branch ? "Buka nota supplier untuk cabang" : "Nota supplier ke gudang",
     `${branch ? field("Cabang penerima", `<select name="receivingBranch" required><option value="">Pilih cabang penerima</option>${opts(branches)}</select>`) : `<p><b>${e(location(s, wh)?.name)}</b></p>`}<div class="form-grid">${field("Supplier", `<select name="supplierId" required>${opts(s.suppliers)}</select>`)}${field("Nomor nota supplier", '<input name="invoiceNo" maxlength="100" required>')}${field("Tanggal penerimaan", `<input name="date" type="date" value="${today()}" max="${today()}" required>`)}${field("Ongkir bersama (Rp)", '<input name="shippingCost" type="number" min="0" step="any" value="0" required>')}</div><div data-note-lines></div><button type="button" data-note-add>+ Tambah produk</button><p class="muted">Modal batch dihitung dari nilai barang dan bagian ongkir, dibagi jumlah aktual yang diterima.</p>`,
-    branch ? "Simpan nota untuk cabang" : "Simpan nota untuk gudang",
   );
   d.classList.add("supply-modal");
   const list = d.querySelector("[data-note-lines]");
@@ -1020,7 +1018,7 @@ export function servicePage(s, store) {
 }
 export function cuttingPage(s, store) {
   const checks = (s.cutChecks || []).filter((c) => c.storeId === store);
-  return `<section class="supply-workspace"><div class="supply-hero"><div><span class="supply-eyebrow">TOKO / TUKANG POTONG</span><h2>Pemeriksaan buah</h2><p>Scan buah yang dipilih pelanggan. Buah yang tidak layak dicatat melalui Reject & Waste.</p></div><button type="button" data-view="waste">Reject & Waste</button></div><section class="panel"><form data-cut-form><div class="form-grid">${field("Barcode buah", '<input name="barcode" maxlength="26" autocomplete="off" required>')}${field("Nomor meja / pesanan", '<input name="tableNo" maxlength="30" required>')}${field("Catatan", '<input name="note" maxlength="300">')}</div><p class="muted">Pencatatan pemeriksaan tidak mengurangi stok. Kasir memindai barcode saat pembayaran.</p><p data-cut-error class="error"></p><button type="submit" class="primary">Catat pemeriksaan</button></form></section><section class="panel"><h3>Pemeriksaan 7 hari terakhir</h3>${table(
+  return `<section class="supply-workspace"><div class="supply-hero"><div><span class="supply-eyebrow">TOKO / TUKANG POTONG</span><h2>Pemeriksaan buah</h2><p>Scan buah yang dipilih pelanggan. Buah yang tidak layak dicatat melalui Reject & Waste.</p></div><button type="button" data-view="waste">Reject & Waste</button></div><section class="panel"><form data-cut-form><div class="form-grid">${field("Barcode buah", '<input name="barcode" maxlength="26" autocomplete="off" required>')}${field("Nomor meja / pesanan", '<input name="tableNo" maxlength="30" required>')}${field("Catatan", '<input name="note" maxlength="300">')}</div><p class="muted">Pencatatan pemeriksaan tidak mengurangi stok. Kasir memindai barcode saat pembayaran.</p><p data-cut-error class="error"></p><button type="submit" class="primary">Simpan</button></form></section><section class="panel"><h3>Pemeriksaan 7 hari terakhir</h3>${table(
     ["Barcode", "Meja", "Catatan", "Petugas"],
     checks.map(
       (c) =>
@@ -1139,7 +1137,6 @@ export function bindSupply(s, store, view, ctx) {
               "Harga transfer ke toko (Rp)",
               `<input name="price" type="number" min="0.01" step="0.01" value="${r?.price || ""}" required>`,
             ),
-          "Simpan harga",
         );
         const request = id();
         savingForm(d, async (f) => {
@@ -1184,7 +1181,6 @@ export function bindSupply(s, store, view, ctx) {
           '<textarea name="reason" minlength="10" maxlength="500" required></textarea>',
         ) +
         '<p class="notice">Khusus stok lama. Total berat dan butir harus tepat sama dengan stok belum berlabel. Barcode milik batch lain ditolak. Tidak menambah stok.</p>',
-      "Registrasikan barcode",
     );
     const eid = id();
     savingForm(d, async (f) => {

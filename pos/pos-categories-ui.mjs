@@ -189,7 +189,6 @@ export function posCategoryDialog(ctx) {
   const d = modal(
     "Kelola kategori",
     `<div class="pos-category-breadcrumb" data-category-breadcrumb></div><section data-category-name-step>${field("Nama kategori", `<input data-category-name value="${e(category?.name || "")}" maxlength="50" required placeholder="Contoh: Paket Hemat">`)}<p class="muted">Kategori tersinkron di Master Barang, Stok, dan POS untuk semua outlet.</p><button type="button" data-category-next class="primary">Lanjut · Tambah produk</button><button type="button" data-category-name-cancel hidden>Kembali ke kategori</button></section><section data-category-members-step hidden><div class="pos-category-selection-head"><div><h3 data-category-title></h3><small data-category-member-count aria-live="polite"></small></div><button type="button" data-category-rename>Ubah nama</button></div><button type="button" data-category-add class="primary">+ Tambah produk dari master</button><h4 class="pos-category-section-title">Produk dalam kategori</h4><div class="pos-category-picker-tools"><label class="pos-category-select-all"><input type="checkbox" data-category-select-all-members><span data-category-select-all-members-label>Pilih semua</span></label></div><div class="pos-category-picker" data-category-members></div><div class="pos-category-remove-tools"><button type="button" data-category-remove disabled>Keluarkan yang dipilih</button><small data-category-remove-count aria-live="polite"></small></div><p class="muted">Produk yang dikeluarkan tetap tersedia di Semua. Data master, stok, dan kategori lainnya tetap tersimpan.</p></section><section data-category-product-step hidden><div class="pos-category-selection-head"><div><h3 data-category-picker-title></h3><small data-category-selection-count aria-live="polite"></small></div><button type="button" data-category-back>Kembali</button></div>${field("Pilih produk dari Master Barang", '<input data-category-search type="search" placeholder="Cari nama, varian, SKU, atau barcode…">')}<div class="pos-category-picker-tools"><label class="pos-category-select-all"><input type="checkbox" data-category-select-all-products><span data-category-select-all-products-label>Pilih semua</span></label><button type="button" data-category-clear>Bersihkan pilihan</button></div><p class="muted">Centang produk atau varian yang ingin dimasukkan. Pilih semua mengikuti hasil pencarian. Produk yang sudah ada di kategori ini tidak ditampilkan.</p><div class="pos-category-picker" data-category-picker></div><p class="muted">${e(itemTypes.raw)} dan ${e(itemTypes.prep)} tidak ditampilkan. Produk yang ditambahkan langsung tampil di kategori, termasuk yang belum memiliki harga atau stok. Penjualan aktif setelah harga, stok, dan resep siap.</p></section>`,
-    "Tambahkan ke kategori",
   );
   d.classList.add("pos-category-modal");
   const submit = d.querySelector('[type="submit"]'),
@@ -271,12 +270,6 @@ export function posCategoryDialog(ctx) {
     d.querySelector("[data-category-name-cancel]").hidden = view !== "rename";
     submit.hidden = !["add", "rename"].includes(view);
     submit.disabled = false;
-    submit.textContent =
-      view === "rename"
-        ? "Simpan nama"
-        : category
-          ? "Tambahkan ke kategori"
-          : "Buat kategori & tambah produk";
     d.querySelector("[data-category-breadcrumb]").textContent =
       `Kelola kategori${category ? ` → ${category.name}` : ""}${view === "add" ? " → Pilih produk dari master" : ""}`;
     if (view === "manage") drawMembers();

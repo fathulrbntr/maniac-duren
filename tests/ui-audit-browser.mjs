@@ -46,6 +46,22 @@ async function assertAlignedActions(group, { shift = false } = {}) {
     assert(first.height <= 48, "Oversized shift actions");
   }
 }
+async function assertSaveFooter(dialog) {
+  const footer = dialog.locator(".modal-actions");
+  assert.deepEqual(await footer.locator("button:visible").allTextContents(), [
+    "Batal",
+    "Simpan",
+  ]);
+  await assertAlignedActions(footer);
+  const cancel = await footer
+    .getByRole("button", { name: "Batal", exact: true })
+    .boundingBox();
+  const save = await footer
+    .getByRole("button", { name: "Simpan", exact: true })
+    .boundingBox();
+  assert.equal(cancel.y, save.y);
+  assert(Math.abs(cancel.width - save.width) < 1, "Unequal save and cancel widths");
+}
 const f = fixture();
 Object.assign(
   f.state.access,
@@ -220,6 +236,12 @@ try {
             await menu.locator("summary").click();
           }
         }
+        if (["devices", "payments", "production"].includes(view)) {
+          const save = page
+            .locator("#device-settings, #payment-settings-form, #production-form")
+            .getByRole("button", { name: "Simpan", exact: true });
+          assert(await save.isVisible(), `Missing save action on ${view}`);
+        }
         if (view === "orders" && [1600, 360].includes(width)) {
           const card = page.locator("#order-products .order-product:visible").first();
           const geometry = await card.evaluate((el) => {
@@ -258,6 +280,7 @@ try {
       await page.locator("#add-catalog-product").click();
       const productDialog = page.locator("dialog.product-entry-modal[open]");
       await productDialog.waitFor({ state: "visible" });
+      await assertSaveFooter(productDialog);
       assert(
         await productDialog.evaluate((el) => el.scrollWidth <= el.clientWidth + 1),
         `product dialog overflow ${width}`,
@@ -494,6 +517,9 @@ try {
         );
       }
       if (view === "supplierNotes") {
+        await page.locator("[data-note-new]").click();
+        await assertSaveFooter(dialog);
+        await dialog.locator(".modal-actions .close").click();
         await page.locator('[data-note-open="receipt"]').click();
         await assertDialogFits(view, width);
         const comparisons = dialog.locator(".receipt-comparison tbody tr");
@@ -507,6 +533,7 @@ try {
         }
         for (const selector of ["[data-note-pay=invoice]", "[data-expected-edit]"]) {
           await dialog.locator(selector).click();
+          await assertSaveFooter(dialog);
           await assertDialogFits(view, width);
           await dialog.locator(".modal-head .close").click();
           await page.locator('[data-note-open="receipt"]').click();
