@@ -22,7 +22,7 @@ const groups = visibleSections(access);
 assert.deepEqual(
   groups.map((g) => [g.label, g.pages]),
   [
-    ["Toko", ["storehome"]],
+    ["Toko", ["home", "storehome"]],
     ["Stok & Penerimaan", ["receiving", "stock", "waste"]],
     ["Kasir", ["orders", "salesreport", "storeExpenses", "shifts"]],
     ["Kitchen", ["kitchen", "production"]],
@@ -50,7 +50,7 @@ for (const [flags, expected] of [
 ])
   assert.deepEqual(
     visibleSections({ workspace: "store", ...flags }).flatMap((g) => g.pages),
-    expected,
+    ["home", ...expected],
   );
 for (const workspace of ["backoffice", "warehouse"])
   assert(

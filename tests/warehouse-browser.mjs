@@ -275,6 +275,9 @@ try {
   await nextSteps.getByRole("button", { name: /Penjualan toko/ }).click();
   await page.locator('.shell[data-page="orders"] #order-products').waitFor();
   await login("owner");
+  await page
+    .locator('.shell[data-page="home"] .home-hero-actions [data-view="backoffice"]')
+    .click();
   await page.locator('.shell[data-page="backoffice"] .dash-profile').waitFor();
   assert.equal(await page.locator("#dash-store").inputValue(), "");
   assert.equal(
@@ -386,6 +389,15 @@ try {
   await page.locator("dialog[open] [type=submit]").click();
   await page.locator("dialog[open]").waitFor({ state: "hidden" });
   await login("waitress");
+  await page.locator('.shell[data-page="home"] .home-page').waitFor();
+  assert.equal(
+    await page
+      .locator(
+        '[data-home-eye], .home-page [data-view="retailFunds"], .home-page [data-view="orders"]',
+      )
+      .count(),
+    0,
+  );
   assert.equal(await page.locator(".nav-item[data-view=orders]").count(), 0);
   await nav("service");
   assert.match(await page.locator("main").innerText(), /Pelayanan meja/);

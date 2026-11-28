@@ -1,6 +1,7 @@
 import { confirmAction } from "../shared/confirmation.mjs";
 import { workspaceGroups } from "./workspaces.mjs";
 export const pageTitles = {
+  home: "Beranda",
   backoffice: "Dashboard Back Office",
   warehouse: "Dashboard Gudang",
   storehome: "Dashboard Toko",
@@ -44,6 +45,7 @@ export const pageTitles = {
   cashier: "Kasir buah cepat",
 };
 const paths = {
+  home: "M3 10.5 12 3l9 7.5 M5 9v12h5v-7h4v7h5V9",
   backoffice: "M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z",
   warehouse: "M3 10l9-6 9 6v11H3z M8 21V12h8v9 M8 16h8",
   storehome:
@@ -98,7 +100,7 @@ export const pageIcon = (k) =>
 
 // Sidebar grouping only. Existing page IDs, permissions and transaction flow are unchanged.
 export const sections = [
-  { id: "utama", label: "Ringkasan", pages: ["dashboard"] },
+  { id: "utama", label: "Ringkasan", pages: ["home", "dashboard"] },
   {
     id: "inventory",
     label: "01 · Gudang & Penerimaan",
@@ -128,6 +130,7 @@ export function visibleSections(access) {
   if (access?.workspace) return workspaceGroups(access);
   const allowed = access
     ? {
+        home: true,
         crm: access.crmAdmin,
         payments: access.cashierOwner,
         devices: access.cashierOwner || access.sell || access.master,

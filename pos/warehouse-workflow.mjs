@@ -20,6 +20,37 @@ export const workflowActions = [
 export const workflowReady = (s) => s.warehouseWorkflowVersion >= 114 && !s.stockDemo;
 export const backOffice = (s, space) =>
   !!s.access?.backoffice && (space === undefined || space === "backoffice");
+export function pendingWorkItems(s, store, space) {
+  const central = space === "backoffice";
+  const places = new Set(store ? [store] : (s.stores || []).map((row) => row.id));
+  const tasks = [];
+  if (workflowReady(s) && (central || (s.branchStockVersion >= 132 && s.access?.stock))) {
+    const open = (s.receiptPlans || []).filter(
+      (p) => places.has(p.storeId) && !p.cancelled && p.receiving?.status !== "completed",
+    );
+    tasks.push(["supplierNotes", "Nota menunggu penerimaan", open.length]);
+  }
+  if (s.branchNoteVersion >= 135 && (central || s.access?.stock)) {
+    const pending = (s.branchNotes || []).filter(
+      (n) =>
+        n.status === (central ? "ready" : "packing") &&
+        (places.has(n.sourceId) || (central && places.has(n.targetId))),
+    );
+    tasks.push([
+      central ? "transfers" : "transferPrep",
+      central ? "Transfer menunggu persetujuan" : "Transfer perlu disiapkan",
+      pending.length,
+    ]);
+  }
+  if (central && s.access?.finance && s.pettyCashVersion >= 130) {
+    const pending = (s.pettyRequests || []).filter(
+      (r) => r.status === "pending" && places.has(r.store_id),
+    );
+    tasks.push(["retailFunds", "Pengajuan petty cash", pending.length]);
+  }
+  return tasks;
+}
+
 export const receiptStatuses = {
   open: "Menunggu / sedang ditimbang",
   paused: "Dijeda",

@@ -17,7 +17,7 @@ import {
   prepareBarcodeInput,
   readyBarcodeInput,
 } from "./barcode-scanner.mjs";
-import { workflowReady, backOffice } from "./warehouse-workflow.mjs";
+import { workflowReady, backOffice, pendingWorkItems } from "./warehouse-workflow.mjs";
 import { receivingPage, openReceivingSession } from "./receiving-session-ui.mjs";
 import { outboundPage, bindOutboundPage, openOutboundForm } from "./outbound-ui.mjs";
 import { escape as e, id, today, num, money } from "./core.mjs";
@@ -262,35 +262,7 @@ function storeReceiptStats(s, store, pending) {
 }
 
 function pendingWork(s, store, space) {
-  const central = space === "backoffice";
-  const tasks = [];
-  if (workflowReady(s) && (central || (s.branchStockVersion >= 132 && s.access?.stock))) {
-    const open = (s.receiptPlans || []).filter(
-      (p) =>
-        (!store || p.storeId === store) &&
-        !p.cancelled &&
-        p.receiving?.status !== "completed",
-    );
-    tasks.push(["supplierNotes", "Nota menunggu penerimaan", open.length]);
-  }
-  if (s.branchNoteVersion >= 135 && (central || s.access?.stock)) {
-    const pending = (s.branchNotes || []).filter(
-      (n) =>
-        n.status === (central ? "ready" : "packing") &&
-        (!store || n.sourceId === store || (central && n.targetId === store)),
-    );
-    tasks.push([
-      central ? "transfers" : "transferPrep",
-      central ? "Transfer menunggu persetujuan" : "Transfer perlu disiapkan",
-      pending.length,
-    ]);
-  }
-  if (central && s.access?.finance && s.pettyCashVersion >= 130) {
-    const pending = (s.pettyRequests || []).filter(
-      (r) => r.status === "pending" && (!store || r.store_id === store),
-    );
-    tasks.push(["retailFunds", "Pengajuan petty cash", pending.length]);
-  }
+  const tasks = pendingWorkItems(s, store, space);
   if (!tasks.length) return "";
   return `<section class="dash-panel dash-pending"><h2>Tindak lanjut</h2><div class="dash-queue">${tasks.map(([view, label, count]) => `<button type="button" data-view="${view}"><span>${label}</span><strong>${num(count)}</strong></button>`).join("")}</div></section>`;
 }

@@ -25,7 +25,7 @@ import {
 } from "./pos-categories-ui.mjs";
 import { menuCatalogChanged, posProductStatus } from "./pos-categories.mjs";
 import { employeesPage, bindEmployees } from "./employees-ui.mjs";
-import { checkOrder } from "./order-stock.mjs";
+import { checkOrder, needsKitchen } from "./order-stock.mjs";
 import { fruitSaleLine } from "./fruit-stock.mjs";
 import { fruitSaleDialog } from "./fruit-sale-dialog.mjs";
 import { orderMargins } from "./finance.mjs";
@@ -43,7 +43,6 @@ export const opsPages = [
   "attendance",
   "guide",
 ];
-const needsKitchen = (o) => o.lines.some((l) => l.itemType === "recipe");
 const isPaid = (o) =>
   o.payment_status === "paid" || (!o.payment_status && o.status === "paid");
 const paymentLabel = (o) =>
