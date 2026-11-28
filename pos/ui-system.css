@@ -368,6 +368,7 @@ td {
 .modal {
   max-height: calc(100dvh - 32px);
   overflow: auto;
+  overflow-wrap: anywhere;
   border: 1px solid var(--line);
   border-radius: var(--radius-modal);
   background: var(--surface);
@@ -411,6 +412,15 @@ td {
   font-size: 24px;
   line-height: 1;
   font-weight: var(--weight-normal);
+}
+.modal :where(fieldset, .field, .table-wrap, .toolbar > *, .modal-head h2) {
+  min-inline-size: 0;
+}
+.modal :where(button, input, select, textarea, img) {
+  max-inline-size: 100%;
+}
+.modal :where(button, .field) {
+  overflow-wrap: anywhere;
 }
 .modal .field {
   font-size: var(--text-dialog-label);

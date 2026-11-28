@@ -19,6 +19,7 @@ import {
 import {
   field,
   table,
+  recordTable,
   name,
   options,
   sessionDialog,
@@ -465,7 +466,7 @@ export function openOutbound(s, oid, ctx) {
       canDispatch = s.branchStockVersion >= 132 && o.kind === "transfer" ? bo : !bo,
       units = o.rates.filter((r) => r.kind === "unit"),
       hasFruit = o.rates.some((r) => r.kind !== "unit");
-    body.innerHTML = `<p><b>${o.kind === "transfer" ? "Transfer toko" : "Penjualan wholesale"}</b> · ${e(o.kind === "transfer" ? name(ctx.getState(), "locations", o.targetId) : o.buyer?.name)}</p><p>${e(o.carrier)} · ${e(outboundStatuses[o.status])}</p>${bo ? `<div class="notice">${e(balance.label)}${o.total != null ? ` · Total ${money(balance.total)} · Dibayar ${money(balance.paid)} · Sisa ${money(balance.remaining)}` : ""}</div>` : ""}${table(
+    body.innerHTML = `<p><b>${o.kind === "transfer" ? "Transfer toko" : "Penjualan wholesale"}</b> · ${e(o.kind === "transfer" ? name(ctx.getState(), "locations", o.targetId) : o.buyer?.name)}</p><p>${e(o.carrier)} · ${e(outboundStatuses[o.status])}</p>${bo ? `<div class="notice">${e(balance.label)}${o.total != null ? ` · Total ${money(balance.total)} · Dibayar ${money(balance.paid)} · Sisa ${money(balance.remaining)}` : ""}</div>` : ""}${recordTable(
       ["Produk", "Batch asal", ...(bo ? ["Harga khusus"] : [])],
       o.rates.map((r) => {
         const lot = (
@@ -474,26 +475,38 @@ export function openOutbound(s, oid, ctx) {
         const batch = lot
           ? batchLabel(ctx.getState(), lot)
           : r.sourceLotId || "Mengikuti barcode (dokumen lama)";
-        return `<tr><td>${e(name(ctx.getState(), "products", r.productId))}</td><td>${e(batch)}${r.kind === "unit" ? `<small>${num(r.qty)} ${e(r.unit)}</small>` : ""}</td>${bo ? `<td>${money(r.price)} / ${e(r.unit)}</td>` : ""}</tr>`;
+        return [
+          e(name(ctx.getState(), "products", r.productId)),
+          `${e(batch)}${r.kind === "unit" ? `<small>${num(r.qty)} ${e(r.unit)}</small>` : ""}`,
+          ...(bo ? [`${money(r.price)} / ${e(r.unit)}`] : []),
+        ];
       }),
     )}<p><b>${outboundContents(o)}</b></p>${packing && hasFruit ? '<div class="supply-scan"><input data-outbound-code aria-label="Scan barcode pengiriman" placeholder="Scan barcode barang yang disiapkan" maxlength="26" autocomplete="off"><button type="button" data-outbound-add>Simpan scan</button></div><p class="muted">Scan tersimpan otomatis. Dokumen ini dapat ditutup dan dilanjutkan dari daftar pengiriman.</p>' : ""}<div class="toolbar">${bo && ["packing", "ready"].includes(o.status) ? '<button type="button" data-outbound-edit>Edit dokumen & harga</button>' : ""}${bo && o.status === "ready" ? '<button type="button" data-outbound-repack>Buka ulang penyiapan</button><button type="button" class="primary" data-outbound-issue>Terbitkan invoice & surat jalan</button>' : ""}${packing ? '<button type="button" class="primary" data-outbound-ready>Selesaikan penyiapan</button>' : ""}${canDispatch && o.status === "approved" ? '<button type="button" class="primary" data-outbound-dispatch>Konfirmasi barang dikirim</button>' : ""}${bo && o.invoiceNo && balance.remaining > 0 && o.status !== "cancelled" ? '<button type="button" data-outbound-pay>Catat pembayaran</button>' : ""}${bo && ["packing", "ready", "approved"].includes(o.status) && !o.paid ? '<button type="button" data-outbound-cancel>Batalkan dokumen</button>' : ""}${o.invoiceNo ? `${bo ? '<button type="button" data-outbound-print="invoice">Cetak invoice</button>' : ""}<button type="button" data-outbound-print="delivery">Cetak surat jalan</button>` : ""}</div>${
       hasFruit
-        ? `<details open><summary>Barcode dalam dokumen</summary>${table(
+        ? `<details open><summary>Barcode dalam dokumen</summary>${recordTable(
             ["Barcode", "Produk", "Berat", ...(packing ? ["Aksi"] : [])],
-            o.items.map(
-              (i) =>
-                `<tr><td><code>${e(i.barcode)}</code></td><td>${e(name(ctx.getState(), "products", i.productId))}</td><td>${num(i.grams / 1000)} kg</td>${packing ? `<td><button type="button" data-outbound-remove="${e(i.barcode)}">Hapus</button></td>` : ""}</tr>`,
-            ),
+            o.items.map((i) => [
+              `<code>${e(i.barcode)}</code>`,
+              e(name(ctx.getState(), "products", i.productId)),
+              `${num(i.grams / 1000)} kg`,
+              ...(packing
+                ? [
+                    `<button type="button" data-outbound-remove="${e(i.barcode)}">Hapus</button>`,
+                  ]
+                : []),
+            ]),
           )}</details>`
         : ""
     }${
       bo && o.payments?.length
-        ? `<h3>Riwayat pembayaran</h3>${table(
+        ? `<h3>Riwayat pembayaran</h3>${recordTable(
             ["Tanggal", "Jumlah", "Metode / referensi", "Dicatat oleh"],
-            o.payments.map(
-              (p) =>
-                `<tr><td>${e(p.date)}</td><td>${money(p.amount)}</td><td>${e(p.method)} · ${e(p.reference)}</td><td>${e(p.actor)}</td></tr>`,
-            ),
+            o.payments.map((p) => [
+              e(p.date),
+              money(p.amount),
+              `${e(p.method)} · ${e(p.reference)}`,
+              e(p.actor),
+            ]),
           )}`
         : ""
     }<p>${e(o.note)}</p>`;

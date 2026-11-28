@@ -1,4 +1,4 @@
-import { table } from "./supply-session-ui.mjs";
+import { table, recordCells, recordTable } from "./supply-session-ui.mjs";
 import { receiptOfficeControls } from "./receiving-session-ui.mjs";
 import { workflowReady } from "./warehouse-workflow.mjs";
 import { escape as e, id, today, money, num } from "./core.mjs";
@@ -100,16 +100,18 @@ function archivedDraft(s, p) {
   const quantities = Object.entries(p.receiving?.quantities || {});
   if (!scans.length && !quantities.length) return "";
   const rows = [
-    ...scans.map(
-      (x) =>
-        `<tr><td>${e(name(s, "products", x.productId))}</td><td>${num(x.grams / 1000)} kg</td><td><code>${e(x.barcode)}</code></td></tr>`,
-    ),
-    ...quantities.map(
-      ([key, x]) =>
-        `<tr><td>${e(name(s, "products", key))}</td><td>${num(x.qty)} ${e(p.expected?.[key]?.unit)}</td><td>—</td></tr>`,
-    ),
+    ...scans.map((x) => [
+      e(name(s, "products", x.productId)),
+      `${num(x.grams / 1000)} kg`,
+      `<code>${e(x.barcode)}</code>`,
+    ]),
+    ...quantities.map(([key, x]) => [
+      e(name(s, "products", key)),
+      `${num(x.qty)} ${e(p.expected?.[key]?.unit)}`,
+      "—",
+    ]),
   ];
-  return `<details><summary>Draf penerimaan saat dibatalkan</summary>${table(["Produk", "Jumlah draf", "Barcode"], rows)}</details>`;
+  return `<details><summary>Draf penerimaan saat dibatalkan</summary>${recordTable(["Produk", "Jumlah draf", "Barcode"], rows)}</details>`;
 }
 function cancelDialog(p, ctx) {
   const scans = p.receiving.scans?.length || 0;
@@ -159,20 +161,36 @@ export function openSupplierNote(s, p, ctx) {
         }</ul></article>`,
     )
     .join("");
+  const costHeads = [
+    "Produk",
+    "Total harga nota",
+    "Diterima",
+    "Alokasi ongkir",
+    p.lines.some((l) => p.expected?.[l.productId]?.unit) ? "Modal/satuan" : "Modal/kg",
+    "Modal/butir",
+  ];
+  const costRows = p.lines.map((line) => {
+    const batch = batches.find((b) => b.productId === line.productId);
+    const costs = noteUnitCosts(batch);
+    const unit = p.expected?.[line.productId]?.unit;
+    const received = unit
+      ? `${num(batch?.receivedQty)} ${e(unit)}`
+      : `${num(batch?.receivedKg)} kg / ${num(batch?.receivedPieces)} butir`;
+    const cells = [
+      e(name(s, "products", line.productId)),
+      money(line.purchaseCost),
+      batch ? received : "—",
+      costValue(batch?.shippingCost),
+      unit
+        ? `${costValue(batch?.unitCost)} /${e(unit)}`
+        : `<span data-note-cost-kg>${costValue(costs.perKg)}</span>`,
+      unit ? "—" : `<span data-note-cost-piece>${costValue(costs.perPiece)}</span>`,
+    ];
+    return `<tr data-note-cost-row="${e(line.productId)}">${recordCells(costHeads, cells)}</tr>`;
+  });
   const d = ctx.modal(
     "Detail nota supplier",
-    `<div class="note-detail"><header><h3>${e(p.invoiceNo)}</h3><p>${e(name(s, "suppliers", p.supplierId))} · ${e(p.date)}</p><p>${e(name(s, "stores", p.storeId))} · <b>${cancelled ? "Dibatalkan" : p.receivedId ? "Sudah diterima" : "Menunggu penerimaan"}</b></p></header>${cancelled ? `<section class="notice"><b>Nota dibatalkan</b><p>${e(stamp(cancelled.at))} · ${e(cancelled.actor || "—")}</p><p>Alasan · ${e(cancelled.reason)}</p></section>${archivedDraft(s, p)}` : canCancel && blocked ? `<p class="muted">Pembatalan nota terkunci. ${e(blocked)}</p>` : ""}${s.stockDemo ? '<p class="notice">Mode demo aktif. Pembayaran dan koreksi nota hanya tersedia pada data nyata.</p>' : !noteReady(s) ? '<p class="notice">Pasang pembaruan nota supplier 112 untuk mencatat pembayaran dan koreksi owner.</p>' : ""}<div class="note-payment-grid">${paymentCard(s, p, "invoice")}${paymentCard(s, p, "shipping")}</div><h3>Rincian produk</h3><div class="table-wrap"><table><thead><tr><th>Produk</th><th>Total harga nota</th><th>Diterima</th><th>Alokasi ongkir</th><th>${p.lines.some((l) => p.expected?.[l.productId]?.unit) ? "Modal/satuan" : "Modal/kg"}</th><th>Modal/butir</th></tr></thead><tbody>${p.lines
-      .map((l) => {
-        const batch = batches.find((b) => b.productId === l.productId);
-        const costs = noteUnitCosts(batch);
-        const unit = p.expected?.[l.productId]?.unit;
-        if (unit)
-          return `<tr data-note-cost-row="${e(l.productId)}"><td>${e(name(s, "products", l.productId))}</td><td>${money(l.purchaseCost)}</td><td>${batch ? `${num(batch.receivedQty)} ${e(unit)}` : "—"}</td><td>${batch?.shippingCost != null ? money(batch.shippingCost) : "—"}</td><td>${costValue(batch?.unitCost)} /${e(unit)}</td><td>—</td></tr>`;
-        return `<tr data-note-cost-row="${e(l.productId)}"><td>${e(name(s, "products", l.productId))}</td><td>${money(l.purchaseCost)}</td><td>${batch ? `${num(batch.receivedKg)} kg / ${num(batch.receivedPieces)} butir` : "—"}</td><td>${batch?.shippingCost != null ? money(batch.shippingCost) : "—"}</td><td data-note-cost-kg>${costValue(costs.perKg)}</td><td data-note-cost-piece>${costValue(costs.perPiece)}</td></tr>`;
-      })
-      .join(
-        "",
-      )}</tbody></table></div><p class="muted">Modal termasuk alokasi ongkir, dibagi berat atau jumlah aktual saat penerimaan. Modal/butir merupakan rata-rata per buah.${cancelled ? "" : p.receivedId ? " Nilai — berarti data modal atau penerimaan belum tersedia untuk akun ini." : " Perhitungan tersedia setelah penerimaan selesai."}</p>${cancelled ? "" : noteOwner(s) ? '<button type="button" data-note-correct>Koreksi harga & ongkir · Owner</button>' : '<p class="muted">Koreksi harga dan ongkir hanya dapat disetujui melalui akun owner.</p>'}<h3>Riwayat pembayaran</h3>${history || '<p class="muted">Belum ada pembayaran yang dicatat.</p>'}<h3>Riwayat koreksi nota</h3>${corrections || '<p class="muted">Belum ada koreksi.</p>'}</div>`,
+    `<div class="note-detail"><header><h3>${e(p.invoiceNo)}</h3><p>${e(name(s, "suppliers", p.supplierId))} · ${e(p.date)}</p><p>${e(name(s, "stores", p.storeId))} · <b>${cancelled ? "Dibatalkan" : p.receivedId ? "Sudah diterima" : "Menunggu penerimaan"}</b></p></header>${cancelled ? `<section class="notice"><b>Nota dibatalkan</b><p>${e(stamp(cancelled.at))} · ${e(cancelled.actor || "—")}</p><p>Alasan · ${e(cancelled.reason)}</p></section>${archivedDraft(s, p)}` : canCancel && blocked ? `<p class="muted">Pembatalan nota terkunci. ${e(blocked)}</p>` : ""}${s.stockDemo ? '<p class="notice">Mode demo aktif. Pembayaran dan koreksi nota hanya tersedia pada data nyata.</p>' : !noteReady(s) ? '<p class="notice">Pasang pembaruan nota supplier 112 untuk mencatat pembayaran dan koreksi owner.</p>' : ""}<div class="note-payment-grid">${paymentCard(s, p, "invoice")}${paymentCard(s, p, "shipping")}</div><h3>Rincian produk</h3>${table(costHeads, costRows, true)}<p class="muted">Modal termasuk alokasi ongkir, dibagi berat atau jumlah aktual saat penerimaan. Modal/butir merupakan rata-rata per buah.${cancelled ? "" : p.receivedId ? " Nilai — berarti data modal atau penerimaan belum tersedia untuk akun ini." : " Perhitungan tersedia setelah penerimaan selesai."}</p>${cancelled ? "" : noteOwner(s) ? '<button type="button" data-note-correct>Koreksi harga & ongkir · Owner</button>' : '<p class="muted">Koreksi harga dan ongkir hanya dapat disetujui melalui akun owner.</p>'}<h3>Riwayat pembayaran</h3>${history || '<p class="muted">Belum ada pembayaran yang dicatat.</p>'}<h3>Riwayat koreksi nota</h3>${corrections || '<p class="muted">Belum ada koreksi.</p>'}</div>`,
     "Tutup",
   );
   d.classList.add("supply-modal");

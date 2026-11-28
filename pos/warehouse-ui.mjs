@@ -714,12 +714,15 @@ function openTransfer(s, t, ctx, receiving) {
   const scanField = canReceive && expectedPieces > 0;
   const d = ctx.modal(
     t.deliveryNo,
-    `<div class="supply-detail-head"><div><h3>${e(t.origin.name)} → ${e(t.destination.name)}</h3><p>${internal ? "Mutasi antarcabang" : e(t.invoiceNo)} · ${e(t.carrier)}</p></div>${badge(t)}</div><div class="toolbar">${finance ? '<button type="button" data-print-invoice>Cetak invoice</button>' : ""}<button type="button" data-print-delivery>Cetak surat jalan</button></div><div class="supply-stats">${finance ? stat("Total tagihan", money(t.total)) + stat("Sisa tagihan", money(t.total - t.paid)) : ""}${expectedPieces && (t.status === "in_transit" || matched()) ? `<article class="supply-stat"><span>Barcode cocok</span><strong data-receive-progress>${progress()}</strong></article>` : ""}</div>${table(
+    `<div class="supply-detail-head"><div><h3>${e(t.origin.name)} → ${e(t.destination.name)}</h3><p>${internal ? "Mutasi antarcabang" : e(t.invoiceNo)} · ${e(t.carrier)}</p></div>${badge(t)}</div><div class="toolbar">${finance ? '<button type="button" data-print-invoice>Cetak invoice</button>' : ""}<button type="button" data-print-delivery>Cetak surat jalan</button></div><div class="supply-stats">${finance ? stat("Total tagihan", money(t.total)) + stat("Sisa tagihan", money(t.total - t.paid)) : ""}${expectedPieces && (t.status === "in_transit" || matched()) ? `<article class="supply-stat"><span>Barcode cocok</span><strong data-receive-progress>${progress()}</strong></article>` : ""}</div>${recordTable(
       ["Barang / batch", "Jumlah", ...(finance ? ["Harga transfer", "Total"] : [])],
-      t.lines.map(
-        (l) =>
-          `<tr><td>${e(l.productName)}<small>${e(l.supplierName || "—")} · ${e(l.sourceLotId.slice(0, 8))}</small></td><td>${l.kind === "fruit" ? num(l.kg) + " kg / " + l.pieces + " butir" : num(l.qty) + " " + e(l.unit)}</td>${finance ? `<td>${money(l.price)} / ${e(l.unit)}</td><td>${money(l.total)}</td>` : ""}</tr>`,
-      ),
+      t.lines.map((l) => [
+        `${e(l.productName)}<small>${e(l.supplierName || "—")} · ${e(l.sourceLotId.slice(0, 8))}</small>`,
+        l.kind === "fruit"
+          ? `${num(l.kg)} kg / ${l.pieces} butir`
+          : `${num(l.qty)} ${e(l.unit)}`,
+        ...(finance ? [`${money(l.price)} / ${e(l.unit)}`, money(l.total)] : []),
+      ]),
     )}${scanField ? `<div class="supply-step"><b>1</b><span>Scan ulang barang yang tiba</span></div><div class="supply-scan"><input data-receive-code autocomplete="off" spellcheck="false" placeholder="Scan barcode penerimaan" aria-label="Scan barcode penerimaan"><button type="button" data-receive-add>Catat scan</button></div><p data-receive-message role="status"></p><p class="notice">Scan tersimpan di server. Seluruh kiriman tetap dalam perjalanan sampai barcode lengkap dan penerimaan dikonfirmasi.</p>` : ""}<div data-receive-list>${t.items.length ? receiptItems(t) : ""}</div>${
       canReceive && t.lines.some((l) => l.kind === "unit")
         ? `<h3>Periksa jumlah barang satuan</h3>${t.lines
@@ -892,12 +895,17 @@ function openTransfer(s, t, ctx, receiving) {
   return d;
 }
 function receiptItems(t) {
-  return `<details ${t.status === "in_transit" ? "open" : ""}><summary>Daftar barcode (${t.items.length})</summary>${table(
+  return `<details ${t.status === "in_transit" ? "open" : ""}><summary>Daftar barcode (${t.items.length})</summary>${recordTable(
     ["Barcode", "Berat", "Pemeriksaan"],
-    t.items.map(
-      (i) =>
-        `<tr><td><code>${e(i.barcode)}</code></td><td>${num(i.grams / 1000)} kg</td><td>${i.scannedAt ? "✓ Cocok" : t.status === "received" ? "Diterima · tanpa rekaman scan" : "Belum dipindai"}</td></tr>`,
-    ),
+    t.items.map((i) => [
+      `<code>${e(i.barcode)}</code>`,
+      `${num(i.grams / 1000)} kg`,
+      i.scannedAt
+        ? "✓ Cocok"
+        : t.status === "received"
+          ? "Diterima · tanpa rekaman scan"
+          : "Belum dipindai",
+    ]),
   )}</details>`;
 }
 function noteDialog(s, ctx) {

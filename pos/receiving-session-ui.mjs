@@ -35,7 +35,7 @@ function quantityInput(attr, unit, value) {
   return `<input ${attr} type="number" min="${step}" step="${step}" value="${e(value ?? "")}" required>`;
 }
 export function varianceTable(s, p) {
-  return table(
+  return recordTable(
     [
       "Produk",
       "Nota supplier",
@@ -52,7 +52,13 @@ export function varianceTable(s, p) {
           p.receiving?.status === "completed" && actual != null
             ? `${num(expected.qty - actual)} ${unit}`
             : "Belum final";
-        return `<tr><td>${e(name(s, "products", l.productId))}</td><td>${num(expected.qty)} ${unit}</td><td>${actual == null ? "Belum dicatat" : num(actual) + " " + unit}</td><td>${diff}</td><td>—</td></tr>`;
+        return [
+          e(name(s, "products", l.productId)),
+          `${num(expected.qty)} ${unit}`,
+          actual == null ? "Belum dicatat" : `${num(actual)} ${unit}`,
+          diff,
+          "—",
+        ];
       }
       const v = receiptVariance(p, l.productId);
       const diff =
@@ -65,7 +71,15 @@ export function varianceTable(s, p) {
           : v.percent < 0
             ? `Kelebihan ${num(-v.percent)}%`
             : `${num(v.percent)}%`;
-      return `<tr><td>${e(name(s, "products", l.productId))}</td><td>${v.expected ? `${num(v.expected.kg)} kg / ${num(v.expected.pieces)} butir` : "Belum dicatat"}</td><td>${num(v.actual.kg)} kg / ${num(v.actual.pieces)} butir</td><td>${diff}</td><td>${pct}</td></tr>`;
+      return [
+        e(name(s, "products", l.productId)),
+        v.expected
+          ? `${num(v.expected.kg)} kg / ${num(v.expected.pieces)} butir`
+          : "Belum dicatat",
+        `${num(v.actual.kg)} kg / ${num(v.actual.pieces)} butir`,
+        diff,
+        pct,
+      ];
     }),
   );
 }
@@ -234,15 +248,21 @@ export function openReceivingSession(s, pid, ctx, readOnly = false) {
       unitLines = p.lines.filter((l) => p.expected?.[l.productId]?.unit),
       fruit = unitLines.length < p.lines.length;
     header.innerHTML = `<p>${e(name(s, "suppliers", p.supplierId))} · ${e(p.date)}</p><p class="notice">${e(receiptStatuses[status])} · ${receivedSummary(p)}${unitLines.length ? "" : " tersimpan"}</p>${varianceTable(ctx.getState(), p)}${editable ? unitLines.map((l) => `<button type="button" data-session-quantity="${e(l.productId)}">Catat jumlah · ${e(name(s, "products", l.productId))}</button>`).join(" ") : ""}${editable && fruit ? '<div class="supply-scan"><input data-session-code autocomplete="off" maxlength="26" inputmode="numeric" placeholder="Scan barcode buah" aria-label="Scan barcode buah" aria-describedby="form-error"><button type="button" data-session-scan>Simpan scan</button></div>' : ""}`;
-    detail.innerHTML = `${editable && fruit ? '<p class="muted">Tunggu konfirmasi tersimpan sebelum scan buah berikutnya. Barcode menentukan produk dan berat; satu label untuk satu buah.</p>' : ""}${!readOnly && status === "completed" ? "<p>Penerimaan terkunci. Koreksi harus dibuka dari Back Office.</p>" : ""}<section ${fruit ? "" : "hidden"} data-receiving-barcodes aria-label="Barcode tersimpan"><h3>Barcode tersimpan (${totals.pieces})</h3>${table(
+    detail.innerHTML = `${editable && fruit ? '<p class="muted">Tunggu konfirmasi tersimpan sebelum scan buah berikutnya. Barcode menentukan produk dan berat; satu label untuk satu buah.</p>' : ""}${!readOnly && status === "completed" ? "<p>Penerimaan terkunci. Koreksi harus dibuka dari Back Office.</p>" : ""}<section ${fruit ? "" : "hidden"} data-receiving-barcodes aria-label="Barcode tersimpan"><h3>Barcode tersimpan (${totals.pieces})</h3>${recordTable(
       ["Barcode", "Produk", "Berat", ...(editable ? ["Aksi"] : [])],
       p.receiving.scans
         .slice()
         .reverse()
-        .map(
-          (x) =>
-            `<tr><td><code>${e(x.barcode)}</code></td><td>${e(name(ctx.getState(), "products", x.productId))}</td><td>${num(x.grams / 1000)} kg</td>${editable ? `<td><button type="button" data-session-remove="${e(x.barcode)}">Hapus scan</button></td>` : ""}</tr>`,
-        ),
+        .map((x) => [
+          `<code>${e(x.barcode)}</code>`,
+          e(name(ctx.getState(), "products", x.productId)),
+          `${num(x.grams / 1000)} kg`,
+          ...(editable
+            ? [
+                `<button type="button" data-session-remove="${e(x.barcode)}">Hapus scan</button>`,
+              ]
+            : []),
+        ]),
     )}</section>`;
     body.querySelectorAll("[data-session-quantity]").forEach((button) => {
       button.onclick = () => {

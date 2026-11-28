@@ -137,7 +137,8 @@
   display: none;
 }
 @media screen {
-  .panel:has(> .table-wrap > .record-table) {
+  .panel:has(> .table-wrap > .record-table),
+  .supply-modal {
     container: record-panel / inline-size;
   }
 }
@@ -176,6 +177,9 @@
   .record-table td:first-child,
   .record-table td:last-child {
     grid-column: 1 / -1;
+  }
+  .supply-modal .record-table td:last-child:nth-child(2n + 3):not(:has(button, input)) {
+    grid-column: auto;
   }
   .record-label {
     display: block;
@@ -460,6 +464,7 @@
 /* Supplier note detail: independently payable invoice and freight. */
 .note-detail {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
 }
 .note-detail h3,
@@ -473,6 +478,7 @@
 }
 .note-payment-card {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
   padding: 16px;
   border: 1px solid var(--line);
@@ -490,6 +496,7 @@
 }
 .note-payment-card dd {
   margin: 0;
+  text-align: end;
   font-weight: 600;
 }
 .note-payment-status {
@@ -545,7 +552,27 @@
 
 /* Receiving sessions and per-document outbound prices (114). */
 .receipt-comparison {
-  margin-bottom: 24px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+.supply-modal .record-table td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.supply-modal .receipt-comparison .toolbar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+  grid-auto-rows: 1fr;
+  align-items: stretch;
+}
+@container record-panel (max-width: 34rem) {
+  .supply-modal > form > .toolbar,
+  [data-outbound-detail] .toolbar {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+    align-items: stretch;
+  }
 }
 .supply-modal fieldset {
   min-width: 0;
@@ -576,10 +603,6 @@
 .supply-modal details {
   min-width: 0;
   margin-top: 16px;
-}
-.supply-modal .receipt-comparison .toolbar,
-.supply-modal [data-outbound-detail] .toolbar {
-  flex-wrap: wrap;
 }
 
 /* Invoice grouping, date/payment filters and receivables summary (115). */

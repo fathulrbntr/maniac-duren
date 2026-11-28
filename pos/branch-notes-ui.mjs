@@ -7,7 +7,7 @@ import {
 import { productLabel, findProduct } from "./branch-dispatch-ui.mjs";
 import { escape as e, num, id } from "./core.mjs";
 import { quantity, scalar } from "./production.mjs";
-import { field, options, recordTable, table } from "./supply-session-ui.mjs";
+import { field, options, recordTable } from "./supply-session-ui.mjs";
 import { outboundInventory } from "./warehouse-workflow.mjs";
 import { transferStatus } from "./warehouse-flow.mjs";
 
@@ -184,7 +184,12 @@ function viewRows(n) {
     const delta = Number((actual - r.qty).toFixed(6)),
       unit = e(unitOf(r));
     const prepared = n.status !== "packing" || n.lines.length > 0;
-    return `<tr><td>${e(r.name)}</td><td>${num(r.qty)} ${unit}</td><td>${prepared ? num(actual) + " " + unit : "—"}${fruit && prepared ? `<small>${num(lines.reduce((v, l) => v + l.pieces, 0))} butir</small>` : ""}</td><td>${prepared ? (delta > 0 ? "+" : "") + num(delta) + " " + unit : "—"}</td></tr>`;
+    return [
+      e(r.name),
+      `${num(r.qty)} ${unit}`,
+      `${prepared ? num(actual) + " " + unit : "—"}${fruit && prepared ? `<small>${num(lines.reduce((v, l) => v + l.pieces, 0))} butir</small>` : ""}`,
+      prepared ? (delta > 0 ? "+" : "") + num(delta) + " " + unit : "—",
+    ];
   });
 }
 function noteHeading(n) {
@@ -203,16 +208,15 @@ function openPacking(s, n, ctx) {
       (fruitRequested.size
         ? `<div class="supply-scan">${field("Scan barcode buah", '<input data-scan autocomplete="off" placeholder="Scan satu per satu">')}<button type="button" data-add-code>Tambah barcode</button></div><p data-scan-result role="status"></p>`
         : "") +
-      table(
+      recordTable(
         ["Barang", "Permintaan", "Aktual"],
-        n.requested.map(
-          (r) =>
-            `<tr><td>${e(r.name)}</td><td>${num(r.qty)} ${e(unitOf(r))}</td><td>${
-              r.unit === "kg_butir"
-                ? `<b data-total="${e(r.productId)}"></b>`
-                : `<input data-quantity="${e(r.productId)}" type="number" min="0" step="${["pcs", "porsi"].includes(r.unit) ? "1" : "any"}" aria-label="Jumlah aktual ${e(r.name)}" value="${n.lines.filter((l) => l.productId === r.productId).reduce((v, l) => v + l.qty, 0) || ""}">`
-            }</td></tr>`,
-        ),
+        n.requested.map((r) => [
+          e(r.name),
+          `${num(r.qty)} ${e(unitOf(r))}`,
+          r.unit === "kg_butir"
+            ? `<b data-total="${e(r.productId)}"></b>`
+            : `<input data-quantity="${e(r.productId)}" type="number" min="0" step="${["pcs", "porsi"].includes(r.unit) ? "1" : "any"}" aria-label="Jumlah aktual ${e(r.name)}" value="${n.lines.filter((l) => l.productId === r.productId).reduce((v, l) => v + l.qty, 0) || ""}">`,
+        ]),
       ) +
       (fruitRequested.size
         ? '<details><summary>Barcode yang disiapkan</summary><div data-codes class="supply-scan-list"></div></details>'
@@ -340,7 +344,10 @@ function openReview(n, ctx, office) {
     n.number,
     noteHeading(n) +
       `<p>${e(statusLabel(n))}${n.deliveryNo ? " · " + e(n.deliveryNo) : ""}</p>` +
-      table(["Barang", "Diminta", "Aktual", "Selisih aktual − diminta"], viewRows(n)) +
+      recordTable(
+        ["Barang", "Diminta", "Aktual", "Selisih aktual − diminta"],
+        viewRows(n),
+      ) +
       `<div class="toolbar">${actions.join("")}</div>`,
     "Tutup",
   );
