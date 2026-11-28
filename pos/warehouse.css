@@ -633,7 +633,7 @@
 .note-list-panel tbody tr:has(.note-row-open) {
   cursor: pointer;
 }
-.note-list-panel tr:focus-within {
+.note-list-panel tr:has(.note-row-open:focus-visible) {
   outline: 2px solid var(--focus);
   outline-offset: -2px;
 }

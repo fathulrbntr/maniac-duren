@@ -14,6 +14,7 @@
   font-display: swap;
 }
 :root {
+  -webkit-tap-highlight-color: transparent;
   color-scheme: light;
   --font-ui: "DM Sans", Arial, sans-serif;
   --font-heading: "Manrope", var(--font-ui);
