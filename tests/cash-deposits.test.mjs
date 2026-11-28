@@ -9,6 +9,7 @@ import {
 } from "../pos/stock-demo.mjs";
 import {
   depositTotals,
+  outstandingBranchCash,
   refreshDepositDemo,
   readDepositsDemo,
   depositProofDemo,
@@ -239,4 +240,37 @@ test("popup locks server date, requires an image, sends no editable date/identit
   assert.equal(rendered, 1);
   assert(d.closed);
   assert.equal(s.cashDeposits[0].date, today());
+});
+
+test("Beranda separates actual deposits and outstanding branch cash across all dates", () => {
+  const stores = [
+    { id: "a", name: "A" },
+    { id: "b", name: "B" },
+    { id: "wh", name: "Gudang", locationType: "warehouse" },
+  ];
+  const state = {
+    stores,
+    access: { finance: true },
+    cashDepositVersion: 92,
+    cashDepositSummary: [
+      { storeId: "a", netCash: 75, deposited: 50, pending: 25 },
+      { storeId: "b", netCash: 70, deposited: 80, pending: -10 },
+      { storeId: "wh", netCash: 500, deposited: 400, pending: 100 },
+    ],
+  };
+  const totals = outstandingBranchCash(state, stores);
+  assert.equal(totals.deposited, 130);
+  assert.equal(totals.total, 25);
+  assert.deepEqual(
+    totals.branches.map((row) => row.pending),
+    [25, -10],
+  );
+  assert.equal(
+    outstandingBranchCash(
+      { ...state, cashDepositSummary: state.cashDepositSummary.slice(1) },
+      stores,
+    ).total,
+    null,
+  );
+  assert.equal(outstandingBranchCash({ ...state, access: {} }, stores).deposited, null);
 });

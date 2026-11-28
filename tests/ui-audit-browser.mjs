@@ -318,11 +318,11 @@ try {
           await more.click();
           assert(await home.locator("#home-extra").isVisible());
           await home.getByRole("button", { name: "Ringkas" }).click();
-          const eye = home.getByRole("button", { name: "Sembunyikan omzet" });
+          const eye = home.getByRole("button", { name: "Sembunyikan saldo" });
           await eye.click();
           assert(await home.locator(".home-mask").isVisible());
           assert(!(await home.locator(".home-value").isVisible()));
-          await eye.click();
+          await home.getByRole("button", { name: "Tampilkan saldo" }).click();
           assert.equal(
             await home
               .locator(".home-grid")
@@ -382,7 +382,7 @@ try {
         );
         if (
           [1600, 390].includes(width) &&
-          ["dashboard", "products", "orders", "reports", "documents"].includes(view)
+          ["home", "products", "orders", "reports", "documents"].includes(view)
         )
           await page.screenshot({
             path: path.join(output, `${view}-${theme}-${width}.png`),
@@ -473,7 +473,15 @@ try {
     branchStockVersion: 132,
     branchNoteVersion: 135,
     pettyCashVersion: 130,
-    retailBalance: 0,
+    retailBalance: 775000,
+    cashDepositVersion: 92,
+    cashDepositSummary: state.stores.map((st) => ({
+      storeId: st.id,
+      netCash: st.id === origin.id ? 1450000 : 500000,
+      deposited: st.id === origin.id ? 1000000 : 500000,
+      pending: st.id === origin.id ? 450000 : 0,
+      count: 1,
+    })),
     pettyBalances: { [origin.id]: 2500000 },
     pettyRequests: [
       {
@@ -558,8 +566,29 @@ try {
     .locator('#pos-navigation [data-view="retailFunds"]')
     .waitFor({ state: "attached" });
   step.phase = "operational report handoffs";
-  await nav("backoffice");
-  await page.locator('[data-dash-tab="transactions"]').click();
+  await nav("home");
+  assert.match(await page.locator(".home-value").innerText(), /775\.000/);
+  assert.match(await page.locator(".home-deposit-head").innerText(), /450\.000/);
+  for (const width of [320, 390, 768, 1280]) {
+    await page.setViewportSize({ width, height: 844 });
+    assert(
+      await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
+    );
+    assert(
+      await page
+        .locator(".home-value")
+        .evaluate(
+          (el) => el.offsetHeight < parseFloat(getComputedStyle(el).lineHeight) * 1.2,
+        ),
+    );
+    if (width === 390 || width === 1280)
+      await page.screenshot({ path: path.join(output, `beranda-pusat-${width}.png`) });
+  }
+  await page.getByRole("button", { name: "Lihat omzet" }).click();
+  assert.equal(
+    await page.locator('[data-dash-tab="transactions"]').getAttribute("aria-pressed"),
+    "true",
+  );
   await page.locator("#dash-store").selectOption(origin.id);
   await page.locator('[data-open-report="products"]').click();
   assert.equal(await page.locator("#report-picker").inputValue(), "products");
@@ -596,7 +625,8 @@ try {
   await page.locator("#report-filter-toggle").click();
   await page.locator("#report-delivery-query").fill("SJ tidak ada");
   assert.doesNotMatch(await page.locator("#report-result tbody").innerText(), /SJ-CBG/);
-  await nav("backoffice");
+  await nav("home");
+  await page.locator(".home-task-guide > summary").click();
   await page.locator('[data-open-report="batches"]').click();
   assert.equal(await page.locator("#report-picker").inputValue(), "batches");
   await page.locator("#batch-from").fill("2026-11-29");

@@ -286,7 +286,17 @@ function customerPanel(s, a) {
         )
   }<p class="dash-note">Nama yang sama digabung. Jumlah ini bukan jumlah pengunjung atau pelanggan unik.</p></section>`;
 }
-export function dashboardPage(s, activeStore, workspace) {
+export function dashboardStorePicker(s, activeStore, workspace, locations = s.stores) {
+  const f = filter(s, activeStore, workspace);
+  return `<label class="dash-store"><span>Lokasi ringkasan</span><select id="dash-store" aria-label="Lokasi ringkasan">${["store", "warehouse"].includes(workspace) ? "" : `<option value="" ${!f.store ? "selected" : ""}>Semua cabang</option>`}${locations
+    .filter((st) => workspace !== "store" || st.locationType !== "warehouse")
+    .map(
+      (st) =>
+        `<option value="${e(st.id)}" ${st.id === f.store ? "selected" : ""}>${e(st.name)}</option>`,
+    )
+    .join("")}</select></label>`;
+}
+export function dashboardPage(s, activeStore, workspace, embedded = false) {
   const tabs = dashboardTabs(s, workspace);
   if (!tabs.length)
     return workspace
@@ -322,15 +332,7 @@ export function dashboardPage(s, activeStore, workspace) {
           : tab === "reject"
             ? rejectPanel(s, f, workspace)
             : customerPanel(s, a);
-  return `<section class="dash-workspace" data-report-store="${e(f.store)}" data-report-from="${e(f.from)}" data-report-to="${e(f.to)}" data-report-period="${e(period)}" aria-label="Dashboard toko"><div class="dash-profile-row"><div class="dash-profile"><span class="dash-avatar">${person.profile_photo ? `<img src="${e(person.profile_photo)}" alt="Foto ${e(name)}">` : `<span>${e(initials(name))}</span>`}</span><div><h2>Ringkasan operasional</h2><p>Selamat datang, ${e(name)} <span class="dash-role">· ${e(roles[person.role] || person.role || "Staff")}</span></p></div></div><label class="dash-store"><span>Outlet</span><select id="dash-store" aria-label="Toko dashboard">${workspace === "store" ? "" : `<option value="" ${!f.store ? "selected" : ""}>Semua toko</option>`}${s.stores
-    .filter((st) => workspace !== "store" || st.locationType !== "warehouse")
-    .map(
-      (st) =>
-        `<option value="${e(st.id)}" ${st.id === f.store ? "selected" : ""}>${e(st.name)}</option>`,
-    )
-    .join(
-      "",
-    )}</select></label></div><div class="dash-tabs" style="--dash-tabs:${tabs.length}" role="group" aria-label="Ringkasan dashboard">${tabs.map(([key, label]) => `<button type="button" data-dash-tab="${key}" aria-pressed="${key === tab}">${label}</button>`).join("")}</div><div class="dash-period-row"><span class="dash-date-caption">${e(tab === "stock" ? "Posisi stok saat ini" : f.from === f.to ? dateLabel(f.from) : dateLabel(f.from) + " – " + dateLabel(f.to))}</span><div>${reportAccess(s) ? '<button type="button" class="dash-print" id="dash-print">Cetak laporan A4</button>' : ""}<button type="button" class="dash-refresh" id="dash-refresh" aria-label="Perbarui data dashboard" title="Perbarui data">${refreshIcon}</button><label class="dash-period"><select id="dash-period" aria-label="Periode dashboard" ${tab === "stock" ? "disabled" : ""}>${Object.entries(
+  return `<section class="dash-workspace" data-report-store="${e(f.store)}" data-report-from="${e(f.from)}" data-report-to="${e(f.to)}" data-report-period="${e(period)}" aria-label="Ringkasan operasional"><div class="dash-profile-row"><div class="dash-profile"><span class="dash-avatar">${person.profile_photo ? `<img src="${e(person.profile_photo)}" alt="Foto ${e(name)}">` : `<span>${e(initials(name))}</span>`}</span><div><h2>Ringkasan operasional</h2><p>Selamat datang, ${e(name)} <span class="dash-role">· ${e(roles[person.role] || person.role || "Staff")}</span></p></div></div>${embedded ? "" : dashboardStorePicker(s, activeStore, workspace)}</div><div class="dash-tabs" style="--dash-tabs:${tabs.length}" role="group" aria-label="Ringkasan dashboard">${tabs.map(([key, label]) => `<button type="button" data-dash-tab="${key}" aria-pressed="${key === tab}">${label}</button>`).join("")}</div><div class="dash-period-row"><span class="dash-date-caption">${e(tab === "stock" ? "Posisi stok saat ini" : f.from === f.to ? dateLabel(f.from) : dateLabel(f.from) + " – " + dateLabel(f.to))}</span><div>${reportAccess(s) ? '<button type="button" class="dash-print" id="dash-print">Cetak laporan A4</button>' : ""}<button type="button" class="dash-refresh" id="dash-refresh" aria-label="Perbarui data dashboard" title="Perbarui data">${refreshIcon}</button><label class="dash-period"><select id="dash-period" aria-label="Periode dashboard" ${tab === "stock" ? "disabled" : ""}>${Object.entries(
     periods,
   )
     .map(
@@ -343,8 +345,28 @@ export function dashboardPage(s, activeStore, workspace) {
 }
 export function bindDashboard(s, activeStore, ctx) {
   const $ = (q) => document.querySelector(q);
-  if (!$("#dash-period")) return;
   const canChange = () => !ctx.isBusy?.();
+  if ($("#dash-store"))
+    $("#dash-store").onchange = async (ev) => {
+      if (!canChange()) {
+        ev.target.value = filter(s, activeStore, ctx.workspace).store;
+        return;
+      }
+      if (!ev.target.value && !ctx.workspace) {
+        allStores = true;
+        ctx.render();
+      } else if (!(await ctx.changeStore(ev.target.value)))
+        ev.target.value = filter(s, activeStore, ctx.workspace).store;
+    };
+  if (!$("#dash-period")) return;
+  $("[data-home-sales]")?.addEventListener("click", () => {
+    if (!canChange()) return;
+    tab = "transactions";
+    ctx.render();
+    const selected = document.querySelector('[data-dash-tab="transactions"]');
+    selected?.focus({ preventScroll: true });
+    selected?.scrollIntoView?.({ block: "start" });
+  });
   document.querySelectorAll("[data-dash-stock-category]").forEach(
     (b) =>
       (b.onclick = () => {
@@ -377,17 +399,6 @@ export function bindDashboard(s, activeStore, ctx) {
     custom = dashboardRange(period, custom);
     period = ev.target.value;
     ctx.render();
-  };
-  $("#dash-store").onchange = async (ev) => {
-    if (!canChange()) {
-      ev.target.value = filter(s, activeStore, ctx.workspace).store;
-      return;
-    }
-    if (!ev.target.value && !ctx.workspace) {
-      allStores = true;
-      ctx.render();
-    } else if (!(await ctx.changeStore(ev.target.value)))
-      ev.target.value = filter(s, activeStore, ctx.workspace).store;
   };
   for (const key of ["from", "to"])
     $("#dash-" + key)?.addEventListener("change", () => {

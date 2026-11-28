@@ -1,7 +1,10 @@
 import { escape as e, money, num, today } from "./core.mjs";
 import { pageIcon, visibleSections } from "./navigation.mjs";
 import { serviceOrders } from "./order-stock.mjs";
-import { transactions } from "./reports.mjs";
+import { outstandingBranchCash, canReadDeposits } from "./cash-deposits.mjs";
+import { depositButtons } from "./cash-deposits-ui.mjs";
+import { dashboardTabs } from "./dashboard-data.mjs";
+import { dashboardStorePicker } from "./dashboard-ui.mjs";
 import { pendingWorkItems } from "./warehouse-workflow.mjs";
 
 const preferred = {
@@ -47,9 +50,6 @@ const shortLabels = {
   receiving: "Terima kiriman",
   waste: "Reject",
   kitchen: "Dapur",
-  storehome: "Dashboard",
-  backoffice: "Dashboard",
-  warehouse: "Dashboard",
 };
 const eyeIcon =
   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="2.5"/><path class="home-eye-slash" d="M3 3l18 18"/></svg>';
@@ -64,21 +64,31 @@ const dateFormat = new Intl.DateTimeFormat("id-ID", {
 const tile = (id, label) =>
   `<button type="button" class="home-tile" data-view="${e(id)}"><span class="home-tile-icon">${pageIcon(id)}</span><span>${e(label)}</span></button>`;
 
-function branchRow(locations, store, central) {
-  const choices = central ? [{ id: "", name: "Semua cabang" }, ...locations] : locations;
-  if (choices.length < 2) return "";
-  return `<section class="home-panel home-locations" aria-labelledby="home-branches"><h2 id="home-branches">Lokasi</h2><div class="home-branch-list">${choices
-    .map(({ id, name }) => {
-      const initials = String(name)
-        .trim()
-        .split(/\s+/)
-        .slice(0, 2)
-        .map((word) => word[0])
+function balanceText(amount) {
+  return amount == null || amount === "" || !Number.isFinite(Number(amount))
+    ? "Belum tersedia"
+    : money(amount);
+}
+function maskedAmount(amount, hidden) {
+  return `<span data-home-amount ${hidden ? "hidden" : ""}>${e(balanceText(amount))}</span><span data-home-mask ${hidden ? "" : "hidden"}>••••</span>`;
+}
+function branchDeposits(s, cash, central, store, hidden) {
+  const buttons = depositButtons(s, central ? "" : store);
+  if (!central && !buttons) return "";
+  const rows = central
+    ? cash.branches
+        .map((branch) => {
+          const note = branch.pending < 0 ? "<small>Periksa selisih setoran</small>" : "";
+          return `<div><dt>${e(branch.name)}${note}</dt><dd>${maskedAmount(branch.pending, hidden)}</dd></div>`;
+        })
         .join("")
-        .toUpperCase();
-      return `<button type="button" data-home-store="${e(id)}" aria-pressed="${id === (store || "")}"><span class="home-branch-icon" aria-hidden="true">${id ? e(initials) : pageIcon("stores")}</span><span>${e(name)}</span></button>`;
-    })
-    .join("")}</div></section>`;
+    : "";
+  return `<section class="home-panel home-deposits" aria-labelledby="home-deposits">
+    <div class="home-deposit-head"><h2 id="home-deposits">${central ? "Tunai belum disetor" : "Setoran cabang"}</h2>
+    ${central ? `<strong>${maskedAmount(cash.total, hidden)}</strong>` : ""}</div>
+    ${central ? (rows ? `<dl aria-label="Tunai belum disetor per cabang">${rows}</dl>` : "<p>Belum ada cabang.</p>") : ""}
+    ${buttons}
+  </section>`;
 }
 
 export function homePage(s, store, access, titles, locations, hidden) {
@@ -95,8 +105,12 @@ export function homePage(s, store, access, titles, locations, hidden) {
     id === "supplierNotes" && space === "store"
       ? titles[id]
       : shortLabels[id] || titles[id];
-  const overview = space === "store" ? "storehome" : space || "dashboard";
-  const actions = [overview, central ? "reports" : "orders", "stock", "attendance"]
+  const showSales =
+    space !== "warehouse" &&
+    (space
+      ? dashboardTabs(s, space).some(([key]) => key === "transactions")
+      : access.reports);
+  const actions = (central ? ["reports"] : ["orders", "stock", "attendance"])
     .filter(has)
     .slice(0, 2);
   const place =
@@ -118,7 +132,15 @@ export function homePage(s, store, access, titles, locations, hidden) {
     ]);
 
   const day = today();
-  const canSeeSales = access.reports && space !== "warehouse";
+  const showCompany = central && !!access.finance;
+  const showCash =
+    showCompany || (!central && space !== "warehouse" && canReadDeposits(s) && !!store);
+  const cash = showCash
+    ? outstandingBranchCash(
+        s,
+        showCompany ? locations : locations.filter((st) => st.id === store),
+      )
+    : null;
   let heading = "Selamat datang",
     value = s.me?.name || "Tim Maniac Duren",
     detail = central
@@ -126,15 +148,15 @@ export function homePage(s, store, access, titles, locations, hidden) {
       : space === "warehouse"
         ? "Operasional gudang"
         : "Operasional toko";
-  if (canSeeSales) {
-    const places = new Set(locations.map((row) => row.id));
-    const paid = transactions(s).filter(
-      (row) =>
-        row.date === day && places.has(row.storeId) && (!store || row.storeId === store),
-    );
-    heading = "Omzet hari ini";
-    value = money(paid.reduce((sum, row) => sum + row.total, 0));
-    detail = num(paid.length) + " transaksi penjualan";
+  if (cash) {
+    const amount = showCompany ? s.retailBalance : cash.branches[0]?.pending;
+    heading = showCompany ? "Saldo perusahaan" : "Tunai cabang belum disetor";
+    value = balanceText(amount);
+    detail = showCompany
+      ? "Dana yang tersedia di PT Retail setelah pengeluaran."
+      : amount < 0
+        ? "Periksa selisih pada riwayat setoran."
+        : "Akumulasi penjualan tunai setelah setoran tercatat.";
   } else if (queues.length) {
     const [, task, count] = queues.find(([, , amount]) => amount > 0) || queues[0];
     heading = task;
@@ -147,10 +169,20 @@ export function homePage(s, store, access, titles, locations, hidden) {
     ? `<button type="button" class="home-tile home-all" data-home-more aria-expanded="false" aria-controls="home-extra"><span class="home-tile-icon">${pageIcon("dashboard")}</span><span>Semua menu</span></button>`
     : "";
   return `<div class="home-page">
-    <section class="home-hero" aria-labelledby="home-headline"><div class="home-hero-meta"><span>${pageIcon("stores")}${e(place)}</span><time datetime="${day}">${e(dateFormat.format(new Date(day + "T12:00:00Z")))}</time></div>
-      <div class="home-hero-body" ${value.length > 12 ? "data-long-value" : ""}><div class="home-summary"><h2 id="home-headline">${e(heading)}</h2><div class="home-value-row"><strong class="home-value" ${canSeeSales && hidden ? "hidden" : ""}>${e(value)}</strong>${canSeeSales ? `<strong class="home-mask" ${hidden ? "" : "hidden"} aria-label="Omzet disembunyikan">••••</strong><button type="button" data-home-eye aria-label="Sembunyikan omzet" aria-pressed="${hidden}">${eyeIcon}</button>` : ""}</div><p>${e(detail)}</p></div>
-      ${actions.length ? `<div class="home-hero-actions">${actions.map((id) => `<button type="button" data-view="${e(id)}">${pageIcon(id)}${e(label(id))}</button>`).join("")}</div>` : ""}</div></section>
-    <div class="home-body"><section class="home-panel home-shortcuts" aria-labelledby="home-shortcuts"><h2 id="home-shortcuts">Akses cepat</h2><div class="home-grid">${visible.map((id) => tile(id, label(id))).join("")}${toggle}</div>${
+    <section class="home-hero" aria-labelledby="home-headline"><div class="home-hero-meta"><span>${pageIcon("stores")}${e(showCompany ? "Seluruh cabang" : place)}</span><time datetime="${day}">${e(dateFormat.format(new Date(day + "T12:00:00Z")))}</time></div>
+      <div class="home-hero-body" ${value.length > 12 ? "data-long-value" : ""}><div class="home-summary"><h2 id="home-headline">${e(heading)}</h2><div class="home-value-row"><strong class="home-value" ${showCash && hidden ? "hidden" : ""}>${e(value)}</strong>${showCash ? `<strong class="home-mask" ${hidden ? "" : "hidden"} aria-label="Saldo disembunyikan">••••</strong><button type="button" data-home-eye aria-label="${hidden ? "Tampilkan saldo" : "Sembunyikan saldo"}" aria-pressed="${hidden}">${eyeIcon}</button>` : ""}</div><p>${e(detail)}</p>${showCompany ? `<p class="home-received">Total setoran masuk <b>${maskedAmount(cash.deposited, hidden)}</b></p>` : ""}</div>
+      ${
+        actions.length || showSales
+          ? `<div class="home-hero-actions">${showSales ? '<button type="button" data-home-sales>Lihat omzet</button>' : ""}${actions
+              .slice(0, showSales ? 1 : 2)
+              .map(
+                (id) =>
+                  `<button type="button" data-view="${e(id)}">${pageIcon(id)}${e(label(id))}</button>`,
+              )
+              .join("")}</div>`
+          : ""
+      }</div></section>
+    <div class="home-body">${cash ? branchDeposits(s, cash, showCompany, store, hidden) : ""}<section class="home-panel home-shortcuts" aria-labelledby="home-shortcuts"><h2 id="home-shortcuts">Akses cepat</h2><div class="home-grid">${visible.map((id) => tile(id, label(id))).join("")}${toggle}</div>${
       overflow
         ? `<div class="home-grid home-extra" id="home-extra" hidden>${menu
             .slice(7)
@@ -158,12 +190,12 @@ export function homePage(s, store, access, titles, locations, hidden) {
             .join("")}</div>`
         : ""
     }</section>
-    ${branchRow(locations, store, central)}
+    ${locations.length ? `<div class="home-scope">${dashboardStorePicker(s, store, space, locations)}</div>` : ""}
     ${queues.length ? `<section class="home-work" aria-labelledby="home-work"><h2 id="home-work">Perlu ditindaklanjuti</h2><div class="home-work-grid">${queues.map(([id, text, count]) => `<button type="button" data-view="${e(id)}" class="home-work-card"><span class="home-work-top">${pageIcon(id)}${arrow}</span><strong>${num(count)}</strong><span>${e(text)}</span></button>`).join("")}</div></section>` : ""}
     </div></div>`;
 }
 
-export function bindHome({ changeStore, setHidden }) {
+export function bindHome({ setHidden }) {
   const root = document.querySelector(".home-page");
   if (!root) return;
   const more = root.querySelector("[data-home-more]");
@@ -181,9 +213,9 @@ export function bindHome({ changeStore, setHidden }) {
       eye.setAttribute("aria-pressed", String(hide));
       root.querySelector(".home-value").hidden = hide;
       root.querySelector(".home-mask").hidden = !hide;
+      eye.setAttribute("aria-label", hide ? "Tampilkan saldo" : "Sembunyikan saldo");
+      for (const el of root.querySelectorAll("[data-home-amount]")) el.hidden = hide;
+      for (const el of root.querySelectorAll("[data-home-mask]")) el.hidden = !hide;
       setHidden(hide);
     };
-  root.querySelectorAll("[data-home-store]").forEach((button) => {
-    button.onclick = () => changeStore(button.dataset.homeStore);
-  });
 }

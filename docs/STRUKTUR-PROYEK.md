@@ -36,7 +36,7 @@ Konfirmasi tindakan di POS dan pengelola menu menggunakan `shared/confirmation.m
 
 Pintasan di dock bawah mengikuti halaman yang boleh dibuka dari sidebar. Pilihan **Atur dock** tersimpan di perangkat untuk setiap akun dan area kerja melalui `pos/system-dock.mjs`.
 
-Beranda POS (`pos/home-ui.mjs`, `pos/home.css`) terbuka setelah login dan saat berganti area kerja. Pintasan mengikuti izin sidebar. Omzet hari ini mengikuti transaksi lunas, tanggal WIB, dan lokasi yang dipilih untuk akun dengan akses laporan di luar gudang. Pengaturan dock tetap berlaku.
+Beranda POS (`pos/home-ui.mjs`, `pos/home.css`) memuat ringkasan operasional langsung setelah login dan saat berganti area kerja. Back Office keuangan melihat saldo tersedia PT Retail dari buku kas pusat dan total setoran cabang yang sudah masuk. Tunai yang masih harus disetor memiliki bagian tersendiri dengan total dan rincian per cabang. POS menggunakan saldo setoran kumulatif dari server. Saldo negatif ditandai untuk diperiksa, dan data yang belum lengkap ditampilkan sebagai “Belum tersedia”. Toko melihat tunai lokasi aktif sesuai hak akses. Tombol **Lihat omzet** membuka bagian **Penjualan** dengan pilihan lokasi dan periode. Pilihan Dashboard lama di dock mengarah ke Beranda.
 
 Dashboard Back Office dan toko menggunakan ringkasan di `pos/dashboard-ui.mjs`.
 `pos/warehouse-ui.mjs` melengkapinya dengan tindak lanjut, saldo, dan pintasan sesuai area kerja.

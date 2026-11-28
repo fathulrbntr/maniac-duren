@@ -56,7 +56,6 @@ export function workspaceGroups(a) {
               label: "Back office",
               pages: [
                 "home",
-                "backoffice",
                 "supplierNotes",
                 "transfers",
                 ...(a.branchStock && a.legacyOutbound ? ["legacyTransfers"] : []),
@@ -89,7 +88,6 @@ export function workspaceGroups(a) {
                 label: a.branchStock ? "Gudang lama" : "Gudang pusat",
                 pages: [
                   "home",
-                  "warehouse",
                   "supplierNotes",
                   "transfers",
                   "waste",
@@ -102,7 +100,7 @@ export function workspaceGroups(a) {
               {
                 id: "store",
                 label: "Toko",
-                pages: ["home", "storehome"],
+                pages: ["home"],
                 standalone: true,
               },
               {
