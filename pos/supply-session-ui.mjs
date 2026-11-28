@@ -5,8 +5,19 @@ import {
   saveWorkflow,
 } from "./warehouse-workflow.mjs";
 export const field = (label, html) => `<label class="field">${e(label)}${html}</label>`;
-export const table = (heads, rows) =>
-  `<div class="table-wrap"><table><thead><tr>${heads.map((x) => `<th>${e(x)}</th>`).join("")}</tr></thead><tbody>${rows.join("") || `<tr><td colspan="${heads.length}">Belum ada data.</td></tr>`}</tbody></table></div>`;
+export const table = (heads, rows, records = false) =>
+  `<div class="table-wrap"><table${records ? ' class="record-table"' : ""}><thead><tr>${heads.map((x) => `<th scope="col">${e(x)}</th>`).join("")}</tr></thead><tbody>${rows.join("") || `<tr><td class="empty" colspan="${heads.length}">Belum ada data.</td></tr>`}</tbody></table></div>`;
+// Keep one set of controls and column labels across the table and phone layouts.
+export function recordTable(heads, rows) {
+  return table(
+    heads,
+    rows.map(
+      (cells) =>
+        `<tr>${cells.map((value, i) => `<td><span class="record-label" aria-hidden="true">${e(heads[i])}</span>${value}</td>`).join("")}</tr>`,
+    ),
+    true,
+  );
+}
 export const name = (s, key, v) => s[key]?.find((x) => x.id === v)?.name || "—";
 export const options = (xs, value) =>
   xs

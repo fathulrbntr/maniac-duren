@@ -269,11 +269,161 @@ try {
       .map(([pathname]) => pathname);
   });
   assert.deepEqual(duplicates, []);
+  // Operational back-office pages use different navigation and tables than the legacy fixture.
+  const [origin, destination] = state.stores;
+  Object.assign(state, {
+    warehouseVersion: 107,
+    warehouseWorkflowVersion: 114,
+    branchStockVersion: 132,
+    branchNoteVersion: 135,
+    pettyCashVersion: 130,
+    retailBalance: 0,
+    pettyBalances: { [origin.id]: 2500000 },
+    pettyRequests: [
+      {
+        id: "funds",
+        store_id: origin.id,
+        requested_at: "2026-11-27T00:00:00Z",
+        status: "pending",
+        amount: 150000,
+        reason: "Penggantian perlengkapan toko",
+      },
+    ],
+    locations: state.stores,
+    branchNotes: [{ id: "note", number: "NT-4", origin, destination, status: "packing" }],
+    receiptPlans: [
+      {
+        id: "receipt",
+        invoiceNo: "546",
+        date: "2026-11-27",
+        supplierId: state.suppliers[0].id,
+        storeId: origin.id,
+        lines: [],
+        shippingCost: 10000,
+      },
+    ],
+    transfers: [
+      {
+        id: "transfer",
+        deliveryNo: "SJ-CBG-202611-000005",
+        invoiceNo: null,
+        origin,
+        destination,
+        status: "received",
+        items: [],
+        lines: [],
+      },
+    ],
+  });
+  state.access.backoffice = true;
+  await page.reload();
+  await page
+    .locator('#pos-navigation [data-view="retailFunds"]')
+    .waitFor({ state: "attached" });
+  for (const [width, theme] of [
+    [320, "light"],
+    [390, "dark"],
+    [768, "light"],
+    [1280, "dark"],
+  ]) {
+    if ((await page.locator("html").getAttribute("data-theme")) !== theme)
+      await page.locator("[data-theme-toggle]").click();
+    await page.setViewportSize({ width, height: 844 });
+    for (const view of [
+      "supplierNotes",
+      "transfers",
+      "retailFunds",
+      "recipes",
+      "products",
+    ]) {
+      step = { ...step, phase: "back office", theme, width, view };
+      await nav(view);
+      await page.evaluate(() => document.fonts.ready);
+      const geometry = await page.evaluate(() => {
+        const fits = (el) => el.scrollWidth <= el.clientWidth + 1;
+        const content = document.querySelector(".workspace-content");
+        const toolbar = content.querySelector(".supply-hero .toolbar, .filter-toolbar");
+        return {
+          fits: fits(document.documentElement) && fits(content),
+          actionHeights: [
+            ...content.querySelectorAll(
+              ".supply-hero button, .intro-actions button, [data-pt-expense]",
+            ),
+          ].map((el) => el.getBoundingClientRect().height),
+          tablesFit: [...content.querySelectorAll(".table-wrap")].every(fits),
+          toolsSpanPanel:
+            !toolbar ||
+            Math.abs(
+              toolbar.getBoundingClientRect().width -
+                (toolbar.parentElement.clientWidth -
+                  parseFloat(getComputedStyle(toolbar.parentElement).paddingLeft) -
+                  parseFloat(getComputedStyle(toolbar.parentElement).paddingRight)),
+            ) < 2,
+          dockInHeader: !!document.querySelector(".topbar .system-dock"),
+        };
+      });
+      assert(geometry.fits, `${view} overflows at ${width}px`);
+      assert(geometry.dockInHeader);
+      assert(geometry.actionHeights.every((h) => h >= 44));
+      if (width <= 540 && geometry.actionHeights.length > 1)
+        assert(
+          Math.max(...geometry.actionHeights) - Math.min(...geometry.actionHeights) < 1,
+        );
+      if (width <= 540) {
+        assert(geometry.toolsSpanPanel, `${view} controls shrink at ${width}px`);
+        assert(
+          geometry.tablesFit,
+          `${view} table requires sideways scrolling at ${width}px`,
+        );
+      }
+      if (view === "transfers") {
+        await page.locator("[data-transfer-search]").fill("tidak cocok");
+        assert.equal(await page.locator("[data-transfer]").count(), 0);
+        await page.locator("[data-transfer-search]").fill("SJ-CBG");
+        await page.locator("[data-transfer]").click();
+        await page.locator("dialog[open] .modal-head button").click();
+      }
+      if (view === "products") {
+        const toggle = page.locator(".inv-filter-toggle");
+        if (
+          (await toggle.isVisible()) &&
+          (await toggle.getAttribute("aria-expanded")) === "false"
+        )
+          await toggle.click();
+        await page.locator("[data-inv-view=grid]").click();
+        assert(
+          await page
+            .locator(".inv-results")
+            .evaluate((el) => el.scrollWidth <= el.clientWidth + 1),
+        );
+        const cardActions = await page.locator(".inv-catalog-card").evaluateAll((cards) =>
+          cards.map((card) => ({
+            row: card.offsetTop,
+            bottom: card.querySelector("summary button").getBoundingClientRect().bottom,
+          })),
+        );
+        assert(cardActions.length >= 2);
+        for (const [i, action] of cardActions.entries()) {
+          if (action.row === cardActions[i - 1]?.row)
+            assert(
+              Math.abs(action.bottom - cardActions[i - 1].bottom) < 1,
+              `Misaligned product actions at ${width}px`,
+            );
+        }
+        await page.locator("[data-inv-reset]").click();
+        if (await toggle.isVisible()) {
+          await toggle.click();
+          assert(!(await page.locator("#catalog-filter").isVisible()));
+          assert(await page.locator(".inv-search input").isVisible());
+        }
+      }
+    }
+  }
   assert.deepEqual(errors, []);
   assert.deepEqual(missing, []);
   fs.writeFileSync(path.join(output, "layouts.json"), JSON.stringify(layouts, null, 2));
   console.log(
-    `PASS UI audit: ${views.length} menus × 7 viewport steps × 2 themes, breakpoint round trips, product/receipt dialogs, session reload and unique module URLs.`,
+    `PASS UI audit: ${views.length} menus × 7 viewport steps × 2 themes, breakpoint round trips, product/receipt dialogs, session reload, unique module URLs and 5 back-office layouts at 320/390/768/1280px.`,
   );
 } catch (error) {
   // Preserve the exact phase and state; a click timeout alone cannot distinguish

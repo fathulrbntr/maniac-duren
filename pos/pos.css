@@ -46,7 +46,7 @@
 .recipe-grid,
 .production-history {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
   gap: 12px;
 }
 .recipe-card,
@@ -147,7 +147,19 @@
     justify-content: flex-start;
   }
   .summary-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .summary-card {
+    display: grid;
+    grid-template-rows: subgrid;
+    grid-row: span 2;
+    min-width: 0;
+    padding: 12px;
+    overflow-wrap: anywhere;
+  }
+  .summary-card b {
+    font-size: var(--text-md);
   }
   .production-layout {
     grid-template-columns: 1fr;
@@ -912,10 +924,6 @@ input[type="number"] {
   }
   .topbar h1 {
     font-size: var(--text-xl);
-  }
-  .toolbar {
-    max-width: 180px;
-    justify-content: end;
   }
   .toolbar select {
     min-width: 120px;

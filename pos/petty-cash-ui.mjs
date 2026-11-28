@@ -1,4 +1,5 @@
 import { escape as e, id, money } from "./core.mjs";
+import { recordTable } from "./supply-session-ui.mjs";
 
 const status = { pending: "Menunggu", paid: "Dicairkan", rejected: "Ditolak" };
 const date = (value) =>
@@ -8,17 +9,29 @@ export function pettyPanel(s, store, office = false) {
   const branch = (key) => s.stores.find((b) => b.id === key)?.name || "—";
   const pending = rows.some((r) => r.status === "pending");
   const header = office
-    ? `<div class="supply-stats"><div class="stat"><small>Saldo PT Retail</small><strong>${money(s.retailBalance)}</strong></div><div class="stat"><small>Pengajuan menunggu</small><strong>${rows.filter((r) => r.status === "pending").length}</strong></div></div>
-       <section class="panel"><div class="header-row"><h2>Petty cash per toko</h2><button data-pt-expense>Catat biaya operasional</button></div><div class="table-wrap"><table><thead><tr><th>Toko</th><th>Saldo petty cash</th></tr></thead><tbody>${Object.entries(
+    ? `<div class="supply-stats petty-balances"><div class="stat"><small>Saldo PT Retail</small><strong>${s.retailBalance == null ? "—" : money(s.retailBalance)}</strong></div><div class="stat"><small>Pengajuan menunggu</small><strong>${rows.filter((r) => r.status === "pending").length}</strong></div></div>
+       <section class="panel"><div class="header-row"><h2>Petty cash per toko</h2><button data-pt-expense>Catat biaya operasional</button></div><div class="table-wrap petty-stores"><table><thead><tr><th>Toko</th><th class="numeric">Saldo petty cash</th></tr></thead><tbody>${Object.entries(
          s.pettyBalances || {},
        )
-         .map(([k, v]) => `<tr><td>${e(branch(k))}</td><td>${money(v)}</td></tr>`)
+         .map(
+           ([k, v]) =>
+             `<tr><td>${e(branch(k))}</td><td class="numeric">${money(v)}</td></tr>`,
+         )
          .join("")}</tbody></table></div></section>`
     : `<section class="panel"><div class="header-row"><div><h2>Saldo petty cash</h2><strong>${money(s.pettyBalances?.[store] || 0)}</strong></div>${pending ? '<span class="pill">Menunggu Back Office</span>' : '<button data-petty-action="petty_request">Ajukan pengisian dana</button>'}</div></section>`;
-  return (
-    header +
-    `<section class="panel"><h3>Pengajuan petty cash</h3>${rows.length ? `<div class="table-wrap"><table><thead><tr><th>Tanggal</th>${office ? "<th>Toko</th>" : ""}<th>Keperluan</th><th>Jumlah</th><th>Status</th></tr></thead><tbody>${rows.map((r) => `<tr><td>${e(date(r.requested_at))}</td>${office ? `<td>${e(branch(r.store_id))}</td>` : ""}<td>${e(r.reason)}</td><td>${money(r.amount)}</td><td>${e(status[r.status])}${r.reference ? `<small>${e(r.reference)}</small>` : ""}${office && r.status === "pending" ? `<div class="toolbar"><button data-petty-action="petty_pay" data-request="${e(r.id)}">Catat pencairan</button><button data-petty-action="petty_reject" data-request="${e(r.id)}">Tolak</button></div>` : ""}</td></tr>`).join("")}</tbody></table></div>` : '<p class="empty">Belum ada pengajuan.</p>'}</section>`
-  );
+  const requests = rows.length
+    ? recordTable(
+        ["Tanggal", ...(office ? ["Toko"] : []), "Keperluan", "Jumlah", "Status"],
+        rows.map((r) => [
+          e(date(r.requested_at)),
+          ...(office ? [e(branch(r.store_id))] : []),
+          e(r.reason),
+          money(r.amount),
+          `${e(status[r.status])}${r.reference ? `<small>${e(r.reference)}</small>` : ""}${office && r.status === "pending" ? `<div class="toolbar"><button data-petty-action="petty_pay" data-request="${e(r.id)}">Catat pencairan</button><button data-petty-action="petty_reject" data-request="${e(r.id)}">Tolak</button></div>` : ""}`,
+        ]),
+      )
+    : '<p class="empty">Belum ada pengajuan.</p>';
+  return `${header}<section class="panel"><h3>Pengajuan petty cash</h3>${requests}</section>`;
 }
 
 export function bindPetty(s, store, ctx) {
