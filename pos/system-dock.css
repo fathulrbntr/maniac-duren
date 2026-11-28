@@ -36,6 +36,7 @@ html:has(.system-dock) {
 .dock-pages {
   overflow-x: auto;
   overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
   scrollbar-width: none;
 }
 .dock-pages::-webkit-scrollbar {
@@ -60,6 +61,13 @@ html:has(.system-dock) {
   background: transparent;
   color: var(--muted);
   line-height: 1.1;
+}
+.system-dock .dock-pages > button {
+  flex-basis: 50%;
+  scroll-snap-align: start;
+}
+.system-dock .dock-right .dock-pages > button {
+  flex-basis: 100%;
 }
 .system-dock .dock-symbol {
   display: grid;
