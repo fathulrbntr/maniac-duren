@@ -272,7 +272,7 @@ try {
   await nextSteps.getByRole("button", { name: /Penjualan toko/ }).click();
   await page.locator('.shell[data-page="orders"] #order-products').waitFor();
   await login("owner");
-  await page.locator('.shell[data-page="home"] .dash-profile').waitFor();
+  await page.locator('.shell[data-page="home"] .home-hero .account-profile').waitFor();
   assert.equal(await page.locator("#dash-store").inputValue(), "");
   assert.equal(
     await page.locator('[data-dash-tab="stock"]').getAttribute("aria-pressed"),

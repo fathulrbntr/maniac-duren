@@ -9,7 +9,7 @@
 
 Contoh: Cikarang menerima 100 buah dari supplier dan mengirim 30 ke Harapan Indah. Saat dikirim, Cikarang memiliki 70 buah tersedia dan 30 dalam perjalanan. Sesudah konfirmasi, Harapan Indah memiliki 30 buah tersedia. Mutasi mempunyai satu surat jalan, tagihan Rp0, dan mempertahankan supplier, batch asal serta modal barang. Nota pembelian awal tetap terkait dengan cabang penerima.
 
-Pembayaran nota supplier dan ongkir untuk penerimaan baru menggunakan saldo PT Retail. Dokumen distribusi lama dapat ditelusuri dan diselesaikan. Bila masih ada stok gudang lama, Back Office memilih gudang sebagai lokasi asal di **Transfer Stok**. Pilih tujuan sesuai lokasi fisik barang. Riwayat dan saldo lama tetap dapat ditelusuri.
+Pembayaran nota supplier dan ongkir untuk penerimaan baru menggunakan saldo PT. Altara Rasa Nusantara. Dokumen distribusi lama dapat ditelusuri dan diselesaikan. Bila masih ada stok gudang lama, Back Office memilih gudang sebagai lokasi asal di **Transfer Stok**. Pilih tujuan sesuai lokasi fisik barang. Riwayat dan saldo lama tetap dapat ditelusuri.
 
 ## Pemasangan setelah patch 131
 

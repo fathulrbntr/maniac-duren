@@ -2,6 +2,9 @@ import { escape as e, money, num, today } from "./core.mjs";
 import { pageIcon, visibleSections } from "./navigation.mjs";
 import { serviceOrders } from "./order-stock.mjs";
 import { outstandingBranchCash, canReadDeposits } from "./cash-deposits.mjs";
+import { accountProfile } from "./account-profile.mjs";
+import { companyName } from "./cash-flow.mjs";
+import { branchSupplierPayable } from "./supplier-notes.mjs";
 import { depositButtons } from "./cash-deposits-ui.mjs";
 import { dashboardTabs } from "./dashboard-data.mjs";
 import { dashboardStorePicker } from "./dashboard-ui.mjs";
@@ -84,8 +87,7 @@ function branchDeposits(s, cash, central, store, hidden) {
         .join("")
     : "";
   return `<section class="home-panel home-deposits" aria-labelledby="home-deposits">
-    <div class="home-deposit-head"><h2 id="home-deposits">${central ? "Omzet belum disetor" : "Setoran cabang"}</h2>
-    ${central ? `<strong>${maskedAmount(cash.total, hidden)}</strong>` : ""}</div>
+    <h2 id="home-deposits">${central ? "Belum disetor per cabang" : "Setoran cabang"}</h2>
     ${central ? (rows ? `<dl aria-label="Omzet belum disetor per cabang">${rows}</dl>` : "<p>Belum ada cabang.</p>") : `<dl><div><dt>Omzet hari ini</dt><dd>${maskedAmount(cash.branches[0]?.salesToday, hidden)}</dd></div></dl>`}
     ${buttons}
   </section>`;
@@ -141,8 +143,8 @@ export function homePage(s, store, access, titles, locations, hidden) {
         showCompany ? locations : locations.filter((st) => st.id === store),
       )
     : null;
-  let heading = "Selamat datang",
-    value = s.me?.name || "Tim Maniac Duren",
+  let heading = "Lokasi aktif",
+    value = place,
     detail = central
       ? "Back Office"
       : space === "warehouse"
@@ -153,7 +155,7 @@ export function homePage(s, store, access, titles, locations, hidden) {
     heading = showCompany ? "Saldo perusahaan" : "Omzet cabang belum disetor";
     value = balanceText(amount);
     detail = showCompany
-      ? "Dana yang tersedia di PT Retail setelah pengeluaran."
+      ? `Dana tersedia di ${companyName} setelah pengeluaran.`
       : amount < 0
         ? "Periksa selisih pada riwayat setoran."
         : "Penjualan tunai dan nontunai setelah pengembalian dana, dikurangi setoran ke PT.";
@@ -163,14 +165,21 @@ export function homePage(s, store, access, titles, locations, hidden) {
     value = num(count);
     detail = place;
   }
+  const figures = showCompany
+    ? [
+        ["Belum disetor", cash.total],
+        ["Tagihan supplier", branchSupplierPayable(s, locations)],
+        ["Omzet hari ini", s.cashDepositToday === day ? cash.salesToday : null],
+      ]
+    : [];
   const overflow = menu.length > 8;
   const visible = overflow ? menu.slice(0, 7) : menu;
   const toggle = overflow
     ? `<button type="button" class="home-tile home-all" data-home-more aria-expanded="false" aria-controls="home-extra"><span class="home-tile-icon">${pageIcon("dashboard")}</span><span>Semua menu</span></button>`
     : "";
   return `<div class="home-page">
-    <section class="home-hero" aria-labelledby="home-headline"><div class="home-hero-meta"><span>${pageIcon("stores")}${e(showCompany ? "Seluruh cabang" : place)}</span><time datetime="${day}">${e(dateFormat.format(new Date(day + "T12:00:00Z")))}</time></div>
-      <div class="home-hero-body" ${value.length > 12 ? "data-long-value" : ""}><div class="home-summary"><h2 id="home-headline">${e(heading)}</h2><div class="home-value-row"><strong class="home-value" ${showCash && hidden ? "hidden" : ""}>${e(value)}</strong>${showCash ? `<strong class="home-mask" ${hidden ? "" : "hidden"} aria-label="Saldo disembunyikan">••••</strong><button type="button" data-home-eye aria-label="${hidden ? "Tampilkan saldo" : "Sembunyikan saldo"}" aria-pressed="${hidden}">${eyeIcon}</button>` : ""}</div><p>${e(detail)}</p>${showCompany ? `<p class="home-received">Total setoran masuk <b>${maskedAmount(cash.deposited, hidden)}</b></p>` : ""}</div>
+    <section class="home-hero" aria-labelledby="home-headline"><div class="home-hero-meta">${accountProfile(s)}<div class="home-context"><span>${pageIcon("stores")}${e(showCompany ? "Seluruh cabang" : place)}</span><time datetime="${day}">${e(dateFormat.format(new Date(day + "T12:00:00Z")))}</time></div></div>
+      <div class="home-hero-body" ${value.length > 12 ? "data-long-value" : ""}><div class="home-summary"><h2 id="home-headline">${e(heading)}</h2><div class="home-value-row"><strong class="home-value" ${showCash && hidden ? "hidden" : ""}>${e(value)}</strong>${showCash ? `<strong class="home-mask" ${hidden ? "" : "hidden"} aria-label="Saldo disembunyikan">••••</strong><button type="button" data-home-eye aria-label="${hidden ? "Tampilkan saldo" : "Sembunyikan saldo"}" aria-pressed="${hidden}">${eyeIcon}</button>` : ""}</div><p>${e(detail)}</p></div>
       ${
         actions.length || showSales
           ? `<div class="home-hero-actions">${showSales ? '<button type="button" data-home-sales>Lihat omzet</button>' : ""}${actions
@@ -181,7 +190,9 @@ export function homePage(s, store, access, titles, locations, hidden) {
               )
               .join("")}</div>`
           : ""
-      }</div></section>
+      }</div>
+      ${figures.length ? `<dl class="home-financials" aria-label="Ringkasan keuangan seluruh cabang">${figures.map(([label, amount]) => `<div><dt>${e(label)}</dt><dd>${maskedAmount(amount, hidden)}</dd></div>`).join("")}</dl>` : ""}
+    </section>
     <div class="home-body">${cash ? branchDeposits(s, cash, showCompany, store, hidden) : ""}<section class="home-panel home-shortcuts" aria-labelledby="home-shortcuts"><h2 id="home-shortcuts">Akses cepat</h2><div class="home-grid">${visible.map((id) => tile(id, label(id))).join("")}${toggle}</div>${
       overflow
         ? `<div class="home-grid home-extra" id="home-extra" hidden>${menu

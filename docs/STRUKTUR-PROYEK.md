@@ -36,7 +36,7 @@ Konfirmasi tindakan di POS dan pengelola menu menggunakan `shared/confirmation.m
 
 Pintasan di dock bawah mengikuti halaman yang boleh dibuka dari sidebar. Pilihan **Atur dock** tersimpan di perangkat untuk setiap akun dan area kerja melalui `pos/system-dock.mjs`.
 
-Beranda POS (`pos/home-ui.mjs`, `pos/home.css`) memuat ringkasan operasional langsung setelah login dan saat berganti area kerja. Back Office keuangan melihat saldo tersedia PT Retail dari buku kas pusat dan total setoran cabang yang sudah masuk. Omzet tunai dan nontunai yang masih harus disetor memiliki bagian tersendiri dengan total dan rincian per cabang. POS menggunakan saldo setoran kumulatif dari server. Saldo negatif ditandai untuk diperiksa, dan data yang belum lengkap ditampilkan sebagai “Belum tersedia”. Toko melihat omzet hari ini (WIB) serta kewajiban setor lokasi aktif. Setoran yang dicatat setelah dana masuk ke rekening PT mengurangi kewajiban cabang. Tombol **Lihat omzet** membuka bagian **Penjualan** dengan pilihan lokasi dan periode. Pilihan Dashboard lama di dock mengarah ke Beranda.
+Beranda POS (`pos/home-ui.mjs`, `pos/home.css`) memuat ringkasan operasional langsung setelah login dan saat berganti area kerja. Kartu utama memuat profil pengguna aktif. Back Office keuangan melihat saldo tersedia PT. Altara Rasa Nusantara, omzet yang belum disetor, sisa tagihan barang dari nota supplier cabang, dan omzet hari ini (WIB). Ongkir memiliki pencatatan tersendiri. Omzet tunai dan nontunai yang masih harus disetor memiliki bagian tersendiri dengan total dan rincian per cabang. POS menggunakan saldo setoran kumulatif dari server. Saldo negatif ditandai untuk diperiksa, dan data yang belum lengkap ditampilkan sebagai “Belum tersedia”. Toko melihat omzet hari ini (WIB) serta kewajiban setor lokasi aktif. Setoran yang dicatat setelah dana masuk ke rekening PT mengurangi kewajiban cabang. Tombol **Lihat omzet** membuka bagian **Penjualan** dengan pilihan lokasi dan periode. Pilihan Dashboard lama di dock mengarah ke Beranda.
 
 Dashboard Back Office dan toko menggunakan ringkasan di `pos/dashboard-ui.mjs`.
 `pos/warehouse-ui.mjs` melengkapinya dengan tindak lanjut, saldo, dan pintasan sesuai area kerja.
@@ -203,7 +203,7 @@ batch sumber. Urutan pemasangan tersedia di `database/README.md`.
 
 `database/cash-flow-127.sql` mengelompokkan pergerakan uang berdasarkan tanggal,
 menjaga hak akses keuangan dan menyesuaikan saldo setoran toko.
-`pos/cash-flow.mjs` menyusun angka Toko, PT Retail, PT Distribusi dan piutang
+`pos/cash-flow.mjs` menyusun angka Toko, PT. Altara Rasa Nusantara, PT Distribusi dan piutang
 untuk tampilan, Excel, dan PDF. Filter dan form sumber dana menggunakan
 `pos/reports-ui.mjs` serta rute mutasi POS yang sama dengan laporan lainnya.
 
@@ -244,9 +244,9 @@ sesudah SQL dan frontend terpasang.
   Tab pelanggan yang sebelumnya bersumber dari invoice manual telah disembunyikan.
 - Kasir mengajukan dana awal atau reimbursement melalui **Pengeluaran Toko**.
   Saldo petty cash awal tiap cabang Rp0. Back Office mencatat pencairan aktual
-  melalui **Keuangan PT Retail**. Pencairan mendebit saldo setoran dan menambah
+  melalui **Keuangan PT. Altara Rasa Nusantara**. Pencairan mendebit saldo setoran dan menambah
   kas kecil cabang. Pengeluaran kasir mengurangi petty cash saat disimpan.
-- Biaya rutin cabang seperti gaji, sewa dan listrik dibayar dari saldo PT Retail di
+- Biaya rutin cabang seperti gaji, sewa dan listrik dibayar dari saldo PT. Altara Rasa Nusantara di
   Back Office. Pencairan reimburse merupakan perpindahan dana. Biaya toko sudah
   tercatat pada transaksi pengeluaran. Transaksi historis mempertahankan sumber dana awal.
 - Ekstrak patch di folder proyek dan jalankan `.\scripts\windows\push-patch-130.cmd`

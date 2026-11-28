@@ -13,7 +13,12 @@ import {
   batchReportSheets,
 } from "./reports.mjs";
 import { transferStatus } from "./warehouse-flow.mjs";
-import { cashFlowSheets, fundingNames, fundingOptions } from "./cash-flow.mjs";
+import {
+  cashFlowSheets,
+  companyName,
+  fundingNames,
+  fundingOptions,
+} from "./cash-flow.mjs";
 import { downloadWorkbook, printWindow, reportPrint } from "./report-export.mjs";
 import { batchReportPage, bindBatchReport } from "./batch-report-ui.mjs";
 const options = (s) =>
@@ -236,7 +241,7 @@ export function bindReports(s, store, ctx) {
     ctx.workspace === "backoffice" &&
     s.access?.backoffice &&
     s.access?.finance
-      ? '<button type="button" data-view="retailFunds">Buka Keuangan PT Retail</button>'
+      ? `<button type="button" data-view="retailFunds">Buka Keuangan ${companyName}</button>`
       : "";
   const drawFlow = async (selected, ticket) => {
     $("#report-excel").disabled = $("#report-pdf").disabled = true;
@@ -270,7 +275,7 @@ export function bindReports(s, store, ctx) {
         `<div class="cash-flow-grid">${panel(shop)}${panel(retail)}${distribution ? panel(distribution, invoiceTable) : ""}</div>` +
         (review ? panel(review) : "") +
         (report.turnoverDepositVersion >= 138
-          ? '<p class="muted">Saldo setoran cabang adalah omzet tunai dan nontunai setelah pengembalian dana, dikurangi setoran ke PT Retail. Saldo positif masih harus disetor. Petty cash dan biaya operasional dicatat terpisah.</p>'
+          ? `<p class="muted">Saldo setoran cabang adalah omzet tunai dan nontunai setelah pengembalian dana, dikurangi setoran ke ${companyName}. Saldo positif masih harus disetor. Petty cash dan biaya operasional dicatat terpisah.</p>`
           : report.branchStockVersion >= 132
             ? '<p class="muted">Pembayaran nota dan ongkir supplier cabang mengikuti tanggal pembayaran. Mutasi antarcabang hanya memindahkan persediaan.</p>'
             : `<p class="muted">Uang kas toko mengikuti transaksi tunai tercatat sejak awal riwayat POS. Uang awal kembalian tidak termasuk. Penjualan nontunai mengikuti pembayaran di kasir. Setoran dan pembayaran nota antarpihak ditampilkan di kedua pihak. Tagihan menjadi arus kas saat dibayar.</p>`) +
@@ -698,7 +703,7 @@ export function expenseDialog(s, store, ctx, retailOnly = false) {
     if (!modern) return payerOptions(s, key);
     return locations.find((t) => t.id === key)?.locationType === "warehouse"
       ? '<option value="distribution">PT Distribusi</option>'
-      : `<option value="retail">Saldo PT Retail · ${money(s.retailBalance)}</option>`;
+      : `<option value="retail">Saldo ${companyName} · ${money(s.retailBalance)}</option>`;
   };
   const d = ctx.modal(
     "Pengeluaran operasional",

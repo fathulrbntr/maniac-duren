@@ -1,3 +1,4 @@
+import { companyName } from "./cash-flow.mjs";
 import { confirmAction } from "../shared/confirmation.mjs";
 import { workspaceGroups } from "./workspaces.mjs";
 export const homePageId = (id) =>
@@ -20,7 +21,7 @@ export const pageTitles = {
   crm: "Member & Poin",
   payments: "Metode Pembayaran",
   shifts: "Shift Kasir",
-  retailFunds: "Keuangan PT Retail",
+  retailFunds: `Keuangan ${companyName}`,
   storeExpenses: "Pengeluaran Toko",
   devices: "Printer & Scanner",
   discounts: "Diskon & Persetujuan",

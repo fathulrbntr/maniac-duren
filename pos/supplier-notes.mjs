@@ -95,6 +95,29 @@ export function noteBalance(note, component) {
     }[status],
   };
 }
+// Invoice and freight are settled separately. Credits stay with their own note.
+export function branchSupplierPayable(state, locations) {
+  if (!noteReady(state) || !Array.isArray(state.receiptPlans)) return null;
+  const branches = new Set(
+    locations.filter((st) => st.locationType !== "warehouse").map((st) => st.id),
+  );
+  if (!branches.size) return null;
+  const remaining = [];
+  for (const note of state.receiptPlans) {
+    if (note.cancelled || !branches.has(note.storeId)) continue;
+    if (
+      !Array.isArray(note.payments) ||
+      !Array.isArray(note.lines) ||
+      !note.lines.length ||
+      note.lines.some((line) => line.purchaseCost == null)
+    )
+      return null;
+    const balance = noteBalance(note, "invoice");
+    if (balance.status === "unknown") return null;
+    remaining.push([Math.max(0, balance.remaining)]);
+  }
+  return sumProducts(remaining);
+}
 export function noteMoney(value, zero = false) {
   const n = Number(value);
   if (

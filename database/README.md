@@ -119,7 +119,7 @@ draf lama, batch yang sudah dipindai mendapat baris masing-masing. Pilih batch
 untuk produk yang belum dipindai. Harga transfer pada invoice tetap menjadi
 dasar modal barang yang diterima toko.
 
-### Arus kas Toko, PT Retail, dan PT Distribusi (127)
+### Arus kas Toko, PT. Altara Rasa Nusantara, dan PT Distribusi (127)
 
 Dari proyek yang sudah memakai patch 126, ekstrak berkas patch 127. Di SQL Editor
 Supabase jalankan `database/cash-flow-127.sql`. Jika memakai migrasi CLI, gunakan
@@ -133,12 +133,12 @@ Filter satu cabang menunjukkan transaksi cabang tersebut dan pembayaran nota ter
 Excel dan PDF pada tab ini mengikuti tanggal serta pilihan cabang yang sama.
 
 - **Toko** mencatat penjualan tunai dan nontunai, refund menurut tanggal pengembalian,
-  pengeluaran yang dibayar toko, dan setoran ke PT Retail. Uang kas adalah saldo
+  pengeluaran yang dibayar toko, dan setoran ke PT. Altara Rasa Nusantara. Uang kas adalah saldo
   kumulatif transaksi tunai POS, di luar uang awal kembalian. Pengeluaran tunai
   dengan sumber Toko juga mengurangi batas setoran yang dapat disimpan.
-- **PT Retail** menerima setoran toko, membayar nota gudang, serta membayar biaya
+- **PT. Altara Rasa Nusantara** menerima setoran toko, membayar nota gudang, serta membayar biaya
   cabang seperti listrik, sewa, dan gaji. Pengeluaran dicatat sekali untuk cabang
-  yang mendapat manfaat dengan pilihan **Dibayar oleh → PT Retail**.
+  yang mendapat manfaat dengan pilihan **Dibayar oleh → PT. Altara Rasa Nusantara**.
 - **PT Distribusi** menerima pembayaran nota toko dan wholesale, lalu membayar
   supplier dan ongkir. Pembayaran cicilan masuk sesuai tanggal bayar. Nilai nota
   terbit dan sisa piutang ditampilkan terpisah dari arus uang. Penjualan wholesale
@@ -198,3 +198,5 @@ Patch **136** (`branch-receipt-barcode-136.sql`) mewajibkan toko tujuan memindai
 Patch **137** (`supplier-note-proof-137.sql`) dipasang setelah 136. POS memberikan nomor `NS-YYYYMM-NNNNNN` saat nota disimpan. Urutan berlaku lintas cabang dan bulan. Foto nota opsional tersimpan bersama nota dan dapat dibuka dari detail nota oleh Back Office.
 
 Patch **138** (`branch-turnover-deposits-138.sql`) dipasang setelah 137. Beranda, validasi setoran dan laporan arus kas memakai penjualan lunas cabang dari seluruh metode pembayaran. Pengembalian dana mengurangi omzet pada tanggal pengembalian. Sisa kewajiban menghitung seluruh riwayat penjualan dikurangi setoran aktif. Petty cash dan biaya operasional memiliki pencatatan tersendiri. Migrasi ini tidak membuat setoran atau memindahkan uang.
+
+Patch **139** (`company-name-139.sql`) memperbarui nama perusahaan pada pesan validasi saldo dan biaya operasional menjadi PT. Altara Rasa Nusantara. Pasang setelah 138.

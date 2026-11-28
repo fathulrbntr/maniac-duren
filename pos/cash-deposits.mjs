@@ -55,6 +55,10 @@ export function outstandingBranchCash(s, stores) {
       branches.length && branches.every((b) => b.deposited !== null)
         ? sumProducts(branches.map((b) => [b.deposited]))
         : null,
+    salesToday:
+      branches.length && branches.every((b) => b.salesToday !== null)
+        ? sumProducts(branches.map((b) => [b.salesToday]))
+        : null,
     total: complete ? sumProducts(branches.map((b) => [Math.max(b.pending, 0)])) : null,
   };
 }

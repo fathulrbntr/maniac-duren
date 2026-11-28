@@ -1,3 +1,4 @@
+import { companyName } from "./cash-flow.mjs";
 import { escape as e, id, money } from "./core.mjs";
 import { recordTable } from "./supply-session-ui.mjs";
 
@@ -9,7 +10,7 @@ export function pettyPanel(s, store, office = false) {
   const branch = (key) => s.stores.find((b) => b.id === key)?.name || "—";
   const pending = rows.some((r) => r.status === "pending");
   const header = office
-    ? `<div class="supply-stats petty-balances"><div class="stat"><small>Saldo PT Retail</small><strong>${s.retailBalance == null ? "—" : money(s.retailBalance)}</strong></div><div class="stat"><small>Pengajuan menunggu</small><strong>${rows.filter((r) => r.status === "pending").length}</strong></div></div>
+    ? `<div class="supply-stats petty-balances"><div class="stat"><small>Saldo ${companyName}</small><strong>${s.retailBalance == null ? "—" : money(s.retailBalance)}</strong></div><div class="stat"><small>Pengajuan menunggu</small><strong>${rows.filter((r) => r.status === "pending").length}</strong></div></div>
        <section class="panel"><div class="header-row"><h2>Petty cash per toko</h2><button data-pt-expense>Catat biaya operasional</button></div><div class="table-wrap petty-stores"><table><thead><tr><th>Toko</th><th class="numeric">Saldo petty cash</th></tr></thead><tbody>${Object.entries(
          s.pettyBalances || {},
        )
@@ -44,7 +45,7 @@ export function bindPetty(s, store, ctx) {
       const title = creating
         ? "Ajukan pengisian petty cash"
         : action === "petty_pay"
-          ? "Catat pencairan dari PT Retail"
+          ? `Catat pencairan dari ${companyName}`
           : "Tolak pengajuan";
       const d = ctx.modal(
         title,

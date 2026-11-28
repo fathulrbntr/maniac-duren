@@ -139,7 +139,7 @@ h4 {
   .shell[data-sidebar-collapsed="true"] .sidebar-store,
   .shell[data-sidebar-collapsed="true"] .nav-heading,
   .shell[data-sidebar-collapsed="true"] .nav-item > span,
-  .shell[data-sidebar-collapsed="true"] .account-profile > div {
+  .shell[data-sidebar-collapsed="true"] .sidebar-account .account-profile > div {
     display: none;
   }
   .shell[data-sidebar-collapsed="true"] .sidebar > .nav {
@@ -166,7 +166,7 @@ h4 {
     gap: 12px;
     padding: 12px 0 0;
   }
-  .shell[data-sidebar-collapsed="true"] .account-profile {
+  .shell[data-sidebar-collapsed="true"] .sidebar-account .account-profile {
     flex: none;
   }
 }

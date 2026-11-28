@@ -312,16 +312,6 @@ export function dashboardPage(s, activeStore, workspace, embedded = false) {
     a = ["transactions", "suppliers", "customers"].includes(tab)
       ? dashboardSales(s, f)
       : null;
-  const person = s.employees?.find((p) => p.id === s.me?.id) || s.me || {},
-    name = person.name || "Akun login",
-    roles = {
-      owner: "Owner",
-      manager: "Manager",
-      cashier: "Kasir",
-      kitchen: "Kitchen",
-      warehouse: "Gudang",
-      staff: "Staff",
-    };
   const page =
     tab === "transactions"
       ? transactionPanel(a, s, f, workspace)
@@ -332,7 +322,7 @@ export function dashboardPage(s, activeStore, workspace, embedded = false) {
           : tab === "reject"
             ? rejectPanel(s, f, workspace)
             : customerPanel(s, a);
-  return `<section class="dash-workspace" data-report-store="${e(f.store)}" data-report-from="${e(f.from)}" data-report-to="${e(f.to)}" data-report-period="${e(period)}" aria-label="Ringkasan operasional"><div class="dash-profile-row"><div class="dash-profile"><span class="dash-avatar">${person.profile_photo ? `<img src="${e(person.profile_photo)}" alt="Foto ${e(name)}">` : `<span>${e(initials(name))}</span>`}</span><div><h2>Ringkasan operasional</h2><p>Selamat datang, ${e(name)} <span class="dash-role">· ${e(roles[person.role] || person.role || "Staff")}</span></p></div></div>${embedded ? "" : dashboardStorePicker(s, activeStore, workspace)}</div><div class="dash-tabs" style="--dash-tabs:${tabs.length}" role="group" aria-label="Ringkasan dashboard">${tabs.map(([key, label]) => `<button type="button" data-dash-tab="${key}" aria-pressed="${key === tab}">${label}</button>`).join("")}</div><div class="dash-period-row"><span class="dash-date-caption">${e(tab === "stock" ? "Posisi stok saat ini" : f.from === f.to ? dateLabel(f.from) : dateLabel(f.from) + " – " + dateLabel(f.to))}</span><div>${reportAccess(s) ? '<button type="button" class="dash-print" id="dash-print">Cetak laporan A4</button>' : ""}<button type="button" class="dash-refresh" id="dash-refresh" aria-label="Perbarui data dashboard" title="Perbarui data">${refreshIcon}</button><label class="dash-period"><select id="dash-period" aria-label="Periode dashboard" ${tab === "stock" ? "disabled" : ""}>${Object.entries(
+  return `<section class="dash-workspace" data-report-store="${e(f.store)}" data-report-from="${e(f.from)}" data-report-to="${e(f.to)}" data-report-period="${e(period)}" aria-label="Ringkasan operasional"><div class="dash-heading"><h2>Ringkasan operasional</h2>${embedded ? "" : dashboardStorePicker(s, activeStore, workspace)}</div><div class="dash-tabs" style="--dash-tabs:${tabs.length}" role="group" aria-label="Ringkasan dashboard">${tabs.map(([key, label]) => `<button type="button" data-dash-tab="${key}" aria-pressed="${key === tab}">${label}</button>`).join("")}</div><div class="dash-period-row"><span class="dash-date-caption">${e(tab === "stock" ? "Posisi stok saat ini" : f.from === f.to ? dateLabel(f.from) : dateLabel(f.from) + " – " + dateLabel(f.to))}</span><div>${reportAccess(s) ? '<button type="button" class="dash-print" id="dash-print">Cetak laporan A4</button>' : ""}<button type="button" class="dash-refresh" id="dash-refresh" aria-label="Perbarui data dashboard" title="Perbarui data">${refreshIcon}</button><label class="dash-period"><select id="dash-period" aria-label="Periode dashboard" ${tab === "stock" ? "disabled" : ""}>${Object.entries(
     periods,
   )
     .map(
