@@ -472,6 +472,27 @@ try {
   origin.locationType = destination.locationType = "store";
   const item = state.products.find((product) => product.stockUnit === "pcs");
   const fruit = state.products.find((product) => product.stockUnit === "kg_butir");
+  const fruitLabel = "92022311260000010002000160";
+  state.fruitUnits = [
+    ...(state.fruitUnits || []),
+    {
+      barcode: fruitLabel,
+      productId: fruit.id,
+      storeId: origin.id,
+      grams: 160,
+      status: "available",
+    },
+  ];
+  state.branchPrices = [
+    ...(state.branchPrices || []),
+    {
+      productId: fruit.id,
+      storeId: origin.id,
+      stockUnit: "kg_butir",
+      priceKg: 150000,
+      pricePiece: 300000,
+    },
+  ];
   item.barcode = "4006381333931";
   item.name = "Crystalyn kemasan " + "A".repeat(50);
   Object.assign(state, {
@@ -757,6 +778,31 @@ try {
   await codeInput.fill(fruit.sku);
   await lookup.getByRole("button", { name: "Cari", exact: true }).click();
   await lookup.getByRole("heading", { name: fruit.name }).waitFor();
+  await codeInput.fill(fruitLabel);
+  await codeInput.press("Enter");
+  const summary = lookup.locator(".lookup-summary");
+  assert.deepEqual(await summary.locator("dt").allTextContents(), [
+    "Berat buah",
+    "Harga sesuai berat",
+  ]);
+  assert.match(await summary.innerText(), /0,16 kg/);
+  assert.match(await summary.innerText(), /24\.000/);
+  assert.match(await summary.innerText(), /150\.000.*\/ kg/);
+  assert.match(await summary.innerText(), /300\.000.*\/ butir/);
+  for (const width of [320, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    const panel = await summary.boundingBox();
+    const controls = await lookup.locator("[data-lookup-camera]").boundingBox();
+    assert(panel.y >= 0 && panel.y + panel.height <= controls.y);
+    assert(await lookup.evaluate((el) => el.scrollWidth <= el.clientWidth + 1));
+    if (width === 390)
+      await page.screenshot({ path: path.join(output, "pindai-berat-harga-390.png") });
+  }
+  await codeInput.fill("kosong");
+  await codeInput.press("Enter");
+  await lookup.getByText(/Barang tidak ditemukan/).waitFor();
+  assert.equal(await summary.innerText(), "");
+  await page.setViewportSize({ width: 320, height: 844 });
   await lookup.getByRole("button", { name: "Tutup", exact: true }).click();
   assert(await page.locator('.shell[data-page="retailFunds"]').isVisible());
   // Android can resolve camera permission after the dialog has already closed.

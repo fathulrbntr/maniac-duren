@@ -188,6 +188,7 @@ body:has(.system-dock) #toast {
 }
 .lookup-body [hidden],
 .lookup-status:empty,
+.lookup-summary:empty,
 .lookup-result:empty {
   display: none;
 }
@@ -224,12 +225,51 @@ body:has(.system-dock) #toast {
   width: 100%;
   min-width: 0;
 }
+.lookup-summary {
+  display: grid;
+  gap: 10px;
+  overflow-wrap: anywhere;
+}
+.lookup-highlights {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+}
+.lookup-highlights > div {
+  flex: 1 1 auto;
+  min-width: min(100%, 7rem);
+  max-width: 100%;
+  padding: 10px 12px;
+  background: var(--surface-raised);
+  border-radius: var(--radius-control);
+}
+.lookup-highlights dt {
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+.lookup-highlights dd {
+  margin: 3px 0 0;
+  color: var(--action-bg);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+.lookup-rates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
 .lookup-result {
   border-top: 1px solid var(--line);
   padding-top: 14px;
   overflow-wrap: anywhere;
 }
-.lookup-result h3,
+.lookup-summary h3,
 .lookup-result dl {
   margin: 0;
 }

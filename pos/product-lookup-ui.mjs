@@ -8,11 +8,12 @@ export function openItemLookup({ modal, getState, storeId, workspace }) {
   const d = modal(
     "Pindai barang",
     `<div class="lookup-body">
+    <section class="lookup-summary" aria-live="polite"></section>
     <div class="lookup-preview" hidden><video muted playsinline></video><span aria-hidden="true"></span></div>
     <p class="lookup-status" role="status"></p>
     <button type="button" data-lookup-camera>Aktifkan kamera</button>
     <div class="field"><label for="lookup-code">Barcode atau SKU</label><div class="lookup-input"><input id="lookup-code" type="text" data-lookup-code autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="256" placeholder="Ketik atau gunakan scanner"><button type="submit" class="primary">Cari</button></div></div>
-    <section class="lookup-result" aria-live="polite"></section></div>`,
+    <div class="lookup-result"></div></div>`,
   );
   d.classList.add("lookup-dialog");
   d.setAttribute("aria-label", "Pindai barang");
@@ -22,6 +23,7 @@ export function openItemLookup({ modal, getState, storeId, workspace }) {
   const preview = d.querySelector(".lookup-preview");
   const video = d.querySelector("video");
   const status = d.querySelector(".lookup-status");
+  const summary = d.querySelector(".lookup-summary");
   const result = d.querySelector(".lookup-result");
   let stream,
     timer,
@@ -35,6 +37,10 @@ export function openItemLookup({ modal, getState, storeId, workspace }) {
     preview.hidden = true;
     camera.disabled = false;
   };
+  const clearResult = () => {
+    summary.replaceChildren();
+    result.replaceChildren();
+  };
   const lookup = (code, fromCamera = false) => {
     stop();
     camera.textContent = "Pindai lagi";
@@ -43,16 +49,23 @@ export function openItemLookup({ modal, getState, storeId, workspace }) {
       const item = lookupItem(getState(), code, storeId, workspace, {
         camera: fromCamera,
       });
-      result.innerHTML = `<h3>${e(item.name)}</h3><code>${e(item.code)}</code><dl>${item.rows.map(([key, value]) => `<div><dt>${e(key)}</dt><dd>${e(value)}</dd></div>`).join("")}</dl>`;
+      const pairs = (rows) =>
+        rows
+          .map(([label, value]) => `<div><dt>${e(label)}</dt><dd>${e(value)}</dd></div>`)
+          .join("");
+      summary.innerHTML = `<h3>${e(item.name)}</h3>${item.highlights.length ? `<dl class="lookup-highlights">${pairs(item.highlights)}</dl>` : ""}${item.priceNotes.length ? `<p class="lookup-rates">${item.priceNotes.map((note) => `<span>${e(note)}</span>`).join("")}</p>` : ""}`;
+      result.innerHTML = `<code>${e(item.code)}</code><dl>${pairs(item.rows)}</dl>`;
+      d.scrollTop = 0;
     } catch (error) {
-      result.textContent = error.message;
+      clearResult();
+      status.textContent = error.message;
     }
     if (!fromCamera && document.activeElement === input) input.select();
   };
   const start = async () => {
     stop();
     const token = generation;
-    result.replaceChildren();
+    clearResult();
     status.textContent = "Menyiapkan kamera…";
     camera.disabled = true;
     try {
@@ -118,7 +131,8 @@ export function openItemLookup({ modal, getState, storeId, workspace }) {
       try {
         return lookup(normalizeBarcode(raw, settings));
       } catch (error) {
-        result.textContent = error.message;
+        clearResult();
+        status.textContent = error.message;
         return;
       }
     }

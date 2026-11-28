@@ -8,7 +8,7 @@ import { pricesForBranch } from "./branch-prices.mjs";
 import { productStock } from "./product-stock.mjs";
 import { location } from "./warehouse-flow.mjs";
 import { fruitStatus } from "./scale-label.mjs";
-import { itemTypes } from "./catalog.mjs";
+import { isMaterial, itemTypes } from "./catalog.mjs";
 import { num, money } from "./core.mjs";
 
 // The lookup also accepts materials, sold fruit and products without a selling price.
@@ -51,11 +51,14 @@ export function lookupItem(state, raw, storeId, workspace, { camera = false } = 
   const access = state.access;
   const inventory =
     !access || access.stock || access.receive || access.backoffice || access.sell;
+  const highlights = [];
+  const priceNotes = [];
+  const kg = unit ? unit.grams / 1000 : scale?.kg;
+  if (kg > 0) highlights.push([unit ? "Berat buah" : "Berat label", `${num(kg)} kg`]);
   if (unit) {
     const lot = (state.lots || []).find((l) => l.id === unit.lotId);
     rows.push(
       ["Status buah", fruitStatus[unit.status] || unit.status],
-      ["Berat buah", `${num(unit.grams / 1000)} kg`],
       ["Lokasi buah", locationName],
     );
     if (inventory)
@@ -64,7 +67,7 @@ export function lookupItem(state, raw, storeId, workspace, { camera = false } = 
         ["Supplier", state.suppliers?.find((x) => x.id === lot?.supplierId)?.name],
         ["Tanggal masuk", lot?.date],
       );
-  } else if (scale) rows.push(["Berat label", `${num(scale.kg)} kg`]);
+  }
   if (
     inventory &&
     product.itemType !== "recipe" &&
@@ -78,26 +81,37 @@ export function lookupItem(state, raw, storeId, workspace, { camera = false } = 
         : `${num(stock.qty)} ${product.stockUnit}`,
     ]);
   }
-  if (
-    locationId &&
-    workspace !== "warehouse" &&
-    (!access || access.sell || access.backoffice)
-  ) {
+  const canSeePrices =
+    workspace !== "warehouse" && (!access || access.sell || access.backoffice);
+  if (canSeePrices && locationId) {
     const priced = pricesForBranch(state, locationId).products.find(
       (p) => p.id === product.id,
     );
-    const prices = dual
-      ? [
-          ["kg", priced.priceKg],
-          ["butir", priced.pricePiece],
-        ]
-      : [[product.stockUnit, priced.salePrice]];
-    for (const [measure, price] of prices)
-      if (price > 0) rows.push([`Harga jual / ${measure}`, money(price)]);
+    const rates = (
+      dual
+        ? [
+            ["kg", priced.priceKg],
+            ["butir", priced.pricePiece],
+          ]
+        : [[product.stockUnit, priced.salePrice]]
+    ).filter(([, rate]) => Number.isFinite(Number(rate)) && rate > 0);
+    if (kg > 0 && dual && rates.some(([measure]) => measure === "kg")) {
+      highlights.push(["Harga sesuai berat", money(kg * priced.priceKg)]);
+      for (const [measure, rate] of rates) priceNotes.push(`${money(rate)} / ${measure}`);
+    } else {
+      for (const [measure, rate] of rates)
+        highlights.push([`Harga jual / ${measure}`, money(rate)]);
+    }
+    if (!rates.length && !isMaterial(product))
+      priceNotes.push("Harga jual belum diatur.");
+  } else if (canSeePrices && workspace === "backoffice" && !isMaterial(product)) {
+    priceNotes.push("Pilih cabang untuk melihat harga jual.");
   }
   return {
     name: product.name,
     code,
+    highlights,
+    priceNotes,
     rows: rows.filter(([, value]) => value != null && value !== ""),
   };
 }
