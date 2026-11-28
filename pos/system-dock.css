@@ -37,20 +37,17 @@ html:has(.system-dock) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: var(--control-height);
   height: var(--control-height);
   min-width: var(--control-height);
   flex: 0 0 auto;
   margin: 0;
-  padding: 0 12px;
+  padding: 0;
   border: 1px solid transparent;
   border-radius: var(--radius-control);
   background: transparent;
   color: var(--muted);
   line-height: 1;
-}
-.system-dock .dock-pages button {
-  width: var(--control-height);
-  padding: 0;
 }
 .system-dock button:hover {
   background: var(--surface-soft);
@@ -70,17 +67,6 @@ html:has(.system-dock) {
   width: 20px;
   height: 20px;
   pointer-events: none;
-}
-.system-dock .dock-settings {
-  flex-direction: column;
-  gap: 3px;
-  padding: 2px 6px;
-  border-color: var(--line);
-  font-size: 10px;
-}
-.dock-settings svg {
-  width: 17px;
-  height: 17px;
 }
 .dock-picker {
   display: grid;

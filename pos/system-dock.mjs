@@ -9,9 +9,7 @@ const svg = (path) =>
 const scanner = svg(
   "M7 3H3v4 M17 3h4v4 M3 17v4h4 M21 17v4h-4 M7 8v8 M10 8v8 M14 8v8 M17 8v8",
 );
-const settingsIcon = svg(
-  "M3 7h4m4 0h10M3 17h10m4 0h4 M11 7a2 2 0 1 1-4 0 2 2 0 0 1 4 0 M17 17a2 2 0 1 1-4 0 2 2 0 0 1 4 0",
-);
+const settingsIcon = `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>`;
 
 function readSelection(key) {
   if (!key) return null;
@@ -70,7 +68,7 @@ function revealActivePage(track) {
 
 export function systemDock(view, access, options = {}) {
   const { pages, selected } = dockModel(access, options);
-  return `<nav class="system-dock" aria-label="Pintasan halaman"><div class="dock-pages">${pageButtons(view, selected, pages)}</div><button type="button" class="dock-settings" data-dock-settings aria-haspopup="dialog" aria-label="Atur dock" title="Atur dock">${settingsIcon}<span>Atur</span></button></nav>`;
+  return `<nav class="system-dock" aria-label="Pintasan halaman"><div class="dock-pages">${pageButtons(view, selected, pages)}</div><button type="button" class="dock-settings" data-dock-settings aria-haspopup="dialog" aria-label="Atur dock" title="Atur dock">${settingsIcon}</button></nav>`;
 }
 
 export function bindDockSettings(
