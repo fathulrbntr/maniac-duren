@@ -7,11 +7,11 @@ const pages = sections.flatMap((x) => x.pages);
 assert.equal(new Set(pages).size, pages.length, "Each menu must appear only once");
 assert.deepEqual(
   visibleSections({}).flatMap((x) => x.pages),
-  ["guide"],
+  ["home", "guide"],
 );
 assert.deepEqual(
   visibleSections({ sell: true, attendance: true }).flatMap((x) => x.pages),
-  ["shifts", "orders", "kitchen", "devices", "attendance", "guide"],
+  ["home", "shifts", "orders", "kitchen", "devices", "attendance", "guide"],
 );
 assert(
   !visibleSections({ master: true })

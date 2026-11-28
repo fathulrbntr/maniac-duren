@@ -195,6 +195,13 @@ const go = async (key) =>
 await space("store");
 await select("#active-store", "b");
 await space("backoffice");
+assert(root.querySelector(".home-page"));
+assert.match(root.querySelector(".home-value").textContent, /5\.000/);
+await root.querySelector('[data-home-store="b"]').fire("click");
+assert.doesNotMatch(root.querySelector(".home-value").textContent, /5\.000/);
+await root.querySelector('[data-home-store=""]').fire("click");
+assert.match(root.querySelector(".home-value").textContent, /5\.000/);
+await root.querySelector('.home-hero-actions [data-view="backoffice"]').fire("click");
 assert.equal(root.querySelector("#dash-store").value, "");
 assert.equal(root.querySelectorAll('#pos-navigation [data-view="dashboard"]').length, 0);
 const pending = () => root.querySelector(".dash-pending").textContent;
@@ -238,6 +245,8 @@ assert.equal(root.querySelector("#office-branch").value, "");
 await select("#office-branch", "a");
 assert(root.querySelector("#payment-settings-form"));
 await space("store");
+assert(root.querySelector(".home-page"));
+await go("storehome");
 assert.equal(root.querySelector("#active-store").value, "b");
 
 assert.equal(root.querySelector("#dash-store").value, "b");

@@ -36,7 +36,9 @@ Konfirmasi tindakan di POS dan pengelola menu menggunakan `shared/confirmation.m
 
 Pintasan di dock bawah mengikuti halaman yang boleh dibuka dari sidebar. Pilihan **Atur dock** tersimpan di perangkat untuk setiap akun dan area kerja melalui `pos/system-dock.mjs`.
 
-Dashboard utama Back Office dan toko menggunakan ringkasan di `pos/dashboard-ui.mjs`.
+Beranda POS (`pos/home-ui.mjs`, `pos/home.css`) terbuka setelah login dan saat berganti area kerja. Pintasan mengikuti izin sidebar. Omzet hari ini mengikuti transaksi lunas, tanggal WIB, dan lokasi yang dipilih untuk akun dengan akses laporan di luar gudang. Pengaturan dock tetap berlaku.
+
+Dashboard Back Office dan toko menggunakan ringkasan di `pos/dashboard-ui.mjs`.
 `pos/warehouse-ui.mjs` melengkapinya dengan tindak lanjut, saldo, dan pintasan sesuai area kerja.
 Back Office dapat memilih semua lokasi atau satu cabang. Dashboard toko mengikuti cabang aktif.
 Saat sesi dipulihkan, POS membuka kembali halaman terakhir yang masih boleh diakses.

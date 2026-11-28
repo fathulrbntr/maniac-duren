@@ -1,8 +1,16 @@
 import { escape as e } from "./core.mjs";
 import { pageTitles, pageIcon, visibleSections } from "./navigation.mjs";
 
-const standardPages = ["stock", "orders", "scan", "kitchen", "reports"];
-const storePages = ["receiving", "orders", "waste", "stock", "kitchen", "reports"];
+const standardPages = ["home", "stock", "orders", "scan", "kitchen", "reports"];
+const storePages = [
+  "home",
+  "receiving",
+  "orders",
+  "waste",
+  "stock",
+  "kitchen",
+  "reports",
+];
 const temporary = new Map();
 const svg = (path) =>
   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="${path}"/></svg>`;
@@ -57,7 +65,7 @@ function pageButtons(view, selected, pages) {
 }
 
 function revealActivePage(track) {
-  if (track.scrollWidth <= track.clientWidth) return;
+  if (!(track.scrollWidth > track.clientWidth)) return;
   const active = track.querySelector('[aria-current="page"]');
   if (!active) return;
   const bounds = track.getBoundingClientRect();

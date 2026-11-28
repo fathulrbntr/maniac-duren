@@ -55,6 +55,7 @@ export function workspaceGroups(a) {
               id: "central",
               label: "Back office",
               pages: [
+                "home",
                 "backoffice",
                 "supplierNotes",
                 "transfers",
@@ -87,6 +88,7 @@ export function workspaceGroups(a) {
                 id: "warehouse",
                 label: a.branchStock ? "Gudang lama" : "Gudang pusat",
                 pages: [
+                  "home",
                   "warehouse",
                   "supplierNotes",
                   "transfers",
@@ -97,7 +99,12 @@ export function workspaceGroups(a) {
               },
             ]
           : [
-              { id: "store", label: "Toko", pages: ["storehome"], standalone: true },
+              {
+                id: "store",
+                label: "Toko",
+                pages: ["home", "storehome"],
+                standalone: true,
+              },
               {
                 id: "store_stock",
                 label: "Stok & Penerimaan",
@@ -122,6 +129,7 @@ export function workspaceGroups(a) {
               { id: "store_reports", label: "Manajemen Toko", pages: ["reports"] },
             ];
   const allowed = {
+    home: true,
     backoffice: all,
     pricing: all,
     supplierNotes: all || a.stock,

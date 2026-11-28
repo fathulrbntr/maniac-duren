@@ -262,6 +262,7 @@ try {
   await page.locator("[name=password]").fill("fixture");
   await page.locator("#login-form [type=submit]").click();
   await page.locator("#pos-main").waitFor();
+  await page.locator('.shell[data-page="home"] .home-page').waitFor();
   const views = await page
     .locator("#pos-navigation [data-view]")
     .evaluateAll((nodes) => nodes.map((n) => n.dataset.view));
@@ -290,6 +291,27 @@ try {
           mainWidth: document.querySelector("main").clientWidth,
           mainScroll: document.querySelector("main").scrollWidth,
         }));
+        if (view === "home" && width === 390) {
+          const home = page.locator(".home-page");
+          const more = home.getByRole("button", { name: "Semua menu" });
+          await more.click();
+          assert(await home.locator("#home-extra").isVisible());
+          await home.getByRole("button", { name: "Ringkas" }).click();
+          const eye = home.getByRole("button", { name: "Sembunyikan omzet" });
+          await eye.click();
+          assert(await home.locator(".home-mask").isVisible());
+          assert(!(await home.locator(".home-value").isVisible()));
+          await eye.click();
+          assert.equal(
+            await home
+              .locator(".home-grid")
+              .first()
+              .evaluate(
+                (el) => getComputedStyle(el).gridTemplateColumns.split(" ").length,
+              ),
+            4,
+          );
+        }
         if (view === "orders" || view === "shifts")
           await assertAlignedActions(page.locator(".shift-banner-actions"), {
             shift: true,

@@ -4,6 +4,7 @@ import { outboundPage } from "./outbound-ui.mjs";
 import { confirmAction, requestReason } from "../shared/confirmation.mjs";
 import { pricesForBranch } from "./branch-prices.mjs";
 import { prepareBarcodeInput } from "./barcode-scanner.mjs";
+import { homePage, bindHome } from "./home-ui.mjs";
 import { supplierDialog, bindSupplierSelect } from "./supplier-ui.mjs";
 import { commitMutation } from "./data/mutations.mjs";
 import { branchPreparationPage } from "./branch-notes-ui.mjs";
@@ -101,6 +102,7 @@ import { catalogPanel, productDialog } from "./catalog-ui.mjs";
 import { storeExpensesPage, bindStoreExpenses } from "./store-expenses-ui.mjs";
 
 let workspace = "";
+let hideHomeTotal = false;
 let officePage = "",
   officeBranch = "";
 function workspaceAccess() {
@@ -304,7 +306,7 @@ async function switchStockDemo(reset = false) {
       if (!reset) demoSource = source;
       state = next;
       mode = "stock-demo";
-      if (["backoffice", "storehome", "warehouse"].includes(view)) view = defaultView();
+      if (["backoffice", "storehome", "warehouse"].includes(view)) view = "home";
     } else {
       // Keep demo active and write-protected until the real read succeeds.
       const fresh = await request("/rest/v1/rpc/pos_read", {}, true, true);
@@ -428,6 +430,7 @@ function resetWorkspace(forget = false) {
   lastSale = null;
   stateRevision++;
   seenKitchen.clear();
+  hideHomeTotal = false;
   cart = [];
   state = emptyState();
   view = "dashboard";
@@ -435,21 +438,6 @@ function resetWorkspace(forget = false) {
   clearOrderDraft();
   document.querySelectorAll("dialog[open]").forEach((dialog) => dialog.close());
   resetCustomerDisplay();
-}
-function workspaceHome(space) {
-  return space === "store" ? "storehome" : space;
-}
-function defaultView() {
-  if (state.warehouseVersion && !state.stockDemo)
-    return workspaceHome(workspaceAccess().workspace);
-  if (state.access?.reports) return "dashboard";
-  return state.access?.sell
-    ? "orders"
-    : state.access?.kitchen
-      ? "kitchen"
-      : state.access?.attendance
-        ? "attendance"
-        : "guide";
 }
 function sessionProgress(text, hidden = false) {
   return `<div class="auth-progress" data-auth-progress ${hidden ? "hidden" : ""}><div class="auth-progress-track" role="progressbar" aria-label="Proses masuk"></div><p class="auth-progress-text" data-auth-progress-text role="status" aria-live="polite">${e(text)}</p></div>`;
@@ -503,7 +491,7 @@ async function restoreSession() {
       workspaceAccess().pettyCash &&
       state.access?.backoffice &&
       saved.view === "documents";
-    view = allowed.includes(saved.view) || archiveView ? saved.view : defaultView();
+    view = allowed.includes(saved.view) || archiveView ? saved.view : "home";
     render();
   } catch (error) {
     if (activeSessionId !== saved.sessionId) return;
@@ -626,7 +614,7 @@ function login(message = "") {
       setLoginProgress(form, "Memuat data outlet…", true);
       await refresh();
       if (attempt !== loginAttempt) return;
-      view = defaultView();
+      view = "home";
       render();
       if (!sessions.persistent)
         toast(
@@ -846,6 +834,12 @@ function bindPageNavigation(root) {
       (b.onclick = async () => {
         if (busy || (hasUnsavedForm() && !(await confirmLeave()))) return;
         if (
+          view === "home" &&
+          workspace === "backoffice" &&
+          ["backoffice", "officeInventory"].includes(b.dataset.view)
+        )
+          officePage = b.dataset.view;
+        if (
           view === "backoffice" &&
           b.dataset.view === "officeInventory" &&
           b.closest(".dash-workspace")
@@ -897,7 +891,7 @@ function render() {
     ) {
       permitted.add("documents");
     }
-    if (!permitted.has(view)) view = workspaceHome(workspace);
+    if (!permitted.has(view)) view = "home";
   }
 
   if (
@@ -927,7 +921,11 @@ function render() {
   const pageStore = central ? officeBranch || null : store;
   const chooseBranch = central && ["payments", "attendance"].includes(view);
   sidebar.capture();
+  const access = workspaceAccess();
+  const titles = workspaceTitles(access);
   const pages = {
+    home: () =>
+      homePage(state, pageStore, access, titles, workspaceLocations(), hideHomeTotal),
     ...Object.fromEntries(
       opsPages.map((key) => [key, () => opsPage(key, state, pageStore)]),
     ),
@@ -962,9 +960,8 @@ function render() {
     stores: () => directoryPage("stores"),
     suppliers: () => directoryPage("suppliers"),
   };
-  const access = workspaceAccess();
   const dockOptions = {
-    titles: workspaceTitles(access),
+    titles,
     userId: state.me?.id || state.me?.user_id,
     demo: !!state.stockDemo,
   };
@@ -987,6 +984,13 @@ function render() {
     render();
     return true;
   };
+  if (view === "home")
+    bindHome({
+      changeStore: central ? changeOfficeBranch : changeStore,
+      setHidden: (value) => {
+        hideHomeTotal = value;
+      },
+    });
   const picker = document.querySelector("#office-branch");
   if (picker)
     picker.onchange = async () => {
@@ -1039,7 +1043,7 @@ function render() {
         clearOrderDraft();
         workspace = b.dataset.workspace;
         resetDashboard();
-        view = workspaceHome(workspace);
+        view = "home";
         render();
       }),
   );
