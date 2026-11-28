@@ -1079,6 +1079,8 @@ function render() {
     },
   };
   bindSupply(state, pageStore, view, {
+    readSupplierNoteProof: (planId) =>
+      adminRpc("pos_supplier_note_proof", { plan_id: planId }),
     ...shiftContext,
     getState: () => state,
     refresh,
