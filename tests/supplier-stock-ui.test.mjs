@@ -66,9 +66,15 @@ await line.querySelector("[data-note-product]").fire("change");
 assert(note.querySelectorAll("[data-note-line]")[1].querySelector("[data-note-pieces]"));
 const session = openReceivingSession(state, plan.id, ctx);
 assert(!session.querySelector("[data-session-code]"));
-await session.querySelector("[data-session-quantity]").fire("click");
+const entry = session.querySelector("[data-session-quantity]");
+assert.equal(entry.textContent, "Isi jumlah diterima");
+assert(entry.closest("tr").textContent.includes("Susu"));
+assert(session.querySelector("[data-session-finish]").disabled);
+await entry.fire("click");
 const form = adapter.latest.querySelector("form");
-assert(form.textContent.includes("Jumlah aktual (ml)"));
+assert(form.textContent.includes("Jumlah diterima (ml)"));
+assert(form.querySelector('[name="qty"]').hasAttribute("autofocus"));
+assert.equal(form.querySelector('[name="qty"]').attrs.inputmode, "decimal");
 form.querySelector('[name="qty"]').value = "975";
 Object.defineProperty(form, "elements", {
   value: {
@@ -81,7 +87,24 @@ assert.equal(calls[0][0], "receipt_quantity");
 assert.equal(calls[0][1].qty, 975);
 assert.equal(calls[0][1].expectedSessionRevision, 1);
 plan.receiving.quantities.milk = { qty: 975 };
+const updated = openReceivingSession(state, plan.id, ctx);
+const edit = updated.querySelector("[data-session-quantity]");
+assert.equal(edit.textContent, "Ubah jumlah");
+assert(edit.closest("td").textContent.includes("975 ml"));
+assert.equal(updated.querySelector("[data-session-finish]").disabled, false);
+assert(
+  !openReceivingSession(state, plan.id, ctx, true).querySelector(
+    "[data-session-quantity]",
+  ),
+);
+plan.receiving.status = "paused";
+assert(
+  !openReceivingSession(state, plan.id, ctx).querySelector("[data-session-quantity]"),
+);
 plan.receiving.status = "completed";
+assert(
+  !openReceivingSession(state, plan.id, ctx).querySelector("[data-session-quantity]"),
+);
 assert(varianceTable(state, plan).includes("25 ml"));
 plan.lines.push({ productId: "fruit" });
 assert(
@@ -90,4 +113,5 @@ assert(
 plan.receiving.status = "open";
 const mixed = openReceivingSession(state, plan.id, ctx);
 assert(mixed.querySelector("[data-session-code]"));
-assert(mixed.querySelector("[data-session-quantity]"));
+assert.equal(mixed.querySelectorAll("[data-session-quantity]").length, 1);
+assert(mixed.querySelector("[data-session-finish]").disabled);

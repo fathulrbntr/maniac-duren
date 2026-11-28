@@ -389,6 +389,54 @@ try {
     ).rows[0].n,
     1,
   );
+  const item = (
+    await db.query(
+      "select id, name from public.md_pos_products where stock_unit='pcs' and item_type<>'recipe' limit 1",
+    )
+  ).rows[0];
+  const unitPlan = id();
+  await db.query("select set_config('request.jwt.claim.sub',$1,false)", [owner]);
+  await invoke("receipt_plan_save", {
+    ...plan,
+    id: unitPlan,
+    invoiceNo: "SUP-PCS",
+    lines: [{ productId: item.id, purchaseCost: 5000, expectedQty: 125 }],
+  });
+  await login("warehouse");
+  await nav("supplierNotes");
+  await page.locator(`[data-session-open="${unitPlan}"]`).click();
+  const unitRow = receiptDialog.getByRole("row").filter({ hasText: item.name });
+  const enter = unitRow.getByRole("button", {
+    name: `Isi jumlah diterima untuk ${item.name}`,
+  });
+  for (const [width, theme] of [
+    [320, "light"],
+    [390, "dark"],
+    [1280, "light"],
+  ]) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.evaluate((t) => (document.documentElement.dataset.theme = t), theme);
+    assert(await enter.isVisible());
+    assert((await enter.boundingBox()).height >= 44);
+    assert(await receiptDialog.evaluate((d) => d.scrollWidth <= d.clientWidth + 1));
+  }
+  assert(await receiptDialog.getByRole("button", { name: "Selesai" }).isDisabled());
+  await enter.click();
+  const qty = page.getByLabel("Jumlah diterima (pcs)", { exact: true });
+  assert(
+    await qty.evaluate(
+      (el) => el === document.activeElement && el.inputMode === "numeric",
+    ),
+  );
+  assert.equal(await qty.inputValue(), "");
+  await qty.fill("120");
+  await page.getByRole("button", { name: "Simpan", exact: true }).click();
+  const editQty = unitRow.getByRole("button", { name: `Ubah jumlah untuk ${item.name}` });
+  await editQty.waitFor();
+  assert.match(await unitRow.innerText(), /120 pcs/);
+  assert(await receiptDialog.getByRole("button", { name: "Selesai" }).isEnabled());
+  await editQty.click();
+  assert.equal(await qty.inputValue(), "120");
   assert.deepEqual(errors, []);
   console.log(
     "PASS workflow browser + real SQL: persistent receiving after reload, privacy, variance, BO pricing, wholesale invoice and barcode dispatch, 360/390/1440 and dark/light.",
