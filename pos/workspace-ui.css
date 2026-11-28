@@ -458,7 +458,9 @@ h4 {
   grid-row: 1;
   min-width: 0;
   padding: 0;
-  background: var(--bg);
+  background:
+    var(--glass-wash) no-repeat,
+    var(--bg);
 }
 .shell .topbar {
   position: sticky;

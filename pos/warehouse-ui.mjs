@@ -28,6 +28,7 @@ import {
   receivingPage,
   openReceivingSession,
   supplierNoteSummaryPanel,
+  bindNoteSummary,
 } from "./receiving-session-ui.mjs";
 import { outboundPage, bindOutboundPage, openOutboundForm } from "./outbound-ui.mjs";
 import { escape as e, id, today, num, money } from "./core.mjs";
@@ -1065,6 +1066,7 @@ export function cuttingPage(s, store) {
   )}</section></section>`;
 }
 export function bindSupply(s, store, view, ctx) {
+  if (view === "supplierNotes") bindNoteSummary();
   if (view === "costPrices") return bindCostPrices(s, store, ctx);
   if (view === "pricing" && s.branchPricingVersion >= 123) return bindBranchPricing(ctx);
   ctx = {
@@ -1240,6 +1242,12 @@ export function bindSupply(s, store, view, ctx) {
   document
     .querySelector("[data-note-new]")
     ?.addEventListener("click", () => noteDialog(s, ctx));
+  const noteList = document.querySelector(".note-list-panel");
+  if (noteList)
+    noteList.onclick = (event) => {
+      if (!event.target.closest("button"))
+        event.target.closest("tr")?.querySelector(".note-row-open")?.click();
+    };
   document.querySelectorAll("[data-note-open]").forEach((b) => {
     b.onclick = () => {
       const current = ctx.getState?.() || s;

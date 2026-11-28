@@ -111,64 +111,81 @@ function cancelledNotes(s) {
     ),
   )}</details>`;
 }
+let selectedBalance = "payable";
+export function bindNoteSummary() {
+  document.querySelectorAll('input[name="note-summary-balance"]').forEach((input) => {
+    input.onchange = () => {
+      if (input.checked) selectedBalance = input.value;
+    };
+  });
+}
 export function supplierNoteSummaryPanel(plans) {
   const { total, inTransit, payable, settled, unclassified } = supplierNoteSummary(plans);
-  const card = (label, metric, stage, countFirst = false) => {
-    const count = `${num(metric.count)} nota`;
-    const amount = metric.amount == null ? "Nilai belum tersedia" : money(metric.amount);
-    return `<article class="supply-stat"${stage ? ` data-progress="${stage}"` : ""}><span>${label}</span><strong>${countFirst ? count : amount}</strong><small>${countFirst ? amount : count}</small></article>`;
-  };
-  return `<section class="note-summary" aria-labelledby="note-summary-title">
-    <header><h3 id="note-summary-title">Ringkasan nota</h3><small>Nilai barang di luar ongkir</small></header>
-    <div class="supply-stats note-summary-grid">
-      ${card("Total nota", total, "", true)}
-      ${card("Dalam perjalanan", inTransit, "active", true)}
-      ${card("Tagihan", payable, "pending")}
-      ${card("Lunas", settled, "done")}
+  const amount = (metric) =>
+    metric.amount == null ? "Nilai belum tersedia" : money(metric.amount);
+  const count = (metric) => `${num(metric.count)} nota`;
+  const option = (key, label) =>
+    `<label><input class="sr-only" type="radio" name="note-summary-balance" value="${key}" ${key === selectedBalance ? "checked" : ""}><span>${label}</span></label>`;
+  return `<section class="note-summary" aria-label="Ringkasan nota">
+    <div class="note-segments" role="radiogroup" aria-label="Pilih nominal pembayaran barang">
+      ${option("payable", "Tagihan")}${option("settled", "Lunas")}
     </div>
-    ${unclassified ? `<small>Tagihan dan Lunas hanya mencakup nota dengan data pembayaran lengkap. Periksa ${num(unclassified)} nota lainnya.</small>` : ""}
+    <div class="note-balances" aria-live="polite">
+      <div data-balance="payable"><strong>${amount(payable)}</strong><small>${count(payable)} dengan sisa tagihan</small></div>
+      <div data-balance="settled"><strong>${amount(settled)}</strong><small>${count(settled)} lunas</small></div>
+    </div>
+    <div class="note-totals">
+      <div><span>Total nota</span><strong>${count(total)}</strong><small>${amount(total)}</small></div>
+      <div><span>Dalam perjalanan</span><strong>${count(inTransit)}</strong><small>${amount(inTransit)}</small></div>
+    </div>
+    <small class="note-scope">Nilai barang di luar ongkir</small>
+    ${unclassified ? `<p class="notice">Tagihan dan Lunas hanya mencakup nota dengan data pembayaran lengkap. Periksa ${num(unclassified)} nota lainnya.</p>` : ""}
   </section>`;
 }
+function officeNoteList(s, plans) {
+  const rows = plans.map((p) => {
+    const invoice = noteBalance(p, "invoice");
+    const freight = noteBalance(p, "shipping");
+    const supplier = name(s, "suppliers", p.supplierId);
+    const branch = name(s, "locations", p.storeId);
+    return `<tr>
+      <td class="note-who"><button class="note-row-open" type="button" data-note-open="${e(p.id)}" aria-label="Buka nota ${e(p.invoiceNo)} dari ${e(supplier)}"><strong>${e(supplier)}</strong><small>${e(p.invoiceNo)}</small></button></td>
+      <td class="note-where">${e(branch)}<small>${e(p.date)}</small></td>
+      <td class="note-invoice"><b>${money(invoice.total)}</b><small>${progressBadge(paymentStage(invoice.status), invoice.label)}</small></td>
+      <td class="note-freight">${money(freight.total)}<small>${progressBadge(paymentStage(freight.status), freight.label)}</small></td>
+      <td class="note-arrival">${receiptBadge(p)}<small>${receivedSummary(p)}</small></td>
+    </tr>`;
+  });
+  return `<section class="panel note-list-panel"><h3>Daftar nota</h3>${table(["Supplier / nota", "Lokasi penerima / tanggal", "Pembayaran nota", "Pembayaran ongkir", "Penerimaan"], rows)}</section>`;
+}
 export function receivingPage(s, store, space) {
-  const branch = s.branchStockVersion >= 132;
-  const bo = backOffice(s, space),
-    plans = (s.receiptPlans || []).filter((p) => bo || p.storeId === store);
-  return `<section class="supply-workspace"><div class="supply-hero"><div><span class="supply-eyebrow">PENERIMAAN SUPPLIER</span><h2>${bo ? (branch ? "Nota supplier cabang" : "Nota barang masuk gudang") : "Penerimaan & penimbangan"}</h2><p>${bo && branch ? "Pilih cabang penerima saat membuka nota supplier." : bo ? "Catat barang dan jumlah sesuai nota supplier. Stok masuk setelah gudang menyelesaikan penerimaan." : "Pilih nota untuk mencatat jumlah barang dan memindai label buah."}</p></div><div class="toolbar"><button type="button" data-supply-refresh>Perbarui</button>${bo ? '<button type="button" data-legacy-labels>Registrasi barcode stok lama</button><button type="button" class="primary" data-note-new>+ Nota supplier</button>' : ""}</div></div>${bo ? supplierNoteSummaryPanel(plans) : ""}<section class="panel">${recordTable(
-    [
-      "Nota / supplier",
-      ...(bo && branch ? ["Lokasi penerima"] : []),
-      "Tanggal",
-      ...(bo ? ["Pembayaran nota", "Pembayaran ongkir"] : []),
-      "Hasil penerimaan",
-      "Penerimaan",
-      "Aksi",
-    ],
+  if (backOffice(s, space)) {
+    const plans = s.receiptPlans || [];
+    return `<section class="supply-workspace note-office">
+      <header class="note-heading"><h2>${s.branchStockVersion >= 132 ? "Nota supplier" : "Nota barang masuk gudang"}</h2>
+        <div class="note-actions"><button type="button" class="primary" data-note-new><span aria-hidden="true">+</span> Buat nota</button>
+          <details class="note-tools"><summary aria-label="Tindakan nota lainnya">•••</summary><div><button type="button" data-supply-refresh>Perbarui</button><button type="button" data-legacy-labels>Registrasi barcode stok lama</button></div></details>
+        </div></header>
+      ${supplierNoteSummaryPanel(plans)}${officeNoteList(s, plans)}${cancelledNotes(s)}
+    </section>`;
+  }
+  const plans = (s.receiptPlans || []).filter((p) => p.storeId === store);
+  return `<section class="supply-workspace"><div class="supply-hero"><div><span class="supply-eyebrow">PENERIMAAN SUPPLIER</span><h2>Penerimaan & penimbangan</h2><p>Pilih nota untuk mencatat jumlah barang dan memindai label buah.</p></div><div class="toolbar"><button type="button" data-supply-refresh>Perbarui</button></div></div><section class="panel">${recordTable(
+    ["Nota / supplier", "Tanggal", "Hasil penerimaan", "Penerimaan", "Aksi"],
     plans.map((p) => {
       const progress = receiptProgress(p);
       return {
         progress,
         cells: [
           `<b>${e(p.invoiceNo)}</b><small>${e(name(s, "suppliers", p.supplierId))}</small>`,
-          ...(bo && branch ? [e(name(s, "locations", p.storeId))] : []),
           e(p.date),
-          ...(bo
-            ? ["invoice", "shipping"].map((k) => {
-                const balance = noteBalance(p, k);
-                return `${money(balance.total)}<small>${progressBadge(paymentStage(balance.status), balance.label)}</small>`;
-              })
-            : []),
           receivedSummary(p),
           receiptBadge(p),
-          progressButton(
-            progress,
-            bo ? "note-open" : "session-open",
-            p.id,
-            `penerimaan ${p.invoiceNo}`,
-          ),
+          progressButton(progress, "session-open", p.id, `penerimaan ${p.invoiceNo}`),
         ],
       };
     }),
-  )}</section>${bo ? cancelledNotes(s) : ""}</section>`;
+  )}</section></section>`;
 }
 export function receiptOfficeControls(s, p, d, ctx) {
   if (!backOffice(s, ctx.workspace)) return;

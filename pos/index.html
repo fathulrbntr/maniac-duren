@@ -8,13 +8,13 @@
     />
     <meta name="robots" content="noindex,nofollow" />
     <title>Maniac Duren · POS</title>
-    <meta name="theme-color" content="#f3f0df" />
+    <meta name="theme-color" content="#edf4f1" />
     <script>
       (() => {
         let theme;
         try { theme = localStorage.getItem('maniac-pos-theme'); } catch {}
         document.documentElement.dataset.theme = ['light','dark'].includes(theme) ? theme : 'light';
-        document.querySelector('meta[name="theme-color"]').setAttribute('content', document.documentElement.dataset.theme === 'dark' ? '#172019' : '#f3f0df');
+        document.querySelector('meta[name="theme-color"]').setAttribute('content', document.documentElement.dataset.theme === 'dark' ? '#14211f' : '#edf4f1');
       })();
     </script>
     <link rel="icon" href="/assets/logo.png" />

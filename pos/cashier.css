@@ -238,9 +238,9 @@
   padding: 22px;
   border: 1px solid var(--line);
   border-radius: var(--radius-card);
-  box-shadow: none;
+  box-shadow: var(--glass-shadow);
   overflow: hidden;
-  background: var(--surface);
+  background: var(--glass-panel);
 }
 .order-summary-head {
   display: flex;
