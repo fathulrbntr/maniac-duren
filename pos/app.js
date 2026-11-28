@@ -54,6 +54,7 @@ import {
 import { documentsPage, bindDocuments } from "./documents-ui.mjs";
 import { variantGroupDialog, productVariantDialog } from "./variant-editor.mjs";
 import { createSidebarController, sidebarIcon } from "./sidebar.mjs";
+import { openItemLookup } from "./product-lookup-ui.mjs";
 import { systemDock, bindDockSettings } from "./system-dock.mjs";
 import { installMoneyInputs } from "./money-input.mjs";
 import { openWeighingReceipt, showWeighingHistory } from "./receipt-weighing.mjs";
@@ -461,6 +462,7 @@ async function request(path, body, auth = true, allowDemoRead = false) {
   }
 }
 function resetWorkspace(forget = false) {
+  document.querySelector("dialog.lookup-dialog[open]")?.close();
   backNavigation.stop();
   resetCustomerDisplay();
   if (forget) sessions?.clear(activeSessionId || undefined);
@@ -875,6 +877,16 @@ function bindPageNavigation(root) {
         window.scrollTo?.({ top: 0, left: 0, behavior: "instant" });
       }),
   );
+  root.querySelector("[data-item-lookup]")?.addEventListener("click", () => {
+    if (busy || document.querySelector("dialog[open]")) return;
+    const space = workspaceAccess().workspace;
+    openItemLookup({
+      modal,
+      getState: () => state,
+      storeId: space === "backoffice" ? officeBranch || null : store,
+      workspace: space,
+    });
+  });
   root.querySelector("[data-dock-scan]")?.addEventListener("click", async () => {
     if (busy || (state.access && !state.access.stock)) return;
     if (document.querySelector("dialog[open]")) {

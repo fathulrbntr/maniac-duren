@@ -2,15 +2,28 @@ import { escape as e } from "./core.mjs";
 import { pageTitles, pageIcon, visibleSections, homePageId } from "./navigation.mjs";
 
 const standardPages = ["home", "stock", "orders", "scan", "kitchen", "reports"];
-const storePages = [
-  "home",
-  "receiving",
-  "orders",
-  "waste",
-  "stock",
-  "kitchen",
-  "reports",
-];
+const workspaceDefaults = {
+  store: ["home", "orders", "stock", "kitchen", "cutting", "service", "reports"],
+  backoffice: ["home", "retailFunds", "reports", "officeInventory", "supplierNotes"],
+  warehouse: ["home", "supplierNotes", "transfers", "stock"],
+};
+const captions = {
+  stock: "Stok",
+  officeInventory: "Inventori",
+  orders: "Kasir",
+  reports: "Laporan",
+  retailFunds: "Keuangan",
+  supplierNotes: "Nota",
+  transfers: "Transfer",
+  receiving: "Kiriman",
+  kitchen: "Dapur",
+  scan: "Timbang",
+  salesreport: "Penjualan",
+  cutting: "Periksa buah",
+  waste: "Reject",
+  service: "Pelayanan",
+  products: "Barang",
+};
 const temporary = new Map();
 const svg = (path) =>
   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="${path}"/></svg>`;
@@ -43,7 +56,10 @@ function dockModel(access, { titles = pageTitles, userId, demo = false }) {
   const key = userId
     ? `maniac-pos-dock-v1:${encodeURIComponent(userId)}:${demo ? "demo" : access?.workspace || "pos"}`
     : null;
-  const fallback = (store ? storePages : standardPages).filter((id) => pages.has(id));
+  const preferred = workspaceDefaults[access?.workspace];
+  const fallback = preferred
+    ? preferred.filter((id) => pages.has(id)).slice(0, 3)
+    : standardPages.filter((id) => pages.has(id));
   const saved = readSelection(key);
   const selected = Array.isArray(saved)
     ? [...new Set(saved.map(homePageId).filter((id) => pages.has(id)))]
@@ -59,7 +75,7 @@ function pageButtons(view, selected, pages) {
   return selected
     .map((id) => {
       const label = e(pages.get(id));
-      return `<button type="button" ${id === "scan" ? "data-dock-scan" : `data-view="${e(id)}"`} aria-label="${label}" title="${label}" ${id === active ? 'aria-current="page"' : ""}>${id === "scan" ? scanner : pageIcon(id)}</button>`;
+      return `<button type="button" ${id === "scan" ? "data-dock-scan" : `data-view="${e(id)}"`} aria-label="${label}" title="${label}" ${id === active ? 'aria-current="page"' : ""}><span class="dock-symbol">${id === "scan" ? pageIcon("receiving") : pageIcon(id)}</span><span class="dock-caption">${e(captions[id] || pages.get(id))}</span></button>`;
     })
     .join("");
 }
@@ -76,7 +92,12 @@ function revealActivePage(track) {
 
 export function systemDock(view, access, options = {}) {
   const { pages, selected } = dockModel(access, options);
-  return `<nav class="system-dock" aria-label="Pintasan halaman"><div class="dock-pages">${pageButtons(view, selected, pages)}</div><button type="button" class="dock-settings" data-dock-settings aria-haspopup="dialog" aria-label="Atur dock" title="Atur dock">${settingsIcon}</button></nav>`;
+  const split = Math.ceil((selected.length + 1) / 2);
+  return `<nav class="system-dock" aria-label="Pintasan halaman"><div class="dock-inner">
+    <div class="dock-pages" data-dock-left>${pageButtons(view, selected.slice(0, split), pages)}</div>
+    <button type="button" class="dock-lookup" data-item-lookup aria-label="Pindai barang" aria-haspopup="dialog"><span class="dock-lens">${scanner}</span><span class="dock-caption">Pindai</span></button>
+    <div class="dock-right"><div class="dock-pages" data-dock-right>${pageButtons(view, selected.slice(split), pages)}</div><button type="button" class="dock-settings" data-dock-settings aria-haspopup="dialog" aria-label="Atur dock" title="Atur dock">${settingsIcon}</button></div>
+  </div></nav>`;
 }
 
 export function bindDockSettings(
@@ -88,8 +109,11 @@ export function bindDockSettings(
   const dock = document.querySelector(".system-dock");
   const opener = dock?.querySelector("[data-dock-settings]");
   if (!opener) return;
-  const track = dock.querySelector(".dock-pages");
-  revealActivePage(track);
+  const tracks = [
+    dock.querySelector("[data-dock-left]"),
+    dock.querySelector("[data-dock-right]"),
+  ];
+  tracks.forEach(revealActivePage);
   opener.onclick = () => {
     const { groups, pages, key, selected } = dockModel(access, options);
     const choice = (id) =>
@@ -120,10 +144,13 @@ export function bindDockSettings(
           toast("Penyimpanan perangkat tidak tersedia. Pilihan berlaku selama sesi ini.");
         }
       }
-      track.innerHTML = pageButtons(view, next, pages);
-      bindNavigation(track);
+      const split = Math.ceil((next.length + 1) / 2);
+      [next.slice(0, split), next.slice(split)].forEach((ids, i) => {
+        tracks[i].innerHTML = pageButtons(view, ids, pages);
+        bindNavigation(tracks[i]);
+        revealActivePage(tracks[i]);
+      });
       dialog.close();
-      revealActivePage(track);
       opener.focus({ preventScroll: true });
     };
   };

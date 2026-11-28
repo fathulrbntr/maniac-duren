@@ -1,6 +1,6 @@
 :root {
-  --dock-height: calc(var(--control-height) + 13px + env(safe-area-inset-bottom, 0px));
-  --dock-clearance: calc(var(--dock-height) + 16px);
+  --dock-height: calc(64px + env(safe-area-inset-bottom, 0px));
+  --dock-clearance: calc(var(--dock-height) + 22px);
 }
 html:has(.system-dock) {
   scroll-padding-bottom: var(--dock-clearance);
@@ -10,63 +10,115 @@ html:has(.system-dock) {
   z-index: 16;
   inset: auto 0 0 var(--sidebar-width);
   display: flex;
-  align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: 6px max(6px, env(safe-area-inset-right))
-    calc(6px + env(safe-area-inset-bottom, 0px)) max(6px, env(safe-area-inset-left));
   background: var(--surface);
   border-top: 1px solid var(--line);
+  padding: 0 max(6px, env(safe-area-inset-right)) env(safe-area-inset-bottom, 0px)
+    max(6px, env(safe-area-inset-left));
 }
 .shell[data-sidebar-collapsed="true"] .system-dock {
   left: var(--sidebar-rail-width);
 }
-.dock-pages {
+.dock-inner {
+  width: min(100%, 37rem);
+  height: 63px;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) clamp(58px, 15vw, 80px) minmax(0, 1fr);
+  align-items: center;
+}
+.dock-pages,
+.dock-right {
   display: flex;
   align-items: center;
   min-width: 0;
-  gap: 2px;
+}
+.dock-pages {
   overflow-x: auto;
   overscroll-behavior-x: contain;
-  scrollbar-width: thin;
+  scrollbar-width: none;
 }
-.dock-pages:empty {
+.dock-pages::-webkit-scrollbar {
   display: none;
 }
+.dock-right .dock-pages {
+  flex: 1;
+}
 .system-dock button {
-  display: inline-flex;
+  display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: var(--control-height);
-  height: var(--control-height);
-  min-width: var(--control-height);
-  flex: 0 0 auto;
+  gap: 3px;
+  flex: 1 0 56px;
+  min-width: 0;
+  height: 54px;
   margin: 0;
-  padding: 0;
-  border: 1px solid transparent;
+  padding: 3px 1px;
+  border: 0;
   border-radius: var(--radius-control);
   background: transparent;
   color: var(--muted);
-  line-height: 1;
+  line-height: 1.1;
 }
-.system-dock button:hover {
-  background: var(--surface-soft);
-  color: var(--ink);
+.system-dock .dock-symbol {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 26px;
+  border-radius: var(--radius-pill);
 }
-.system-dock button[aria-current="page"] {
+.system-dock svg {
+  width: 21px;
+  height: 21px;
+  display: block;
+  pointer-events: none;
+}
+.dock-caption {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  line-height: 1.2;
+  font-weight: 600;
+}
+.system-dock [aria-current="page"] {
+  color: var(--action-bg);
+}
+.system-dock [aria-current="page"] .dock-symbol {
+  background: var(--surface-raised);
+}
+.system-dock .dock-lookup {
+  align-self: end;
+  height: 74px;
+  padding: 0 0 7px;
+  gap: 4px;
+  color: var(--action-bg);
+}
+.dock-lens {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 47px;
+  border-radius: 20px;
   background: var(--action-bg);
   color: var(--action-ink);
-  border-color: var(--action-bg);
+  box-shadow:
+    0 0 0 4px var(--surface),
+    0 4px 10px color-mix(in srgb, var(--ink) 20%, transparent);
+}
+.dock-lens svg {
+  width: 29px;
+  height: 29px;
+}
+.system-dock .dock-settings {
+  flex: 0 0 50%;
+  padding-bottom: 18px;
 }
 .system-dock button:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: -3px;
-}
-.system-dock svg {
-  display: block;
-  width: 20px;
-  height: 20px;
-  pointer-events: none;
 }
 .dock-picker {
   display: grid;
@@ -109,19 +161,6 @@ body:has(.system-dock) #toast {
   .shell[data-sidebar-collapsed="true"] .system-dock {
     left: 0;
   }
-  .system-dock .dock-pages {
-    scrollbar-width: none;
-  }
-}
-@media (max-width: 360px) {
-  .system-dock {
-    gap: 2px;
-    padding-inline: max(4px, env(safe-area-inset-left))
-      max(4px, env(safe-area-inset-right));
-  }
-  .dock-pages {
-    gap: 0;
-  }
 }
 @media print {
   .system-dock {
@@ -130,4 +169,80 @@ body:has(.system-dock) #toast {
   .shell #pos-main .workspace-content {
     padding-bottom: 0;
   }
+}
+.lookup-dialog {
+  width: min(30rem, calc(100% - 16px));
+}
+.lookup-body {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.lookup-body [hidden],
+.lookup-status:empty,
+.lookup-result:empty {
+  display: none;
+}
+.lookup-preview {
+  position: relative;
+  background: #111;
+  aspect-ratio: 2.3;
+  border-radius: var(--radius-control);
+  overflow: hidden;
+}
+.lookup-preview video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.lookup-preview span {
+  position: absolute;
+  inset: 50% 10% auto;
+  border-top: 2px solid #b8f59e;
+  box-shadow: 0 1px 3px #000;
+}
+.lookup-status {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.lookup-input {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+.lookup-input input {
+  width: 100%;
+  min-width: 0;
+}
+.lookup-result {
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+  overflow-wrap: anywhere;
+}
+.lookup-result h3,
+.lookup-result dl {
+  margin: 0;
+}
+.lookup-result code {
+  color: var(--muted);
+}
+.lookup-result dl {
+  margin-top: 10px;
+}
+.lookup-result dl div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+  gap: 12px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--line);
+}
+.lookup-result dt {
+  color: var(--muted);
+}
+.lookup-result dd {
+  margin: 0;
+  text-align: end;
+  font-weight: 600;
 }
