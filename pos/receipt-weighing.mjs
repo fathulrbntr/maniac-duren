@@ -265,7 +265,7 @@ function openLineWeighing(line, state, lines, d, update) {
           editing = row.id;
           wf.elements.kg.value = row.kg;
           wf.elements.pieces.value = row.pieces;
-          wf.querySelector("[type=submit]").textContent = "Simpan koreksi";
+          wf.querySelector("[type=submit]").textContent = "Simpan";
           w.querySelector("[data-reset]").hidden = false;
           w.querySelector(".weigh-manual").open = true;
           wf.elements.kg.focus();

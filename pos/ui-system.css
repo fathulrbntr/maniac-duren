@@ -731,6 +731,8 @@ input[type="radio"] {
   margin-bottom: 20px;
 }
 .modal .modal-actions {
+  align-items: stretch;
+  flex-wrap: wrap;
   position: sticky;
   bottom: -24px;
   z-index: 2;
@@ -739,7 +741,12 @@ input[type="radio"] {
   padding: 16px 24px;
 }
 .modal .modal-actions button {
-  min-height: 44px;
+  min-height: var(--control-height);
+  min-width: min(100%, var(--action-min-width));
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+  font-size: var(--text-control);
+  line-height: 1.35;
   flex: 0 1 auto;
 }
 .modal .modal-head button {
@@ -1026,9 +1033,9 @@ tbody tr:hover {
     bottom: -20px;
     margin: 20px -20px -20px;
     padding: 12px 20px;
-    flex-wrap: wrap;
   }
   .modal .modal-actions button {
+    min-width: 0;
     flex: 1 1 0;
   }
   .form-grid {
@@ -1108,12 +1115,6 @@ tbody tr:hover {
   .team-stats strong,
   .attendance-times strong {
     font-size: var(--text-2xl);
-  }
-  .modal .modal-actions {
-    flex-wrap: wrap;
-  }
-  .modal .modal-actions button {
-    flex: 1 1 0;
   }
 }
 /* Common visual language for every screen; feature-specific layouts stay intact. */

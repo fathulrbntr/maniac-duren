@@ -91,7 +91,6 @@ export function bindBranchPricing(ctx) {
     const dialog = ctx.modal(
       "Harga jual · " + e(p.name),
       `<p><b>${e(shop.name)}</b></p>${field("Sumber harga", `<select name="source"><option value="branch">Harga khusus cabang</option><option value="master">Ikuti Master Barang</option></select>`)}<div data-retail-inputs class="form-grid">${fields.map(([key, u]) => field("Harga jual per " + u + " (Rp)", `<input name="${key}" type="number" min="0.01" max="1000000000000" step="0.01" value="${e(current[key] ?? "")}" required>`)).join("")}</div><p class="muted">Harga master · ${fields.map(([k, u]) => displayPrice(p[k], u)).join(" · ")}</p>`,
-      "Simpan harga",
     );
     const form = dialog.querySelector("form"),
       source = form.elements.namedItem("source"),

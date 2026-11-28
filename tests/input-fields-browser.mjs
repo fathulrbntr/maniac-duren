@@ -188,7 +188,7 @@ try {
         state = { ...state, suppliers: [...state.suppliers, payload] };
         return true;
       },
-      modal(title, body, label) {
+      modal(title, body, label = "Simpan") {
         const d = document.createElement("dialog");
         d.innerHTML = `<h2>${title}</h2><form>${body}<p id="form-error"></p><button type="button" data-close>Batal</button><button type="submit">${label}</button></form>`;
         document.body.append(d);
@@ -204,7 +204,6 @@ try {
     const d = ctx.modal(
       "Nota",
       '<select name="supplierId" required></select><input name="invoice" value="NOTA-001"><input name="cost0" type="number" step="any" value="150000">',
-      "Simpan nota",
     );
     d.dataset.parentNote = "";
   });

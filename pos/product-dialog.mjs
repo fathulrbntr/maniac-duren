@@ -130,9 +130,6 @@ export function productDialog({
       button.textContent = enabled ? "− Tanpa varian" : "+ Tambah varian";
       button.setAttribute("aria-expanded", String(enabled));
     }
-    d.querySelector('[type="submit"]').textContent = enabled
-      ? "Simpan semua varian"
-      : "Simpan";
   }
   if (editor) {
     c("hasVariants").onchange = toggleVariants;

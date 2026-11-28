@@ -29,7 +29,7 @@ export function storeExpensesPage(s, store) {
     <form id="store-expense-form">${expenseFields("", true, petty)}
       <p class="muted" data-expense-source></p>
       <p class="error" role="alert" data-expense-error></p>
-      <button type="submit" class="primary" ${petty && balance <= 0 ? "disabled" : ""}>Simpan pengeluaran</button>
+      <button type="submit" class="primary" ${petty && balance <= 0 ? "disabled" : ""}>Simpan</button>
     </form></section>
     <section class="panel"><h2>Pengeluaran terakhir Anda</h2>${rows.length ? `<div class="table-wrap"><table><thead><tr><th>Tanggal</th><th>Keterangan</th><th>Pembayaran</th><th>Nominal</th><th>Status</th></tr></thead><tbody>${rows.map((r) => `<tr><td>${e(r.date)}</td><td>${e(r.description)}<small>${e(r.category)}${r.reference ? " · " + e(r.reference) : ""}</small></td><td>${e(r.payment)}</td><td>${money(r.amount)}</td><td>${r.voided ? "Dibatalkan" : "Tercatat"}</td></tr>`).join("")}</tbody></table></div>` : '<p class="empty">Belum ada pengeluaran yang Anda catat di cabang ini.</p>'}</section>`;
 }

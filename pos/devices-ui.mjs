@@ -80,7 +80,7 @@ export function devicesPage(state) {
       <div class="device-scan-test">${field("Uji scanner", '<input id="device-scan-input" type="text" maxlength="256" autocomplete="off" spellcheck="false" placeholder="Klik di sini, lalu scan barcode">')}<button type="button" id="device-scan-test">Periksa kode</button><p id="device-scan-status" class="device-status" role="status">Hasil uji tidak menambah keranjang atau mengubah stok.</p></div>
       <p class="muted">Pasangkan scanner Bluetooth melalui Windows terlebih dahulu. Label CAS POS KG (21IIIIWWWWWWC) membaca kode barang 4 digit dan berat gram 6 digit. Isi kolom Barcode buah di Master Barang dengan kode seperti 0001. Harga per kg di POS harus sama dengan timbangan. Awalan tambahan scanner tetap kosong jika tidak ada; angka 21 merupakan bagian label.</p>
     </section></div>
-    <div class="device-settings-actions"><p id="device-save-status" role="status">Uji perangkat memakai isian saat ini. Simpan untuk menerapkannya di kasir.</p><div><button type="button" id="device-reset">Kembalikan bawaan</button><button type="submit" class="primary">Simpan pengaturan</button></div></div>
+    <div class="device-settings-actions"><p id="device-save-status" role="status">Uji perangkat memakai isian saat ini. Simpan untuk menerapkannya di kasir.</p><div><button type="button" id="device-reset">Kembalikan bawaan</button><button type="submit" class="primary">Simpan</button></div></div>
   </form>`;
 }
 export function bindDevices(state, store, ctx) {

@@ -52,7 +52,7 @@ export function bindPetty(s, store, ctx) {
           ? '<label class="field">Jumlah pengajuan (Rp)<input name="amount" type="number" inputmode="numeric" min="1" max="1000000000000000" step="1" required></label>'
           : `<p>${e(s.stores.find((b) => b.id === request.store_id)?.name)} · ${money(request.amount)}</p>`) +
           `<label class="field">${creating ? "Keperluan / rincian biaya" : action === "petty_pay" ? "Referensi pencairan dana" : "Alasan penolakan"}<textarea name="note" minlength="3" maxlength="300" required></textarea></label><p role="alert" class="error" data-petty-error></p>`,
-        title,
+        action === "petty_pay" ? "Simpan" : title,
       );
       const form = d.querySelector("form"),
         operation = id();

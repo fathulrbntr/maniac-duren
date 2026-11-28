@@ -67,7 +67,6 @@ function paymentDialog(s, p, component, ctx) {
   const d = ctx.modal(
     `Pembayaran ${componentName(component).toLowerCase()}`,
     `<p>Nota <b>${e(p.invoiceNo)}</b> · Sisa ${money(b.remaining)}</p><div class="form-grid">${field("Tanggal pembayaran", `<input name="date" type="date" value="${today()}" max="${today()}" required>`)}${field("Jumlah dibayar (Rp)", `<input name="amount" type="number" min="0.01" step="0.01" max="${b.remaining}" value="${b.remaining}" required>`)}${field("Metode", '<select name="method"><option value="transfer">Transfer bank</option><option value="cash">Tunai</option><option value="other">Lainnya</option></select>')}${field("Referensi / keterangan", '<input name="reference" maxlength="200" placeholder="Nomor referensi atau penerima pembayaran">')}</div><p class="muted">Catat pembayaran yang sudah dilakukan. Pembayaran ini hanya mengurangi tagihan ${componentName(component).toLowerCase()}.</p>`,
-    "Simpan pembayaran",
   );
   saveForm(d, "supplier_note_payment", p, ctx, (f) => ({
     component,
@@ -82,7 +81,6 @@ function correctionDialog(s, p, ctx) {
   const d = ctx.modal(
     "Koreksi nota · persetujuan owner",
     `<p>Nota <b>${e(p.invoiceNo)}</b> · ${e(name(s, "suppliers", p.supplierId))}</p><p>Periksa total harga per produk sesuai nota supplier. Jumlah barang dan barcode tetap mengikuti penerimaan.</p><div class="note-correction-lines">${p.lines.map((l, i) => field(`${name(s, "products", l.productId)} · sebelumnya ${money(l.purchaseCost)}`, `<input name="cost${i}" type="number" min="0.01" step="0.01" value="${e(l.purchaseCost)}" required>`)).join("")}${field(`Ongkir · sebelumnya ${money(p.shippingCost)}`, `<input name="shippingCost" type="number" min="0" step="0.01" value="${e(p.shippingCost)}" required>`)}</div>${field("Alasan koreksi", '<textarea name="reason" minlength="5" maxlength="500" required placeholder="Contoh: harga pada nota supplier salah diketik"></textarea>')}<p class="notice">Modal batch dan stok turunannya dihitung ulang. HPP transaksi terdahulu dan harga transfer tetap memakai nilai saat transaksi. Riwayat pembayaran tetap tersimpan.</p><label class="note-confirm"><input name="confirmed" type="checkbox" required> Saya sebagai owner menyetujui nilai koreksi ini.</label>`,
-    "Simpan koreksi owner",
   );
   d.classList.add("supply-modal");
   saveForm(d, "supplier_note_correct", p, ctx, (f) => ({

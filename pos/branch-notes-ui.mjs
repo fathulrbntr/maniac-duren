@@ -237,7 +237,7 @@ function openPacking(s, n, ctx) {
   }
   const draft = document.createElement("button");
   draft.type = "submit";
-  draft.textContent = "Simpan progres";
+  draft.textContent = "Simpan";
   draft.dataset.draft = "true";
   form
     .querySelector(".modal-actions")
