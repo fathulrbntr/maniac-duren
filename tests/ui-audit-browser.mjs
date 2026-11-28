@@ -540,6 +540,7 @@ try {
         receivedId: "shipment",
         invoiceTracked: true,
         shippingTracked: true,
+        payments: [],
         shippingCost: 10000,
       },
     ],
@@ -570,6 +571,8 @@ try {
   });
   state.access.backoffice = true;
   state.access.cut = true;
+  state.employees.find((p) => p.id === state.me.id).profile_photo =
+    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Zl1sAAAAASUVORK5CYII=";
   await page.reload();
   await page
     .locator('#pos-navigation [data-view="retailFunds"]')
@@ -577,8 +580,23 @@ try {
   step.phase = "operational report handoffs";
   await nav("home");
   assert.match(await page.locator(".home-value").innerText(), /775\.000/);
-  assert.match(await page.locator("#home-deposits").innerText(), /Omzet belum disetor/);
-  assert.match(await page.locator(".home-deposit-head").innerText(), /450\.000/);
+  const hero = page.locator(".home-hero");
+  assert.equal(
+    await hero.locator(".account-profile img").getAttribute("alt"),
+    "Foto Owner Test",
+  );
+  assert.deepEqual(await hero.locator(".home-financials dt").allTextContents(), [
+    "Belum disetor",
+    "Tagihan supplier",
+    "Omzet hari ini",
+  ]);
+  assert.match(
+    await hero.locator(".home-financials").innerText(),
+    /450\.000[\s\S]+11\.234\.867\.890[\s\S]+370\.000/,
+  );
+  await hero.getByRole("button", { name: "Sembunyikan saldo" }).click();
+  assert.equal(await hero.locator("[data-home-amount]:visible").count(), 0);
+  await hero.getByRole("button", { name: "Tampilkan saldo" }).click();
   for (const width of [320, 390, 768, 1280]) {
     await page.setViewportSize({ width, height: 844 });
     assert(
@@ -591,8 +609,25 @@ try {
           (el) => el.offsetHeight < parseFloat(getComputedStyle(el).lineHeight) * 1.2,
         ),
     );
-    if (width === 390 || width === 1280)
-      await page.screenshot({ path: path.join(output, `beranda-pusat-${width}.png`) });
+    assert(
+      await hero
+        .locator(".home-financials dd")
+        .evaluateAll((cells) =>
+          cells.every((cell) => cell.scrollWidth <= cell.clientWidth + 1),
+        ),
+    );
+    assert(await hero.locator(".account-profile strong").isVisible());
+    if (width === 390 || width === 1280) {
+      if (width === 390) {
+        await openSidebar(page);
+        await page.locator("#pos-sidebar [data-sidebar-toggle]").click();
+        await page.locator("#pos-sidebar").waitFor({ state: "hidden" });
+      }
+      await page.screenshot({
+        path: path.join(output, `beranda-pusat-${width}.png`),
+        animations: "disabled",
+      });
+    }
   }
   await page.getByRole("button", { name: "Lihat omzet" }).click();
   assert.equal(

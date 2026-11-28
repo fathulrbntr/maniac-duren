@@ -113,6 +113,7 @@ for (const [source, migration] of [
   ["office-stock-transfers-133.sql", "20261127102631_office_stock_transfers_133.sql"],
   ["branch-receipt-barcode-136.sql", "20261127135212_branch_receipt_barcode_136.sql"],
   ["supplier-note-proof-137.sql", "20261128071537_supplier_note_proof_137.sql"],
+  ["company-name-139.sql", "20261128081052_company_name_139.sql"],
   ["branch-turnover-deposits-138.sql", "20261128075343_branch_turnover_deposits_138.sql"],
   ["branch-transfer-notes-135.sql", "20261127131647_branch_transfer_notes_135.sql"],
   ["branch-stock-132.sql", "20261127090000_branch_stock_132.sql"],

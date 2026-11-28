@@ -61,10 +61,10 @@ html.innerHTML = supplyHome(s, "a", "backoffice");
 assert.match(html.querySelector(".dash-summary-metrics").textContent, /Omzet.*120\.000/);
 assert.doesNotMatch(
   html.querySelector(".dash-operations").textContent,
-  /Saldo PT Retail/,
+  /Saldo PT. Altara Rasa Nusantara/,
 );
 assert.equal(html.querySelector(".dash-pending"), null);
-assert.doesNotMatch(supplyHome(s, "a", "store"), /Saldo PT Retail/);
+assert.doesNotMatch(supplyHome(s, "a", "store"), /Saldo PT. Altara Rasa Nusantara/);
 const storeForm = storeExpensesPage(s, "a");
 assert.match(storeForm, /data-petty-action="petty_request"/);
 assert.doesNotMatch(storeForm, /<option>Gaji|<option>Sewa/);
@@ -105,8 +105,14 @@ const [shop, retail] = cashFlowSheets(
   today(),
 );
 assert.equal(Object.fromEntries(shop.rows)["Saldo akhir petty cash"], 210000);
-assert.equal(Object.fromEntries(retail.rows)["Arus bersih PT Retail"], 700000);
-assert.equal(Object.fromEntries(retail.rows)["Saldo akhir PT Retail"], 650000);
+assert.equal(
+  Object.fromEntries(retail.rows)["Arus bersih PT. Altara Rasa Nusantara"],
+  700000,
+);
+assert.equal(
+  Object.fromEntries(retail.rows)["Saldo akhir PT. Altara Rasa Nusantara"],
+  650000,
+);
 console.log(
   "PASS: dashboards, central administration, archive, store expenses and cash flow totals",
 );

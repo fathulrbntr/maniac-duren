@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { Node, makeModal } from "./variant-dom.mjs";
 import {
+  branchSupplierPayable,
   noteBalance,
   noteMoney,
   noteOwner,
@@ -163,6 +164,31 @@ const withPayments = {
     { id: "pay3", component: "shipping", amount: 10 },
   ],
 };
+const branch = { id: "branch", locationType: "store" };
+const outstanding = {
+  ...p,
+  storeId: "branch",
+  invoiceTracked: true,
+  payments: [
+    { component: "invoice", amount: 30 },
+    { component: "invoice", amount: 60, voided: true },
+    { component: "shipping", amount: 5 },
+  ],
+};
+const payable = (notes) =>
+  branchSupplierPayable({ ...s, receiptPlans: notes }, [...s.stores, branch]);
+assert.equal(
+  payable([
+    outstanding,
+    { ...outstanding, cancelled: true },
+    p,
+    { ...outstanding, payments: [{ component: "invoice", amount: 200 }] },
+  ]),
+  70.3,
+);
+assert.equal(payable([]), 0);
+assert.equal(payable([{ ...outstanding, payments: [], invoiceTracked: false }]), null);
+assert.equal(payable([{ ...outstanding, lines: [{}] }]), null);
 assert.equal(noteBalance(withPayments, "invoice").status, "paid");
 assert.equal(noteBalance(withPayments, "shipping").status, "partial");
 assert.equal(

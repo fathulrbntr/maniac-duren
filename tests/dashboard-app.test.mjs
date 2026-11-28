@@ -157,6 +157,8 @@ Object.assign(s, {
   warehouseVersion: 107,
   branchStockVersion: 132,
   retailBalance: 7500,
+  cashDepositToday: today(),
+  supplierNotesVersion: 112,
   cashDepositVersion: 92,
   cashDepositSummary: [
     {
@@ -181,8 +183,20 @@ Object.assign(s, {
   warehouseWorkflowVersion: 114,
   branchNoteVersion: 135,
   receiptPlans: [
-    { storeId: "a", receiving: { status: "completed" } },
-    { storeId: "b", receiving: { status: "paused" } },
+    {
+      storeId: "a",
+      receiving: { status: "completed" },
+      invoiceTracked: true,
+      lines: [{ purchaseCost: 9000 }],
+      payments: [{ component: "invoice", amount: 3000 }],
+    },
+    {
+      storeId: "b",
+      receiving: { status: "paused" },
+      invoiceTracked: true,
+      lines: [{ purchaseCost: 1000 }],
+      payments: [],
+    },
   ],
   branchNotes: [
     {
@@ -218,9 +232,16 @@ await space("store");
 await select("#active-store", "b");
 await space("backoffice");
 assert(root.querySelector(".home-page"));
-assert.match(root.querySelector(".home-received").textContent, /12\.000/);
-assert.match(root.querySelector(".home-deposit-head").textContent, /Omzet belum disetor/);
-assert.match(root.querySelector(".home-deposit-head").textContent, /33\.000/);
+assert.match(
+  root.querySelector(".home-financials").textContent,
+  /Belum disetor.*33\.000.*Tagihan supplier.*7\.000.*Omzet hari ini.*18\.000/s,
+);
+assert.equal(
+  root.querySelector(".home-hero .account-profile strong").textContent,
+  "Owner Test",
+);
+assert.equal(root.querySelector(".home-hero .account-avatar").textContent, "OT");
+assert(!root.querySelector(".dash-workspace .account-profile"));
 assert.match(root.querySelector("#home-headline").textContent, /Saldo perusahaan/);
 assert.match(root.querySelector(".home-value").textContent, /7\.500/);
 assert.match(
@@ -285,5 +306,5 @@ assert.equal(root.querySelector("#dash-store").value, "b");
 assert.doesNotMatch(root.querySelector("#dash-store").textContent, /Semua toko/);
 assert.doesNotMatch(
   root.querySelector(".dash-operations").textContent,
-  /Saldo PT Retail/,
+  /Saldo PT. Altara Rasa Nusantara/,
 );

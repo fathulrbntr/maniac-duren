@@ -230,6 +230,20 @@ try {
   await db.exec(readFile("branch-turnover-deposits-138"));
   const summary = async (outlet) =>
     (await query("select public.pos_deposit_summary($1) as totals", [outlet]))[0].totals;
+  await db.exec(readFile("company-name-139"));
+  await db.exec(readFile("company-name-139"));
+  await assert.rejects(
+    query("select md_supply.require_retail_balance(current_date,999999999)"),
+    /Saldo PT\. Altara Rasa Nusantara/,
+  );
+  assert.equal(
+    (
+      await query(
+        "select strpos(pg_get_functiondef('public.pos_admin_mutate_before_107(text,jsonb)'::regprocedure),'PT Retail')=0 as renamed",
+      )
+    )[0].renamed,
+    true,
+  );
   const currentDay = (
     await query("select (now() at time zone 'Asia/Jakarta')::date::text as date")
   )[0].date;

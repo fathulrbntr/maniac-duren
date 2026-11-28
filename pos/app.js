@@ -1,3 +1,4 @@
+import { accountProfile } from "./account-profile.mjs";
 import { officeInventoryPage, bindOfficeInventory } from "./office-inventory-ui.mjs";
 import { costPricesPage } from "./cost-prices-ui.mjs";
 import { outboundPage } from "./outbound-ui.mjs";
@@ -685,32 +686,6 @@ function login(message = "") {
     }
   };
 }
-function accountProfile() {
-  const person =
-    state.employees?.find((employee) => employee.id === state.me?.id) || state.me || {};
-  const accountName = person.name || "Akun login";
-  const photo = person.profile_photo;
-  const role =
-    {
-      owner: "Owner · Akses penuh",
-      manager: "Manager",
-      cashier: "Kasir",
-      admin: "Admin Back Office",
-      waitress: "Waitress",
-      cutter: "Tukang Potong",
-      kitchen: "Kitchen",
-      warehouse: "Gudang",
-      staff: "Staff",
-    }[person.role] || "Staff";
-  const initials = accountName
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((word) => word[0])
-    .join("")
-    .toUpperCase();
-  return `<div class="account-profile" aria-label="Akun yang login">${photo ? `<img src="${e(photo)}" alt="Foto ${e(accountName)}">` : `<span class="account-avatar" aria-hidden="true">${e(initials)}</span>`}<div><strong>${e(accountName)}</strong><span>${e(role)}</span></div></div>`;
-}
 function workspaceLocations() {
   if (!state.warehouseVersion || state.stockDemo) return state.stores;
   if (workspace === "backoffice") return state.stores;
@@ -783,7 +758,7 @@ function shell(body, access, dockOptions) {
         ${workspaceSwitch()}${central ? "" : `<div class="sidebar-store"><label for="active-store">Lokasi aktif</label><div class="store-select-wrap">${icon(activeIcon)}<select id="active-store" aria-label="Lokasi aktif: branch outlet atau gudang" title="${e(locationLabel(activeLocation))}">${locationOptions(selectableLocations, store)}</select></div></div>`}
       </div>
       <nav class="nav" id="pos-navigation" data-workspace-nav="${e(access.workspace || "")}" aria-label="Navigasi POS">${navigation(pageTitles, view, icon, access, sidebar.closedGroups)}</nav>
-      <div class="sidebar-account">${accountProfile()}<button id="logout" class="sidebar-logout" type="button" aria-label="Logout" title="Logout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 4H4v16h5M14 8l4 4-4 4M8 12h10"/></svg><span>Logout</span></button></div>
+      <div class="sidebar-account">${accountProfile(state)}<button id="logout" class="sidebar-logout" type="button" aria-label="Logout" title="Logout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 4H4v16h5M14 8l4 4-4 4M8 12h10"/></svg><span>Logout</span></button></div>
     </aside>
     <button type="button" class="sidebar-backdrop" data-sidebar-close tabindex="-1" aria-label="Tutup sidebar"></button>
     <main id="pos-main"><header class="topbar"><div class="workspace-heading"><button id="sidebar-toggle" type="button" class="sidebar-toggle" data-sidebar-toggle aria-controls="pos-sidebar" aria-label="Buka sidebar">${sidebarIcon}</button><div class="workspace-title"><span class="workspace-breadcrumb">Maniac Duren</span><h1>${view === "orders" ? `Selamat datang, <span>${e((state.me?.name || "Kasir").trim().split(/\s+/)[0])}</span>` : e(pageTitles[view] || "Maniac Duren")}</h1></div></div><div class="workspace-tools">${installButton()}<span class="workspace-outlet" title="${e(scopeLabel)}">${icon(central ? "backoffice" : activeIcon)}<span>${e(scopeLabel)}</span></span><button type="button" id="stock-demo-toggle" class="stock-demo-toggle" role="switch" aria-label="Mode demo" aria-checked="${mode === "stock-demo"}"><span class="stock-demo-track" aria-hidden="true"></span>Mode demo</button>${themeButton()}</div></header><div class="workspace-content">${mode === "stock-demo" ? '<aside class="stock-demo-banner" role="status"><div><b>MODE DEMO · Stok awal 100</b><p>Data uji hanya di tab ini. Semua penyimpanan demo terpisah dari database asli. Harga jual demo Rp150.000 per satuan; resep mengikuti master.</p><small>Buah: 100 kg + 100 butir. Bahan / produk stok: 100 sesuai satuannya. ${e(itemTypes.recipe)} mengikuti bahan.</small></div><button type="button" id="stock-demo-reset">Reset demo</button></aside>' : ""}${body}<p class="page-foot">Maniac Duren · ${e(scopeLabel)}</p></div>${systemDock(view, access, dockOptions)}</main>

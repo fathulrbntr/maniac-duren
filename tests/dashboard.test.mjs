@@ -310,7 +310,7 @@ test("dashboard handlers switch period/store/tabs without requests, validate dat
   try {
     resetDashboard();
     render();
-    assert(root.querySelector(".dash-profile"));
+    assert(root.querySelector(".dash-heading"));
     assert.equal(root.querySelectorAll("[data-dash-tab]").length, 5);
     assert(root.textContent.includes("670.000"));
     assert(!dashboardPage(s, active).includes("<test>"));

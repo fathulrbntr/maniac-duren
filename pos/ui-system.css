@@ -161,14 +161,9 @@ h4 {
   box-shadow: none;
   border-color: var(--focus);
 }
-.dash-profile h2 {
+.dash-heading h2 {
   font-size: var(--text-2xl);
   font-weight: var(--weight-semibold);
-  text-transform: none;
-}
-.dash-profile p {
-  font-size: var(--text-body);
-  font-style: normal;
   text-transform: none;
 }
 .dash-metric-value {
@@ -918,11 +913,8 @@ tbody tr:hover {
   font-size: 13px;
   line-height: 1.5;
 }
-.dash-profile h2 {
+.dash-heading h2 {
   font-size: 22px;
-}
-.dash-profile p {
-  font-size: 13px;
 }
 .dashboard-workspace {
   margin-top: 0;

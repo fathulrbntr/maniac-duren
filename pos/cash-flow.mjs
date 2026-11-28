@@ -1,9 +1,11 @@
 import { sumProducts } from "./decimal-totals.mjs";
 
+export const companyName = "PT. Altara Rasa Nusantara";
+
 export const fundingNames = {
   store: "Toko",
   petty: "Petty cash toko",
-  retail: "PT Retail",
+  retail: companyName,
   distribution: "PT Distribusi",
 };
 export const fundingOptions = (warehouse) =>
@@ -77,13 +79,13 @@ export function cashFlowSheets(report, outlet, from, to) {
       ...(petty
         ? [
             ["Saldo awal petty cash", movement("opening")],
-            ["Pengisian petty cash dari PT Retail", total("petty_disbursement")],
+            [`Pengisian petty cash dari ${companyName}`, total("petty_disbursement")],
             ["Pengeluaran petty cash", -total("petty_expense")],
             ["Saldo akhir petty cash", add(movement("opening"), movement("amount"))],
           ]
         : []),
       ...(allMethods ? [["Omzet wajib setor pada periode ini", turnover("amount")]] : []),
-      ["Setoran ke PT Retail", -deposits],
+      [`Setoran ke ${companyName}`, -deposits],
       [
         (allMethods ? "Saldo setoran cabang sebelum " : "Uang kas tercatat sebelum ") +
           from,
@@ -94,7 +96,7 @@ export function cashFlowSheets(report, outlet, from, to) {
         add(opening, cashChange("amount")),
       ],
     ]),
-    sheet("PT Retail", [
+    sheet(companyName, [
       ["Setoran dari toko", deposits],
       ...(report.branchStockVersion >= 132
         ? [
@@ -106,13 +108,13 @@ export function cashFlowSheets(report, outlet, from, to) {
         ? [["Pembayaran nota ke PT Distribusi", -transfers]]
         : []),
       ...expenses("retail_expense"),
-      ["Total operasional toko dibayar PT Retail", -total("retail_expense")],
+      [`Total operasional toko dibayar ${companyName}`, -total("retail_expense")],
       ...(petty ? [["Pencairan petty cash ke toko", -total("petty_disbursement")]] : []),
-      ["Arus bersih PT Retail", retail("amount")],
+      [`Arus bersih ${companyName}`, retail("amount")],
       ...(petty
         ? [
             [
-              outlet ? "Saldo kumulatif terkait cabang" : "Saldo akhir PT Retail",
+              outlet ? "Saldo kumulatif terkait cabang" : `Saldo akhir ${companyName}`,
               add(retail("opening"), retail("amount")),
             ],
           ]
