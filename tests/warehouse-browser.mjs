@@ -275,7 +275,30 @@ try {
   await nextSteps.getByRole("button", { name: /Penjualan toko/ }).click();
   await page.locator('.shell[data-page="orders"] #order-products').waitFor();
   await login("owner");
-  await page.locator("[data-workspace=backoffice]").click();
+  await page.locator('.shell[data-page="backoffice"] .dash-profile').waitFor();
+  assert.equal(await page.locator("#dash-store").inputValue(), "");
+  assert.equal(
+    await page.locator('[data-dash-tab="stock"]').getAttribute("aria-pressed"),
+    "true",
+  );
+  for (const width of [320, 390, 1024]) {
+    await page.setViewportSize({ width, height: 900 });
+    const amounts = page.locator(".dash-metric-value");
+    assert((await amounts.count()) >= 2);
+    assert(
+      await amounts.evaluateAll((values) =>
+        values.every(
+          (v) =>
+            v.scrollWidth <= v.clientWidth + 1 &&
+            v.offsetHeight <= parseFloat(getComputedStyle(v).lineHeight) + 1,
+        ),
+      ),
+      "Stock KPI fits at " + width,
+    );
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.locator(".dash-stock-panel .dash-link").click();
+  await page.locator("[data-office-inventory]").waitFor();
   await nav("supplierNotes");
   await page.locator("[data-note-open]").click();
   assert.match(await page.locator("dialog[open]").innerText(), /Sudah diterima/);

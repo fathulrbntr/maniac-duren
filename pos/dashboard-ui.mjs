@@ -23,7 +23,7 @@ import {
 import { dashboardPrintHTML } from "./dashboard-print.mjs";
 import { printWindow } from "./report-export.mjs";
 
-let tab = "transactions",
+let tab = "",
   period = "day",
   allStores = false,
   custom = { from: today(), to: today() },
@@ -37,7 +37,7 @@ const periods = {
   custom: "Pilih tanggal",
 };
 export function resetDashboard() {
-  tab = "transactions";
+  tab = "";
   period = "day";
   allStores = false;
   custom = { from: today(), to: today() };
@@ -48,10 +48,10 @@ export function followDashboardStore() {
   allStores = false;
 }
 const allowed = (s, ...keys) => !s.access || keys.some((k) => s.access[k]);
-const filter = (s, activeStore) => ({
+const filter = (s, activeStore, workspace) => ({
   ...dashboardRange(period, custom),
   store:
-    allStores || activeStore === null
+    (!workspace && allStores) || (workspace !== "store" && activeStore === null)
       ? ""
       : s.stores.find((x) => x.id === activeStore)?.id || s.stores[0]?.id || "",
 });
@@ -93,7 +93,7 @@ const metricIcons = {
     '<path d="m12 3 9 5v9l-9 5-9-5V8Z"/><path d="m3 8 9 5 9-5m-9 5v9"/>',
 };
 function metric(label, value, items = [], note = "") {
-  return `<article class="dash-metric"><div class="dash-metric-heading"><span class="dash-metric-icon">${svg(metricIcons[label] || '<path d="M4 19V5h16v14ZM8 15v-4m4 4V8m4 7v-5"/>')}</span><h2>${e(label)}</h2></div><strong class="dash-metric-value" title="${e(value)}">${e(value)}</strong>${items.length ? `<dl class="dash-breakdown">${items.map(([name, value]) => `<div><dt>${e(name)}</dt><dd>${e(value)}</dd></div>`).join("")}</dl>` : ""}${note ? `<p class="dash-metric-note">${e(note)}</p>` : ""}</article>`;
+  return `<article class="dash-metric" ${value.length > 9 ? "data-wide-value" : ""}><div class="dash-metric-heading"><span class="dash-metric-icon">${svg(metricIcons[label] || '<path d="M4 19V5h16v14ZM8 15v-4m4 4V8m4 7v-5"/>')}</span><h2>${e(label)}</h2></div><strong class="dash-metric-value" ${value.length > 9 ? `style="--dash-value-size:${150 / value.length}cqi"` : ""} title="${e(value)}">${e(value)}</strong>${items.length ? `<dl class="dash-breakdown">${items.map(([name, value]) => `<div><dt>${e(name)}</dt><dd>${e(value)}</dd></div>`).join("")}</dl>` : ""}${note ? `<p class="dash-metric-note">${e(note)}</p>` : ""}</article>`;
 }
 function chart(a) {
   const { bins, unknown, hourly, step } = a.timeline,
@@ -111,10 +111,10 @@ function chart(a) {
   const line = points
     .map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(2)},${y.toFixed(2)}`)
     .join(" ");
-  return `<section class="dash-panel dash-traffic" aria-labelledby="dash-chart-title"><div class="dash-section-head"><div><h2 id="dash-chart-title">Traffic penjualan</h2><p>${hourly ? "Omzet per 4 jam · WIB" : step === 1 ? "Omzet per hari" : `Omzet per ${step} hari`}</p></div><span class="dash-chart-legend"><i></i>Omzet</span></div><div class="dash-chart"><div class="dash-y-axis" aria-hidden="true"><span>${compact(max)}</span><span>${compact(max / 2)}</span><span>0</span></div><div class="dash-chart-plot"><svg class="dash-line-chart" viewBox="0 0 600 180" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="dash-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--chart-1)" stop-opacity=".22"/><stop offset="100%" stop-color="var(--chart-1)" stop-opacity="0"/></linearGradient></defs><path class="dash-grid-line" d="M0 20H600 M0 90H600 M0 160H600"/><path d="${line} L600,180 L0,180 Z" fill="url(#dash-area)"/><path d="${line}" fill="none" stroke="var(--chart-1)" stroke-width="2.5" vector-effect="non-scaling-stroke"/></svg><div class="dash-bars" style="--bar-count:${bins.length}">${bins.map((b, i) => `<button type="button" class="dash-bar" style="--point-x:${bins.length === 1 ? 50 : (i / (bins.length - 1)) * 100}%" data-dash-bar="${i}" data-total="${b.total}" aria-label="${e(b.detail + ": " + money(b.total) + ", " + num(b.count) + " transaksi")}" aria-pressed="false" title="${e(b.detail + ": " + money(b.total))}"><span class="dash-bar-dot" style="--point-y:${(points[i][1] / 180) * 100}%"></span><span class="dash-bar-label">${e(b.label)}</span></button>`).join("")}</div>${!a.tx.length ? '<span class="dash-chart-empty">Belum ada penjualan pada periode ini</span>' : ""}</div></div><p class="dash-chart-detail" id="dash-chart-detail" role="status">Pilih titik grafik untuk melihat omzet dan jumlah transaksi.</p>${unknown.count ? `<p class="dash-note">${num(unknown.count)} transaksi (${money(unknown.total)}) tanpa jam yang sesuai tanggal penjualan tetap dihitung pada total omzet.</p>` : ""}</section>`;
+  return `<section class="dash-panel dash-traffic" aria-labelledby="dash-chart-title"><div class="dash-section-head"><div><h2 id="dash-chart-title">Tren penjualan</h2><p>${hourly ? "Omzet per 4 jam · WIB" : step === 1 ? "Omzet per hari" : `Omzet per ${step} hari`}</p></div><span class="dash-chart-legend"><i></i>Omzet</span></div><div class="dash-chart"><div class="dash-y-axis" aria-hidden="true"><span>${compact(max)}</span><span>${compact(max / 2)}</span><span>0</span></div><div class="dash-chart-plot"><svg class="dash-line-chart" viewBox="0 0 600 180" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="dash-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--chart-1)" stop-opacity=".22"/><stop offset="100%" stop-color="var(--chart-1)" stop-opacity="0"/></linearGradient></defs><path class="dash-grid-line" d="M0 20H600 M0 90H600 M0 160H600"/><path d="${line} L600,180 L0,180 Z" fill="url(#dash-area)"/><path d="${line}" fill="none" stroke="var(--chart-1)" stroke-width="2.5" vector-effect="non-scaling-stroke"/></svg><div class="dash-bars" style="--bar-count:${bins.length}">${bins.map((b, i) => `<button type="button" class="dash-bar" style="--point-x:${bins.length === 1 ? 50 : (i / (bins.length - 1)) * 100}%" data-dash-bar="${i}" data-total="${b.total}" aria-label="${e(b.detail + ": " + money(b.total) + ", " + num(b.count) + " transaksi")}" aria-pressed="false" title="${e(b.detail + ": " + money(b.total))}"><span class="dash-bar-dot" style="--point-y:${(points[i][1] / 180) * 100}%"></span><span class="dash-bar-label">${e(b.label)}</span></button>`).join("")}</div>${!a.tx.length ? '<span class="dash-chart-empty">Belum ada penjualan pada periode ini</span>' : ""}</div></div><p class="dash-chart-detail" id="dash-chart-detail" role="status">Pilih titik grafik untuk melihat omzet dan jumlah transaksi.</p>${unknown.count ? `<p class="dash-note">${num(unknown.count)} transaksi (${money(unknown.total)}) tanpa jam yang sesuai tanggal penjualan tetap dihitung pada total omzet.</p>` : ""}</section>`;
 }
-function topProducts(a) {
-  return `<section class="dash-panel dash-top-products">${heading("5 penjualan teratas", "Berdasarkan omzet setelah diskon", link("Laporan", "reports"))}${
+function topProducts(a, s) {
+  return `<section class="dash-panel dash-top-products">${heading("5 produk terlaris", "Berdasarkan omzet setelah diskon", allowed(s, "reports", "trace") ? link("Laporan", "reports") : "")}${
     a.topProducts.length
       ? `<ol class="dash-ranking">${a.topProducts
           .map((p, i) => {
@@ -159,17 +159,22 @@ function paymentPanel(a) {
       .join("") || "<div><dt>Belum ada pembayaran</dt><dd>—</dd></div>"
   }</dl></div></section>`;
 }
-function stockOverview(s, f) {
+function stockLink(s, workspace, label) {
+  if (workspace === "backoffice") return link(label, "officeInventory");
+  if (allowed(s, "stock", "produce", "receive")) return link(label, "stock");
+  return link("Laporan", "reports");
+}
+function stockOverview(s, f, workspace) {
   if (!allowed(s, "stock", "trace", "produce")) return "";
   const a = dashboardStock(s, f.store),
     total = a.available + a.empty,
     percent = total ? Math.round((a.available / total) * 100) : 0;
-  return `<section class="dash-panel dash-stock-overview">${heading("Ketersediaan produk", "Stok fisik saat ini", allowed(s, "stock", "produce") ? link("Stok", "stock") : link("Laporan", "reports"))}<strong class="dash-overview-value">${num(a.available)}<small> / ${num(total)} produk</small></strong><div class="dash-stock-track" role="img" aria-label="${percent}% produk tersedia"><span style="width:${percent}%"></span></div><div class="dash-stock-key"><span><i></i>Tersedia <b>${num(a.available)}</b></span><span><i></i>Kosong <b>${num(a.empty)}</b></span></div><p class="dash-note">${a.empty ? "Periksa produk kosong sebelum menerima pesanan." : "Ketersediaan mengikuti sisa stok setiap produk."}</p></section>`;
+  return `<section class="dash-panel dash-stock-overview">${heading("Ketersediaan produk", "Stok fisik saat ini", stockLink(s, workspace, "Stok"))}<strong class="dash-overview-value">${num(a.available)}<small> / ${num(total)} produk</small></strong><div class="dash-stock-track" role="img" aria-label="${percent}% produk tersedia"><span style="width:${percent}%"></span></div><div class="dash-stock-key"><span><i></i>Tersedia <b>${num(a.available)}</b></span><span><i></i>Kosong <b>${num(a.empty)}</b></span></div><p class="dash-note">${a.empty ? "Periksa produk kosong sebelum menerima pesanan." : "Ketersediaan mengikuti sisa stok setiap produk."}</p></section>`;
 }
 function financeOverview(m) {
   return `<section class="dash-panel dash-finance-overview">${heading("Rincian keuangan", "Mengikuti periode yang dipilih")}<dl class="dash-finance-list"><div><dt>Laba kotor</dt><dd>${financeValue(m.gross)}</dd></div><div><dt>Biaya operasional</dt><dd>${financeValue(m.operating)}</dd></div><div><dt>Kerugian stok / waste</dt><dd>${financeValue(m.loss)}</dd></div></dl><p class="dash-note">${m.result === null || m.assets.unknown ? "Ada modal atau biaya belum lengkap. Periksa Cetak laporan A4." : "Profit = penjualan − HPP − waste − biaya operasional."}</p>${m.assets.unknown ? `<p class="dash-note">Aset terhitung: ${money(m.assets.known)}; sebagian modal belum diketahui.</p>` : ""}</section>`;
 }
-function recentTransactions(a, s) {
+function recentTransactions(a, s, workspace) {
   const stamp = (t) =>
     t.order?.paid_at || t.paid_at || t.order?.created_at || t.created_at || "";
   const rows = [...a.tx]
@@ -180,19 +185,17 @@ function recentTransactions(a, s) {
         String(y.id).localeCompare(String(x.id)),
     )
     .slice(0, 6);
-  return `<section class="dash-panel dash-recent">${heading("Transaksi terbaru", "Penjualan lunas pada outlet dan periode terpilih", link("Semua transaksi", "reports"))}${rows.length ? `<div class="table-wrap"><table><caption class="sr-only">Enam transaksi lunas terbaru</caption><thead><tr><th>Transaksi</th><th>Outlet</th><th>Pembayaran</th><th>Status</th><th>Tanggal</th><th class="dash-numeric">Total</th></tr></thead><tbody>${rows.map((t) => `<tr><td><strong title="${e(t.id)}">#${e(String(t.id).slice(-8).toUpperCase())}</strong><small>${e(t.lines[0]?.name || "Penjualan POS")}${t.lines.length > 1 ? " +" + (t.lines.length - 1) : ""}</small></td><td>${e(s.stores.find((st) => st.id === t.storeId)?.name || "—")}</td><td>${e(t.payment || "Belum tercatat")}</td><td><span class="dash-paid"><i></i>Lunas</span></td><td>${e(dateLabel(t.date))}</td><td class="dash-numeric"><strong>${money(t.total)}</strong></td></tr>`).join("")}</tbody></table></div>` : empty("Belum ada transaksi lunas", "Transaksi yang sudah dibayar akan tampil sesuai outlet dan periode yang dipilih.")}</section>`;
+  return `<section class="dash-panel dash-recent">${heading("Transaksi terbaru", "Penjualan lunas pada outlet dan periode terpilih", link("Semua transaksi", workspace === "store" ? "salesreport" : "reports"))}${rows.length ? `<div class="table-wrap"><table><caption class="sr-only">Enam transaksi lunas terbaru</caption><thead><tr><th>Transaksi</th><th>Outlet</th><th>Pembayaran</th><th>Status</th><th>Tanggal</th><th class="dash-numeric">Total</th></tr></thead><tbody>${rows.map((t) => `<tr><td><strong title="${e(t.id)}">#${e(String(t.id).slice(-8).toUpperCase())}</strong><small>${e(t.lines[0]?.name || "Penjualan POS")}${t.lines.length > 1 ? " +" + (t.lines.length - 1) : ""}</small></td><td>${e(s.stores.find((st) => st.id === t.storeId)?.name || "—")}</td><td>${e(t.payment || "Belum tercatat")}</td><td><span class="dash-paid"><i></i>Lunas</span></td><td>${e(dateLabel(t.date))}</td><td class="dash-numeric"><strong>${money(t.total)}</strong></td></tr>`).join("")}</tbody></table></div>` : empty("Belum ada transaksi lunas", "Transaksi yang sudah dibayar akan tampil sesuai outlet dan periode yang dipilih.")}</section>`;
 }
-function transactionPanel(a, s, f) {
+function transactionPanel(a, s, f, workspace) {
   const m = financeAccess(s) ? dashboardReport(s, f).financial : null;
-  return `<div class="dash-metrics dash-summary-metrics">${metric("Omzet", money(a.total), [], "Penjualan lunas setelah diskon")}${metric("Transaksi", num(a.tx.length), [], "Transaksi lunas aktif")}${metric("Rata-rata transaksi", money(a.tx.length ? a.total / a.tx.length : 0), [], "Omzet ÷ transaksi")}${m ? financialMetrics(m) : ""}</div><div class="dash-sales-grid">${chart(a)}${topProducts(a)}</div><div class="dash-insights">${paymentPanel(a)}${stockOverview(s, f)}${m ? financeOverview(m) : ""}</div>${recentTransactions(a, s)}`;
+  return `<div class="dash-metrics dash-summary-metrics">${metric("Omzet", money(a.total), [], "Penjualan lunas setelah diskon")}${metric("Transaksi", num(a.tx.length), [], "Transaksi lunas aktif")}${metric("Rata-rata transaksi", money(a.tx.length ? a.total / a.tx.length : 0), [], "Omzet ÷ transaksi")}${m ? financialMetrics(m) : ""}</div><div class="dash-sales-grid">${chart(a)}${topProducts(a, s)}</div><div class="dash-insights">${paymentPanel(a)}${stockOverview(s, f, workspace)}${m ? financeOverview(m) : ""}</div>${recentTransactions(a, s, workspace)}`;
 }
-function stockPanel(s, f) {
+function stockPanel(s, f, workspace) {
   const a = dashboardStock(s, f.store),
     filtered = filterDashboardStock(s, a, { category: stockCategory, sort: stockSort }),
     assets = financeAccess(s) ? inventoryAssets(s, f.store) : null,
-    action = allowed(s, "stock", "produce")
-      ? link("Buka stok", "stock")
-      : link("Laporan", "reports");
+    action = stockLink(s, workspace, "Buka stok");
   const categoryName =
     stockCategoryButtons.find(([key]) => key === filtered.category)?.[1] || "";
   return `<div class="dash-metrics">${metric("Produk tersedia", num(a.available), [], "Produk fisik dengan sisa stok lebih dari nol")}${metric("Stok kosong", num(a.empty), [], "Produk fisik yang perlu diperiksa")}${assets ? metric("Estimasi nilai aset", financeValue(assets.total), [], "Modal sisa stok saat ini · termasuk bahan & reject") : ""}</div><section class="dash-panel dash-stock-panel">${heading("Ringkasan stok", "Posisi stok saat ini · setiap satuan ditampilkan terpisah", action)}<div class="dash-stock-controls"><div class="dash-stock-categories" role="group" aria-label="Kategori stok">${stockCategoryButtons.map(([key, label]) => `<button type="button" data-dash-stock-category="${key}" aria-pressed="${key === filtered.category}">${label}</button>`).join("")}</div><label class="dash-stock-sort">Urutkan<select id="dash-stock-sort">${Object.entries(
@@ -241,7 +244,7 @@ function supplierPanel(a) {
         )
   }</section>`;
 }
-function rejectPanel(s, f) {
+function rejectPanel(s, f, workspace) {
   const a = dashboardRejects(s, f),
     labels = {
       mark: "Catat reject",
@@ -251,7 +254,7 @@ function rejectPanel(s, f) {
       coral: "Olah Coral",
       loss: "Waste / dibuang",
     };
-  return `<div class="dash-metrics">${metric("Reject tercatat", num(a.markedKg) + " kg", [], "Buah yang ditandai reject pada periode ini")}${metric("Reject diolah", num(a.processedKg) + " kg", [], "Berat buah yang masuk proses pengolahan")}</div><section class="dash-panel">${heading("Aktivitas reject & waste", a.rows.length + " pencatatan aktif", allowed(s, "waste") ? link("Buka reject", "waste") : link("Laporan", "reports"))}${
+  return `<div class="dash-metrics">${metric("Reject tercatat", num(a.markedKg) + " kg", [], "Buah yang ditandai reject pada periode ini")}${metric("Reject diolah", num(a.processedKg) + " kg", [], "Berat buah yang masuk proses pengolahan")}</div><section class="dash-panel">${heading("Aktivitas reject & waste", a.rows.length + " pencatatan aktif", workspace !== "backoffice" && allowed(s, "waste") ? link("Buka reject", "waste") : allowed(s, "reports", "trace") ? link("Laporan", "reports") : "")}${
     a.rows.length
       ? `<ul class="dash-records">${a.rows
           .slice(0, 10)
@@ -283,12 +286,19 @@ function customerPanel(s, a) {
         )
   }<p class="dash-note">Nama yang sama digabung. Jumlah ini bukan jumlah pengunjung atau pelanggan unik.</p></section>`;
 }
-export function dashboardPage(s, activeStore) {
-  const tabs = dashboardTabs(s);
-  if (!tabs.some((x) => x[0] === tab)) tab = tabs[0]?.[0] || "transactions";
+export function dashboardPage(s, activeStore, workspace) {
+  const tabs = dashboardTabs(s, workspace);
   if (!tabs.length)
-    return empty("Dashboard tidak tersedia", "Akun ini belum memiliki akses laporan.");
-  const f = filter(s, activeStore),
+    return workspace
+      ? ""
+      : empty("Dashboard tidak tersedia", "Akun ini belum memiliki akses laporan.");
+  if (!tabs.some(([key]) => key === tab)) {
+    tab =
+      workspace === "backoffice" && tabs.some(([key]) => key === "stock")
+        ? "stock"
+        : tabs[0][0];
+  }
+  const f = filter(s, activeStore, workspace),
     a = ["transactions", "suppliers", "customers"].includes(tab)
       ? dashboardSales(s, f)
       : null;
@@ -304,15 +314,23 @@ export function dashboardPage(s, activeStore) {
     };
   const page =
     tab === "transactions"
-      ? transactionPanel(a, s, f)
+      ? transactionPanel(a, s, f, workspace)
       : tab === "stock"
-        ? stockPanel(s, f)
+        ? stockPanel(s, f, workspace)
         : tab === "suppliers"
           ? supplierPanel(a)
           : tab === "reject"
-            ? rejectPanel(s, f)
+            ? rejectPanel(s, f, workspace)
             : customerPanel(s, a);
-  return `<section class="dash-workspace" aria-label="Dashboard toko"><div class="dash-profile-row"><div class="dash-profile"><span class="dash-avatar">${person.profile_photo ? `<img src="${e(person.profile_photo)}" alt="Foto ${e(name)}">` : `<span>${e(initials(name))}</span>`}</span><div><h2>Ringkasan operasional</h2><p>Selamat datang, ${e(name)} <span class="dash-role">· ${e(roles[person.role] || person.role || "Staff")}</span></p></div></div><label class="dash-store"><span>Outlet</span><select id="dash-store" aria-label="Toko dashboard"><option value="" ${!f.store ? "selected" : ""}>Semua toko</option>${s.stores.map((st) => `<option value="${e(st.id)}" ${st.id === f.store ? "selected" : ""}>${e(st.name)}</option>`).join("")}</select></label></div><div class="dash-tabs" style="--dash-tabs:${tabs.length}" role="group" aria-label="Ringkasan dashboard">${tabs.map(([key, label]) => `<button type="button" data-dash-tab="${key}" aria-pressed="${key === tab}">${label}</button>`).join("")}</div><div class="dash-period-row"><span class="dash-date-caption">${e(tab === "stock" ? "Posisi stok saat ini" : f.from === f.to ? dateLabel(f.from) : dateLabel(f.from) + " – " + dateLabel(f.to))}</span><div>${reportAccess(s) ? '<button type="button" class="dash-print" id="dash-print">Cetak laporan A4</button>' : ""}<button type="button" class="dash-refresh" id="dash-refresh" aria-label="Perbarui data dashboard" title="Perbarui data">${refreshIcon}</button><label class="dash-period"><select id="dash-period" aria-label="Periode dashboard" ${tab === "stock" ? "disabled" : ""}>${Object.entries(
+  return `<section class="dash-workspace" aria-label="Dashboard toko"><div class="dash-profile-row"><div class="dash-profile"><span class="dash-avatar">${person.profile_photo ? `<img src="${e(person.profile_photo)}" alt="Foto ${e(name)}">` : `<span>${e(initials(name))}</span>`}</span><div><h2>Ringkasan operasional</h2><p>Selamat datang, ${e(name)} <span class="dash-role">· ${e(roles[person.role] || person.role || "Staff")}</span></p></div></div><label class="dash-store"><span>Outlet</span><select id="dash-store" aria-label="Toko dashboard">${workspace === "store" ? "" : `<option value="" ${!f.store ? "selected" : ""}>Semua toko</option>`}${s.stores
+    .filter((st) => workspace !== "store" || st.locationType !== "warehouse")
+    .map(
+      (st) =>
+        `<option value="${e(st.id)}" ${st.id === f.store ? "selected" : ""}>${e(st.name)}</option>`,
+    )
+    .join(
+      "",
+    )}</select></label></div><div class="dash-tabs" style="--dash-tabs:${tabs.length}" role="group" aria-label="Ringkasan dashboard">${tabs.map(([key, label]) => `<button type="button" data-dash-tab="${key}" aria-pressed="${key === tab}">${label}</button>`).join("")}</div><div class="dash-period-row"><span class="dash-date-caption">${e(tab === "stock" ? "Posisi stok saat ini" : f.from === f.to ? dateLabel(f.from) : dateLabel(f.from) + " – " + dateLabel(f.to))}</span><div>${reportAccess(s) ? '<button type="button" class="dash-print" id="dash-print">Cetak laporan A4</button>' : ""}<button type="button" class="dash-refresh" id="dash-refresh" aria-label="Perbarui data dashboard" title="Perbarui data">${refreshIcon}</button><label class="dash-period"><select id="dash-period" aria-label="Periode dashboard" ${tab === "stock" ? "disabled" : ""}>${Object.entries(
     periods,
   )
     .map(
@@ -362,14 +380,14 @@ export function bindDashboard(s, activeStore, ctx) {
   };
   $("#dash-store").onchange = async (ev) => {
     if (!canChange()) {
-      ev.target.value = filter(s, activeStore).store;
+      ev.target.value = filter(s, activeStore, ctx.workspace).store;
       return;
     }
-    if (!ev.target.value) {
+    if (!ev.target.value && !ctx.workspace) {
       allStores = true;
       ctx.render();
     } else if (!(await ctx.changeStore(ev.target.value)))
-      ev.target.value = filter(s, activeStore).store;
+      ev.target.value = filter(s, activeStore, ctx.workspace).store;
   };
   for (const key of ["from", "to"])
     $("#dash-" + key)?.addEventListener("change", () => {
@@ -400,7 +418,7 @@ export function bindDashboard(s, activeStore, ctx) {
   };
   $("#dash-print")?.addEventListener("click", async (ev) => {
     if (!canChange() || !reportAccess(s)) return;
-    const f = filter(s, activeStore);
+    const f = filter(s, activeStore, ctx.workspace);
     if (
       period === "custom" &&
       tab !== "stock" &&

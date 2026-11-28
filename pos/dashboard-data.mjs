@@ -20,15 +20,27 @@ export function dashboardRange(period, custom = {}, day = today()) {
   if (["week", "month"].includes(period)) return { ...periodRange(period, day), to: day };
   return { from: day, to: day };
 }
-export function dashboardTabs(s) {
+export function dashboardTabs(s, workspace) {
   const a = s.access,
     can = (...keys) => !a || keys.some((k) => a[k]);
   return [
-    ["transactions", "Transaksi", can("reports")],
-    ["stock", "Stock", can("stock", "trace", "produce")],
+    [
+      "transactions",
+      "Transaksi",
+      can("reports") || (workspace === "store" && can("sell")),
+    ],
+    [
+      "stock",
+      "Stok",
+      can("stock", "trace", "produce") || (workspace === "store" && can("receive")),
+    ],
     ["suppliers", "Supplier", can("reports")],
     ["reject", "Reject", can("waste", "trace", "finance")],
-    ["customers", "Customer", can("finance") && !(s.pettyCashVersion >= 130)],
+    [
+      "customers",
+      "Customer",
+      workspace !== "store" && can("finance") && !(s.pettyCashVersion >= 130),
+    ],
   ].filter((x) => x[2]);
 }
 function timeline(tx, range) {
@@ -204,7 +216,7 @@ export function dashboardStock(s, store) {
           },
         ]),
     );
-  for (const l of [...s.lots, ...s.unitLots]) {
+  for (const l of [...(s.lots || []), ...(s.unitLots || [])]) {
     if (!allowed.has(l.storeId) || (store && l.storeId !== store)) continue;
     const row = rows.get(l.productId);
     if (!row) continue;

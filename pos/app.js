@@ -397,6 +397,7 @@ async function switchStockDemo(reset = false) {
       if (!reset) demoSource = source;
       state = next;
       mode = "stock-demo";
+      if (["backoffice", "storehome", "warehouse"].includes(view)) view = defaultView();
     } else {
       // Keep demo active and write-protected until the real read succeeds.
       const fresh = await request("/rest/v1/rpc/pos_read", {}, true, true);
@@ -509,6 +510,7 @@ function resetWorkspace(forget = false) {
   resetCustomerDisplay();
   if (forget) sessions?.clear(activeSessionId || undefined);
   resetDashboard();
+  workspace = "";
   officePage = officeBranch = "";
   loginAttempt++;
   authBusy = false;
@@ -527,7 +529,13 @@ function resetWorkspace(forget = false) {
   document.querySelectorAll("dialog[open]").forEach((dialog) => dialog.close());
   resetCustomerDisplay();
 }
+function workspaceHome(space) {
+  return space === "store" ? "storehome" : space;
+}
 function defaultView() {
+  if (state.warehouseVersion && !state.stockDemo)
+    return workspaceHome(workspaceAccess().workspace);
+  if (state.access?.reports) return "dashboard";
   return state.access?.sell
     ? "orders"
     : state.access?.kitchen
@@ -579,13 +587,15 @@ async function restoreSession() {
   try {
     await refresh();
     if (activeSessionId !== saved.sessionId) return;
-    if (spacesFor(state).includes(saved.workspace)) workspace = saved.workspace;
+    workspace = spacesFor(state).includes(saved.workspace)
+      ? saved.workspace
+      : defaultSpace(state);
     const allowed = visibleSections(workspaceAccess()).flatMap((group) => group.pages);
     const archiveView =
       workspace === "backoffice" &&
       workspaceAccess().pettyCash &&
       state.access?.backoffice &&
-      ["documents", "dashboard"].includes(saved.view);
+      saved.view === "documents";
     view = allowed.includes(saved.view) || archiveView ? saved.view : defaultView();
     render();
   } catch (error) {
@@ -819,7 +829,6 @@ function shell(body) {
                 }
               : {}),
             documents: "Arsip dokumen",
-            dashboard: "Analisis penjualan",
             backoffice: "Dashboard",
             products: "Master barang",
             employees: "Akun karyawan",
@@ -830,7 +839,7 @@ function shell(body) {
     activeIcon = activeLocation?.locationType === "warehouse" ? "warehouse" : "stores";
   const scopeLabel = central ? "Pusat · Semua cabang" : locationLabel(activeLocation);
   const selectableLocations = workspaceLocations();
-  return `<div class="shell ${["products", "stock"].includes(view) ? "inventory-shell" : ""} ${view === "dashboard" ? "dashboard-shell" : ""}" ${sidebar.attributes()} data-page="${e(view)}">
+  return `<div class="shell ${["products", "stock"].includes(view) ? "inventory-shell" : ""} ${["dashboard", "backoffice", "storehome"].includes(view) ? "dashboard-shell" : ""}" ${sidebar.attributes()} data-page="${e(view)}">
     <aside class="sidebar" id="pos-sidebar" aria-label="Sidebar Maniac Duren">
       <div class="sidebar-header">
         <div class="sidebar-brand-row"><div class="brand"><img src="/assets/logo.png" alt=""><div><strong>Maniac Duren</strong><span>${central ? "Back Office pusat" : "Operasional outlet"}</span></div></div><button type="button" class="sidebar-toggle" data-sidebar-toggle aria-controls="pos-sidebar" aria-label="Tutup sidebar">${sidebarIcon}</button></div>
@@ -926,7 +935,6 @@ function render() {
   if (state.warehouseVersion && !state.stockDemo) {
     if (!spacesFor(state).includes(workspace)) {
       workspace = defaultSpace(state);
-      if (view === "dashboard") view = workspace === "store" ? "storehome" : workspace;
     }
     const locations = workspaceLocations();
     if (!locations.some((x) => x.id === store)) store = locations[0]?.id || "";
@@ -937,9 +945,8 @@ function render() {
       state.access.backoffice
     ) {
       permitted.add("documents");
-      permitted.add("dashboard");
     }
-    if (!permitted.has(view)) view = workspace === "store" ? "storehome" : workspace;
+    if (!permitted.has(view)) view = workspaceHome(workspace);
   }
 
   if (
@@ -1072,7 +1079,8 @@ function render() {
           return;
         clearOrderDraft();
         workspace = b.dataset.workspace;
-        view = workspace === "store" ? "storehome" : workspace;
+        resetDashboard();
+        view = workspaceHome(workspace);
         render();
       }),
   );
@@ -1101,6 +1109,12 @@ function render() {
     (b) =>
       (b.onclick = async () => {
         if (busy || (hasUnsavedForm() && !(await confirmLeave()))) return;
+        if (
+          view === "backoffice" &&
+          b.dataset.view === "officeInventory" &&
+          b.closest(".dash-workspace")
+        )
+          officePage = "officeInventory";
         view = b.dataset.view;
         sidebar.navigate();
         render();
@@ -1135,9 +1149,10 @@ function render() {
     activePicker.onchange = async (ev) => {
       if (!(await changeStore(ev.target.value))) ev.target.value = store;
     };
-  if (view === "dashboard")
+  if (["dashboard", "backoffice", "storehome"].includes(view))
     bindDashboard(state, pageStore, {
       ...shiftContext,
+      workspace: workspaceAccess().workspace,
       readShifts: shiftContext.readShifts,
       render,
       refresh,
@@ -1252,7 +1267,7 @@ function render() {
     document.querySelector("[data-pt-expense]").onclick = () =>
       expenseDialog(state, pageStore, adminContext, true);
   }
-  if (view === "officeInventory") bindOfficeInventory(state, adminContext);
+  if (view === "officeInventory") bindOfficeInventory(state, adminContext, pageStore);
   if (view === "reports") bindReports(state, pageStore, adminContext);
   if (view === "documents") bindDocuments(state, pageStore, adminContext);
   bindWaste(view, state, store, {

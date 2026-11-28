@@ -8,7 +8,7 @@ import { recordTable, table } from "./supply-session-ui.mjs";
 import { openBranchDispatch } from "./branch-dispatch-ui.mjs";
 import { confirmAction } from "../shared/confirmation.mjs";
 import { depositButtons } from "./cash-deposits-ui.mjs";
-import { transactions } from "./reports.mjs";
+import { dashboardPage } from "./dashboard-ui.mjs";
 import { branchPricingPage, bindBranchPricing } from "./branch-prices-ui.mjs";
 import { locationFruitStock } from "./dashboard-data.mjs";
 import {
@@ -54,10 +54,11 @@ const blocker = (s) =>
     : s.warehouseVersion < 107
       ? '<div class="notice">Pembaruan gudang belum terpasang. Admin perlu memasang SQL 107 sebelum fitur ini digunakan.</div>'
       : "";
-function locationStockTable(s) {
+function locationStockTable(s, store) {
   const weight = (kg, pieces) =>
     `<td>${num(kg)} kg<small>${num(pieces)} butir</small></td>`;
   const rows = locationFruitStock(s)
+    .filter((row) => !store || row.location.id === store)
     .filter(
       (r) =>
         !(s.branchStockVersion >= 132) ||
@@ -260,9 +261,47 @@ function storeReceiptStats(s, store, pending) {
   );
 }
 
+function pendingWork(s, store, space) {
+  const central = space === "backoffice";
+  const tasks = [];
+  if (workflowReady(s) && (central || (s.branchStockVersion >= 132 && s.access?.stock))) {
+    const open = (s.receiptPlans || []).filter(
+      (p) =>
+        (!store || p.storeId === store) &&
+        !p.cancelled &&
+        p.receiving?.status !== "completed",
+    );
+    tasks.push(["supplierNotes", "Nota menunggu penerimaan", open.length]);
+  }
+  if (s.branchNoteVersion >= 135 && (central || s.access?.stock)) {
+    const pending = (s.branchNotes || []).filter(
+      (n) =>
+        n.status === (central ? "ready" : "packing") &&
+        (!store || n.sourceId === store || (central && n.targetId === store)),
+    );
+    tasks.push([
+      central ? "transfers" : "transferPrep",
+      central ? "Transfer menunggu persetujuan" : "Transfer perlu disiapkan",
+      pending.length,
+    ]);
+  }
+  if (central && s.access?.finance && s.pettyCashVersion >= 130) {
+    const pending = (s.pettyRequests || []).filter(
+      (r) => r.status === "pending" && (!store || r.store_id === store),
+    );
+    tasks.push(["retailFunds", "Pengajuan petty cash", pending.length]);
+  }
+  if (!tasks.length) return "";
+  return `<section class="dash-panel dash-pending"><h2>Tindak lanjut</h2><div class="dash-queue">${tasks.map(([view, label, count]) => `<button type="button" data-view="${view}"><span>${label}</span><strong>${num(count)}</strong></button>`).join("")}</div></section>`;
+}
+
 export function supplyHome(s, store, space) {
+  const dashboard = space === "warehouse" ? "" : dashboardPage(s, store, space);
   const ts = (s.transfers || []).filter(
-      (t) => space === "backoffice" || t.sourceId === store || t.targetId === store,
+      (t) =>
+        (space === "backoffice" && !store) ||
+        t.sourceId === store ||
+        t.targetId === store,
     ),
     active = ts.filter((t) => t.status === "in_transit"),
     due = ts
@@ -326,7 +365,7 @@ export function supplyHome(s, store, space) {
           "Buah di lokasi",
           num(
             s.lots
-              .filter((l) => space === "backoffice" || l.storeId === store)
+              .filter((l) => (space === "backoffice" && !store) || l.storeId === store)
               .reduce((n, l) => n + l.kg, 0),
           ) + " kg",
           "Siap pakai dan reject terpisah di stok",
@@ -342,49 +381,46 @@ export function supplyHome(s, store, space) {
             ));
   if (s.pettyCashVersion >= 130) {
     const central = space === "backoffice";
-    const branchIds = new Set(
-      s.stores
-        .filter((b) => b.locationType === "store" && (central || b.id === store))
-        .map((b) => b.id),
-    );
-    const sales =
-      central || (space === "store" && (s.access?.reports || s.access?.sell))
-        ? transactions(s).filter((t) => t.date === today() && branchIds.has(t.storeId))
-        : null;
-    const revenue = sales?.reduce((a, t) => a + t.total, 0) || 0;
-    const posStats = sales
+    const funds =
+      central && s.access?.finance
+        ? stat("Saldo PT Retail", money(s.retailBalance), "Saldo pusat · seluruh toko")
+        : "";
+    const petty =
+      (space === "store" && s.access?.sell) || (central && s.access?.finance && store);
+    const balance = petty
       ? stat(
-          "Omzet hari ini",
-          money(revenue),
-          central ? "Seluruh toko" : location(s, store)?.name || "Toko",
-        ) +
-        stat("Transaksi lunas", num(sales.length), "Hari ini") +
-        stat(
-          "Rata-rata per struk",
-          money(sales.length ? revenue / sales.length : 0),
-          "Hari ini",
+          "Saldo petty cash",
+          money(s.pettyBalances?.[store] || 0),
+          location(s, store)?.name || "Dana pengeluaran toko",
         )
       : "";
-    const funds = central
-      ? stat("Saldo PT Retail", money(s.retailBalance), "Dari setoran toko")
-      : space === "store" && s.access?.sell
-        ? stat(
-            "Saldo petty cash",
-            money(s.pettyBalances?.[store] || 0),
-            "Dana pengeluaran toko",
-          )
-        : "";
     const deposits =
-      !central && sales && s.cashDepositSummary?.find((x) => x.storeId === store);
+      ((space === "store" && s.access?.sell) || (central && s.access?.finance)) &&
+      s.cashDepositSummary?.filter((x) => !store || x.storeId === store);
+    const cash = deposits?.length
+      ? stat(
+          "Tunai belum disetor",
+          money(deposits.reduce((total, row) => total + Number(row.pending || 0), 0)),
+          store ? location(s, store)?.name : "Seluruh toko",
+        )
+      : "";
     const extra =
       central && s.access?.finance
         ? action(
             "retailFunds",
             "Keuangan PT Retail",
-            `${(s.pettyRequests || []).filter((r) => r.status === "pending").length} pengajuan petty cash menunggu.`,
+            "Kelola saldo pusat dan pengajuan cabang.",
           )
         : "";
-    return `<section class="supply-workspace">${blocker(s)}<div class="header-row"><h2>${central ? "Dashboard Back Office" : space === "warehouse" ? "Dashboard gudang" : e(location(s, store)?.name || "Dashboard toko")}</h2><button data-supply-refresh>Perbarui</button></div><div class="supply-stats">${posStats}${funds}${deposits ? stat("Tunai belum disetor", money(deposits.pending), "Akumulasi cabang") : ""}${!sales ? stats : ""}</div><div class="supply-task-grid">${supplyTasks(s, space)}${extra}</div>${space === "store" && s.access?.sell ? depositButtons(s, store) : ""}${central ? locationStockTable(s) : ""}${!operational ? `<section class="panel"><h3>Kiriman yang belum diterima</h3>${transferTable(active.slice(0, 8), central && !(s.branchStockVersion >= 132), central)}</section>` : ""}</section>`;
+    const heading = dashboard
+      ? "<h2>Operasional saat ini</h2>"
+      : `<div class="header-row"><h2>${central ? "Dashboard Back Office" : space === "warehouse" ? "Dashboard gudang" : e(location(s, store)?.name || "Dashboard toko")}</h2><button data-supply-refresh>Perbarui</button></div>`;
+    const metrics =
+      funds +
+      balance +
+      cash +
+      (dashboard && (central || s.access?.sell || s.access?.reports) ? "" : stats);
+    return `${dashboard}<section class="supply-workspace dash-operations">${blocker(s)}${heading}${dashboard ? pendingWork(s, store, space) : ""}${metrics ? `<div class="supply-stats">${metrics}</div>` : ""}<div class="supply-task-grid">${supplyTasks(s, space)}${extra}</div>${space === "store" && s.access?.sell ? depositButtons(s, store) : ""}${central ? locationStockTable(s, store) : ""}${!operational ? `<section class="panel"><h3>Kiriman yang belum diterima</h3>${transferTable(active.slice(0, 8), central && !(s.branchStockVersion >= 132), central)}</section>` : ""}</section>`;
   }
   const desc =
     space === "backoffice"
@@ -392,8 +428,8 @@ export function supplyHome(s, store, space) {
       : space === "warehouse"
         ? "Terima barang berdasarkan nota supplier. Siapkan transfer toko atau wholesale, dan catat reject gudang."
         : "Setelah kiriman diterima, jual barang yang layak. Catat reject dari batch toko saat ditemukan.";
-  return `<section class="supply-workspace">${blocker(s)}<div class="supply-hero"><div><span class="supply-eyebrow">MANIAC DUREN / ${e(space === "backoffice" ? "ADMINISTRASI" : space === "warehouse" ? "DISTRIBUSI" : "PELAYANAN")}</span><h2>${title}</h2><p>${desc}</p></div><button type="button" data-supply-refresh>Perbarui</button></div><div class="supply-task-grid">${supplyTasks(s, space)}</div><div class="supply-stats">${stats}</div>${
-    space === "backoffice" ? locationStockTable(s) : ""
+  return `${dashboard}<section class="supply-workspace dash-operations">${blocker(s)}${dashboard ? "<h2>Operasional saat ini</h2>" : `<div class="supply-hero"><div><span class="supply-eyebrow">MANIAC DUREN / ${e(space === "backoffice" ? "ADMINISTRASI" : space === "warehouse" ? "DISTRIBUSI" : "PELAYANAN")}</span><h2>${title}</h2><p>${desc}</p></div><button type="button" data-supply-refresh>Perbarui</button></div>`}<div class="supply-task-grid">${supplyTasks(s, space)}</div><div class="supply-stats">${stats}</div>${
+    space === "backoffice" ? locationStockTable(s, store) : ""
   }${operational ? "" : `<section class="panel"><h3>Kiriman yang belum diterima</h3>${transferTable(active.slice(0, 8), !workflowReady(s) || space === "backoffice")}</section>`}</section>`;
 }
 function transferTable(rows, finance = true, showOrigin = false) {
