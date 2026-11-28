@@ -228,7 +228,12 @@ try {
   await receiptActions.getByRole("button", { name: "Lanjutkan", exact: true }).click();
   await receiptActions.getByRole("button", { name: "Selesai", exact: true }).click();
   const decision = page.getByRole("alertdialog", { name: "Konfirmasi tindakan" });
-  await decision.getByRole("img", { name: "Maniac Duren" }).waitFor();
+  const logo = decision.getByRole("img", { name: "Maniac Duren" });
+  await logo.waitFor();
+  assert.equal(
+    await logo.evaluate((img) => getComputedStyle(img).backgroundColor),
+    "rgba(0, 0, 0, 0)",
+  );
   const bounds = await decision.boundingBox();
   const screen = await page.evaluate(() => ({
     width: document.documentElement.clientWidth,

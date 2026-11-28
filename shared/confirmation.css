@@ -26,12 +26,9 @@ dialog.brand-confirmation {
 }
 .brand-confirmation img {
   display: block;
-  box-sizing: content-box;
   width: 7.5rem;
+  max-width: 100%;
   height: auto;
-  padding: 0.625rem 0.875rem;
-  border-radius: 12px;
-  background: #18321e;
   margin: 0 auto;
 }
 .brand-confirmation p {
