@@ -1,9 +1,12 @@
+import { dashboardReport } from "../pos/dashboard-report.mjs";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import {
   salesReport,
   stockReport,
+  deliveryReport,
+  marginReport,
   expenseReport,
   periodRange,
   reportSheets,
@@ -216,4 +219,114 @@ test("demo discards real documents, expense entries and admin history", () => {
   assert.deepEqual(s.documents, []);
   assert.deepEqual(s.expenses, []);
   assert.deepEqual(s.adminEvents, []);
+});
+
+test("a cancelled order cannot reappear through a legacy sale with the same identifier", () => {
+  const state = {
+    ...basic,
+    orders: [{ id: "voided", status: "cancelled", payment_status: "refunded" }],
+    sales: [{ id: "voided", date: f.from, storeId: "a", lines: [], total: 30000 }],
+  };
+  assert.equal(salesReport(state, f).total, 0);
+});
+
+test("wholesale dispatch is sold stock in both report and export", () => {
+  const state = {
+    ...basic,
+    journal: [
+      {
+        event_id: "dispatch",
+        lot_id: "lot",
+        product_id: "p",
+        store_id: "a",
+        date: f.from,
+        qty: -2,
+        unit: "kg",
+        action: "wholesale_sale",
+      },
+    ],
+  };
+  const report = stockReport(state, f);
+  assert.equal(report.rows[0].sold, 2);
+  assert.equal(report.rows[0].other, 0);
+  assert.equal(
+    report.details.find((r) => r.event_id === "dispatch").label,
+    "Penjualan grosir",
+  );
+  const exportRows = reportSheets(state, f, "stock");
+  assert.equal(exportRows.find((sheet) => sheet.name === "Stok").rows[0][5], 2);
+  assert(!exportRows.some((sheet) => sheet.name === "Pengeluaran"));
+});
+
+test("delivery period uses dispatch in Jakarta, includes either end and counts only posted shipments", () => {
+  const first = {
+    id: "1",
+    sourceId: "a",
+    targetId: "b",
+    deliveryNo: "SJ-01",
+    status: "received",
+    createdAt: "2026-09-30T17:01:00Z",
+    receivedAt: "2026-10-02T01:00:00Z",
+  };
+  const state = {
+    ...basic,
+    warehouseVersion: 107,
+    access: { trace: true },
+    branchNotes: [
+      { number: "NT-01", transferId: "1" },
+      { number: "NT-02", status: "approved" },
+    ],
+    transfers: [
+      first,
+      { ...first, id: "2", deliveryNo: "SJ-02", status: "cancelled", receivedAt: null },
+      { ...first, id: "3", deliveryNo: "SJ-03", createdAt: "2026-10-31T17:00:00Z" },
+    ],
+  };
+  for (const store of ["a", "b", ""]) {
+    const r = deliveryReport(state, { ...f, store });
+    assert.deepEqual(r.counts, { in_transit: 0, received: 1, cancelled: 1 });
+    assert.equal(r.sheet.rows.length, 2);
+  }
+  assert.deepEqual(
+    deliveryReport(state, { ...f, query: "nt-01", status: "received" }).sheet.rows,
+    [
+      [
+        "2026-10-01",
+        "SJ-01",
+        "NT-01",
+        "Depok",
+        "Bekasi",
+        "Diterima lengkap",
+        "2026-10-02",
+      ],
+    ],
+  );
+  assert.equal(deliveryReport(state, { ...f, store: "c" }).sheet.rows.length, 0);
+  assert(
+    !reportSheets({ ...state, access: { finance: true } }, f).some(
+      (x) => x.name === "Pengiriman",
+    ),
+  );
+});
+
+test("dashboard, margin and export agree on incomplete and subsequently reconciled costs", () => {
+  const state = {
+    ...structuredClone(basic),
+    orders: [],
+    money: [{ event_id: "w", store_id: "a", category: "loss", cost: 7 }],
+    sales: [{ id: "s", storeId: "a", date: f.from, total: 50, lines: [] }],
+  };
+  function check(expected) {
+    assert.equal(marginReport(state, f).result, expected);
+    assert.equal(dashboardReport(state, f).financial.result, expected);
+    assert.equal(
+      reportSheets(state, f, "margin")[0].rows[0][4],
+      expected ?? "Belum lengkap",
+    );
+  }
+  check(null);
+  state.sales[0].lines = [{ lotId: "lot", productId: "p", unit: "KG", kg: 1, total: 50 }];
+  check(null);
+  state.events.push({ id: "w", business_date: f.from });
+  check(33);
 });

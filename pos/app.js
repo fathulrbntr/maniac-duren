@@ -885,6 +885,21 @@ function bindPageNavigation(root) {
           b.closest(".dash-workspace")
         )
           officePage = "officeInventory";
+        if (b.dataset.view === "reports") {
+          const dashboard = b.closest(".dash-workspace")?.dataset;
+          if (b.dataset.openReport || (workspace === "backoffice" && view === "home"))
+            selectReportTab(
+              b.dataset.openReport || "summary",
+              dashboard
+                ? {
+                    store: dashboard.reportStore,
+                    from: dashboard.reportFrom,
+                    to: dashboard.reportTo,
+                    period: dashboard.reportPeriod,
+                  }
+                : { store: workspace === "backoffice" ? officeBranch : store },
+            );
+        }
         view = b.dataset.view;
         sidebar.navigate();
         render();
@@ -1216,6 +1231,7 @@ function render() {
   bindProduction(view, state, store, { modal, mutate, render, toast, refresh });
   const adminContext = {
     workspace,
+    bindNavigation: bindPageNavigation,
     modal,
     mutate,
     render,

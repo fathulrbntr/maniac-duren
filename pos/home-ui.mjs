@@ -1,6 +1,6 @@
 import { escape as e, money, num, today } from "./core.mjs";
 import { pageIcon, visibleSections } from "./navigation.mjs";
-import { needsKitchen } from "./order-stock.mjs";
+import { serviceOrders } from "./order-stock.mjs";
 import { transactions } from "./reports.mjs";
 import { pendingWorkItems } from "./warehouse-workflow.mjs";
 
@@ -103,23 +103,12 @@ export function homePage(s, store, access, titles, locations, hidden) {
     locations.find((row) => row.id === store)?.name ||
     (central ? "Semua cabang" : "Lokasi belum tersedia");
   const queues = pendingWorkItems(s, store, space).filter(([view]) => has(view));
-  if (has("receiving"))
-    queues.push([
-      "receiving",
-      "Kiriman dalam perjalanan",
-      (s.transfers || []).filter(
-        (row) => row.targetId === store && row.status === "in_transit",
-      ).length,
-    ]);
-  const orders = (s.orders || []).filter(
-    (o) => o.store_id === store && o.payment_status === "paid",
-  );
+  const orders = serviceOrders(s, store);
   if (has("kitchen"))
     queues.push([
       "kitchen",
       "Pesanan dapur",
-      orders.filter((o) => ["queued", "preparing"].includes(o.status) && needsKitchen(o))
-        .length,
+      orders.filter((o) => ["queued", "preparing"].includes(o.status)).length,
     ]);
   if (has("service"))
     queues.push([
@@ -145,9 +134,9 @@ export function homePage(s, store, access, titles, locations, hidden) {
     );
     heading = "Omzet hari ini";
     value = money(paid.reduce((sum, row) => sum + row.total, 0));
-    detail = num(paid.length) + " transaksi lunas";
+    detail = num(paid.length) + " transaksi penjualan";
   } else if (queues.length) {
-    const [, task, count] = queues[0];
+    const [, task, count] = queues.find(([, , amount]) => amount > 0) || queues[0];
     heading = task;
     value = num(count);
     detail = place;

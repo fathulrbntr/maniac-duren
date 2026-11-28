@@ -42,6 +42,22 @@ export function pendingWorkItems(s, store, space) {
       pending.length,
     ]);
   }
+  if (space === "store" && s.branchNoteVersion >= 135 && s.access?.stock) {
+    tasks.push([
+      "transferPrep",
+      "Siap dikirim dari toko",
+      (s.branchNotes || []).filter((n) => n.sourceId === store && n.status === "approved")
+        .length,
+    ]);
+  }
+  if (space === "store" && s.access?.receive) {
+    tasks.push([
+      "receiving",
+      "Kiriman dalam perjalanan",
+      (s.transfers || []).filter((t) => t.targetId === store && t.status === "in_transit")
+        .length,
+    ]);
+  }
   if (central && s.access?.finance && s.pettyCashVersion >= 130) {
     const pending = (s.pettyRequests || []).filter(
       (r) => r.status === "pending" && places.has(r.store_id),

@@ -1,9 +1,11 @@
+import { serviceOrders } from "../pos/order-stock.mjs";
 import { answerConfirmations } from "./helpers/confirmation-ui.mjs";
 import { pricingPage } from "../pos/warehouse-ui.mjs";
 import assert from "node:assert/strict";
 import { Node, makeModal } from "./variant-dom.mjs";
 import {
   receiptVariance,
+  pendingWorkItems,
   receiptTotals,
   saveWorkflow,
   loadWorkflowPending,
@@ -497,4 +499,50 @@ clearWorkflowPending(s, "plan", storage);
 assert(renders > 0);
 console.log(
   "PASS workflow UI/model: expected vs actual variance, unknown/excess weights, role/workspace privacy, durable retry identity, user isolation, pause/resume/finish controls, office reopening, escaped invoices and delta merging.",
+);
+
+const handoff = {
+  ...s,
+  access: { stock: true, receive: true },
+  branchNoteVersion: 135,
+  branchNotes: ["packing", "ready", "approved", "dispatched", "cancelled"].map(
+    (status) => ({ sourceId: "a", targetId: "b", status }),
+  ),
+  transfers: [
+    { targetId: "b", status: "in_transit" },
+    { targetId: "b", status: "received" },
+  ],
+};
+assert.deepEqual(
+  pendingWorkItems(handoff, "a", "store").map(([, , count]) => count),
+  [1, 1, 0],
+);
+assert.deepEqual(
+  pendingWorkItems(handoff, "b", "store").map(([, , count]) => count),
+  [0, 0, 1],
+);
+assert.deepEqual(
+  pendingWorkItems(handoff, "b", "backoffice").find(([view]) => view === "transfers"),
+  ["transfers", "Transfer menunggu persetujuan", 1],
+);
+const order = {
+  store_id: "a",
+  status: "queued",
+  payment_status: "paid",
+  lines: [{ itemType: "direct" }],
+};
+assert.deepEqual(
+  serviceOrders(
+    {
+      orders: [
+        order,
+        { ...order, id: "meal", lines: [{ itemType: "recipe" }] },
+        { ...order, id: "ready", status: "ready" },
+        { ...order, status: "ready", payment_status: "pending" },
+        { ...order, store_id: "b", status: "ready" },
+      ],
+    },
+    "a",
+  ).map((o) => o.id),
+  ["meal", "ready"],
 );

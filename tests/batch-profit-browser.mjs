@@ -210,7 +210,11 @@ try {
     total: 100000,
     lines: [{ lotId: "original", productId: "fruit", kg: 1, pieces: 1, total: 100000 }],
   });
-  await page.locator("#batch-refresh").click();
+  assert.equal(
+    await page.getByRole("button", { name: "Perbarui", exact: true }).count(),
+    1,
+  );
+  await page.locator("#report-refresh").click();
   await page.waitForFunction(() =>
     document
       .querySelector("[data-batch-profit=total-realized]")

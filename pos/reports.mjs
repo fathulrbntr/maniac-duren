@@ -1,10 +1,11 @@
-import { batchLocationRows } from "./warehouse-flow.mjs";
+import { invoiceDate } from "./warehouse-workflow.mjs";
+import { batchLocationRows, transferStatus } from "./warehouse-flow.mjs";
 import { fruitStatus } from "./scale-label.mjs";
 import { batchProfit } from "./batch-profit.mjs";
 import { batchMetrics, batchStockCosts } from "./batch-metrics.mjs";
 // One read-only reporting model shared by screen, Excel and PDF.
 import { batchReports } from "./batch-report.mjs";
-import { sources, orderMargins } from "./finance.mjs";
+import { sources, financialSummary } from "./finance.mjs";
 export const label = (s, key, id) =>
   s[key]?.find((x) => x.id === id)?.name || "Belum terpetakan";
 export const isPaid = (o) =>
@@ -45,7 +46,7 @@ export function transactions(s) {
       total: n(l.qty) * n(l.price),
     })),
   }));
-  const seen = new Set(rows.map((x) => x.id));
+  const seen = new Set((s.orders || []).map((o) => o.id));
   for (const sale of s.sales || [])
     if (!sale.voided && !seen.has(sale.id)) {
       seen.add(sale.id);
@@ -128,7 +129,6 @@ export function salesReport(s, f) {
       r.qty += n(l.qty);
       r.kg += n(l.kg);
       r.pieces += n(l.pieces);
-      if (l.quality === "reject") r.rejectCurrent += n(l.kg);
       r.revenue += l.revenue;
       products.set(key, r);
       const lot = s.lots?.find((x) => x.id === l.lotId);
@@ -175,6 +175,72 @@ export function salesReport(s, f) {
     suppliers: [...suppliers.values()].sort((a, b) => b.revenue - a.revenue),
   };
 }
+export function deliveryReport(s, f) {
+  const notes = new Map(
+    (s.branchNotes || [])
+      .filter((note) => note.transferId)
+      .map((note) => [note.transferId, note.number]),
+  );
+  const rows = [];
+  const counts = { in_transit: 0, received: 0, cancelled: 0 };
+  const query = (f.query || "").trim().toLowerCase();
+  for (const transfer of s.transfers || []) {
+    const sent = invoiceDate(transfer.createdAt);
+    if (
+      !within(sent, f) ||
+      (f.store && transfer.sourceId !== f.store && transfer.targetId !== f.store)
+    )
+      continue;
+    const status = transfer.status;
+    if (f.status && status !== f.status) continue;
+    const row = {
+      id: transfer.id,
+      sent,
+      received: invoiceDate(transfer.receivedAt),
+      note: notes.get(transfer.id) || "",
+      document: transfer.deliveryNo,
+      origin: transfer.origin?.name || label(s, "stores", transfer.sourceId),
+      destination: transfer.destination?.name || label(s, "stores", transfer.targetId),
+      status: transferStatus[status] || "Perlu diperiksa",
+    };
+    if (
+      query &&
+      ![row.document, row.note, row.origin, row.destination].some((v) =>
+        v?.toLowerCase().includes(query),
+      )
+    )
+      continue;
+    if (Object.hasOwn(counts, status)) counts[status]++;
+    rows.push(row);
+  }
+  rows.sort(
+    (a, b) =>
+      b.sent.localeCompare(a.sent) ||
+      String(b.document).localeCompare(String(a.document)),
+  );
+  const sheet = {
+    name: "Pengiriman",
+    headers: [
+      "Dikirim",
+      "Surat jalan",
+      "Nota transfer",
+      "Asal",
+      "Tujuan",
+      "Status saat ini",
+      "Diterima",
+    ],
+    rows: rows.map((r) => [
+      r.sent,
+      r.document,
+      r.note,
+      r.origin,
+      r.destination,
+      r.status,
+      r.received,
+    ]),
+  };
+  return { sheet, counts };
+}
 export function expenseReport(s, f) {
   const rows = [];
   for (const l of [...(s.lots || []), ...(s.unitLots || [])]) {
@@ -216,7 +282,8 @@ export function expenseReport(s, f) {
   };
 }
 const actionLabels = {
-  transfer_dispatch: "Dikirim gudang",
+  transfer_dispatch: "Dikirim dari lokasi asal",
+  wholesale_sale: "Penjualan grosir",
   transfer_receive: "Diterima toko",
   transfer_cancel: "Pengiriman dibatalkan",
   receipt: "Barang datang",
@@ -344,6 +411,8 @@ export function stockReport(s, f) {
     date: j.date || events.get(j.event_id)?.business_date || "",
     action: j.action || events.get(j.event_id)?.action || "unknown",
   }));
+  const recordedLots = new Set(journal.map((j) => j.lot_id));
+  const positiveLots = new Set(journal.filter((j) => j.qty > 0).map((j) => j.lot_id));
   // Older lots might precede the stock journal. Backfill only missing receipt entries.
   for (const l of lots) {
     if (!scope(l.storeId, f)) continue;
@@ -352,7 +421,7 @@ export function stockReport(s, f) {
     r.current += n(l.kg ?? l.qty);
     r.pieces += n(l.pieces);
     if (l.quality === "reject") r.rejectCurrent += n(l.kg);
-    if (!journal.some((j) => j.lot_id === l.id && j.qty > 0)) {
+    if (!positiveLots.has(l.id)) {
       const movement = (s.movements || []).find((m) => m.id === l.id),
         date = movement?.date || l.date;
       journal.push({
@@ -389,6 +458,7 @@ export function stockReport(s, f) {
       else if (
         [
           "sale",
+          "wholesale_sale",
           "order_create",
           "order_direct",
           "order_start",
@@ -424,102 +494,105 @@ export function stockReport(s, f) {
     details: details.sort((a, b) => b.date.localeCompare(a.date)),
     rejectUnclassified,
     incomplete:
-      journal.some((j) => !j.date) ||
-      lots.some((l) => !s.journal?.some((j) => j.lot_id === l.id)),
+      journal.some((j) => scope(j.store_id, f) && !j.date) ||
+      lots.some((l) => scope(l.storeId, f) && !recordedLots.has(l.id)),
   };
 }
 
 export function marginReport(s, f) {
-  const tx = transactions(s).filter((t) => scope(t.storeId, f) && within(t.date, f));
-  const rows = [];
-  for (const t of tx) {
-    if (t.kind === "order")
-      for (const m of orderMargins(s, [t.order]))
-        rows.push({
-          date: t.date,
-          storeId: t.storeId,
-          name: m.name,
-          revenue: m.revenue,
-          cost: m.cost,
-          recovered: m.recovered,
-        });
-    else
-      for (const l of t.lines) {
-        const lot = s.lots.find((x) => x.id === l.lotId);
-        rows.push({
-          date: t.date,
-          storeId: t.storeId,
-          name: l.name,
-          revenue: l.revenue,
-          cost: lot?.unitCost == null ? null : n(l.kg) * n(lot.unitCost),
-          recovered: false,
-        });
-      }
-  }
-  const events = new Map((s.events || []).map((x) => [x.id, x]));
-  const lossRows = (s.money || []).filter(
-    (x) =>
-      x.category === "loss" &&
-      scope(x.store_id, f) &&
-      within(events.get(x.event_id)?.business_date, f),
+  const places = new Set((s.stores || []).map((row) => row.id));
+  const tx = transactions(s).filter(
+    (t) => places.has(t.storeId) && scope(t.storeId, f) && within(t.date, f),
   );
-  const unknown =
-    rows.filter((x) => x.cost == null).length +
-    lossRows.filter((x) => x.cost == null).length;
-  const revenue = tx.reduce((a, t) => a + t.total, 0),
-    cogs = rows.reduce((a, x) => a + n(x.cost), 0),
-    loss = lossRows.reduce((a, x) => a + n(x.cost), 0),
-    operating = expenseReport(s, f).operating;
+  const { lines, totals } = financialSummary(s, f, tx);
+  const rows = lines.map(({ transaction: t, line, cost }) => {
+    const used = line?.lineId
+      ? (t.order?.consumption || []).filter((c) => c.lineId === line.lineId)
+      : [];
+    return {
+      date: t.date,
+      storeId: t.storeId,
+      name: line?.name || "Transaksi tanpa rincian produk",
+      revenue: line?.revenue ?? t.total,
+      cost,
+      recovered: used.some((c) =>
+        sources(s, c.lotId, c.qty).some((origin) => origin.recovered),
+      ),
+    };
+  });
   return {
     rows,
-    unknown,
-    revenue,
-    cogs,
-    loss,
-    operating,
-    result: unknown ? null : revenue - cogs - loss - operating,
+    unknown: totals.unknownCogs + totals.unknownLoss + totals.unknownOperating,
+    revenue: tx.reduce((sum, t) => sum + t.total, 0),
+    cogs: totals.knownCogs,
+    loss: totals.knownLoss,
+    operating: totals.operating,
+    result: totals.result,
   };
 }
 
-export function reportSheets(s, f) {
-  const a = salesReport(s, f),
-    x = expenseReport(s, f),
-    st = stockReport(s, f),
-    sheets = [];
+export function reportSheets(s, f, selected = "summary") {
+  const all = selected === "summary";
+  const sheets = [];
+  let st;
   const add = (name, headers, rows) => sheets.push({ name, headers, rows });
-  if (!s.access || s.access.reports) {
-    add(
-      "Ringkasan",
-      ["Tanggal", "Transaksi", "Penjualan bersih"],
-      a.days.map((r) => [r.date, r.count, r.total]),
-    );
-    add(
-      "Produk",
-      ["Produk", "Satuan", "Jumlah", "Kg aktual", "Butir aktual", "Penjualan bersih"],
-      a.products.map((r) => [r.name, r.unit, r.qty, r.kg, r.pieces, r.revenue]),
-    );
-    add(
-      "Toko",
-      ["Toko", "Transaksi", "Penjualan bersih"],
-      a.stores.map((r) => [r.name, r.count, r.total]),
-    );
-    add(
-      "Supplier",
-      ["Supplier", "Metode", "Penjualan bersih"],
-      a.suppliers.map((r) => [r.name, r.method, r.revenue]),
-    );
-    add(
-      "Pembayaran",
-      ["Metode pembayaran", "Transaksi", "Penjualan bersih"],
-      a.payments.map((r) => [r.name, r.count, r.total]),
-    );
-    add(
-      "Transaksi",
-      ["Tanggal", "ID transaksi", "Toko", "Pembayaran", "Penjualan bersih"],
-      a.tx.map((t) => [t.date, t.id, label(s, "stores", t.storeId), t.payment, t.total]),
-    );
+  if (
+    (!s.access || s.access.reports) &&
+    (all || ["products", "stores", "suppliers", "payments"].includes(selected))
+  ) {
+    const a = salesReport(s, f);
+    if (all)
+      add(
+        "Ringkasan",
+        ["Tanggal", "Transaksi", "Penjualan bersih"],
+        a.days.map((r) => [r.date, r.count, r.total]),
+      );
+    if (all || selected === "products")
+      add(
+        "Produk",
+        ["Produk", "Satuan", "Jumlah", "Kg aktual", "Butir aktual", "Penjualan bersih"],
+        a.products.map((r) => [r.name, r.unit, r.qty, r.kg, r.pieces, r.revenue]),
+      );
+    if (all || selected === "stores")
+      add(
+        "Toko",
+        ["Toko", "Transaksi", "Penjualan bersih"],
+        a.stores.map((r) => [r.name, r.count, r.total]),
+      );
+    if (all || selected === "suppliers")
+      add(
+        "Supplier",
+        ["Supplier", "Metode", "Penjualan bersih"],
+        a.suppliers.map((r) => [r.name, r.method, r.revenue]),
+      );
+    if (all || selected === "payments")
+      add(
+        "Pembayaran",
+        ["Metode pembayaran", "Transaksi", "Penjualan bersih"],
+        a.payments.map((r) => [r.name, r.count, r.total]),
+      );
+    if (all)
+      add(
+        "Transaksi",
+        ["Tanggal", "ID transaksi", "Toko", "Pembayaran", "Penjualan bersih"],
+        a.tx.map((t) => [
+          t.date,
+          t.id,
+          label(s, "stores", t.storeId),
+          t.payment,
+          t.total,
+        ]),
+      );
   }
-  if (!s.access || s.access.trace) {
+  if (
+    all &&
+    s.warehouseVersion >= 107 &&
+    !s.stockDemo &&
+    (s.access?.trace || s.access?.reports)
+  )
+    sheets.push(deliveryReport(s, f).sheet);
+  if ((!s.access || s.access.trace) && (all || selected === "stock")) {
+    st = stockReport(s, f);
     add(
       "Stok",
       [
@@ -583,7 +656,7 @@ export function reportSheets(s, f) {
       ]),
     );
   }
-  if (!s.access || s.access.finance) {
+  if ((!s.access || s.access.finance) && (all || selected === "margin")) {
     const m = marginReport(s, f);
     add(
       "HPP dan hasil",
@@ -595,7 +668,16 @@ export function reportSheets(s, f) {
         "Hasil setelah biaya",
         "Biaya belum lengkap",
       ],
-      [[m.revenue, m.cogs, m.loss, m.operating, m.result ?? "Belum lengkap", m.unknown]],
+      [
+        [
+          m.revenue,
+          m.cogs,
+          m.loss,
+          m.operating ?? "Belum lengkap",
+          m.result ?? "Belum lengkap",
+          m.unknown,
+        ],
+      ],
     );
     add(
       "Margin produk",
@@ -619,11 +701,11 @@ export function reportSheets(s, f) {
       ]),
     );
   }
-  if (!s.access || s.access.finance)
+  if ((!s.access || s.access.finance) && (all || selected === "expenses"))
     add(
       "Pengeluaran",
       ["Tanggal", "Toko", "Kategori", "Keterangan", "Supplier", "Nominal", "Referensi"],
-      x.rows.map((r) => [
+      expenseReport(s, f).rows.map((r) => [
         r.date,
         label(s, "stores", r.storeId),
         r.category,
@@ -659,12 +741,16 @@ export function reportSheets(s, f) {
         "Reject **",
         "Buah yang ditandai reject, dikurangi pembatalan pada periode ini. Perubahan kualitas dihitung sekali; pemakaian untuk olahan tidak dihitung ulang. Bisa berasal dari stok awal. Nilai negatif berarti pembatalan melebihi penandaan pada periode ini.",
       ],
-      [
-        "Kelengkapan reject",
-        st.rejectUnclassified
-          ? st.rejectUnclassified + " baris belum terpetakan; periksa jejak stok."
-          : "Pergerakan reject terpetakan.",
-      ],
+      ...(st
+        ? [
+            [
+              "Kelengkapan reject",
+              st.rejectUnclassified
+                ? st.rejectUnclassified + " baris belum terpetakan; periksa jejak stok."
+                : "Pergerakan reject terpetakan.",
+            ],
+          ]
+        : []),
       [
         "Stok fisik",
         "Terjual/bahan pesanan mengikuti tanggal pemotongan stok, dapat berbeda dari tanggal pembayaran.",

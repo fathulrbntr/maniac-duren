@@ -2,6 +2,16 @@ import { checkTrackedLines } from "./scale-label.mjs";
 export const needsKitchen = (order) =>
   order.lines.some((line) => line.itemType === "recipe");
 
+export function serviceOrders(state, store) {
+  return (state.orders || []).filter(
+    (order) =>
+      order.store_id === store &&
+      order.payment_status === "paid" &&
+      ["queued", "preparing", "ready"].includes(order.status) &&
+      (order.status === "ready" || needsKitchen(order)),
+  );
+}
+
 // A recipe uses prepared ingredients as stock; it never manufactures missing prep automatically.
 export function requirements(state, lines) {
   const needs = new Map();

@@ -507,6 +507,10 @@ try {
     transfers: [
       {
         id: "transfer",
+        sourceId: origin.id,
+        targetId: destination.id,
+        createdAt: "2026-11-27T23:00:00Z",
+        receivedAt: "2026-11-28T01:00:00Z",
         deliveryNo: "SJ-CBG-202611-000005",
         invoiceNo: null,
         origin,
@@ -531,6 +535,54 @@ try {
   await page
     .locator('#pos-navigation [data-view="retailFunds"]')
     .waitFor({ state: "attached" });
+  step.phase = "operational report handoffs";
+  await nav("backoffice");
+  await page.locator('[data-dash-tab="transactions"]').click();
+  await page.locator("#dash-store").selectOption(origin.id);
+  await page.locator('[data-open-report="products"]').click();
+  assert.equal(await page.locator("#report-picker").inputValue(), "products");
+  assert.equal(await page.locator("#report-store").inputValue(), origin.id);
+  assert.equal(await page.locator("#report-period").inputValue(), "day");
+  await page.setViewportSize({ width: 360, height: 800 });
+  await page.locator("#report-picker").selectOption("deliveries");
+  assert(!(await page.locator("#report-controls").isVisible()));
+  await page.locator("#report-filter-toggle").click();
+  await page.locator("#report-from").fill("2026-11-28");
+  await page.locator("#report-to").fill("2026-11-28");
+  await page.locator("#report-delivery-query").fill("000005");
+  await page.locator("#report-delivery-status").selectOption("received");
+  assert.match(
+    await page.locator("#report-result tbody").innerText(),
+    /SJ-CBG-202611-000005/,
+  );
+  assert(
+    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
+  );
+  await page.locator("#report-filter-toggle").click();
+  assert.match(await page.locator("#report-filter-caption").innerText(), /000005/);
+  await page.screenshot({
+    path: "test-results/reports-admin/deliveries-mobile.png",
+    fullPage: true,
+  });
+  const reportDownload = page.waitForEvent("download");
+  await page.locator("#report-excel").click();
+  assert(
+    fs
+      .readFileSync(await (await reportDownload).path())
+      .includes(Buffer.from("SJ-CBG-202611-000005")),
+  );
+  await page.locator("#report-filter-toggle").click();
+  await page.locator("#report-delivery-query").fill("SJ tidak ada");
+  assert.doesNotMatch(await page.locator("#report-result tbody").innerText(), /SJ-CBG/);
+  await nav("backoffice");
+  await page.locator('[data-open-report="batches"]').click();
+  assert.equal(await page.locator("#report-picker").inputValue(), "batches");
+  await page.locator("#batch-from").fill("2026-11-29");
+  await page.locator("#batch-to").fill("2026-11-28");
+  assert(await page.locator("#report-pdf").isDisabled());
+  await page.locator("#report-picker").selectOption("expenses");
+  await page.locator('#report-result [data-view="retailFunds"]').click();
+  await page.locator('.shell[data-page="retailFunds"]').waitFor();
   step.phase = "bottom dock preferences";
   await page.setViewportSize({ width: 320, height: 844 });
   const dock = page.locator(".system-dock");

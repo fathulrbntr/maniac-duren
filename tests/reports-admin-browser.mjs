@@ -122,6 +122,21 @@ try {
     await page.locator(`[data-report-tab=${t}]`).click();
     assert(await page.locator("#report-result").innerText());
   }
+  await page.locator("[data-report-tab=summary]").click();
+  const salesDay = page.locator("[data-sales-day]").first();
+  const date = await salesDay.getAttribute("data-sales-day");
+  const expected = await page.evaluate(
+    async (day) =>
+      (await import("/pos/reports.mjs"))
+        .transactions(s)
+        .filter((t) => t.date === day)
+        .map((t) => t.invoiceNo || t.id),
+    date,
+  );
+  await salesDay.click();
+  for (const reference of expected)
+    assert((await page.locator("dialog[open] tbody").innerText()).includes(reference));
+  await page.locator("dialog[open] [type=submit]").click();
   await page.locator("[data-report-tab=stock]").click();
   await page.screenshot({ path: output + "/reports-desktop.png", fullPage: true });
   const [dl] = await Promise.all([
@@ -216,7 +231,7 @@ try {
     view = "reports";
     draw();
   });
-  await page.locator("[data-report-tab=summary]").click();
+  await page.locator("#report-picker").selectOption("summary");
   await page.screenshot({ path: output + "/reports-mobile.png", fullPage: true });
   assert(
     await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),

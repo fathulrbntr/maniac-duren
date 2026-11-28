@@ -1,12 +1,7 @@
 // One read-only model for dashboard cards and the A4 sales report.
 import { transactions } from "./reports.mjs";
 
-const finite = (v) =>
-  v !== null && v !== undefined && v !== "" && Number.isFinite(Number(v));
-const amount = (v) => (finite(v) ? Number(v) : null);
-const cost = (v) => (finite(v) && Number(v) >= 0 ? Number(v) : null);
-const sum = (rows) => rows.reduce((a, v) => a + (v ?? 0), 0);
-const complete = (values) => (values.every((v) => v !== null) ? sum(values) : null);
+import { finite, amount, cost, sum, complete, financialSummary } from "./finance.mjs";
 const inRange = (d, f) => !!d && d >= f.from && d <= f.to;
 const number = (v) => Number(v) || 0;
 export const financeAccess = (s) => !s.access || !!s.access.finance;
@@ -35,25 +30,6 @@ function addGroup(map, key, name, revenue, qty = 0, unit = "") {
   if (unit) row.units.set(unit, (row.units.get(unit) || 0) + qty);
   map.set(key, row);
   return row;
-}
-function lineCost(s, t, line) {
-  if (t.kind === "sale") {
-    const lot = s.lots.find((l) => l.id === line.lotId),
-      unitCost = cost(lot?.unitCost),
-      kg = cost(line.kg);
-    return unitCost === null || kg === null ? null : unitCost * kg;
-  }
-  // Never value historical consumption at today's master price.
-  if (!line.lineId) return null;
-  const used = (t.order.consumption || []).filter((c) => c.lineId === line.lineId);
-  if (!used.length) return null;
-  return complete(
-    used.map((c) =>
-      cost(c.qty) === null || cost(c.unitCost) === null
-        ? null
-        : Number(c.qty) * Number(c.unitCost),
-    ),
-  );
 }
 export function inventoryAssets(s, store = "") {
   const allowed = new Set(s.stores.map((x) => x.id)),
@@ -173,7 +149,6 @@ export function dashboardReport(
     if (finite(o.pointsEarned)) points += Number(o.pointsEarned);
     else pointsUnknown++;
   }
-  const events = new Map((s.events || []).map((x) => [x.id, x]));
   const cancelEvents = new Map();
   for (const ev of s.events || [])
     if (["order_void", "order_cancel", "void"].includes(ev.action))
@@ -248,40 +223,8 @@ export function dashboardReport(
     financial: null,
   };
   if (financeAccess(s)) {
-    const costs = tx.flatMap((t) =>
-      t.lines.length ? t.lines.map((l) => lineCost(s, t, l)) : [null],
-    );
-    const lossRows = (s.money || []).filter(
-      (x) => x.category === "loss" && scope(x.store_id),
-    );
-    const undatedLoss = lossRows.filter(
-      (x) => !events.get(x.event_id)?.business_date,
-    ).length;
-    const losses = lossRows.filter((x) =>
-      inRange(events.get(x.event_id)?.business_date, f),
-    );
-    const expenses = (s.expenses || []).filter(
-      (x) => !x.voided && scope(x.store_id) && inRange(x.date, f),
-    );
-    const cogs = complete(costs),
-      loss = undatedLoss ? null : complete(losses.map((x) => amount(x.cost))),
-      operating = complete(expenses.map((x) => cost(x.amount)));
-    const gross = cogs === null ? null : total - cogs,
-      result = [cogs, loss, operating].some((x) => x === null)
-        ? null
-        : total - cogs - loss - operating;
     report.financial = {
-      cogs,
-      knownCogs: sum(costs),
-      unknownCogs: costs.filter((x) => x === null).length,
-      loss,
-      knownLoss: sum(losses.map((x) => amount(x.cost))),
-      unknownLoss: undatedLoss + losses.filter((x) => !finite(x.cost)).length,
-      losses,
-      operating,
-      expenses,
-      gross,
-      result,
+      ...financialSummary(s, f, tx).totals,
       assets: inventoryAssets(s, f.store),
     };
   }
