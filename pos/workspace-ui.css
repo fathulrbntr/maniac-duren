@@ -458,9 +458,8 @@ h4 {
   grid-row: 1;
   min-width: 0;
   padding: 0;
-  background:
-    var(--glass-wash) no-repeat,
-    var(--bg);
+  background-color: var(--bg);
+  background-image: var(--glass-wash);
 }
 .shell .topbar {
   position: sticky;
@@ -733,7 +732,8 @@ td {
   min-height: 100vh;
   min-height: 100dvh;
   padding: 80px 24px 40px;
-  background: var(--bg);
+  background-color: var(--bg);
+  background-image: var(--glass-wash);
 }
 .auth-workspace .auth-form {
   display: block;

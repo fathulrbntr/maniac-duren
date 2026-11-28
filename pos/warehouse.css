@@ -504,8 +504,8 @@
   z-index: 4;
   width: min(14rem, 76vw);
   padding: 4px;
-  background: var(--surface);
-  box-shadow: var(--shadow);
+  background: var(--glass-sheet);
+  box-shadow: var(--glass-shadow);
   border: 1px solid var(--line);
   border-radius: var(--radius-control);
 }
@@ -554,7 +554,7 @@
 }
 .note-segments input:checked + span {
   color: var(--ink);
-  background: var(--surface);
+  background: var(--glass-control);
   box-shadow: var(--glass-shadow);
   border-color: var(--line);
 }
@@ -711,7 +711,7 @@
   padding: 16px;
   border: 1px solid var(--line);
   border-radius: var(--radius-card);
-  background: var(--surface-soft);
+  background: var(--glass-panel);
   min-width: 0;
 }
 .note-payment-card dl {

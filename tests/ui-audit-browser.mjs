@@ -11,6 +11,17 @@ import {
   applyStockDemoAction,
   readStockDemo,
 } from "../pos/stock-demo.mjs";
+async function assertGlass(locator, description) {
+  const surfaces = await locator.evaluateAll((nodes) =>
+    nodes
+      .filter((node) => node.getClientRects().length)
+      .map((node) => getComputedStyle(node).backgroundImage),
+  );
+  assert(
+    surfaces.some((image) => image.includes("linear-gradient")),
+    `Missing Liquid Glass on ${description}`,
+  );
+}
 async function assertAlignedActions(group, { shift = false } = {}) {
   const buttons = await group.locator("button:visible").evaluateAll((nodes) =>
     nodes.map((button) => {
@@ -201,6 +212,14 @@ try {
   });
   await page.goto("https://test.invalid/pos/");
   await page.locator("#login-form").waitFor();
+  const loginCard = page.locator(".auth-form");
+  await assertGlass(loginCard, "login");
+  await page.emulateMedia({ contrast: "more" });
+  assert.equal(
+    await loginCard.evaluate((el) => getComputedStyle(el).backgroundImage),
+    "none",
+  );
+  await page.emulateMedia({ contrast: null });
   assert.equal(await page.locator("html").getAttribute("data-theme"), "light");
   const logoPixels = await page.locator(".auth-logo").evaluate(async (logo) => {
     const manifestUrl = document.querySelector('link[rel="manifest"]').href;
@@ -315,6 +334,24 @@ try {
       await page.setViewportSize({ width, height: 1000 });
       for (const view of views) {
         await nav(view);
+        if (width === 390 || width === 1600) {
+          const surface =
+            {
+              home: ".home-hero",
+              orders: ".order-product",
+              products: ".inv-variant-group",
+              reports: "#report-filters",
+              kitchen: ".kitchen-lane",
+              payments: ".payment-group",
+              devices: ".device-card",
+              stores: ".location-section",
+            }[view] ||
+            ".panel, .stat, .shift-banner, .team-panel, .inv-card, .team-stats > div";
+          await assertGlass(
+            page.locator(".workspace-content").locator(surface),
+            `${view} ${theme} ${width}px`,
+          );
+        }
         const result = await page.evaluate(() => ({
           width: innerWidth,
           pageWidth: document.documentElement.scrollWidth,
@@ -917,6 +954,7 @@ try {
   await dock.locator('[data-view="supplierNotes"]').waitFor();
   const dialog = page.locator("dialog[open]");
   const assertDialogFits = async (view, width) => {
+    await assertGlass(dialog, `${view} dialog at ${width}px`);
     const dimensions = await dialog.evaluate((el) => {
       const rect = el.getBoundingClientRect();
       const controls = el.querySelectorAll(
@@ -1130,6 +1168,18 @@ try {
         }
       }
     }
+  }
+  const selectedTheme = await page.locator("html").getAttribute("data-theme");
+  for (const [url, surface] of [
+    ["/pos/customer-display.html", ".pairing, .welcome"],
+    ["/pos/compress-photos.html", "main"],
+    ["/pos-recover.html", "main"],
+  ]) {
+    step = { ...step, phase: "standalone", view: url };
+    await page.goto(new URL(url, "https://test.invalid").href);
+    await page.locator(surface).waitFor();
+    await assertGlass(page.locator(surface), url);
+    assert.equal(await page.locator("html").getAttribute("data-theme"), selectedTheme);
   }
   assert.deepEqual(errors, []);
   assert.deepEqual(missing, []);

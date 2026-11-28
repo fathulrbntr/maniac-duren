@@ -43,7 +43,7 @@
   border-radius: 16px;
   padding: 18px;
   margin: 16px 0;
-  background: var(--surface);
+  background: var(--glass-panel);
 }
 .variant-heading {
   margin-bottom: 16px;
@@ -107,7 +107,7 @@
   flex-shrink: 0;
 }
 .variant-bulk {
-  background: var(--surface-soft);
+  background: var(--glass-control);
   margin-bottom: 16px;
 }
 .variant-bulk > span {
@@ -187,7 +187,7 @@
   border: 1px solid var(--line);
   border-radius: 12px;
   margin: 16px 0;
-  background: var(--surface-soft);
+  background: var(--glass-control);
 }
 .product-shared-categories > span {
   font-size: var(--text-xs);

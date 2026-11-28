@@ -3,7 +3,7 @@
 .inventory-shell {
   --inv-bg: var(--bg);
   --inv-panel: var(--surface);
-  --inv-field: var(--surface-soft);
+  --inv-field: var(--glass-field);
   --inv-photo: var(--surface-raised);
   --inv-ink: var(--ink);
   --inv-muted: var(--muted);
@@ -11,10 +11,8 @@
   --inv-active: var(--surface-raised);
   --inv-button: var(--action-bg);
   --inv-button-ink: var(--action-ink);
-  --card-action: var(--surface-soft);
 }
 .inventory-shell #pos-main {
-  background: var(--inv-bg);
   color: var(--inv-ink);
 }
 .inventory-shell .topbar {
@@ -161,7 +159,8 @@
   border: 1px solid transparent;
   border-radius: 14px;
   color: var(--inv-ink);
-  background: var(--inv-panel);
+  background: var(--glass-panel);
+  box-shadow: var(--glass-shadow);
   font-size: var(--text-body);
   font-weight: var(--weight-medium);
 }
@@ -401,7 +400,8 @@
 .inv-card {
   margin: 0;
   min-width: 0;
-  background: var(--inv-panel);
+  background: var(--glass-panel);
+  box-shadow: var(--glass-shadow);
   border: 1px solid var(--inv-line);
   border-radius: 14px;
   overflow: hidden;
@@ -534,8 +534,8 @@
   width: 100%;
   padding: 8px;
   border: 1px solid var(--inv-line);
-  border-radius: 8px;
-  background: var(--card-action);
+  border-radius: var(--radius-pill);
+  background: var(--glass-control);
   color: var(--inv-ink);
   font-size: 12px;
   line-height: 1.5;
@@ -652,7 +652,8 @@
   text-align: center;
   padding: 40px 20px;
   color: var(--inv-ink);
-  background: var(--inv-panel);
+  background: var(--glass-panel);
+  box-shadow: var(--glass-shadow);
   border: 1px solid var(--inv-line);
   border-radius: 14px;
 }

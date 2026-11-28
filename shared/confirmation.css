@@ -11,8 +11,8 @@ dialog.brand-confirmation {
   border: 1px solid var(--line, #deded2);
   border-radius: 18px;
   color: var(--ink, #19241a);
-  background: var(--surface, #fffdf6);
-  box-shadow: 0 16px 56px #0003;
+  background: var(--glass-sheet, var(--surface, #fffdf6));
+  box-shadow: var(--glass-shadow, 0 16px 56px #0003);
   font: 500 1rem/1.5 var(--font-ui, "DM Sans", sans-serif);
   text-align: center;
 }
@@ -65,11 +65,11 @@ dialog.brand-confirmation {
 }
 .brand-confirmation [data-cancel] {
   color: inherit;
-  background: transparent;
+  background: var(--glass-control, transparent);
   border: 1px solid var(--line, #c7cbbe);
 }
 .brand-confirmation [data-accept] {
-  background: var(--action-bg, #25622e);
+  background: var(--action-bg, #25622e) var(--glass-action, none);
   color: var(--action-ink, #fff);
   border: 1px solid transparent;
 }

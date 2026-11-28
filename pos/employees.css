@@ -41,7 +41,7 @@
   flex-wrap: wrap;
 }
 .team-workspace button {
-  background: var(--surface);
+  background: var(--glass-control);
   color: var(--muted);
   border: 1px solid var(--line);
   border-radius: 9px;
@@ -482,8 +482,8 @@
   padding: 10px;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: var(--surface);
-  box-shadow: var(--shadow);
+  background: var(--glass-sheet);
+  box-shadow: var(--glass-shadow);
   z-index: 2;
 }
 img.employee-photo,
@@ -545,7 +545,8 @@ img.employee-photo,
   width: min(680px, 94vw);
   padding: 22px;
   border-radius: 18px;
-  background: var(--surface);
+  background: var(--glass-sheet);
+  box-shadow: var(--glass-shadow);
   color: var(--ink);
 }
 .employee-recap-dialog .employee-detail-head {
@@ -572,7 +573,8 @@ img.employee-photo,
   width: min(420px, 94vw);
   padding: 22px;
   border-radius: 18px;
-  background: var(--surface);
+  background: var(--glass-sheet);
+  box-shadow: var(--glass-shadow);
   color: var(--ink);
 }
 .employee-password-dialog .modal-head h2 {
