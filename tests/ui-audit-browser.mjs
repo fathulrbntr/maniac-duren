@@ -177,7 +177,9 @@ try {
     const { icons } = await (await fetch(manifestUrl)).json();
     const sources = [
       logo.currentSrc,
-      ...icons.map((icon) => new URL(icon.src, manifestUrl).href),
+      ...icons
+        .filter((icon) => icon.purpose === "any")
+        .map((icon) => new URL(icon.src, manifestUrl).href),
     ];
     const canvas = document.createElement("canvas");
     canvas.width = canvas.height = 32;
@@ -200,6 +202,44 @@ try {
       `Expected visible artwork on a transparent canvas: ${src}`,
     );
   }
+  const splash = await page.evaluate(async () => {
+    const manifestUrl = document.querySelector('link[rel="manifest"]').href;
+    const manifest = await (await fetch(manifestUrl)).json();
+    const icon = new Image();
+    icon.src = new URL(
+      manifest.icons.find((entry) => entry.purpose === "maskable").src,
+      manifestUrl,
+    ).href;
+    await icon.decode();
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = icon.naturalWidth;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    ctx.fillStyle = manifest.background_color;
+    ctx.fillRect(0, 0, 1, 1);
+    const background = ctx.getImageData(0, 0, 1, 1).data;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(icon, 0, 0);
+    const size = canvas.width;
+    const pixels = ctx.getImageData(0, 0, size, size).data;
+    let artwork = 0;
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        const i = 4 * (y * size + x);
+        if (background.every((value, c) => value === pixels[i + c])) continue;
+        if (
+          pixels[i + 3] !== 255 ||
+          Math.hypot(x + 0.5 - size / 2, y + 0.5 - size / 2) > size * 0.4
+        )
+          return false;
+        artwork++;
+      }
+    }
+    return artwork > 0;
+  });
+  assert(
+    splash,
+    "Android launch artwork must stay inside the safe zone and blend into the splash screen",
+  );
   const menuBrand = await page.evaluate(async () => {
     await document.fonts.ready;
     const loaded = [...document.fonts].filter((face) => face.status === "loaded");

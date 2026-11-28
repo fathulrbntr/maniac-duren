@@ -12,8 +12,14 @@ assert.equal(manifest.start_url, "/pos/");
 assert.equal(manifest.scope, "/pos/");
 assert.equal(manifest.display, "standalone");
 assert.equal(manifest.prefer_related_applications, false);
-for (const size of [192, 512]) {
-  const icon = manifest.icons.find((icon) => icon.sizes === `${size}x${size}`);
+for (const [size, purpose] of [
+  [192, "any"],
+  [512, "any"],
+  [512, "maskable"],
+]) {
+  const icon = manifest.icons.find(
+    (icon) => icon.sizes === `${size}x${size}` && icon.purpose === purpose,
+  );
   assert(icon);
   const bytes = readFileSync(new URL("pos/" + icon.src, root));
   assert.equal(bytes.subarray(1, 4).toString(), "PNG");
