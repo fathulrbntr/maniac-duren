@@ -1,7 +1,8 @@
 import { bindNoteProofViewer } from "./supplier-note-proof.mjs";
 import { table, recordCells, recordTable } from "./supply-session-ui.mjs";
 import { receiptOfficeControls } from "./receiving-session-ui.mjs";
-import { workflowReady } from "./warehouse-workflow.mjs";
+import { progressBadge, progressButton, paymentStage } from "./progress-ui.mjs";
+import { receiptProgress, workflowReady } from "./warehouse-workflow.mjs";
 import { escape as e, id, today, money, num } from "./core.mjs";
 import {
   noteBalance,
@@ -22,13 +23,13 @@ const name = (s, collection, key) =>
 const stamp = (at) =>
   at ? new Date(at).toLocaleString("id-ID", { timeZone: "Asia/Jakarta" }) : "—";
 const componentName = (c) => (c === "shipping" ? "Ongkir" : "Nota supplier");
-export function notePaymentCell(p, component) {
-  const b = noteBalance(p, component);
-  return `<b>${money(b.total)}</b><span class="note-payment-status ${b.status}">${e(b.label)}</span>`;
+export function notePaymentCell(p, component, b = noteBalance(p, component)) {
+  return `<b>${money(b.total)}</b><div class="note-payment-status">${progressBadge(paymentStage(b.status), b.label)}</div>`;
 }
 function paymentCard(s, p, component) {
   const b = noteBalance(p, component);
-  return `<section class="note-payment-card"><h3>${componentName(component)}</h3>${notePaymentCell(p, component)}<dl><div><dt>Sudah dibayar</dt><dd>${money(b.paid)}</dd></div><div><dt>${b.remaining < 0 ? "Kelebihan bayar" : "Sisa tagihan"}</dt><dd>${money(Math.abs(b.remaining))}</dd></div></dl>${noteCanPay(s) && b.remaining > 0 ? `<button type="button" data-note-pay="${component}">Catat pembayaran ${component === "shipping" ? "ongkir" : "nota"}</button>${b.status === "unknown" ? `<button type="button" data-note-unpaid="${component}">Tandai belum dibayar</button>` : ""}` : ""}</section>`;
+  const stage = paymentStage(b.status);
+  return `<section class="note-payment-card" data-progress="${stage}"><h3>${componentName(component)}</h3>${notePaymentCell(p, component, b)}<dl><div><dt>Sudah dibayar</dt><dd>${money(b.paid)}</dd></div><div><dt>${b.remaining < 0 ? "Kelebihan bayar" : "Sisa tagihan"}</dt><dd>${money(Math.abs(b.remaining))}</dd></div></dl>${noteCanPay(s) && b.remaining > 0 ? `${progressButton(stage, "note-pay", component, `pembayaran ${componentName(component)}`)}${b.status === "unknown" ? `<button type="button" data-note-unpaid="${component}">Tandai belum dibayar</button>` : ""}` : ""}</section>`;
 }
 function saveForm(d, action, p, ctx, payload) {
   const f = d.querySelector("form"),
@@ -187,9 +188,16 @@ export function openSupplierNote(s, p, ctx) {
     ];
     return `<tr data-note-cost-row="${e(line.productId)}">${recordCells(costHeads, cells)}</tr>`;
   });
+  const stage = receiptProgress(p);
+  const arrival = {
+    pending: "Menunggu penerimaan",
+    active: "Penerimaan berlangsung",
+    done: "Sudah diterima",
+    cancelled: "Dibatalkan",
+  };
   const d = ctx.modal(
     "Detail nota supplier",
-    `<div class="note-detail"><header><h3>${e(p.invoiceNo)}</h3><p>${e(name(s, "suppliers", p.supplierId))} · ${e(p.date)}</p><p>${e(name(s, "stores", p.storeId))} · <b>${cancelled ? "Dibatalkan" : p.receivedId ? "Sudah diterima" : "Menunggu penerimaan"}</b></p></header>${p.hasProof && s.access?.backoffice && ctx.workspace === "backoffice" ? '<div><button type="button" data-view-note-proof>Lihat foto nota</button><span role="status" data-view-proof-status></span><img class="deposit-proof-full" data-note-proof-image alt="Bukti foto nota supplier" hidden></div>' : ""}${cancelled ? `<section class="notice"><b>Nota dibatalkan</b><p>${e(stamp(cancelled.at))} · ${e(cancelled.actor || "—")}</p><p>Alasan · ${e(cancelled.reason)}</p></section>${archivedDraft(s, p)}` : canCancel && blocked ? `<p class="muted">Pembatalan nota terkunci. ${e(blocked)}</p>` : ""}${s.stockDemo ? '<p class="notice">Mode demo aktif. Pembayaran dan koreksi nota hanya tersedia pada data nyata.</p>' : !noteReady(s) ? '<p class="notice">Pasang pembaruan nota supplier 112 untuk mencatat pembayaran dan koreksi owner.</p>' : ""}<div class="note-payment-grid">${paymentCard(s, p, "invoice")}${paymentCard(s, p, "shipping")}</div><h3>Rincian produk</h3>${table(costHeads, costRows, true)}<p class="muted">Modal termasuk alokasi ongkir, dibagi berat atau jumlah aktual saat penerimaan. Modal/butir merupakan rata-rata per buah.${cancelled ? "" : p.receivedId ? " Nilai — berarti data modal atau penerimaan belum tersedia untuk akun ini." : " Perhitungan tersedia setelah penerimaan selesai."}</p>${cancelled ? "" : noteOwner(s) ? '<button type="button" data-note-correct>Koreksi harga & ongkir · Owner</button>' : '<p class="muted">Koreksi harga dan ongkir hanya dapat disetujui melalui akun owner.</p>'}<h3>Riwayat pembayaran</h3>${history || '<p class="muted">Belum ada pembayaran yang dicatat.</p>'}<h3>Riwayat koreksi nota</h3>${corrections || '<p class="muted">Belum ada koreksi.</p>'}</div>`,
+    `<div class="note-detail"><header><h3>${e(p.invoiceNo)}</h3><p>${e(name(s, "suppliers", p.supplierId))} · ${e(p.date)}</p><p>${e(name(s, "stores", p.storeId))} · <b>${progressBadge(stage, arrival[stage])}</b></p></header>${p.hasProof && s.access?.backoffice && ctx.workspace === "backoffice" ? '<div><button type="button" data-view-note-proof>Lihat foto nota</button><span role="status" data-view-proof-status></span><img class="deposit-proof-full" data-note-proof-image alt="Bukti foto nota supplier" hidden></div>' : ""}${cancelled ? `<section class="notice"><b>Nota dibatalkan</b><p>${e(stamp(cancelled.at))} · ${e(cancelled.actor || "—")}</p><p>Alasan · ${e(cancelled.reason)}</p></section>${archivedDraft(s, p)}` : canCancel && blocked ? `<p class="muted">Pembatalan nota terkunci. ${e(blocked)}</p>` : ""}${s.stockDemo ? '<p class="notice">Mode demo aktif. Pembayaran dan koreksi nota hanya tersedia pada data nyata.</p>' : !noteReady(s) ? '<p class="notice">Pasang pembaruan nota supplier 112 untuk mencatat pembayaran dan koreksi owner.</p>' : ""}<div class="note-payment-grid">${paymentCard(s, p, "invoice")}${paymentCard(s, p, "shipping")}</div><h3>Rincian produk</h3>${table(costHeads, costRows, true)}<p class="muted">Modal termasuk alokasi ongkir, dibagi berat atau jumlah aktual saat penerimaan. Modal/butir merupakan rata-rata per buah.${cancelled ? "" : p.receivedId ? " Nilai — berarti data modal atau penerimaan belum tersedia untuk akun ini." : " Perhitungan tersedia setelah penerimaan selesai."}</p>${cancelled ? "" : noteOwner(s) ? '<button type="button" data-note-correct>Koreksi harga & ongkir · Owner</button>' : '<p class="muted">Koreksi harga dan ongkir hanya dapat disetujui melalui akun owner.</p>'}<h3>Riwayat pembayaran</h3>${history || '<p class="muted">Belum ada pembayaran yang dicatat.</p>'}<h3>Riwayat koreksi nota</h3>${corrections || '<p class="muted">Belum ada koreksi.</p>'}</div>`,
     "Tutup",
   );
   bindNoteProofViewer(d, p.id, ctx.readSupplierNoteProof);

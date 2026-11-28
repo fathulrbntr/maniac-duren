@@ -5,6 +5,7 @@ import { escape as e, id, num, money, today } from "./core.mjs";
 import {
   backOffice,
   outboundStatuses,
+  shipmentProgress,
   outboundBatches,
   outboundRateRows,
   outboundBalance,
@@ -26,6 +27,8 @@ import {
   submitSession,
   bindRecovery,
 } from "./supply-session-ui.mjs";
+import { progressBadge, progressButton } from "./progress-ui.mjs";
+
 function invoiceScope(s, store, space) {
   const bo = backOffice(s, space);
   return {
@@ -67,7 +70,12 @@ function invoiceTable(s, rows, bo, group) {
         : transfer?.status === "received"
           ? "Diterima toko"
           : outboundStatuses[o.status] || o.status;
-      return `<tr data-outbound-row="${e(o.id)}"><td><b>${e(o.invoiceNo || (cancelled ? "Dokumen dibatalkan" : "Belum terbit"))}</b><small>${e(o.deliveryNo || o.id.slice(0, 8))}</small></td><td>${e(invoiceDate(group === "issued" ? o.issuedAt : o.createdAt) || "Belum tersedia")}</td><td>${o.kind === "transfer" ? "Transfer toko" : "Wholesale"}<small>${e(o.kind === "transfer" ? name(s, "locations", o.targetId) : o.buyer?.name)}</small></td><td>${outboundContents(o)}</td><td>${e(status)}</td>${bo ? `<td>${o.total == null ? "Menunggu penyiapan" : money(balance.total)}${cancelled ? "<small>Tidak masuk tagihan aktif</small>" : o.invoiceNo ? `<small class="outbound-payment ${e(payment)}">${e({ paid: "Lunas", partial: "Dibayar sebagian", unpaid: "Belum dibayar", unknown: "Nilai belum tersedia" }[payment])}</small>${payment !== "unknown" ? `<small>Sudah dibayar ${money(balance.paid)}</small><small>Sisa ${money(balance.remaining)}</small>` : ""}` : "<small>Belum terbit</small>"}</td>` : ""}${cancelled ? `<td>${e(o.cancelReason || transfer?.cancelReason || "—")}</td>` : ""}<td><button type="button" data-outbound-open="${e(o.id)}">Buka</button></td></tr>`;
+      const progress = shipmentProgress(o.status, {
+        transferStatus: cancelled ? "cancelled" : transfer?.status,
+        hasPacking: o.items.length,
+        wholesale: o.kind === "wholesale",
+      });
+      return `<tr data-progress="${progress}" data-outbound-row="${e(o.id)}"><td><b>${e(o.invoiceNo || (cancelled ? "Dokumen dibatalkan" : "Belum terbit"))}</b><small>${e(o.deliveryNo || o.id.slice(0, 8))}</small></td><td>${e(invoiceDate(group === "issued" ? o.issuedAt : o.createdAt) || "Belum tersedia")}</td><td>${o.kind === "transfer" ? "Transfer toko" : "Wholesale"}<small>${e(o.kind === "transfer" ? name(s, "locations", o.targetId) : o.buyer?.name)}</small></td><td>${outboundContents(o)}</td><td>${progressBadge(progress, status)}</td>${bo ? `<td>${o.total == null ? "Menunggu penyiapan" : money(balance.total)}${cancelled ? "<small>Tidak masuk tagihan aktif</small>" : o.invoiceNo ? `<small class="outbound-payment ${e(payment)}">${e({ paid: "Lunas", partial: "Dibayar sebagian", unpaid: "Belum dibayar", unknown: "Nilai belum tersedia" }[payment])}</small>${payment !== "unknown" ? `<small>Sudah dibayar ${money(balance.paid)}</small><small>Sisa ${money(balance.remaining)}</small>` : ""}` : "<small>Belum terbit</small>"}</td>` : ""}${cancelled ? `<td>${e(o.cancelReason || transfer?.cancelReason || "—")}</td>` : ""}<td>${progressButton(progress, "outbound-open", o.id, o.invoiceNo || "dokumen pengiriman")}</td></tr>`;
     }),
   );
 }

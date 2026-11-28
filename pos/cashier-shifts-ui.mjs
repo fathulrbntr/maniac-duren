@@ -1,3 +1,4 @@
+import { progressBadge, progressButton } from "./progress-ui.mjs";
 import { depositButtons, bindDeposits } from "./cash-deposits-ui.mjs";
 import { id, today, money, escape as e } from "./core.mjs";
 import { activeShift } from "./cashier-shifts.mjs";
@@ -37,7 +38,7 @@ export function shiftBanner(s, store) {
     return '<aside class="shift-banner"><div><b>Shift kasir belum tersedia</b><p>Pasang database/cashier-shifts-083.sql lalu muat ulang POS.</p></div></aside>';
   const sh = activeShift(s),
     here = sh?.storeId === store;
-  return `<aside class="shift-banner"><div><b>${sh ? `<span class="shift-dot"></span> Kasir buka · ${e(sh.cashierName)}` : "Kasir belum dibuka"}</b><p>${sh ? `${e(outlet(s, sh.storeId))} · sejak ${e(time(sh.openedAt))}${here ? "" : " · tutup shift ini sebelum membuka di outlet lain."}` : "Isi uang awal sebelum menerima pembayaran."}</p></div><div class="shift-banner-actions">${depositButtons(s, store)}<button type="button" ${sh ? `data-shift-close="${e(sh.id)}"` : "data-shift-open"} class="${sh ? "" : "primary"}">${sh ? "Tutup kasir" : "Buka kasir"}</button></div></aside>`;
+  return `<aside class="shift-banner" data-progress="${sh ? "active" : "pending"}"><div><b>${sh ? `<span class="shift-dot"></span> Kasir buka · ${e(sh.cashierName)}` : "Kasir belum dibuka"}</b><p>${sh ? `${e(outlet(s, sh.storeId))} · sejak ${e(time(sh.openedAt))}${here ? "" : " · tutup shift ini sebelum membuka di outlet lain."}` : "Isi uang awal sebelum menerima pembayaran."}</p></div><div class="shift-banner-actions">${depositButtons(s, store)}<button type="button" ${sh ? `data-shift-close="${e(sh.id)}"` : "data-shift-open"} class="${sh ? "" : "primary"}">${sh ? "Tutup kasir" : "Buka kasir"}</button></div></aside>`;
 }
 export function bindShiftBanner(ctx, store, root = document) {
   bindDeposits(ctx, root);
@@ -228,12 +229,12 @@ export function bindShiftsPage(ctx, store) {
           form.elements.cashierId.add(option);
         }
       form.elements.cashierId.value = selected;
-      host.innerHTML = `<section class="panel"><h3>Kasir aktif (${active.length})</h3><p class="muted">Daftar aktif mengikuti filter outlet dan kasir, tanpa batas tanggal.</p><div class="shift-cards">${active.map((sh) => `<article class="shift-card"><span class="pill"><span class="shift-dot"></span> Buka</span><h4>${e(sh.cashierName)}</h4><p>${e(outlet(s, sh.storeId))}<br><small>${e(time(sh.openedAt))}</small></p><p>Penjualan <b>${money(sh.summary.sales)}</b><br>Kas seharusnya <b>${money(sh.summary.expectedCash)}</b></p><div class="toolbar"><button type="button" class="small" data-shift-detail="${e(sh.id)}">Detail shift</button>${canClose(s, sh) ? `<button type="button" class="small" data-shift-close="${e(sh.id)}">Tutup kasir</button>` : ""}</div></article>`).join("") || '<p class="empty">Tidak ada kasir yang sedang buka pada filter ini.</p>'}</div></section><section class="panel"><h3>Riwayat tutup kasir</h3><div class="table-wrap"><table><thead><tr><th>Kasir / outlet</th><th>Dibuka → ditutup</th><th>Kas seharusnya</th><th>Kas aktual</th><th>Selisih</th><th>Detail</th></tr></thead><tbody>${
+      host.innerHTML = `<section class="panel"><h3>Kasir aktif (${active.length})</h3><p class="muted">Daftar aktif mengikuti filter outlet dan kasir, tanpa batas tanggal.</p><div class="shift-cards">${active.map((sh) => `<article class="shift-card" data-progress="active">${progressBadge("active", "Shift berjalan")}<h4>${e(sh.cashierName)}</h4><p>${e(outlet(s, sh.storeId))}<br><small>${e(time(sh.openedAt))}</small></p><p>Penjualan <b>${money(sh.summary.sales)}</b><br>Kas seharusnya <b>${money(sh.summary.expectedCash)}</b></p><div class="toolbar">${progressButton("active", "shift-detail", sh.id, `shift ${sh.cashierName}`)}${canClose(s, sh) ? `<button type="button" class="small" data-shift-close="${e(sh.id)}">Tutup kasir</button>` : ""}</div></article>`).join("") || '<p class="empty">Tidak ada kasir yang sedang buka pada filter ini.</p>'}</div></section><section class="panel"><h3>Riwayat tutup kasir</h3><div class="table-wrap"><table><thead><tr><th>Kasir / outlet</th><th>Dibuka → ditutup</th><th>Kas seharusnya</th><th>Kas aktual</th><th>Selisih</th><th>Detail</th></tr></thead><tbody>${
         data.history
           .slice(0, 20)
           .map(
             (sh) =>
-              `<tr><td>${e(sh.cashierName)}<small>${e(outlet(s, sh.storeId))}</small></td><td>${e(time(sh.openedAt))}<small>→ ${e(time(sh.closedAt))}</small></td><td>${money(sh.summary.expectedCash)}</td><td>${money(sh.closingCash)}</td><td class="${sh.summary.difference ? "error" : ""}">${money(sh.summary.difference)}</td><td><button type="button" class="small" data-shift-detail="${e(sh.id)}">Detail</button></td></tr>`,
+              `<tr data-progress="done"><td>${e(sh.cashierName)}<small>${e(outlet(s, sh.storeId))}</small></td><td>${e(time(sh.openedAt))}<small>→ ${e(time(sh.closedAt))}</small></td><td>${money(sh.summary.expectedCash)}</td><td>${money(sh.closingCash)}</td><td class="${sh.summary.difference ? "error" : ""}">${money(sh.summary.difference)}</td><td>${progressButton("done", "shift-detail", sh.id, `shift ${sh.cashierName}`)}</td></tr>`,
           )
           .join("") ||
         '<tr><td colspan="6" class="empty">Belum ada shift ditutup pada tanggal ini.</td></tr>'

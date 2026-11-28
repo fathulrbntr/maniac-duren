@@ -8,7 +8,8 @@ import { productLabel, findProduct } from "./branch-dispatch-ui.mjs";
 import { escape as e, num, id } from "./core.mjs";
 import { quantity, scalar } from "./production.mjs";
 import { field, options, recordTable } from "./supply-session-ui.mjs";
-import { outboundInventory } from "./warehouse-workflow.mjs";
+import { progressBadge, progressButton } from "./progress-ui.mjs";
+import { outboundInventory, shipmentProgress } from "./warehouse-workflow.mjs";
 import { transferStatus } from "./warehouse-flow.mjs";
 
 const statuses = {
@@ -32,13 +33,22 @@ export function branchNoteList(s, store) {
     );
   return `<section class="panel">${recordTable(
     ["Nota transfer", "Toko asal → tujuan", "Status", "Surat jalan", "Aksi"],
-    notes.map((n) => [
-      `<b>${e(n.number)}</b>`,
-      `${e(n.origin.name)} → ${e(n.destination.name)}`,
-      e(statusLabel(n)),
-      e(n.deliveryNo || "—"),
-      `<button type="button" data-branch-note="${e(n.id)}">${store && n.status === "packing" ? "Siapkan barang" : store && n.status === "approved" ? "Proses pengiriman" : "Buka nota"}</button>`,
-    ]),
+    notes.map((n) => {
+      const progress = shipmentProgress(n.status, {
+        transferStatus: n.transferStatus,
+        hasPacking: n.items?.length || n.lines?.length,
+      });
+      return {
+        progress,
+        cells: [
+          `<b>${e(n.number)}</b>`,
+          `${e(n.origin.name)} → ${e(n.destination.name)}`,
+          progressBadge(progress, statusLabel(n)),
+          e(n.deliveryNo || "—"),
+          progressButton(progress, "branch-note", n.id, `nota transfer ${n.number}`),
+        ],
+      };
+    }),
   )}</section>`;
 }
 export function branchPreparationPage(s, store) {

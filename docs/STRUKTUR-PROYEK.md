@@ -92,6 +92,7 @@ untuk fitur baru yang memerlukan beberapa file, bukan tempat menyalin modul lama
 
 ## Penerimaan & wholesale 114
 
+- `pos/progress-ui.mjs` dan `pos/progress.css` menyamakan badge, tombol pembuka, dan warna tahap operasional. Setiap fitur menentukan tahap dari data prosesnya.
 - `pos/warehouse-workflow.mjs` memiliki aksi sesi, selisih nota/aktual, saldo invoice
   dan penyimpanan operasi pending per akun/dokumen. Jangan membuat jalur stok kedua.
 - `pos/receiving-session-ui.mjs` memiliki UI penerimaan dan kontrol pembukaan ulang.

@@ -26,7 +26,7 @@ export function pendingWorkItems(s, store, space) {
   const tasks = [];
   if (workflowReady(s) && (central || (s.branchStockVersion >= 132 && s.access?.stock))) {
     const open = (s.receiptPlans || []).filter(
-      (p) => places.has(p.storeId) && !p.cancelled && p.receiving?.status !== "completed",
+      (p) => places.has(p.storeId) && ["pending", "active"].includes(receiptProgress(p)),
     );
     tasks.push(["supplierNotes", "Nota menunggu penerimaan", open.length]);
   }
@@ -67,12 +67,33 @@ export function pendingWorkItems(s, store, space) {
   return tasks;
 }
 
-export const receiptStatuses = {
-  open: "Menunggu / sedang ditimbang",
-  paused: "Dijeda",
-  completed: "Penerimaan selesai",
-  reopened: "Dibuka kembali",
-};
+export function receiptProgress(plan) {
+  const session = plan.receiving;
+  if (plan.cancelled) return "cancelled";
+  if (session?.status === "completed" || (!session && plan.receivedId)) return "done";
+  if (
+    plan.receivedId ||
+    ["reopened", "paused"].includes(session?.status) ||
+    session?.scans?.length ||
+    Object.values(session?.quantities || {}).some((line) => line.qty > 0)
+  )
+    return "active";
+  return "pending";
+}
+
+// Follow the goods until the destination confirms receipt. A wholesale dispatch ends at handover.
+export function shipmentProgress(status, { transferStatus, hasPacking, wholesale } = {}) {
+  if (status === "cancelled" || transferStatus === "cancelled") return "cancelled";
+  if (
+    status === "received" ||
+    transferStatus === "received" ||
+    (wholesale && status === "dispatched")
+  )
+    return "done";
+  if (status === "packing" && !hasPacking) return "pending";
+  return "active";
+}
+
 export const outboundStatuses = {
   packing: "Penyiapan gudang",
   ready: "Menunggu Back Office",

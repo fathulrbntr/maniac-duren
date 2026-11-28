@@ -1,3 +1,4 @@
+import { progressBadge, progressButton } from "./progress-ui.mjs";
 import { confirmAction } from "../shared/confirmation.mjs";
 import { attachFruitScanSelection } from "./fruit-scan-selection.mjs";
 import { escape as e, num, money, today, id } from "./core.mjs";
@@ -39,10 +40,24 @@ const rows = (s) =>
       (b.createdAt || b.date).localeCompare(a.createdAt || a.date) ||
       b.id.localeCompare(a.id),
   );
+function rejectProgress(lot, originalKg) {
+  if (!lot) return "done"; // Depleted lots can be absent from the stock list.
+  if (lot.kg <= 0) return "done";
+  return lot.kg < originalKg ? "active" : "pending";
+}
+
 export function wastePage(s, store) {
   const ready = s.rejectFlowVersion >= 63,
     waiting = rejectLots(s, store, "process");
-  return `<section class="reject-workspace"><div class="intro"><div><h2>Reject & Waste</h2><p class="muted">Pisahkan buah reject, catat hasil aktual, dan telusuri batch asal.</p></div><button id="waste-refresh">Perbarui stok</button></div>${!ready ? '<p class="notice">Pembaruan database Reject & Waste 063 belum terpasang. Riwayat tetap dapat dibaca.</p>' : ""}<div class="reject-actions">${action("mark", "Catat reject", "", !ready)}${action("process", "Olah reject", "", !ready)}${action("coral", "Olah Coral", "", !ready)}${action("loss", "Catat waste", "", !ready)}<button type="button" data-view="batches">Laporan batch</button></div><div class="summary-grid"><div class="summary-card"><span>Reject menunggu diolah</span><b>${num(waiting.reduce((n, l) => n + l.kg, 0))} kg</b></div><div class="summary-card"><span>Buah reject</span><b>${waiting.reduce((n, l) => n + l.pieces, 0)} butir</b></div><div class="summary-card"><span>Batch reject aktif</span><b>${waiting.length}</b></div></div><section class="panel"><h3>Menunggu diolah</h3><p class="muted">Stok ini sudah terpisah dari stok siap jual di kasir.</p><div class="table-wrap"><table><thead><tr><th>Buah / batch</th><th>Supplier / masuk</th><th>Sisa reject</th><th>Tindakan</th></tr></thead><tbody>${waiting.map((l) => `<tr><td><b>${e(lookup(s, "products", l.productId))}</b><small>${e(l.id.slice(0, 8))}</small></td><td>${e(lookup(s, "suppliers", l.supplierId))}<small>${e(l.date)}</small></td><td>${num(l.kg)} kg / ${l.pieces} butir</td><td><div class="reject-row-actions">${action("process", "Olah", l.id, !ready)}${action("loss", "Buang seluruhnya", l.id, !ready)}</div></td></tr>`).join("") || '<tr><td colspan="4" class="empty">Tidak ada reject yang menunggu diolah.</td></tr>'}</tbody></table></div></section><section class="panel"><h3>Riwayat outlet</h3><div class="toolbar"><input id="reject-history-search" type="search" placeholder="Cari produk, supplier, alasan…" aria-label="Cari riwayat reject"><select id="reject-history-kind" aria-label="Jenis pencatatan"><option value="">Semua proses</option>${options(Object.entries({ ...rejectKinds, legacy: "Olahan lama" }))}</select><select id="reject-history-state" aria-label="Status pencatatan"><option value="">Semua status</option><option value="active">Aktif</option><option value="void">Dibatalkan</option></select></div><div id="reject-history"></div><div class="reject-pagination"><button id="reject-history-prev" type="button">Sebelumnya</button><span id="reject-history-count"></span><button id="reject-history-next" type="button">Berikutnya</button></div></section></section>`;
+  return `<section class="reject-workspace"><div class="intro"><div><h2>Reject & Waste</h2><p class="muted">Pisahkan buah reject, catat hasil aktual, dan telusuri batch asal.</p></div><button id="waste-refresh">Perbarui stok</button></div>${!ready ? '<p class="notice">Pembaruan database Reject & Waste 063 belum terpasang. Riwayat tetap dapat dibaca.</p>' : ""}<div class="reject-actions">${action("mark", "Catat reject", "", !ready)}${action("process", "Olah reject", "", !ready)}${action("coral", "Olah Coral", "", !ready)}${action("loss", "Catat waste", "", !ready)}<button type="button" data-view="batches">Laporan batch</button></div><div class="summary-grid"><div class="summary-card"><span>Reject menunggu diolah</span><b>${num(waiting.reduce((n, l) => n + l.kg, 0))} kg</b></div><div class="summary-card"><span>Buah reject</span><b>${waiting.reduce((n, l) => n + l.pieces, 0)} butir</b></div><div class="summary-card"><span>Batch reject aktif</span><b>${waiting.length}</b></div></div><section class="panel"><h3>Menunggu diolah</h3><p class="muted">Stok ini sudah terpisah dari stok siap jual di kasir.</p><div class="table-wrap"><table><thead><tr><th>Buah / batch</th><th>Supplier / masuk</th><th>Sisa reject</th><th>Tindakan</th></tr></thead><tbody>${
+    waiting
+      .map((l) => {
+        const progress = rejectProgress(l, l.receivedKg);
+        return `<tr data-progress="${progress}"><td><b>${e(lookup(s, "products", l.productId))}</b><small>${e(l.id.slice(0, 8))}</small></td><td>${e(lookup(s, "suppliers", l.supplierId))}<small>${e(l.date)}</small></td><td>${num(l.kg)} kg / ${l.pieces} butir<br>${progressBadge(progress)}</td><td><div class="reject-row-actions">${action("process", progress === "active" ? "Diproses" : "Buka", l.id, !ready)}${action("loss", "Buang seluruhnya", l.id, !ready)}</div></td></tr>`;
+      })
+      .join("") ||
+    '<tr><td colspan="4" class="empty">Tidak ada reject yang menunggu diolah.</td></tr>'
+  }</tbody></table></div></section><section class="panel"><h3>Riwayat outlet</h3><div class="toolbar"><input id="reject-history-search" type="search" placeholder="Cari produk, supplier, alasan…" aria-label="Cari riwayat reject"><select id="reject-history-kind" aria-label="Jenis pencatatan"><option value="">Semua proses</option>${options(Object.entries({ ...rejectKinds, legacy: "Olahan lama" }))}</select><select id="reject-history-state" aria-label="Status pencatatan"><option value="">Semua status</option><option value="active">Aktif</option><option value="void">Dibatalkan</option></select></div><div id="reject-history"></div><div class="reject-pagination"><button id="reject-history-prev" type="button">Sebelumnya</button><span id="reject-history-count"></span><button id="reject-history-next" type="button">Berikutnya</button></div></section></section>`;
 }
 export function openRejectDialog(kind, s, store, ctx, selected = "") {
   if (!can(s, "waste") || s.rejectFlowVersion < 63) {
@@ -313,10 +328,15 @@ export function bindWaste(view, s, store, ctx) {
     target.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Tanggal / proses</th><th>Asal / petugas</th><th>Jumlah / hasil</th><th>Status</th><th>Detail</th></tr></thead><tbody>${
       filtered
         .slice(page * 30, page * 30 + 30)
-        .map(
-          (r) =>
-            `<tr><td>${e(r.date)}<small>${e(rejectKinds[r.kind] || "Olahan lama")}</small></td><td>${e(r.sourceName)}<small>${e(lookup(s, "suppliers", r.supplierId))} · ${e(r.processedBy || "—")}</small></td><td>${num(r.kg ?? r.qty)} ${e(r.unit || "kg")}${r.pieces ? " / " + r.pieces + " butir" : ""}${r.outputKg != null ? `<small>Hasil ${num(r.outputKg)} kg · susut ${num(r.lossKg)} kg</small>` : ""}</td><td>${r.voided ? "Dibatalkan" : r.kind === "mark" ? (s.lots.find((l) => l.id === r.rejectLotId)?.kg > 0 ? "Menunggu / diproses sebagian" : "Sudah ditangani") : "Tercatat"}</td><td><button type="button" data-reject-detail="${e(r.id)}">Lihat</button></td></tr>`,
-        )
+        .map((r) => {
+          const lot = r.kind === "mark" && s.lots.find((l) => l.id === r.rejectLotId);
+          const progress = r.voided
+            ? "cancelled"
+            : r.kind === "mark"
+              ? rejectProgress(lot, r.markedKg ?? r.kg)
+              : "done";
+          return `<tr data-progress="${progress}"><td>${e(r.date)}<small>${e(rejectKinds[r.kind] || "Olahan lama")}</small></td><td>${e(r.sourceName)}<small>${e(lookup(s, "suppliers", r.supplierId))} · ${e(r.processedBy || "—")}</small></td><td>${num(r.kg ?? r.qty)} ${e(r.unit || "kg")}${r.pieces ? " / " + r.pieces + " butir" : ""}${r.outputKg != null ? `<small>Hasil ${num(r.outputKg)} kg · susut ${num(r.lossKg)} kg</small>` : ""}</td><td>${progressBadge(progress)}</td><td>${progressButton(progress, "reject-detail", r.id, "rincian reject")}</td></tr>`;
+        })
         .join("") ||
       '<tr><td colspan="5" class="empty">Belum ada riwayat yang sesuai.</td></tr>'
     }</tbody></table></div>`;

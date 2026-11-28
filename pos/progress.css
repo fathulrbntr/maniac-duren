@@ -1,0 +1,80 @@
+/* Shared workflow colors for cards, wide tables and their status labels. */
+:is([data-progress="pending"], [data-progress-tone="pending"]) {
+  --progress-ink: var(--warning);
+  --progress-fill: var(--warning-bg);
+}
+:is([data-progress="active"], [data-progress-tone="active"]) {
+  --progress-ink: var(--info);
+  --progress-fill: var(--info-bg);
+}
+:is([data-progress="done"], [data-progress-tone="done"]) {
+  --progress-ink: var(--success);
+  --progress-fill: var(--success-bg);
+}
+:is(
+  [data-progress="cancelled"],
+  [data-progress-tone="cancelled"],
+  [data-progress="attention"],
+  [data-progress-tone="attention"]
+) {
+  --progress-ink: var(--danger);
+  --progress-fill: var(--danger-bg);
+}
+
+:is(article, .note-payment-card, .shift-banner)[data-progress],
+.home-work-card[data-progress],
+tr[data-progress] > td {
+  background-color: color-mix(in srgb, var(--progress-fill) 72%, var(--surface));
+}
+:is(article, .note-payment-card, .shift-banner)[data-progress],
+.home-work-card[data-progress],
+tr[data-progress] > td:first-child {
+  box-shadow: inset 3px 0 var(--progress-ink);
+}
+.progress-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  max-width: 100%;
+  padding: 0.25em 0.65em;
+  border-radius: var(--radius-control);
+  color: var(--progress-ink);
+  background-color: var(--progress-fill);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  line-height: 1.45;
+  white-space: normal;
+}
+.progress-badge::before {
+  content: "";
+  flex: 0 0 0.55em;
+  height: 0.55em;
+  border-radius: 50%;
+  background: currentColor;
+}
+[data-progress] .progress-open {
+  min-height: var(--control-height);
+  min-width: min(100%, 6rem);
+  border-color: var(--progress-ink);
+  background-color: var(--surface);
+  color: var(--progress-ink);
+}
+[data-progress] .progress-open:hover {
+  background-color: var(--progress-fill);
+}
+@container record-panel (max-width: 48rem) {
+  .record-table tr[data-progress] {
+    padding: 14px;
+    border: 1px solid var(--line);
+    border-inline-start: 3px solid var(--progress-ink);
+    border-radius: var(--radius-control);
+    background-color: color-mix(in srgb, var(--progress-fill) 72%, var(--surface));
+  }
+  .record-table tr[data-progress] + tr[data-progress] {
+    margin-top: 10px;
+  }
+  .record-table tr[data-progress] > td {
+    background: transparent;
+    box-shadow: none;
+  }
+}

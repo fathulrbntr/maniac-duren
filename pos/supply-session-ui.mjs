@@ -18,7 +18,11 @@ export const recordCells = (heads, cells) =>
 export function recordTable(heads, rows) {
   return table(
     heads,
-    rows.map((cells) => `<tr>${recordCells(heads, cells)}</tr>`),
+    rows.map((row) =>
+      Array.isArray(row)
+        ? `<tr>${recordCells(heads, row)}</tr>`
+        : `<tr data-progress="${e(row.progress)}">${recordCells(heads, row.cells)}</tr>`,
+    ),
     true,
   );
 }

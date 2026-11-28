@@ -1,3 +1,4 @@
+import { progressBadge } from "./progress-ui.mjs";
 import { productPhoto } from "./product-photos.mjs";
 import { uiIcon } from "./ui-icons.mjs";
 import { cashierName } from "./cashier-shifts.mjs";
@@ -47,6 +48,14 @@ const isPaid = (o) =>
   o.payment_status === "paid" || (!o.payment_status && o.status === "paid");
 const paymentLabel = (o) =>
   o.payment_status === "refunded" ? "Dikembalikan" : isPaid(o) ? "Lunas" : "Belum bayar";
+const orderProgress = (o) =>
+  ({
+    queued: "pending",
+    preparing: "active",
+    ready: "active",
+    paid: "done",
+    cancelled: "cancelled",
+  })[o.status] || "pending";
 const orderLabel = (o) =>
   ({
     queued: isPaid(o) ? "Antre" : "Menunggu bayar",
@@ -155,7 +164,7 @@ export function opsPage(view, s, store) {
           .filter((o) => o.store_id === store)
           .map(
             (o) =>
-              `<tr><td><b>${e(o.id.slice(0, 8))}</b><small>${e(o.business_date)} · ${e(tableLabel(o.table_no))}</small>${e(o.note)}<small>Kasir: ${e(cashierName(o))}</small></td><td>${o.lines.map((l) => `${e(l.name)} × ${num(l.qty)} ${e(l.unit)}`).join("<br>")}</td><td><span class="pill">${e(orderLabel(o))}</span><small>${e(paymentLabel(o))} · ${money(o.total)}</small></td><td>${isPaid(o) && !needsKitchen(o) && ["queued", "preparing", "ready"].includes(o.status) && allowed(s, "sell") ? button("Selesaikan di kasir", "order_direct", o.id, "primary") : ""}${!isPaid(o) && o.status !== "cancelled" && allowed(s, "sell") ? button("Bayar sekarang", "pay", o.id, "primary") : ""}${isPaid(o) && needsKitchen(o) && o.status === "ready" && allowed(s, "sell") ? button("Sudah diserahkan", "order_complete", o.id, "primary") : ""}${o.status !== "cancelled" && allowed(s, "sell") ? button("Void", "cashier_void", o.id, "danger") : ""}${button("Detail / struk", "order_receipt", o.id)}</td></tr>`,
+              `<tr data-progress="${orderProgress(o)}"><td><b>${e(o.id.slice(0, 8))}</b><small>${e(o.business_date)} · ${e(tableLabel(o.table_no))}</small>${e(o.note)}<small>Kasir: ${e(cashierName(o))}</small></td><td>${o.lines.map((l) => `${e(l.name)} × ${num(l.qty)} ${e(l.unit)}`).join("<br>")}</td><td>${progressBadge(orderProgress(o), orderLabel(o))}<small>${e(paymentLabel(o))} · ${money(o.total)}</small></td><td>${isPaid(o) && !needsKitchen(o) && ["queued", "preparing", "ready"].includes(o.status) && allowed(s, "sell") ? button("Selesai", "order_direct", o.id, "primary") : ""}${!isPaid(o) && o.status !== "cancelled" && allowed(s, "sell") ? button("Bayar sekarang", "pay", o.id, "primary") : ""}${isPaid(o) && needsKitchen(o) && o.status === "ready" && allowed(s, "sell") ? button("Selesai", "order_complete", o.id, "primary") : ""}${o.status !== "cancelled" && allowed(s, "sell") ? button("Void", "cashier_void", o.id, "danger") : ""}${button("Detail / struk", "order_receipt", o.id)}</td></tr>`,
           ),
       )}</section>`;
   }
@@ -687,13 +696,13 @@ function kitchenPage(s, store) {
   return (
     header(
       "Antrean Kitchen",
-      `Hanya ${itemTypes.recipe} yang sudah lunas masuk antrean. Tekan Mulai buat, lalu Selesai / siap saat pesanan selesai.`,
+      `Hanya ${itemTypes.recipe} yang sudah lunas masuk antrean. Tekan Diproses saat mulai membuat pesanan, lalu Selesai saat siap diantar.`,
       '<button id="kitchen-sound" type="button">Aktifkan suara</button>',
     ) +
     `<div class="kitchen-status" id="kitchen-sync" role="status">${s.stockDemo ? "Mode demo · hanya di tab ini" : "Pembaruan otomatis setiap 5 detik"} · ${orders.filter((o) => o.status === "queued").length} pesanan menunggu</div><div class="kitchen-board">${[
       ["queued", "Pesanan baru"],
       ["preparing", "Sedang dibuat"],
-      ["ready", "Selesai / siap"],
+      ["ready", "Siap diantar"],
     ]
       .map(
         ([status, label]) =>
@@ -702,7 +711,7 @@ function kitchenPage(s, store) {
               .filter((o) => o.status === status)
               .map(
                 (o) =>
-                  `<article class="kitchen-ticket"><div class="header-row"><b>#${e(o.id.slice(0, 8))}</b><span class="muted">${e(o.business_date)}</span></div><span class="pill">Lunas</span><p><b>${e(tableLabel(o.table_no))}</b></p><p class="kitchen-note">${e(o.note || "Tanpa catatan")}</p><ul>${o.lines
+                  `<article class="kitchen-ticket" data-progress="${status === "ready" ? "done" : orderProgress(o)}"><div class="header-row"><b>#${e(o.id.slice(0, 8))}</b><span class="muted">${e(o.business_date)}</span></div>${progressBadge(status === "ready" ? "done" : orderProgress(o))}<p><b>${e(tableLabel(o.table_no))}</b></p><p class="kitchen-note">${e(o.note || "Tanpa catatan")}</p><ul>${o.lines
                     .filter((l) => l.itemType === "recipe")
                     .map(
                       (l) =>
@@ -710,7 +719,7 @@ function kitchenPage(s, store) {
                     )
                     .join(
                       "",
-                    )}</ul>${status === "queued" && (allowed(s, "kitchen") || !o.lines.some((l) => l.itemType === "recipe")) ? button("Mulai buat", "order_start", o.id, "primary full") : ""}${status === "preparing" && (allowed(s, "kitchen") || !o.lines.some((l) => l.itemType === "recipe")) ? button("Selesai / siap", "order_ready", o.id, "primary full") : ""}${status === "ready" ? '<p class="muted">Siap disajikan / diserahkan</p>' : ""}</article>`,
+                    )}</ul>${status === "queued" && (allowed(s, "kitchen") || !o.lines.some((l) => l.itemType === "recipe")) ? button("Diproses", "order_start", o.id, "primary full") : ""}${status === "preparing" && (allowed(s, "kitchen") || !o.lines.some((l) => l.itemType === "recipe")) ? button("Selesai", "order_ready", o.id, "primary full") : ""}${status === "ready" ? '<p class="muted">Siap disajikan / diserahkan</p>' : ""}</article>`,
               )
               .join("") || '<p class="empty">Belum ada pesanan</p>'
           }</section>`,

@@ -177,7 +177,13 @@ try {
 
   await login("warehouse");
   await nav("supplierNotes");
-  await page.locator("[data-session-open]").click();
+  const receiptCard = page
+    .locator("tr")
+    .filter({ has: page.locator("[data-session-open]") });
+  const openReceipt = receiptCard.locator("[data-session-open]");
+  assert.equal(await openReceipt.innerText(), "Buka");
+  assert.equal(await receiptCard.getAttribute("data-progress"), "pending");
+  await openReceipt.click();
   assert(!/Rp|Modal|Pembayaran/.test(await page.locator("dialog[open]").innerText()));
   const scanner = page.locator("[data-session-code]");
   const feedback = page.locator("dialog[open] #form-error");
@@ -219,7 +225,9 @@ try {
   await page.reload();
   await page.locator("#pos-main").waitFor();
   await nav("supplierNotes");
-  await page.locator("[data-session-open]").click();
+  assert.equal(await openReceipt.innerText(), "Diproses");
+  assert.equal(await receiptCard.getAttribute("data-progress"), "active");
+  await openReceipt.click();
   await page
     .locator("[data-receiving-barcodes] code")
     .filter({ hasText: code(3) })
@@ -248,6 +256,12 @@ try {
   await receiptActions.getByRole("button", { name: "Selesai", exact: true }).click();
   await decision.getByRole("button", { name: "Konfirmasi", exact: true }).click();
   await receiptActions.waitFor({ state: "detached" });
+  await receiptDialog.getByRole("button", { name: "Tutup", exact: true }).click();
+  await receiptCard.locator(".progress-badge").filter({ hasText: "Selesai" }).waitFor();
+  assert.equal(await openReceipt.innerText(), "Selesai");
+  assert.equal(await receiptCard.getAttribute("data-progress"), "done");
+  await openReceipt.click();
+  assert.equal(await receiptDialog.locator("[data-session-code]").count(), 0);
   await receiptDialog.getByRole("button", { name: "Tutup", exact: true }).click();
   await login("owner");
   await openSidebar(page);
