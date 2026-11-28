@@ -32,6 +32,7 @@ import {
   transferPreview,
   transferDocument,
 } from "./warehouse-flow.mjs";
+import { bindNoteProofField, noteProofField } from "./supplier-note-proof.mjs";
 import { notePaymentCell, openSupplierNote } from "./supplier-notes-ui.mjs";
 import { openWeighingReceipt } from "./receipt-weighing.mjs";
 const field = (label, html) => `<label class="field">${e(label)}${html}</label>`;
@@ -914,6 +915,7 @@ function receiptItems(t) {
   )}</details>`;
 }
 function noteDialog(s, ctx) {
+  const autoNumber = s.supplierNoteProofVersion >= 137 && !s.stockDemo;
   const branch = s.branchStockVersion >= 132;
   const branches = (s.locations || s.stores).filter((l) => l.locationType === "store");
   const wh = warehouseId(s),
@@ -936,9 +938,10 @@ function noteDialog(s, ctx) {
   }
   const d = ctx.modal(
     branch ? "Buka nota supplier untuk cabang" : "Nota supplier ke gudang",
-    `${branch ? field("Cabang penerima", `<select name="receivingBranch" required><option value="">Pilih cabang penerima</option>${opts(branches)}</select>`) : `<p><b>${e(location(s, wh)?.name)}</b></p>`}<div class="form-grid">${field("Supplier", `<select name="supplierId" required>${opts(s.suppliers)}</select>`)}${field("Nomor nota supplier", '<input name="invoiceNo" maxlength="100" required>')}${field("Tanggal penerimaan", `<input name="date" type="date" value="${today()}" max="${today()}" required>`)}${field("Ongkir bersama (Rp)", '<input name="shippingCost" type="number" min="0" step="any" value="0" required>')}</div><div data-note-lines></div><button type="button" data-note-add>+ Tambah produk</button><p class="muted">Modal batch dihitung dari nilai barang dan bagian ongkir, dibagi jumlah aktual yang diterima.</p>`,
+    `${branch ? field("Cabang penerima", `<select name="receivingBranch" required><option value="">Pilih cabang penerima</option>${opts(branches)}</select>`) : `<p><b>${e(location(s, wh)?.name)}</b></p>`}<div class="form-grid">${field("Supplier", `<select name="supplierId" required>${opts(s.suppliers)}</select>`)}${field("Nomor nota supplier", autoNumber ? '<input value="Otomatis saat disimpan" readonly>' : '<input name="invoiceNo" maxlength="100" required>')}${field("Tanggal penerimaan", `<input name="date" type="date" value="${today()}" max="${today()}" required>`)}${field("Ongkir bersama (Rp)", '<input name="shippingCost" type="number" min="0" step="any" value="0" required>')}</div>${autoNumber ? noteProofField : ""}<div data-note-lines></div><button type="button" data-note-add>+ Tambah produk</button><p class="muted">Modal batch dihitung dari nilai barang dan bagian ongkir, dibagi jumlah aktual yang diterima.</p>`,
   );
   d.classList.add("supply-modal");
+  const getProof = autoNumber ? bindNoteProofField(d) : null;
   const list = d.querySelector("[data-note-lines]");
   const unitOf = (r) => products.find((p) => p.id === r.productId)?.stockUnit;
   const draw = () => {
@@ -994,13 +997,17 @@ function noteDialog(s, ctx) {
   savingForm(d, async (f) => {
     if (new Set(rows.map((r) => r.productId)).size !== rows.length)
       throw Error("Produk tidak boleh terduplikasi.");
+    const numberAndProof = autoNumber
+      ? await getProof()
+      : { invoiceNo: f.elements.invoiceNo.value.trim() };
+    if (d.open === false) return;
     await ctx.mutate(
       "receipt_plan_save",
       {
         id: request,
         storeId: branch ? f.elements.receivingBranch.value : wh,
         supplierId: f.elements.supplierId.value,
-        invoiceNo: f.elements.invoiceNo.value.trim(),
+        ...numberAndProof,
         date: f.elements.date.value,
         shippingCost: Number(f.elements.shippingCost.value),
         lines: rows.map((r) => ({ ...r, purchaseCost: Number(r.purchaseCost) })),
@@ -1009,6 +1016,9 @@ function noteDialog(s, ctx) {
     );
     d.close();
     ctx.render();
+    const saved =
+      autoNumber && ctx.getState?.().receiptPlans?.find((p) => p.id === request);
+    if (saved) ctx.toast(`Nota ${saved.invoiceNo} tersimpan.`);
   });
   draw();
   return d;

@@ -734,3 +734,31 @@
     flex-direction: column;
   }
 }
+
+.note-proof-field {
+  min-inline-size: 0;
+  margin: 0 0 1rem;
+  padding: 0;
+  border: 0;
+}
+.note-proof-field legend {
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+.note-proof-field small {
+  font-weight: 400;
+  color: var(--muted);
+}
+.note-proof-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+.note-proof-field [data-photo-status] {
+  overflow-wrap: anywhere;
+}
+.note-proof-field [hidden],
+.note-detail [data-note-proof-image][hidden],
+.note-detail [data-view-note-proof][hidden] {
+  display: none;
+}

@@ -194,3 +194,5 @@ Patch **134** (`supplier-note-cancel-134.sql`) menambahkan pembatalan nota suppl
 Patch **135** (`branch-transfer-notes-135.sql`) dipasang setelah 134. Back Office menerbitkan nota estimasi, toko asal mengajukan jumlah aktual, lalu Back Office menyetujui dan menerbitkan surat jalan. Pengiriman membukukan mutasi sesuai barcode dan batch FIFO. Penerimaan memakai surat jalan yang sama. Nota dan surat jalan yang sudah terbit sebelum pembaruan dapat diproses melalui riwayatnya.
 
 Patch **136** (`branch-receipt-barcode-136.sql`) mewajibkan toko tujuan memindai ulang setiap buah pada surat jalan antarcabang, termasuk kiriman yang masih dalam perjalanan saat patch dipasang. Setiap scan yang cocok tersimpan pada dokumen. Konfirmasi akhir memeriksa barcode, berat dan jumlah per batch serta jumlah barang satuan, lalu membukukan stok tujuan dalam satu transaksi.
+
+Patch **137** (`supplier-note-proof-137.sql`) dipasang setelah 136. POS memberikan nomor `NS-YYYYMM-NNNNNN` saat nota disimpan. Urutan berlaku lintas cabang dan bulan. Foto nota opsional tersimpan bersama nota dan dapat dibuka dari detail nota oleh Back Office.

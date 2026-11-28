@@ -201,8 +201,86 @@ try {
     confirmed: true,
   });
   await assert.rejects(mutate("supplier_note_cancel", await request(next)), /dibukukan/);
+  await db.exec(sql("branch-transfer-notes-135"));
+  await db.exec(sql("branch-receipt-barcode-136"));
+  const prefix = (
+    await one(
+      "select 'NS-' || to_char(now() at time zone 'Asia/Jakarta','YYYYMM') || '-' prefix",
+    )
+  ).prefix;
+  // A manually numbered note may already occupy the first system number.
+  await mutate("receipt_plan_save", {
+    ...newNote,
+    id: id(),
+    invoiceNo: prefix + "000001",
+  });
+  await db.exec(sql("supplier-note-proof-137"));
+  await db.exec(sql("supplier-note-proof-137"));
+  assert.equal((await read()).supplierNoteProofVersion, 137);
+  assert.equal((await active(next)).invoiceNo, note.invoiceNo);
+  const photo =
+    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aZncAAAAASUVORK5CYII=";
+  const numbered = { ...newNote, id: id(), noteProof: photo };
+  delete numbered.invoiceNo;
+  const proof = async (planId) =>
+    (await one("select public.pos_supplier_note_proof($1) photo", [planId])).photo;
+  const issue = (payload) => mutate("receipt_plan_save", payload);
+  const created = await issue(numbered);
+  const saved = created.receiptPlans.find((x) => x.id === numbered.id);
+  assert.equal(saved.invoiceNo, prefix + "000002");
+  assert.equal(saved.hasProof, true);
+  assert(!JSON.stringify(created).includes("data:image"));
+  assert(
+    !(
+      await one(
+        "select request ? 'noteProof' as included from md_supply.events where id=$1",
+        [numbered.id],
+      )
+    ).included,
+  );
+  assert.equal(await proof(numbered.id), photo);
+  assert.equal(
+    (await issue(numbered)).receiptPlans.find((x) => x.id === numbered.id).invoiceNo,
+    saved.invoiceNo,
+  );
+  await assert.rejects(issue({ ...numbered, noteProof: null }), /isi berbeda/);
+  await assert.rejects(
+    issue({ ...numbered, id: id(), invoiceNo: saved.invoiceNo }),
+    /otomatis/,
+  );
+  const invalid = {
+    ...numbered,
+    id: id(),
+    noteProof: photo.replace("image/png", "image/jpeg"),
+  };
+  await assert.rejects(issue(invalid), /format gambar/);
+  const failed = { ...numbered, id: id(), lines: [] };
+  await assert.rejects(issue(failed));
+  assert.equal(
+    (
+      await one(
+        "select count(*) n from md_supply.supplier_note_proofs where plan_id=$1",
+        [failed.id],
+      )
+    ).n,
+    0,
+  );
+  const optional = { ...numbered, id: id() };
+  delete optional.noteProof;
+  const plain = (await issue(optional)).receiptPlans.find((x) => x.id === optional.id);
+  assert.notEqual(plain.invoiceNo, saved.invoiceNo);
+  assert.equal(plain.hasProof, false);
+  assert.equal(await proof(plain.id), null);
+  await as(staff);
+  await assert.rejects(proof(numbered.id), /akses/i);
+  assert(!(await active(numbered.id)).hasProof);
+  await assert.rejects(issue({ ...numbered, id: id() }), /akses/i);
+  await as(owner);
+  const archivedNote = await mutate("supplier_note_cancel", await request(numbered.id));
+  assert(archivedNote.cancelledReceiptPlans.find((x) => x.id === numbered.id).hasProof);
+  assert.equal(await proof(numbered.id), photo);
   console.log(
-    "PASS supplier cancellation, permissions, draft archive, stock/payment guards, retries and reuse of invoice and barcode",
+    "PASS supplier cancellation and archive, stock/payment guards, automatic invoice numbers, private photo evidence and idempotent retries",
   );
 } finally {
   await db.close();

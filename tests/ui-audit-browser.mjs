@@ -114,6 +114,7 @@ try {
     layouts = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await acceptConfirmations(page);
+  const proofByPlan = new Map();
   await page.route("**/*", async (route) => {
     const u = new URL(route.request().url()),
       reply = (json) => route.fulfill({ json });
@@ -134,6 +135,26 @@ try {
     if (u.pathname.startsWith("/backend/rest/v1/rpc/")) {
       const name = u.pathname.split("/").at(-1),
         p = route.request().postDataJSON();
+      if (name === "pos_supplier_note_proof")
+        return reply(proofByPlan.get(p.plan_id) || null);
+      if (name === "pos_warehouse_mutate" && p.action === "receipt_plan_save") {
+        const { id, storeId, supplierId, date, lines, shippingCost, noteProof } =
+          p.payload;
+        assert(!("invoiceNo" in p.payload));
+        proofByPlan.set(id, noteProof);
+        state.receiptPlans.push({
+          id,
+          storeId,
+          supplierId,
+          date,
+          lines,
+          shippingCost,
+          hasProof: !!noteProof,
+          invoiceNo: "NS-202611-000042",
+          receiving: { status: "open", revision: 0, quantities: {}, scans: [] },
+        });
+        return reply(live());
+      }
       if (name === "pos_store_logo") return reply({ logo: "" });
       if (name === "pos_cashier_shift_mutate") {
         state = applyStockDemoAction(state, p.action, p.payload);
@@ -446,6 +467,7 @@ try {
   Object.assign(state, {
     supplierNotesVersion: 112,
     supplierNoteCancelVersion: 134,
+    supplierNoteProofVersion: 137,
     warehouseVersion: 107,
     warehouseWorkflowVersion: 114,
     branchStockVersion: 132,
@@ -760,7 +782,53 @@ try {
       if (view === "supplierNotes") {
         await page.locator("[data-note-new]").click();
         await assertSaveFooter(dialog);
-        await dialog.locator(".modal-actions .close").click();
+        assert(
+          await dialog.getByLabel("Nomor nota supplier").evaluate((el) => el.readOnly),
+        );
+        assert.equal(
+          await dialog.locator('[data-source="camera"]').getAttribute("capture"),
+          "environment",
+        );
+        await assertDialogFits(view, width);
+        if (width === 390) {
+          const png = await page.evaluate(() =>
+            document.createElement("canvas").toDataURL(),
+          );
+          const upload = dialog.locator('[data-source="gallery"]');
+          await upload.setInputFiles({
+            name: "bukan-foto.txt",
+            mimeType: "text/plain",
+            buffer: Buffer.from("nota"),
+          });
+          await dialog.getByText("Pilih foto JPG, PNG, atau WebP").waitFor();
+          await dialog.getByRole("button", { name: "Hapus foto" }).click();
+          await dialog.locator('[name="receivingBranch"]').selectOption(origin.id);
+          await dialog.locator("[data-note-product]").selectOption(fruit.id);
+          await dialog.locator("[data-note-cost]").fill("300000");
+          await dialog.locator("[data-note-kg]").fill("2");
+          await dialog.locator("[data-note-pieces]").fill("1");
+          const file = page.waitForEvent("filechooser");
+          await dialog.getByRole("button", { name: "Pilih foto" }).click();
+          await (
+            await file
+          ).setFiles({
+            name: "nota.png",
+            mimeType: "image/png",
+            buffer: Buffer.from(png.split(",")[1], "base64"),
+          });
+          await dialog.getByAltText("Pratinjau bukti foto nota").waitFor();
+          await dialog.getByRole("button", { name: "Simpan", exact: true }).click();
+          const createdRow = page.locator("tr").filter({ hasText: "NS-202611-000042" });
+          await createdRow.locator("[data-note-open]").click();
+          await dialog.getByRole("button", { name: "Lihat foto nota" }).click();
+          const proof = dialog.getByAltText("Bukti foto nota supplier");
+          await proof.waitFor();
+          assert.equal(await proof.getAttribute("src"), png);
+          await assertDialogFits(view, width);
+          await dialog.locator(".modal-head .close").click();
+        } else {
+          await dialog.locator(".modal-actions .close").click();
+        }
         await page.locator('[data-note-open="receipt"]').click();
         await assertDialogFits(view, width);
         const comparisons = dialog.locator(".receipt-comparison tbody tr");
