@@ -1,4 +1,5 @@
 import { sumProducts } from "./decimal-totals.mjs";
+import { receiptProgress } from "./warehouse-workflow.mjs";
 export const supplierNoteActions = [
   "supplier_note_cancel",
   "supplier_note_correct",
@@ -95,6 +96,47 @@ export function noteBalance(note, component) {
     }[status],
   };
 }
+function hasInvoiceValue(note) {
+  return (
+    Array.isArray(note.lines) &&
+    note.lines.length > 0 &&
+    note.lines.every((line) => line.purchaseCost != null)
+  );
+}
+function noteMetric(amounts) {
+  return {
+    count: amounts.length,
+    amount: amounts.includes(null) ? null : sumProducts(amounts.map((value) => [value])),
+  };
+}
+export function supplierNoteSummary(plans) {
+  const total = [],
+    inTransit = [],
+    payable = [],
+    settled = [];
+  let unclassified = 0;
+  for (const note of plans) {
+    if (note.cancelled) continue;
+    const balance = hasInvoiceValue(note) ? noteBalance(note, "invoice") : null;
+    const value = balance?.total ?? null;
+    total.push(value);
+    if (receiptProgress(note) === "pending") inTransit.push(value);
+    if (!balance || !Array.isArray(note.payments) || balance.status === "unknown") {
+      unclassified++;
+    } else if (balance.remaining > 0) {
+      payable.push(balance.remaining);
+    } else if (balance.total > 0) {
+      settled.push(balance.total);
+    }
+  }
+  return {
+    total: noteMetric(total),
+    inTransit: noteMetric(inTransit),
+    payable: noteMetric(payable),
+    settled: noteMetric(settled),
+    unclassified,
+  };
+}
 // Invoice and freight are settled separately. Credits stay with their own note.
 export function branchSupplierPayable(state, locations) {
   if (!noteReady(state) || !Array.isArray(state.receiptPlans)) return null;
@@ -105,13 +147,7 @@ export function branchSupplierPayable(state, locations) {
   const remaining = [];
   for (const note of state.receiptPlans) {
     if (note.cancelled || !branches.has(note.storeId)) continue;
-    if (
-      !Array.isArray(note.payments) ||
-      !Array.isArray(note.lines) ||
-      !note.lines.length ||
-      note.lines.some((line) => line.purchaseCost == null)
-    )
-      return null;
+    if (!Array.isArray(note.payments) || !hasInvoiceValue(note)) return null;
     const balance = noteBalance(note, "invoice");
     if (balance.status === "unknown") return null;
     remaining.push([Math.max(0, balance.remaining)]);

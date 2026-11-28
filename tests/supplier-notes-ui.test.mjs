@@ -6,6 +6,7 @@ import {
   noteMoney,
   noteOwner,
   noteUnitCosts,
+  supplierNoteSummary,
 } from "../pos/supplier-notes.mjs";
 import { money } from "../pos/core.mjs";
 import { openSupplierNote } from "../pos/supplier-notes-ui.mjs";
@@ -189,6 +190,45 @@ assert.equal(
 assert.equal(payable([]), 0);
 assert.equal(payable([{ ...outstanding, payments: [], invoiceTracked: false }]), null);
 assert.equal(payable([{ ...outstanding, lines: [{}] }]), null);
+const waiting = { ...outstanding, receivedId: null, receiving: { status: "open" } };
+const summaryPlans = [
+  waiting,
+  { ...waiting, storeId: "second", payments: withPayments.payments },
+  {
+    ...outstanding,
+    receiving: { status: "reopened" },
+    payments: [{ component: "invoice", amount: 130 }],
+  },
+  { ...p, receiving: { status: "paused" } },
+  { ...waiting, cancelled: true },
+];
+assert.deepEqual(supplierNoteSummary(summaryPlans), {
+  total: { count: 4, amount: 401.2 },
+  inTransit: { count: 2, amount: 200.6 },
+  payable: { count: 1, amount: 70.3 },
+  settled: { count: 2, amount: 200.6 },
+  unclassified: 1,
+});
+const summaryState = {
+  ...s,
+  branchStockVersion: 132,
+  warehouseWorkflowVersion: 114,
+  receiptPlans: summaryPlans.slice(0, 4),
+};
+body.innerHTML = supplierNotesPage(summaryState, "wh", "backoffice");
+const panel = body.querySelector(".note-summary");
+assert.deepEqual(
+  panel.querySelectorAll("strong").map((el) => el.textContent),
+  ["4 nota", "2 nota", money(70.3), money(200.6)],
+);
+assert.match(panel.textContent, /Periksa 1 nota/);
+assert(!supplierNotesPage(summaryState, "wh", "store").includes("Ringkasan nota"));
+assert(!supplierNotesPage(summaryState, "wh", "warehouse").includes("Ringkasan nota"));
+const missingCost = supplierNoteSummary([{ ...waiting, lines: [{}] }]);
+assert.equal(missingCost.total.amount, null);
+assert.equal(missingCost.inTransit.amount, null);
+assert.equal(missingCost.unclassified, 1);
+assert.deepEqual(supplierNoteSummary([]).total, { count: 0, amount: 0 });
 assert.equal(noteBalance(withPayments, "invoice").status, "paid");
 assert.equal(noteBalance(withPayments, "shipping").status, "partial");
 assert.equal(

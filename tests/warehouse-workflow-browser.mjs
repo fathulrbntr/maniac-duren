@@ -177,6 +177,8 @@ try {
 
   await login("warehouse");
   await nav("supplierNotes");
+  const summary = page.getByRole("region", { name: "Ringkasan nota" });
+  assert.equal(await summary.count(), 0);
   const receiptCard = page
     .locator("tr")
     .filter({ has: page.locator("[data-session-open]") });
@@ -284,6 +286,25 @@ try {
   await outlet.selectOption(store);
   await priceRow.filter({ hasText: "Khusus cabang" }).waitFor();
   await nav("supplierNotes");
+  await summary.waitFor();
+  const cards = summary.getByRole("article");
+  assert.equal(await cards.count(), 4);
+  assert.match(await cards.filter({ hasText: "Total nota" }).innerText(), /1 nota/);
+  assert.match(await cards.filter({ hasText: "Dalam perjalanan" }).innerText(), /0 nota/);
+  assert.match(await cards.filter({ hasText: "Tagihan" }).innerText(), /200\.000/);
+  assert.match(await cards.filter({ hasText: "Lunas" }).innerText(), /0 nota/);
+  await page.setViewportSize({ width: 390, height: 844 });
+  const mobileCards = await cards.evaluateAll((nodes) =>
+    nodes.map((el) => {
+      const { x, y, right } = el.getBoundingClientRect();
+      return { x, y, right };
+    }),
+  );
+  assert.equal(mobileCards[0].y, mobileCards[1].y);
+  assert.equal(mobileCards[0].x, mobileCards[2].x);
+  assert(mobileCards[2].y > mobileCards[0].y);
+  assert(mobileCards.every((rect) => rect.x >= 0 && rect.right <= 390));
+  await page.setViewportSize({ width: 1440, height: 1000 });
   await page.locator("[data-note-open]").click();
   assert.match(await page.locator(".receipt-comparison").innerText(), /40%/);
   assert.equal(await page.locator("[data-receipt-reopen]").count(), 1);

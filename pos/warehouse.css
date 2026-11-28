@@ -450,6 +450,36 @@
   }
 }
 
+.note-summary {
+  display: grid;
+  gap: 10px;
+}
+.note-summary header {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+.note-summary h3 {
+  margin: 0;
+}
+.note-summary small {
+  color: var(--muted);
+}
+.note-summary-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.note-summary-grid .supply-stat {
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+}
+@media (max-width: 900px) {
+  .note-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+}
+
 /* Supplier note detail: independently payable invoice and freight. */
 .note-detail {
   display: grid;

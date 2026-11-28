@@ -62,6 +62,7 @@ Jalankan `npm run check`, `npm test`, lalu `npm run test:browser` untuk perubaha
 
 - `pos/data/mutations.mjs`: satu dispatcher endpoint penyimpanan, termasuk penggabungan hasil scan gudang.
 - `pos/supplier-notes.mjs`, `pos/supplier-notes-ui.mjs`: saldo nota/ongkir, detail nota, pembayaran, serta koreksi owner melalui RPC gudang; aturan akses dan audit ada di `database/supplier-notes-112.sql`.
+- Ringkasan di **Back Office → Nota Supplier** menampilkan jumlah nota aktif dan nilai barang di luar ongkir. **Dalam perjalanan** mencakup nota yang masih menunggu dimulainya penerimaan. **Tagihan** menjumlahkan sisa pembayaran barang, sedangkan **Lunas** menjumlahkan nilai barang pada nota yang seluruhnya sudah dibayar. Nota lama dengan status pembayaran belum diketahui ditandai untuk diperiksa.
 - `pos/supplier-note-proof.mjs` menangani kamera, pilihan berkas, pratinjau dan pembacaan foto dari detail nota. Patch 137 memberikan nomor nota di server serta menyimpan foto terpisah dari data sinkronisasi POS.
 - `pos/warehouse-*.mjs`, `pos/workspaces.mjs`: gudang, branch outlet, pengiriman, dan ruang kerja per divisi.
 - `pos/customer-display-*.mjs`, `api/pos-display.js`: layar pelanggan lokal/wireless.
