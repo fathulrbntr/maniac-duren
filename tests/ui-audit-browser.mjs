@@ -137,6 +137,8 @@ try {
         p = route.request().postDataJSON();
       if (name === "pos_cash_deposits_read" && state.branchStockVersion >= 132)
         return reply({
+          rows: [],
+          periodDeposited: 0,
           summary: state.cashDepositSummary.filter(
             (row) => row.storeId === p.filters.storeId,
           ),
@@ -580,6 +582,13 @@ try {
   step.phase = "operational report handoffs";
   await nav("home");
   assert.match(await page.locator(".home-value").innerText(), /775\.000/);
+  const shortcuts = page.locator(".home-body > .home-shortcuts:first-child");
+  const depositCard = page.locator(".home-work .home-deposits");
+  await shortcuts.waitFor();
+  await depositCard.getByRole("button", { name: "Riwayat setoran" }).click();
+  const history = page.locator("dialog.cash-deposit-history[open]");
+  await history.getByText("Belum ada setoran pada periode ini.").waitFor();
+  await history.getByRole("button", { name: "Selesai" }).click();
   const hero = page.locator(".home-hero");
   assert.equal(
     await hero.locator(".account-profile img").getAttribute("alt"),
@@ -727,8 +736,9 @@ try {
   await page.locator("#active-store").selectOption(origin.id);
   if (await page.locator('.shell[data-mobile-open="true"]').count())
     await page.locator("#pos-sidebar [data-sidebar-toggle]").click();
-  assert.match(await page.locator(".home-deposits").innerText(), /Omzet hari ini/);
-  await page.getByRole("button", { name: "Setor omzet", exact: true }).click();
+  await shortcuts.waitFor();
+  assert.match(await depositCard.innerText(), /Omzet hari ini/);
+  await depositCard.getByRole("button", { name: "Setor omzet", exact: true }).click();
   const depositDialog = page.locator("dialog.cash-deposit-dialog[open]");
   await depositDialog.waitFor();
   assert.match(await depositDialog.locator(".deposit-balance").innerText(), /250\.000/);
