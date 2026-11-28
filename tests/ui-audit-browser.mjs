@@ -11,6 +11,41 @@ import {
   applyStockDemoAction,
   readStockDemo,
 } from "../pos/stock-demo.mjs";
+async function assertAlignedActions(group, { shift = false } = {}) {
+  const buttons = await group.locator("button:visible").evaluateAll((nodes) =>
+    nodes.map((button) => {
+      const box = button.getBoundingClientRect();
+      const style = getComputedStyle(button);
+      return {
+        top: box.top,
+        height: box.height,
+        width: box.width,
+        radius: style.borderRadius,
+        fits:
+          button.scrollWidth <= button.clientWidth + 1 &&
+          button.scrollHeight <= button.clientHeight + 1,
+      };
+    }),
+  );
+  assert(buttons.length >= 2, `Missing actions in ${group}`);
+  const [first] = buttons;
+  for (const item of buttons) {
+    assert(item.height >= 44 && item.fits, `Small or clipped action in ${group}`);
+    assert.equal(item.radius, first.radius);
+    assert(
+      Math.abs(item.height - first.height) < 1,
+      `Unequal action heights in ${group}`,
+    );
+    if (shift) {
+      assert.equal(item.top, first.top);
+      assert(Math.abs(item.width - first.width) < 1, "Unequal shift button widths");
+    }
+  }
+  if (shift) {
+    assert.equal(buttons.length, 3);
+    assert(first.height <= 48, "Oversized shift actions");
+  }
+}
 const f = fixture();
 Object.assign(
   f.state.access,
@@ -156,7 +191,7 @@ try {
   for (const theme of ["light", "dark"]) {
     if ((await page.evaluate(() => document.documentElement.dataset.theme)) !== theme)
       await page.locator("[data-theme-toggle]").click();
-    for (const width of [1600, 1024, 900, 901, 390, 360, 1600]) {
+    for (const width of [1600, 1024, 900, 901, 390, 360, 320, 1600]) {
       step = { phase: "resize", theme, width, view: "dashboard" };
       console.log(`UI audit 117C: theme=${theme} width=${width}`);
       await page.setViewportSize({ width, height: 1000 });
@@ -168,6 +203,23 @@ try {
           mainWidth: document.querySelector("main").clientWidth,
           mainScroll: document.querySelector("main").scrollWidth,
         }));
+        if (view === "orders" || view === "shifts")
+          await assertAlignedActions(page.locator(".shift-banner-actions"), {
+            shift: true,
+          });
+        if (width <= 390) {
+          if (view === "reports")
+            await assertAlignedActions(page.locator(".report-heading .report-actions"));
+          if (view === "documents")
+            for (const group of await page.locator(".doc-toolbar").all())
+              await assertAlignedActions(group);
+          if (view === "employees") {
+            const menu = page.locator(".employee-more").first();
+            await menu.locator("summary").click();
+            await assertAlignedActions(menu);
+            await menu.locator("summary").click();
+          }
+        }
         if (view === "orders" && [1600, 360].includes(width)) {
           const card = page.locator("#order-products .order-product:visible").first();
           const geometry = await card.evaluate((el) => {
@@ -271,7 +323,13 @@ try {
   assert.deepEqual(duplicates, []);
   // Operational back-office pages use different navigation and tables than the legacy fixture.
   const [origin, destination] = state.stores;
+  origin.locationType = destination.locationType = "store";
+  const item = state.products.find((product) => product.stockUnit === "pcs");
+  const fruit = state.products.find((product) => product.stockUnit === "kg_butir");
+  item.name = "Crystalyn kemasan " + "A".repeat(50);
   Object.assign(state, {
+    supplierNotesVersion: 112,
+    supplierNoteCancelVersion: 134,
     warehouseVersion: 107,
     warehouseWorkflowVersion: 114,
     branchStockVersion: 132,
@@ -290,15 +348,43 @@ try {
       },
     ],
     locations: state.stores,
-    branchNotes: [{ id: "note", number: "NT-4", origin, destination, status: "packing" }],
+    branchNotes: [
+      {
+        id: "note",
+        number: "NT-4",
+        origin,
+        destination,
+        status: "packing",
+        requested: [{ productId: item.id, name: item.name, qty: 100, unit: "pcs" }],
+        lines: [],
+      },
+    ],
     receiptPlans: [
       {
         id: "receipt",
-        invoiceNo: "546",
+        invoiceNo: "546-" + "8".repeat(48),
         date: "2026-11-27",
         supplierId: state.suppliers[0].id,
         storeId: origin.id,
-        lines: [],
+        lines: [
+          { productId: item.id, purchaseCost: 300000 },
+          { productId: fruit.id, purchaseCost: 11234567890 },
+        ],
+        expected: {
+          [item.id]: { qty: 150, unit: "pcs" },
+          [fruit.id]: { kg: 2, pieces: 1 },
+        },
+        receiving: {
+          status: "completed",
+          revision: 1,
+          quantities: { [item.id]: { qty: 150 } },
+          scans: [
+            { barcode: "92021511260003210000000162", grams: 2000, productId: fruit.id },
+          ],
+        },
+        receivedId: "shipment",
+        invoiceTracked: true,
+        shippingTracked: true,
         shippingCost: 10000,
       },
     ],
@@ -311,7 +397,15 @@ try {
         destination,
         status: "received",
         items: [],
-        lines: [],
+        lines: [
+          {
+            kind: "unit",
+            productName: item.name,
+            sourceLotId: "batch-crystalyn",
+            qty: 100,
+            unit: "pcs",
+          },
+        ],
       },
     ],
   });
@@ -320,6 +414,29 @@ try {
   await page
     .locator('#pos-navigation [data-view="retailFunds"]')
     .waitFor({ state: "attached" });
+  const dialog = page.locator("dialog[open]");
+  const assertDialogFits = async (view, width) => {
+    const dimensions = await dialog.evaluate((el) => {
+      const rect = el.getBoundingClientRect();
+      const controls = el.querySelectorAll(
+        "button, h2, h3, p, dd, input, select, fieldset, .table-wrap, .field",
+      );
+      return {
+        width: el.clientWidth,
+        content: el.scrollWidth,
+        inside: [...controls]
+          .filter((node) => node.getClientRects().length)
+          .every((node) => {
+            const box = node.getBoundingClientRect();
+            return box.left >= rect.left - 1 && box.right <= rect.right + 1;
+          }),
+      };
+    });
+    assert(
+      dimensions.content <= dimensions.width + 1 && dimensions.inside,
+      `${view} dialog at ${width}px: ${JSON.stringify(dimensions)}`,
+    );
+  };
   for (const [width, theme] of [
     [320, "light"],
     [390, "dark"],
@@ -376,11 +493,45 @@ try {
           `${view} table requires sideways scrolling at ${width}px`,
         );
       }
+      if (view === "supplierNotes") {
+        await page.locator('[data-note-open="receipt"]').click();
+        await assertDialogFits(view, width);
+        const comparisons = dialog.locator(".receipt-comparison tbody tr");
+        assert.match(await comparisons.first().innerText(), /150 pcs/);
+        assert.match(await comparisons.last().innerText(), /2 kg/);
+        assert(await dialog.locator("[data-note-pay=invoice]").isVisible());
+        assert(await dialog.locator("[data-note-pay=shipping]").isVisible());
+        if (width <= 768) {
+          for (const wrapper of await dialog.locator(".table-wrap").all())
+            assert(await wrapper.evaluate((el) => el.scrollWidth <= el.clientWidth + 1));
+        }
+        for (const selector of ["[data-note-pay=invoice]", "[data-expected-edit]"]) {
+          await dialog.locator(selector).click();
+          await assertDialogFits(view, width);
+          await dialog.locator(".modal-head .close").click();
+          await page.locator('[data-note-open="receipt"]').click();
+        }
+        await dialog.locator("[data-receiving-view]").click();
+        await dialog.locator("[data-receiving-session]").waitFor();
+        await assertDialogFits(view, width);
+        await dialog.locator(".modal-head .close").click();
+      }
+      if (view === "retailFunds" || view === "recipes") {
+        await page
+          .locator(view === "recipes" ? "#new-recipe" : "[data-pt-expense]")
+          .click();
+        await assertDialogFits(view, width);
+        await dialog.locator(".modal-head .close").click();
+      }
       if (view === "transfers") {
+        await page.locator('[data-branch-note="note"]').click();
+        await assertDialogFits(view, width);
+        await dialog.locator(".modal-head .close").click();
         await page.locator("[data-transfer-search]").fill("tidak cocok");
         assert.equal(await page.locator("[data-transfer]").count(), 0);
         await page.locator("[data-transfer-search]").fill("SJ-CBG");
         await page.locator("[data-transfer]").click();
+        await assertDialogFits(view, width);
         await page.locator("dialog[open] .modal-head button").click();
       }
       if (view === "products") {
@@ -423,7 +574,7 @@ try {
   assert.deepEqual(missing, []);
   fs.writeFileSync(path.join(output, "layouts.json"), JSON.stringify(layouts, null, 2));
   console.log(
-    `PASS UI audit: ${views.length} menus × 7 viewport steps × 2 themes, breakpoint round trips, product/receipt dialogs, session reload, unique module URLs and 5 back-office layouts at 320/390/768/1280px.`,
+    `PASS UI audit: ${views.length} menus × 8 viewport steps × 2 themes, aligned action buttons, breakpoint round trips, product/receipt dialogs, session reload, unique module URLs, supplier note, receiving, payment, correction, transfer, expense and recipe dialogs, and 5 back-office layouts at 320/390/768/1280px.`,
   );
 } catch (error) {
   // Preserve the exact phase and state; a click timeout alone cannot distinguish

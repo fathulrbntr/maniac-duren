@@ -111,8 +111,19 @@
   .intro .toolbar {
     flex-wrap: wrap;
   }
-  .doc-toolbar button {
-    flex: 1;
+  .intro:has(> .doc-toolbar) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .doc-toolbar {
+    display: grid;
+    width: 100%;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 8.5rem), 1fr));
+    grid-auto-rows: 1fr;
+  }
+  .doc-toolbar > button {
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 }
 @media (max-width: 440px) {
@@ -180,7 +191,7 @@
   max-width: none;
   margin: 0;
   justify-content: flex-end;
-  align-items: center;
+  align-items: stretch;
   gap: 8px;
 }
 .report-actions button {
@@ -264,12 +275,15 @@
   .report-heading .report-actions {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-auto-rows: 1fr;
     width: 100%;
     max-width: none;
     gap: 7px;
   }
-  .report-actions button {
-    padding: 10px 6px;
+  .report-heading .report-actions button {
+    padding: 5px 4px;
+    line-height: 1.3;
+    white-space: normal;
     font-size: var(--text-xs);
     min-width: 0;
   }
