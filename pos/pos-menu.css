@@ -24,11 +24,11 @@
   min-height: 172px;
   padding: 18px;
   color: var(--ink);
-  background: var(--surface);
+  background: var(--glass-panel);
   text-align: left;
   border: 1px solid var(--line);
   border-radius: var(--radius-card);
-  box-shadow: none;
+  box-shadow: var(--glass-shadow);
 }
 .order-product-grid .order-product:hover {
   transform: none;

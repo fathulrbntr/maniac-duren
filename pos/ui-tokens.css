@@ -1,4 +1,4 @@
-/* POS typography and colors follow the public menu. */
+/* Shared POS typography, semantic colors and Liquid Glass surfaces. */
 @font-face {
   font-family: "DM Sans";
   src: url("assets/fonts/dm-sans/dm-sans-latin-wght-normal.woff2") format("woff2");
@@ -36,8 +36,8 @@
   --weight-medium: 600;
   --weight-semibold: 600;
   --weight-bold: 700;
-  --radius-control: 10px;
-  --radius-card: 18px;
+  --radius-control: 12px;
+  --radius-card: 20px;
   --radius-modal: 16px;
   --radius-pill: 999px;
   --control-height: 44px;
@@ -45,18 +45,18 @@
   --dialog-control-height: 44px;
   --sidebar-width: 252px;
   --sidebar-rail-width: 96px;
-  --bg: #f3f0df;
-  --surface: #f8f6ec;
+  --bg: #edf4f1;
+  --surface: #fbfdfc;
   --surface-soft: #ffffff;
-  --surface-raised: #e3edda;
-  --ink: #111111;
-  --muted: #605f55;
-  --line: #d9d8cc;
+  --surface-raised: #dceee5;
+  --ink: #162722;
+  --muted: #51645d;
+  --line: #cfddd6;
   --panel: var(--surface);
   --sidebar: var(--surface);
   --sidebar-ink: var(--ink);
-  --hover: #eceedd;
-  --action-bg: #146321;
+  --hover: #e5f1eb;
+  --action-bg: #155c46;
   --action-ink: #ffffff;
   --action-large-ink: #ffffff;
   --success: #42752f;
@@ -73,6 +73,26 @@
   --backdrop: #0009;
   --shadow: 0 8px 32px #0000000d;
   --ui-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24'%3E%3Cpath d='m6 9 6 6 6-6' fill='none' stroke='%236d7075' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --glass-mint: #bfdfcf;
+  --glass-blue: #cddceb;
+  --glass-rim: #ffffffaf;
+  --glass-shade: #173e3010;
+  --glass-wash:
+    radial-gradient(ellipse 54rem 24rem at 8% 0%, var(--glass-mint), transparent 76%),
+    radial-gradient(ellipse 46rem 27rem at 92% 0%, var(--glass-blue), transparent 80%);
+  --glass-panel: linear-gradient(
+    125deg,
+    color-mix(in srgb, var(--surface) 89%, transparent),
+    color-mix(in srgb, var(--surface) 68%, transparent)
+  );
+  --glass-chrome: color-mix(in srgb, var(--surface) 84%, transparent);
+  --glass-shadow: inset 0 1px 0 var(--glass-rim), 0 5px 18px var(--glass-shade);
+  --glass-action: linear-gradient(
+    155deg,
+    color-mix(in srgb, var(--action-bg) 92%, white),
+    var(--action-bg) 75%
+  );
+  --glass-blur: blur(16px) saturate(120%);
   /* Existing modules use these aliases for buttons, surfaces and copy. */
   --green: var(--action-bg);
   --lime: var(--action-bg);
@@ -91,17 +111,21 @@
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #172019;
-  --surface: #202b22;
-  --surface-soft: #29352b;
-  --surface-raised: #304632;
-  --ink: #f8f6ec;
-  --muted: #bec9ba;
-  --line: #405144;
+  --glass-mint: #284b40;
+  --glass-blue: #303f55;
+  --glass-rim: #d7f3e42a;
+  --glass-shade: #0003;
+  --bg: #14211f;
+  --surface: #202e2b;
+  --surface-soft: #293a35;
+  --surface-raised: #2c493e;
+  --ink: #f1f8f5;
+  --muted: #bbcfc6;
+  --line: #41564e;
   --hover: #354638;
-  --action-bg: #a6dd99;
-  --action-ink: #142e19;
-  --action-large-ink: #142e19;
+  --action-bg: #a6e7c9;
+  --action-ink: #103526;
+  --action-large-ink: #103526;
   --success: #a6dd99;
   --success-bg: #334934;
   --danger: #ffa6af;
@@ -127,6 +151,17 @@
     --text-control: 16px;
     --text-dialog-label: 13px;
     --radius-modal: 16px;
+  }
+}
+@media (prefers-reduced-transparency: reduce), (forced-colors: active) {
+  :root,
+  :root[data-theme="dark"] {
+    --glass-wash: none;
+    --glass-panel: var(--surface);
+    --glass-chrome: var(--surface);
+    --glass-blur: none;
+    --glass-shadow: none;
+    --glass-action: none;
   }
 }
 @media print {

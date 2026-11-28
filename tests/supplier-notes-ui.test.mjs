@@ -219,7 +219,7 @@ body.innerHTML = supplierNotesPage(summaryState, "wh", "backoffice");
 const panel = body.querySelector(".note-summary");
 assert.deepEqual(
   panel.querySelectorAll("strong").map((el) => el.textContent),
-  ["4 nota", "2 nota", money(70.3), money(200.6)],
+  [money(70.3), money(200.6), "4 nota", "2 nota"],
 );
 assert.match(panel.textContent, /Periksa 1 nota/);
 assert(!supplierNotesPage(summaryState, "wh", "store").includes("Ringkasan nota"));

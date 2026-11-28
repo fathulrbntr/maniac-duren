@@ -11,7 +11,9 @@ html:has(.system-dock) {
   inset: auto 0 0 var(--sidebar-width);
   display: flex;
   justify-content: center;
-  background: var(--surface);
+  background: var(--glass-chrome);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   border-top: 1px solid var(--line);
   padding: 0 max(6px, env(safe-area-inset-right)) env(safe-area-inset-bottom, 0px)
     max(6px, env(safe-area-inset-left));
@@ -110,7 +112,7 @@ html:has(.system-dock) {
   width: 58px;
   height: 47px;
   border-radius: 20px;
-  background: var(--action-bg);
+  background: var(--action-bg) var(--glass-action);
   color: var(--action-ink);
   box-shadow:
     0 0 0 4px var(--surface),

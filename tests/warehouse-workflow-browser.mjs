@@ -287,23 +287,37 @@ try {
   await priceRow.filter({ hasText: "Khusus cabang" }).waitFor();
   await nav("supplierNotes");
   await summary.waitFor();
-  const cards = summary.getByRole("article");
-  assert.equal(await cards.count(), 4);
-  assert.match(await cards.filter({ hasText: "Total nota" }).innerText(), /1 nota/);
-  assert.match(await cards.filter({ hasText: "Dalam perjalanan" }).innerText(), /0 nota/);
-  assert.match(await cards.filter({ hasText: "Tagihan" }).innerText(), /200\.000/);
-  assert.match(await cards.filter({ hasText: "Lunas" }).innerText(), /0 nota/);
-  await page.setViewportSize({ width: 390, height: 844 });
-  const mobileCards = await cards.evaluateAll((nodes) =>
-    nodes.map((el) => {
-      const { x, y, right } = el.getBoundingClientRect();
-      return { x, y, right };
-    }),
+  const debt = summary.locator('[data-balance="payable"]');
+  const settled = summary.locator('[data-balance="settled"]');
+  assert.match(await debt.innerText(), /200\.000/);
+  assert.equal(await settled.isVisible(), false);
+  await summary.getByText("Lunas", { exact: true }).click();
+  assert.equal(await summary.getByRole("radio", { name: "Lunas" }).isChecked(), true);
+  assert.match(await settled.innerText(), /0 nota lunas/);
+  assert.equal(await debt.isVisible(), false);
+  await page.locator(".note-tools summary").click();
+  await page.getByRole("button", { name: "Perbarui", exact: true }).click();
+  await page.locator(".note-tools:not([open])").waitFor();
+  assert.equal(await settled.isVisible(), true);
+  await summary.getByRole("radio", { name: "Lunas" }).focus();
+  await page.keyboard.press("ArrowLeft");
+  assert.equal(await debt.isVisible(), true);
+  const totals = summary.locator(".note-totals > div");
+  assert.match(await totals.filter({ hasText: "Total nota" }).innerText(), /1 nota/);
+  assert.match(
+    await totals.filter({ hasText: "Dalam perjalanan" }).innerText(),
+    /0 nota/,
   );
-  assert.equal(mobileCards[0].y, mobileCards[1].y);
-  assert.equal(mobileCards[0].x, mobileCards[2].x);
-  assert(mobileCards[2].y > mobileCards[0].y);
-  assert(mobileCards.every((rect) => rect.x >= 0 && rect.right <= 390));
+  await page.setViewportSize({ width: 390, height: 844 });
+  assert.equal(await summary.evaluate((el) => el.scrollWidth <= el.clientWidth), true);
+  const mobileTotals = await totals.evaluateAll((nodes) =>
+    nodes.map((el) => el.getBoundingClientRect().top),
+  );
+  assert.equal(mobileTotals[0], mobileTotals[1]);
+  const noteRow = page.locator(".note-list-panel tbody tr");
+  await noteRow.locator(".note-invoice").click();
+  await page.locator("dialog[open] [data-receiving-view]").waitFor();
+  await page.locator("dialog[open] [type=submit]").click();
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.locator("[data-note-open]").click();
   assert.match(await page.locator(".receipt-comparison").innerText(), /40%/);

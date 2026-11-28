@@ -283,9 +283,9 @@ try {
     };
   });
   assert.deepEqual(menuBrand, {
-    background: "rgb(243, 240, 223)",
+    background: "rgb(237, 244, 241)",
     logoBackground: "rgba(0, 0, 0, 0)",
-    action: "rgb(20, 99, 33)",
+    action: "rgb(21, 92, 70)",
     fonts: ["DM Sans", "Manrope"],
   });
   await page.locator("[name=identifier]").fill("owner");

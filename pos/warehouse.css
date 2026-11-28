@@ -12,7 +12,8 @@
   padding: 26px 28px;
   border: 1px solid var(--line);
   border-radius: var(--radius-card);
-  background: var(--surface);
+  background: var(--glass-panel);
+  box-shadow: var(--glass-shadow);
 }
 .supply-hero > div {
   min-width: 0;
@@ -59,7 +60,8 @@
   padding: 21px;
   border: 1px solid var(--line);
   border-radius: var(--radius-card);
-  background: var(--surface);
+  background: var(--glass-panel);
+  box-shadow: var(--glass-shadow);
   min-width: 0;
 }
 .supply-stat span {
@@ -91,7 +93,8 @@
   padding: 22px 42px 22px 22px;
   border: 1px solid var(--line);
   border-radius: var(--radius-card);
-  background: var(--surface);
+  background: var(--glass-panel);
+  box-shadow: var(--glass-shadow);
   white-space: normal;
 }
 .supply-task span {
@@ -450,33 +453,239 @@
   }
 }
 
-.note-summary {
-  display: grid;
-  gap: 10px;
+/* Supplier notes use one balance selector and keep the full receipt in its detail dialog. */
+.note-office {
+  gap: clamp(12px, 2vw, 22px);
 }
-.note-summary header {
+.note-heading,
+.note-actions {
   display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 4px 12px;
+  align-items: center;
+  gap: 8px;
 }
-.note-summary h3 {
+.note-heading {
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+.note-heading h2 {
+  font-size: clamp(22px, 3vw, 32px);
+  line-height: 1.1;
+  letter-spacing: -0.05em;
   margin: 0;
 }
+.note-heading .primary {
+  white-space: nowrap;
+}
+.note-actions > :is(button, details) {
+  margin: 0;
+}
+.note-tools {
+  position: relative;
+}
+.note-tools summary {
+  display: grid;
+  place-items: center;
+  list-style: none;
+  cursor: pointer;
+  min-height: var(--control-height);
+  min-width: var(--control-height);
+  color: var(--ink);
+  background: var(--glass-panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+}
+.note-tools summary::-webkit-details-marker {
+  display: none;
+}
+.note-tools > div {
+  position: absolute;
+  inset-inline-end: 0;
+  margin-top: 6px;
+  z-index: 4;
+  width: min(14rem, 76vw);
+  padding: 4px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+}
+.note-tools button {
+  width: 100%;
+  text-align: start;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+}
+.note-tools button:hover {
+  background: var(--hover);
+}
+.note-summary {
+  display: grid;
+  gap: 13px;
+  padding: clamp(15px, 2.2vw, 26px);
+  border: 1px solid var(--glass-rim);
+  border-radius: 24px;
+  background: var(--glass-panel);
+  box-shadow: var(--glass-shadow);
+}
+.note-segments {
+  display: inline-flex;
+  justify-self: start;
+  padding: 3px;
+  gap: 2px;
+  border-radius: var(--radius-pill);
+  background-color: color-mix(in srgb, var(--ink) 8%, transparent);
+}
+.note-segments label {
+  position: relative;
+  margin: 0;
+  cursor: pointer;
+}
+.note-segments label > span {
+  display: grid;
+  place-items: center;
+  min-height: var(--control-height);
+  padding-inline: 18px;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-weight: 650;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+}
+.note-segments input:checked + span {
+  color: var(--ink);
+  background: var(--surface);
+  box-shadow: var(--glass-shadow);
+  border-color: var(--line);
+}
+.note-segments input:focus-visible + span {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+.note-balances > div {
+  display: grid;
+  gap: 3px;
+}
+.note-balances strong {
+  font: 700 clamp(28px, 5vw, 46px)/1.1 var(--font-heading);
+  letter-spacing: -0.055em;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.note-summary:has(input[value="payable"]:checked) [data-balance="settled"],
+.note-summary:has(input[value="settled"]:checked) [data-balance="payable"] {
+  display: none;
+}
+.note-totals {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.note-totals > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.note-totals span,
 .note-summary small {
   color: var(--muted);
+  font-size: var(--text-xs);
 }
-.note-summary-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+.note-totals strong {
+  font-size: var(--text-lg);
+  letter-spacing: -0.035em;
 }
-.note-summary-grid .supply-stat {
-  grid-template-columns: minmax(0, 1fr);
-  align-content: start;
+.note-totals small {
+  overflow-wrap: anywhere;
 }
-@media (max-width: 900px) {
-  .note-summary-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+.note-scope {
+  align-self: end;
+}
+.note-list-panel h3 {
+  margin: 0 0 10px;
+}
+.note-list-panel .table-wrap {
+  max-width: 100%;
+}
+.note-list-panel .note-row-open {
+  width: 100%;
+  padding: 6px 0;
+  text-align: start;
+  border: 0;
+  background: none;
+  border-radius: 6px;
+  color: var(--ink);
+  min-height: var(--control-height);
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.note-row-open strong {
+  display: block;
+}
+.note-row-open small {
+  font-weight: 400;
+}
+.note-row-open:hover strong {
+  color: var(--action-bg);
+}
+.note-list-panel tbody tr:has(.note-row-open) {
+  cursor: pointer;
+}
+.note-list-panel tr:focus-within {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+@container supply-workspace (max-width: 48rem) {
+  .note-list-panel .table-wrap {
+    border: 0;
+    overflow: visible;
+  }
+  .note-list-panel table,
+  .note-list-panel tbody {
+    display: block;
+    min-width: 0;
+    width: 100%;
+  }
+  .note-list-panel thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .note-list-panel tbody tr {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: center;
     gap: 8px;
+  }
+  .note-list-panel tbody tr + tr {
+    border-top: 1px solid var(--line);
+  }
+  .note-list-panel tbody td {
+    padding: 5px 0;
+    min-width: 0;
+    white-space: normal;
+    border: 0;
+    background: transparent;
+  }
+  .note-list-panel .note-where,
+  .note-list-panel .note-freight,
+  .note-list-panel .note-arrival {
+    display: none;
+  }
+  .note-list-panel .note-invoice {
+    text-align: end;
+    overflow-wrap: anywhere;
+    font-variant-numeric: tabular-nums;
+  }
+}
+@media (forced-colors: active) {
+  .note-segments input:checked + span {
+    border-color: Highlight;
   }
 }
 

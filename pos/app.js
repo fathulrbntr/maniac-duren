@@ -179,7 +179,7 @@ function syncThemeControls() {
   const dark = document.documentElement.dataset.theme === "dark";
   document
     .querySelector('meta[name="theme-color"]')
-    ?.setAttribute("content", dark ? "#172019" : "#f3f0df");
+    ?.setAttribute("content", dark ? "#14211f" : "#edf4f1");
   document.querySelectorAll("[data-theme-toggle]").forEach((button) => {
     button.setAttribute(
       "aria-label",
