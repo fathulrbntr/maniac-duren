@@ -230,7 +230,7 @@ try {
     "Penjualan",
   );
   await page.reload();
-  await page.locator('.shell[data-page="salesreport"] #sales-result').waitFor();
+  await page.locator('.shell[data-page="home"] .home-page').waitFor();
   await nav("storehome");
   assert.equal(
     await page.locator('#pos-navigation [data-view="storehome"]').getAttribute("title"),

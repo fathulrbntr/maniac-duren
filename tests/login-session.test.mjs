@@ -198,7 +198,7 @@ if (!scenario) {
     assert.equal(loginCalls, 0);
     networkFails = false;
     await elements["#auth-retry"].onclick();
-    assert.match(app.innerHTML, /data-location-section="branch"/);
+    assert.match(app.innerHTML, /data-page="home"/);
     assert.equal(loginCalls, 0);
   } else if (scenario === "invalid") {
     assert.match(app.innerHTML, /login-form/);
@@ -206,7 +206,7 @@ if (!scenario) {
     assert.equal(manager.read(), null);
     assert.equal(loginCalls, 0);
   } else {
-    assert.match(app.innerHTML, /data-location-section="branch"/);
+    assert.match(app.innerHTML, /data-page="home"/);
     assert.match(app.innerHTML, /<option value="B" selected/);
     assert.equal(loginCalls, 0, "refresh must not call the password login endpoint");
     if (scenario === "expired" || scenario === "unauthorized-retry") {

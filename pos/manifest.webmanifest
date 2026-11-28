@@ -6,6 +6,7 @@
   "lang": "id",
   "start_url": "/pos/",
   "scope": "/pos/",
+  "launch_handler": { "client_mode": "focus-existing" },
   "display": "standalone",
   "prefer_related_applications": false,
   "background_color": "#f3f0df",
