@@ -75,6 +75,7 @@ import { receiptHeader, fillReceiptLogo } from "./store-profile.mjs";
 import {
   navigation,
   pageTitles as title,
+  homePageId,
   pageIcon as icon,
   visibleSections,
   hasUnsavedForm,
@@ -222,7 +223,7 @@ let state = emptyState(),
   mode = "",
   config = {},
   token = "",
-  view = "dashboard",
+  view = "home",
   store = "",
   cart = [],
   busy = false,
@@ -350,7 +351,6 @@ async function switchStockDemo(reset = false) {
       if (!reset) demoSource = source;
       state = next;
       mode = "stock-demo";
-      if (["backoffice", "storehome", "warehouse"].includes(view)) view = "home";
     } else {
       // Keep demo active and write-protected until the real read succeeds.
       const fresh = await request("/rest/v1/rpc/pos_read", {}, true, true);
@@ -478,7 +478,7 @@ function resetWorkspace(forget = false) {
   hideHomeTotal = false;
   cart = [];
   state = emptyState();
-  view = "dashboard";
+  view = "home";
   store = "";
   clearOrderDraft();
   document.querySelectorAll("dialog[open]").forEach((dialog) => dialog.close());
@@ -776,7 +776,7 @@ function shell(body, access, dockOptions) {
     activeIcon = activeLocation?.locationType === "warehouse" ? "warehouse" : "stores";
   const scopeLabel = central ? "Pusat · Semua cabang" : locationLabel(activeLocation);
   const selectableLocations = workspaceLocations();
-  return `<div class="shell ${["products", "stock"].includes(view) ? "inventory-shell" : ""} ${["dashboard", "backoffice", "storehome"].includes(view) ? "dashboard-shell" : ""}" ${sidebar.attributes()} data-page="${e(view)}">
+  return `<div class="shell ${["products", "stock"].includes(view) ? "inventory-shell" : ""} ${view === "home" ? "dashboard-shell" : ""}" ${sidebar.attributes()} data-page="${e(view)}">
     <aside class="sidebar" id="pos-sidebar" aria-label="Sidebar Maniac Duren">
       <div class="sidebar-header">
         <div class="sidebar-brand-row"><div class="brand"><img src="/assets/logo.png" alt=""><div><strong>Maniac Duren</strong><span>${central ? "Back Office pusat" : "Operasional outlet"}</span></div></div><button type="button" class="sidebar-toggle" data-sidebar-toggle aria-controls="pos-sidebar" aria-label="Tutup sidebar">${sidebarIcon}</button></div>
@@ -876,13 +876,7 @@ function bindPageNavigation(root) {
         if (
           view === "home" &&
           workspace === "backoffice" &&
-          ["backoffice", "officeInventory"].includes(b.dataset.view)
-        )
-          officePage = b.dataset.view;
-        if (
-          view === "backoffice" &&
-          b.dataset.view === "officeInventory" &&
-          b.closest(".dash-workspace")
+          b.dataset.view === "officeInventory"
         )
           officePage = "officeInventory";
         if (b.dataset.view === "reports") {
@@ -900,7 +894,7 @@ function bindPageNavigation(root) {
                 : { store: workspace === "backoffice" ? officeBranch : store },
             );
         }
-        view = b.dataset.view;
+        view = homePageId(b.dataset.view);
         sidebar.navigate();
         render();
         window.scrollTo?.({ top: 0, left: 0, behavior: "instant" });
@@ -980,7 +974,12 @@ function render() {
   const titles = workspaceTitles(access);
   const pages = {
     home: () =>
-      homePage(state, pageStore, access, titles, workspaceLocations(), hideHomeTotal),
+      homePage(state, pageStore, access, titles, workspaceLocations(), hideHomeTotal) +
+      (access.workspace
+        ? supplyHome(state, pageStore, access.workspace)
+        : access.reports
+          ? dashboardPage(state, pageStore, undefined, true)
+          : ""),
     ...Object.fromEntries(
       opsPages.map((key) => [key, () => opsPage(key, state, pageStore)]),
     ),
@@ -989,10 +988,6 @@ function render() {
     shifts: () => shiftsPage(state, pageStore),
     retailFunds: () => pettyPanel(state, pageStore, true),
     storeExpenses: () => storeExpensesPage(state, pageStore),
-    dashboard: () => dashboardPage(state, pageStore),
-    backoffice: () => supplyHome(state, pageStore, "backoffice"),
-    warehouse: () => supplyHome(state, pageStore, "warehouse"),
-    storehome: () => supplyHome(state, pageStore, "store"),
     transferPrep: () => branchPreparationPage(state, pageStore),
     transfers: () => transfersPage(state, pageStore, false, workspace),
     receiving: () => transfersPage(state, pageStore, true),
@@ -1041,7 +1036,6 @@ function render() {
   };
   if (view === "home")
     bindHome({
-      changeStore: central ? changeOfficeBranch : changeStore,
       setHidden: (value) => {
         hideHomeTotal = value;
       },
@@ -1137,7 +1131,7 @@ function render() {
     activePicker.onchange = async (ev) => {
       if (!(await changeStore(ev.target.value))) ev.target.value = store;
     };
-  if (["dashboard", "backoffice", "storehome"].includes(view))
+  if (view === "home")
     bindDashboard(state, pageStore, {
       ...shiftContext,
       workspace: workspaceAccess().workspace,

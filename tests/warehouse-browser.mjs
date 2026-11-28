@@ -231,11 +231,8 @@ try {
   );
   await page.reload();
   await page.locator('.shell[data-page="home"] .home-page').waitFor();
-  await nav("storehome");
-  assert.equal(
-    await page.locator('#pos-navigation [data-view="storehome"]').getAttribute("title"),
-    "Dashboard",
-  );
+  await nav("home");
+  assert.equal(await page.locator('#pos-navigation [data-view="storehome"]').count(), 0);
   await nav("receiving");
   await page.locator("[data-transfer-search]").fill("SJ-ARN");
   await page.locator("[data-transfer]").click();
@@ -275,10 +272,7 @@ try {
   await nextSteps.getByRole("button", { name: /Penjualan toko/ }).click();
   await page.locator('.shell[data-page="orders"] #order-products').waitFor();
   await login("owner");
-  await page
-    .locator('.shell[data-page="home"] .home-hero-actions [data-view="backoffice"]')
-    .click();
-  await page.locator('.shell[data-page="backoffice"] .dash-profile').waitFor();
+  await page.locator('.shell[data-page="home"] .dash-profile').waitFor();
   assert.equal(await page.locator("#dash-store").inputValue(), "");
   assert.equal(
     await page.locator('[data-dash-tab="stock"]').getAttribute("aria-pressed"),
@@ -411,7 +405,8 @@ try {
       .querySelector(".supply-workspace")
       .textContent.includes("Pemeriksaan 7 hari"),
   );
-  await nav("storehome");
+  await nav("home");
+  await page.locator(".home-task-guide > summary").click();
   await page
     .locator(".workspace-content")
     .getByRole("button", { name: /Catat atau olah reject/ })

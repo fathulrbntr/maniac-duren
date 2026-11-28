@@ -110,7 +110,7 @@ globalThis.fetch = async (endpoint) => {
 };
 await import("../pos/app.js?dashboard-integration");
 assert(root.querySelector(".home-page"));
-await root.querySelector('#pos-navigation [data-view="dashboard"]').fire("click");
+assert.equal(root.querySelector('#pos-navigation [data-view="dashboard"]'), null);
 assert(root.querySelector(".dashboard-shell"));
 assert(root.querySelector(".system-dock"));
 assert.equal(reads, 1);
@@ -156,6 +156,12 @@ console.log(
 Object.assign(s, {
   warehouseVersion: 107,
   branchStockVersion: 132,
+  retailBalance: 7500,
+  cashDepositVersion: 92,
+  cashDepositSummary: [
+    { storeId: "a", netCash: 18000, deposited: 8000, pending: 10000 },
+    { storeId: "b", netCash: 27000, deposited: 4000, pending: 23000 },
+  ],
   branchPricingVersion: 123,
   pettyCashVersion: 130,
   warehouseWorkflowVersion: 114,
@@ -198,23 +204,30 @@ await space("store");
 await select("#active-store", "b");
 await space("backoffice");
 assert(root.querySelector(".home-page"));
-assert.match(root.querySelector(".home-value").textContent, /5\.000/);
-await root.querySelector('[data-home-store="b"]').fire("click");
-assert.doesNotMatch(root.querySelector(".home-value").textContent, /5\.000/);
-await root.querySelector('[data-home-store=""]').fire("click");
-assert.match(root.querySelector(".home-value").textContent, /5\.000/);
-await root.querySelector('.home-hero-actions [data-view="backoffice"]').fire("click");
+assert.match(root.querySelector(".home-received").textContent, /12\.000/);
+assert.match(root.querySelector(".home-deposit-head").textContent, /33\.000/);
+assert.match(root.querySelector("#home-headline").textContent, /Saldo perusahaan/);
+assert.match(root.querySelector(".home-value").textContent, /7\.500/);
+assert.match(
+  root.querySelector(".home-deposits").textContent,
+  /Outlet A.*10\.000.*Outlet B.*23\.000/s,
+);
+await select("#dash-store", "b");
+assert.match(root.querySelector(".home-value").textContent, /7\.500/);
+await select("#dash-store", "");
+await root.querySelector("[data-home-sales]").fire("click");
+assert.match(root.querySelector(".dash-metric").textContent, /Omzet.*5\.000/s);
 assert.equal(root.querySelector("#dash-store").value, "");
 assert.equal(root.querySelectorAll('#pos-navigation [data-view="dashboard"]').length, 0);
-const pending = () => root.querySelector(".dash-pending").textContent;
+const pending = () => root.querySelector(".home-work").textContent;
 assert.match(
   pending(),
-  /Nota menunggu penerimaan1.*Transfer menunggu persetujuan1.*Pengajuan petty cash1/,
+  /1Nota menunggu penerimaan.*1Transfer menunggu persetujuan.*1Pengajuan petty cash/,
 );
 await select("#dash-store", "a");
 assert.match(
   pending(),
-  /Nota menunggu penerimaan0.*Transfer menunggu persetujuan1.*Pengajuan petty cash0/,
+  /0Nota menunggu penerimaan.*1Transfer menunggu persetujuan.*0Pengajuan petty cash/,
 );
 await root.querySelector('[data-dash-tab="stock"]').fire("click");
 assert.equal(
@@ -223,9 +236,9 @@ assert.equal(
 );
 await root.querySelector(".dash-stock-panel .dash-link").fire("click");
 assert.equal(root.querySelector("[data-inv-place]").value, "a");
-await go("backoffice");
+await go("home");
 await select("#dash-store", "");
-assert.match(pending(), /Nota menunggu penerimaan1/);
+assert.match(pending(), /1Nota menunggu penerimaan/);
 await root.querySelector(".dash-stock-panel .dash-link").fire("click");
 assert(root.querySelector("[data-office-inventory]"));
 assert.equal(root.querySelector("#active-store"), null);
@@ -248,7 +261,9 @@ await select("#office-branch", "a");
 assert(root.querySelector("#payment-settings-form"));
 await space("store");
 assert(root.querySelector(".home-page"));
-await go("storehome");
+assert.equal(root.querySelector('#pos-navigation [data-view="storehome"]'), null);
+assert.match(root.querySelector(".home-value").textContent, /23\.000/);
+assert.doesNotMatch(root.querySelector(".home-page").textContent, /7\.500/);
 assert.equal(root.querySelector("#active-store").value, "b");
 
 assert.equal(root.querySelector("#dash-store").value, "b");

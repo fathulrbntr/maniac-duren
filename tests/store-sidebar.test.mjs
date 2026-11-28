@@ -22,7 +22,7 @@ const groups = visibleSections(access);
 assert.deepEqual(
   groups.map((g) => [g.label, g.pages]),
   [
-    ["Toko", ["home", "storehome"]],
+    ["Toko", ["home"]],
     ["Stok & Penerimaan", ["receiving", "stock", "waste"]],
     ["Kasir", ["orders", "salesreport", "storeExpenses", "shifts"]],
     ["Kitchen", ["kitchen", "production"]],
@@ -37,16 +37,13 @@ assert.equal(all.length, new Set(all).size);
 for (const [flags, expected] of [
   [
     { sell: true, cashierExpenses: true },
-    ["storehome", "orders", "salesreport", "storeExpenses", "shifts", "devices", "guide"],
+    ["orders", "salesreport", "storeExpenses", "shifts", "devices", "guide"],
   ],
-  [
-    { kitchen: true, produce: true },
-    ["storehome", "stock", "kitchen", "production", "guide"],
-  ],
-  [{ cut: true, waste: true }, ["storehome", "waste", "cutting", "guide"]],
-  [{ serve: true }, ["storehome", "service", "guide"]],
-  [{ receive: true }, ["storehome", "receiving", "stock", "guide"]],
-  [{ reports: true }, ["storehome", "salesreport", "reports", "guide"]],
+  [{ kitchen: true, produce: true }, ["stock", "kitchen", "production", "guide"]],
+  [{ cut: true, waste: true }, ["waste", "cutting", "guide"]],
+  [{ serve: true }, ["service", "guide"]],
+  [{ receive: true }, ["receiving", "stock", "guide"]],
+  [{ reports: true }, ["salesreport", "reports", "guide"]],
 ])
   assert.deepEqual(
     visibleSections({ workspace: "store", ...flags }).flatMap((g) => g.pages),
@@ -65,7 +62,8 @@ root.innerHTML = navigation(titles, "salesreport", () => "", access, {
   store_stock: true,
 });
 const button = (k) => root.querySelector(`[data-view="${k}"]`);
-assert(!button("storehome").closest("details"));
+assert.equal(button("storehome"), null);
+assert(!button("home").closest("details"));
 assert.equal(button("stock").attrs["aria-label"], "Inventory");
 assert.equal(button("orders").attrs["aria-label"], "POS");
 assert.equal(button("salesreport").attrs["aria-current"], "page");

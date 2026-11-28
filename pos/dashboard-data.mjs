@@ -26,7 +26,7 @@ export function dashboardTabs(s, workspace) {
   return [
     [
       "transactions",
-      "Transaksi",
+      "Penjualan",
       can("reports") || (workspace === "store" && can("sell")),
     ],
     [

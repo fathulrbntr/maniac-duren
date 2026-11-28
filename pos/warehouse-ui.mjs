@@ -8,7 +8,6 @@ import {
 import { recordTable, table } from "./supply-session-ui.mjs";
 import { openBranchDispatch } from "./branch-dispatch-ui.mjs";
 import { confirmAction } from "../shared/confirmation.mjs";
-import { depositButtons } from "./cash-deposits-ui.mjs";
 import { dashboardPage } from "./dashboard-ui.mjs";
 import { branchPricingPage, bindBranchPricing } from "./branch-prices-ui.mjs";
 import { locationFruitStock } from "./dashboard-data.mjs";
@@ -18,7 +17,7 @@ import {
   prepareBarcodeInput,
   readyBarcodeInput,
 } from "./barcode-scanner.mjs";
-import { workflowReady, backOffice, pendingWorkItems } from "./warehouse-workflow.mjs";
+import { workflowReady, backOffice } from "./warehouse-workflow.mjs";
 import { receivingPage, openReceivingSession } from "./receiving-session-ui.mjs";
 import { outboundPage, bindOutboundPage, openOutboundForm } from "./outbound-ui.mjs";
 import { escape as e, id, today, num, money } from "./core.mjs";
@@ -265,14 +264,8 @@ function storeReceiptStats(s, store, pending) {
   );
 }
 
-function pendingWork(s, store, space) {
-  const tasks = pendingWorkItems(s, store, space);
-  if (!tasks.length) return "";
-  return `<section class="dash-panel dash-pending"><h2>Tindak lanjut</h2><div class="dash-queue">${tasks.map(([view, label, count]) => `<button type="button" data-view="${view}"><span>${label}</span><strong>${num(count)}</strong></button>`).join("")}</div></section>`;
-}
-
 export function supplyHome(s, store, space) {
-  const dashboard = space === "warehouse" ? "" : dashboardPage(s, store, space);
+  const dashboard = space === "warehouse" ? "" : dashboardPage(s, store, space, true);
   const ts = (s.transfers || []).filter(
       (t) =>
         (space === "backoffice" && !store) ||
@@ -350,12 +343,12 @@ export function supplyHome(s, store, space) {
               ),
               "Dokumen menunggu scan",
             ));
+  const tasks = supplyTasks(s, space);
+  const taskGuide = tasks
+    ? `<details class="home-task-guide"><summary>Panduan tugas</summary><div class="supply-task-grid">${tasks}</div></details>`
+    : "";
   if (s.pettyCashVersion >= 130) {
     const central = space === "backoffice";
-    const funds =
-      central && s.access?.finance
-        ? stat("Saldo PT Retail", money(s.retailBalance), "Saldo pusat · seluruh toko")
-        : "";
     const petty =
       (space === "store" && s.access?.sell) || (central && s.access?.finance && store);
     const balance = petty
@@ -365,33 +358,13 @@ export function supplyHome(s, store, space) {
           location(s, store)?.name || "Dana pengeluaran toko",
         )
       : "";
-    const deposits =
-      ((space === "store" && s.access?.sell) || (central && s.access?.finance)) &&
-      s.cashDepositSummary?.filter((x) => !store || x.storeId === store);
-    const cash = deposits?.length
-      ? stat(
-          "Tunai belum disetor",
-          money(deposits.reduce((total, row) => total + Number(row.pending || 0), 0)),
-          store ? location(s, store)?.name : "Seluruh toko",
-        )
-      : "";
-    const extra =
-      central && s.access?.finance
-        ? action(
-            "retailFunds",
-            "Keuangan PT Retail",
-            "Kelola saldo pusat dan pengajuan cabang.",
-          )
-        : "";
     const heading = dashboard
       ? "<h2>Operasional saat ini</h2>"
-      : `<div class="header-row"><h2>${central ? "Dashboard Back Office" : space === "warehouse" ? "Dashboard gudang" : e(location(s, store)?.name || "Dashboard toko")}</h2><button data-supply-refresh>Perbarui</button></div>`;
+      : `<div class="header-row"><h2>${central ? "Operasional pusat" : space === "warehouse" ? "Operasional gudang" : e(location(s, store)?.name || "Operasional toko")}</h2><button data-supply-refresh>Perbarui</button></div>`;
     const metrics =
-      funds +
       balance +
-      cash +
       (dashboard && (central || s.access?.sell || s.access?.reports) ? "" : stats);
-    return `${dashboard}<section class="supply-workspace dash-operations">${blocker(s)}${heading}${dashboard ? pendingWork(s, store, space) : ""}${metrics ? `<div class="supply-stats">${metrics}</div>` : ""}<div class="supply-task-grid">${supplyTasks(s, space)}${extra}</div>${space === "store" && s.access?.sell ? depositButtons(s, store) : ""}${central ? locationStockTable(s, store) : ""}${!operational ? `<section class="panel"><h3>Kiriman yang belum diterima</h3>${transferTable(active.slice(0, 8), central && !(s.branchStockVersion >= 132), central)}</section>` : ""}</section>`;
+    return `${dashboard}<section class="supply-workspace dash-operations">${blocker(s)}${heading}${metrics ? `<div class="supply-stats">${metrics}</div>` : ""}${taskGuide}${central ? locationStockTable(s, store) : ""}${!operational ? `<section class="panel"><h3>Kiriman yang belum diterima</h3>${transferTable(active.slice(0, 8), central && !(s.branchStockVersion >= 132), central)}</section>` : ""}</section>`;
   }
   const desc =
     space === "backoffice"
@@ -399,7 +372,7 @@ export function supplyHome(s, store, space) {
       : space === "warehouse"
         ? "Terima barang berdasarkan nota supplier. Siapkan transfer toko atau wholesale, dan catat reject gudang."
         : "Setelah kiriman diterima, jual barang yang layak. Catat reject dari batch toko saat ditemukan.";
-  return `${dashboard}<section class="supply-workspace dash-operations">${blocker(s)}${dashboard ? "<h2>Operasional saat ini</h2>" : `<div class="supply-hero"><div><span class="supply-eyebrow">MANIAC DUREN / ${e(space === "backoffice" ? "ADMINISTRASI" : space === "warehouse" ? "DISTRIBUSI" : "PELAYANAN")}</span><h2>${title}</h2><p>${desc}</p></div><button type="button" data-supply-refresh>Perbarui</button></div>`}<div class="supply-task-grid">${supplyTasks(s, space)}</div><div class="supply-stats">${stats}</div>${
+  return `${dashboard}<section class="supply-workspace dash-operations">${blocker(s)}${dashboard ? "<h2>Operasional saat ini</h2>" : `<div class="supply-hero"><div><span class="supply-eyebrow">MANIAC DUREN / ${e(space === "backoffice" ? "ADMINISTRASI" : space === "warehouse" ? "DISTRIBUSI" : "PELAYANAN")}</span><h2>${title}</h2><p>${desc}</p></div><button type="button" data-supply-refresh>Perbarui</button></div>`}${taskGuide}<div class="supply-stats">${stats}</div>${
     space === "backoffice" ? locationStockTable(s, store) : ""
   }${operational ? "" : `<section class="panel"><h3>Kiriman yang belum diterima</h3>${transferTable(active.slice(0, 8), !workflowReady(s) || space === "backoffice")}</section>`}</section>`;
 }

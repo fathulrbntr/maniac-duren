@@ -1,5 +1,7 @@
 import { confirmAction } from "../shared/confirmation.mjs";
 import { workspaceGroups } from "./workspaces.mjs";
+export const homePageId = (id) =>
+  ["dashboard", "backoffice", "storehome", "warehouse"].includes(id) ? "home" : id;
 export const pageTitles = {
   home: "Beranda",
   backoffice: "Dashboard Back Office",
@@ -100,7 +102,7 @@ export const pageIcon = (k) =>
 
 // Sidebar grouping only. Existing page IDs, permissions and transaction flow are unchanged.
 export const sections = [
-  { id: "utama", label: "Ringkasan", pages: ["home", "dashboard"] },
+  { id: "utama", label: "Ringkasan", pages: ["home"] },
   {
     id: "inventory",
     label: "01 · Gudang & Penerimaan",
@@ -140,7 +142,6 @@ export function visibleSections(access) {
         storeExpenses: access.sell && access.cashierExpenses,
         kitchen: access.kitchen || access.sell,
         shifts: access.sell || access.reports || access.finance,
-        dashboard: access.reports,
         stock: access.stock || access.produce,
         production: access.produce,
         waste: access.waste,

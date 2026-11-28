@@ -1,5 +1,5 @@
 import { escape as e } from "./core.mjs";
-import { pageTitles, pageIcon, visibleSections } from "./navigation.mjs";
+import { pageTitles, pageIcon, visibleSections, homePageId } from "./navigation.mjs";
 
 const standardPages = ["home", "stock", "orders", "scan", "kitchen", "reports"];
 const storePages = [
@@ -46,7 +46,7 @@ function dockModel(access, { titles = pageTitles, userId, demo = false }) {
   const fallback = (store ? storePages : standardPages).filter((id) => pages.has(id));
   const saved = readSelection(key);
   const selected = Array.isArray(saved)
-    ? [...new Set(saved.filter((id) => pages.has(id)))]
+    ? [...new Set(saved.map(homePageId).filter((id) => pages.has(id)))]
     : fallback;
   return { groups, pages, key, selected };
 }

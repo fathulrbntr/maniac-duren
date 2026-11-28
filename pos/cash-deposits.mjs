@@ -28,6 +28,25 @@ export function depositTotals(s, store = "", rows = s.cashDepositSummary) {
     ]),
   );
 }
+// A branch with excess deposits needs reconciliation and does not settle another branch's cash.
+export function outstandingBranchCash(s, stores) {
+  const branches = stores
+    .filter((st) => st.locationType !== "warehouse")
+    .map((st) => {
+      const totals = depositTotals(s, st.id);
+      return {
+        name: st.name,
+        pending: totals?.pending ?? null,
+        deposited: totals?.deposited ?? null,
+      };
+    });
+  const complete = branches.length > 0 && branches.every((b) => b.pending !== null);
+  return {
+    branches,
+    deposited: complete ? sumProducts(branches.map((b) => [b.deposited])) : null,
+    total: complete ? sumProducts(branches.map((b) => [Math.max(b.pending, 0)])) : null,
+  };
+}
 export function validateDepositInput(p) {
   if (
     Object.keys(p).some((k) => !["id", "storeId", "amount", "bank", "proof"].includes(k))
