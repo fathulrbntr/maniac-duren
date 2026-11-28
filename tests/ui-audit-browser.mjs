@@ -617,8 +617,17 @@ try {
         ),
     );
     assert(await hero.locator(".account-profile strong").isVisible());
-    if (width === 390 || width === 1280)
-      await page.screenshot({ path: path.join(output, `beranda-pusat-${width}.png`) });
+    if (width === 390 || width === 1280) {
+      if (width === 390) {
+        await openSidebar(page);
+        await page.locator("#pos-sidebar [data-sidebar-toggle]").click();
+        await page.locator("#pos-sidebar").waitFor({ state: "hidden" });
+      }
+      await page.screenshot({
+        path: path.join(output, `beranda-pusat-${width}.png`),
+        animations: "disabled",
+      });
+    }
   }
   await page.getByRole("button", { name: "Lihat omzet" }).click();
   assert.equal(
