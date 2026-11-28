@@ -42,7 +42,7 @@ export function installMoneyInputs(root = document) {
     const defaultStep = input.type === "number" ? "1" : "any";
     input.dataset.moneyInput = "true";
     input.type = "text";
-    input.inputMode = "decimal";
+    if (!input.inputMode) input.inputMode = "decimal";
     let raw = normalizeNumericInput(initial);
     const validate = () => {
       const n = Number(raw);

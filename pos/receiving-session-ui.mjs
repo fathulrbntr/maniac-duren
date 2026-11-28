@@ -2,6 +2,7 @@ import { confirmAction } from "../shared/confirmation.mjs";
 import { prepareBarcodeInput, readyBarcodeInput } from "./barcode-scanner.mjs";
 import { escape as e, id, num, money } from "./core.mjs";
 import { noteBalance } from "./supplier-notes.mjs";
+import { pageIcon } from "./navigation.mjs";
 import {
   backOffice,
   receiptProgress,
@@ -38,20 +39,26 @@ function receivedSummary(p) {
   return result.join(" · ");
 }
 function quantityInput(attr, unit, value) {
-  const step = ["pcs", "porsi"].includes(unit) ? 1 : 0.000001;
-  return `<input ${attr} type="number" min="${step}" step="${step}" value="${e(value ?? "")}" required>`;
+  const whole = ["pcs", "porsi"].includes(unit);
+  const step = whole ? 1 : 0.000001;
+  return `<input ${attr} type="number" inputmode="${whole ? "numeric" : "decimal"}" min="${step}" step="${step}" value="${e(value ?? "")}" required>`;
 }
-export function varianceTable(s, p) {
-  return recordTable(
+function quantityEntry(productId, productName, actual, unit) {
+  const saved = actual != null;
+  const label = saved ? "Ubah jumlah" : "Isi jumlah diterima";
+  return `<div class="receipt-quantity-entry">${saved ? `<strong>${num(actual)} ${e(unit)}</strong>` : ""}<button type="button" class="receipt-quantity-button${saved ? "" : " primary"}" data-session-quantity="${e(productId)}" aria-label="${e(label + " untuk " + productName)}" aria-haspopup="dialog">${pageIcon("edit")}${label}</button></div>`;
+}
+export function varianceTable(s, p, { enterQuantities = false } = {}) {
+  const rows = recordTable(
     [
       "Produk",
       "Nota supplier",
       "Hasil penerimaan",
-      "Selisih nota − aktual",
-      "Penyusutan berat",
+      ...(enterQuantities ? [] : ["Selisih nota − aktual", "Penyusutan berat"]),
     ],
     p.lines.map((l) => {
       const expected = p.expected?.[l.productId];
+      const productName = name(s, "products", l.productId);
       if (expected?.unit) {
         const actual = p.receiving?.quantities?.[l.productId]?.qty;
         const unit = e(expected.unit);
@@ -60,11 +67,14 @@ export function varianceTable(s, p) {
             ? `${num(expected.qty - actual)} ${unit}`
             : "Belum final";
         return [
-          e(name(s, "products", l.productId)),
+          e(productName),
           `${num(expected.qty)} ${unit}`,
-          actual == null ? "Belum dicatat" : `${num(actual)} ${unit}`,
-          diff,
-          "—",
+          enterQuantities
+            ? quantityEntry(l.productId, productName, actual, expected.unit)
+            : actual == null
+              ? "Belum dicatat"
+              : `${num(actual)} ${unit}`,
+          ...(enterQuantities ? [] : [diff, "—"]),
         ];
       }
       const v = receiptVariance(p, l.productId);
@@ -79,16 +89,16 @@ export function varianceTable(s, p) {
             ? `Kelebihan ${num(-v.percent)}%`
             : `${num(v.percent)}%`;
       return [
-        e(name(s, "products", l.productId)),
+        e(productName),
         v.expected
           ? `${num(v.expected.kg)} kg / ${num(v.expected.pieces)} butir`
           : "Belum dicatat",
         `${num(v.actual.kg)} kg / ${num(v.actual.pieces)} butir`,
-        diff,
-        pct,
+        ...(enterQuantities ? [] : [diff, pct]),
       ];
     }),
   );
+  return enterQuantities ? `<div class="receipt-entry-table">${rows}</div>` : rows;
 }
 function cancelledNotes(s) {
   const notes = s.cancelledReceiptPlans || [];
@@ -265,7 +275,7 @@ export function openReceivingSession(s, pid, ctx, readOnly = false) {
       totals = receiptTotals(p),
       unitLines = p.lines.filter((l) => p.expected?.[l.productId]?.unit),
       fruit = unitLines.length < p.lines.length;
-    header.innerHTML = `<p>${e(name(s, "suppliers", p.supplierId))} · ${e(p.date)}</p><p class="notice">${receiptBadge(p)} · ${receivedSummary(p)}${unitLines.length ? "" : " tersimpan"}</p>${varianceTable(ctx.getState(), p)}${editable ? unitLines.map((l) => `<button type="button" data-session-quantity="${e(l.productId)}">Catat jumlah · ${e(name(s, "products", l.productId))}</button>`).join(" ") : ""}${editable && fruit ? '<div class="supply-scan"><input data-session-code autocomplete="off" maxlength="26" inputmode="numeric" placeholder="Scan barcode buah" aria-label="Scan barcode buah" aria-describedby="form-error"><button type="button" data-session-scan>Simpan</button></div>' : ""}`;
+    header.innerHTML = `<p>${e(name(s, "suppliers", p.supplierId))} · ${e(p.date)}</p><p class="notice">${receiptBadge(p)} · ${receivedSummary(p)}${unitLines.length ? "" : " tersimpan"}</p>${varianceTable(ctx.getState(), p, { enterQuantities: editable && unitLines.length > 0 })}${editable && fruit ? '<div class="supply-scan"><input data-session-code autocomplete="off" maxlength="26" inputmode="numeric" placeholder="Scan barcode buah" aria-label="Scan barcode buah" aria-describedby="form-error"><button type="button" data-session-scan>Simpan</button></div>' : ""}`;
     detail.innerHTML = `${editable && fruit ? '<p class="muted">Tunggu konfirmasi tersimpan sebelum scan buah berikutnya. Barcode menentukan produk dan berat; satu label untuk satu buah.</p>' : ""}${!readOnly && status === "completed" ? "<p>Penerimaan terkunci. Koreksi harus dibuka dari Back Office.</p>" : ""}<section ${fruit ? "" : "hidden"} data-receiving-barcodes aria-label="Barcode tersimpan"><h3>Barcode tersimpan (${totals.pieces})</h3>${recordTable(
       ["Barcode", "Produk", "Berat", ...(editable ? ["Aksi"] : [])],
       p.receiving.scans
@@ -286,15 +296,17 @@ export function openReceivingSession(s, pid, ctx, readOnly = false) {
       button.onclick = () => {
         if (working) return;
         const productId = button.dataset.sessionQuantity;
-        const unit = p.expected[productId].unit;
+        const expected = p.expected[productId];
+        const unit = expected.unit;
         const saved = p.receiving.quantities?.[productId];
         d.close();
         const next = ctx.modal(
-          `Terima ${e(name(s, "products", productId))}`,
-          field(
-            `Jumlah aktual (${unit})`,
-            quantityInput('name="qty"', unit, saved?.qty),
-          ) +
+          `Penerimaan · ${e(name(s, "products", productId))}`,
+          `<p class="muted">Jumlah pada nota <strong>${num(expected.qty)} ${e(unit)}</strong></p>` +
+            field(
+              `Jumlah diterima (${unit})`,
+              quantityInput('name="qty" autofocus', unit, saved?.qty),
+            ) +
             field(
               "Kedaluwarsa (opsional)",
               `<input type="date" name="expiry" min="${e(p.date)}" value="${e(saved?.expiry || "")}">`,
@@ -337,7 +349,14 @@ export function openReceivingSession(s, pid, ctx, readOnly = false) {
         '<button type="button" data-session-pause>Jeda</button><button type="button" class="primary" data-session-finish>Selesai</button>';
       actions.querySelector("[data-session-pause]").onclick = () =>
         perform("receipt_pause");
-      actions.querySelector("[data-session-finish]").onclick = async () => {
+      const finish = actions.querySelector("[data-session-finish]");
+      const scannedProducts = new Set(p.receiving.scans.map((scan) => scan.productId));
+      finish.disabled = p.lines.some(({ productId }) =>
+        p.expected?.[productId]?.unit
+          ? !(p.receiving.quantities?.[productId]?.qty > 0)
+          : !scannedProducts.has(productId),
+      );
+      finish.onclick = async () => {
         if (
           !working &&
           (await confirmAction(

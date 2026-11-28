@@ -272,7 +272,7 @@ dan push dari PowerShell, jalankan `.\scripts\windows\push-patch-131.cmd`.
 
 ### Penerimaan langsung di cabang dan mutasi 132
 
-`pos/receiving-session-ui.mjs` menampilkan nota untuk cabang penerima.
+`pos/receiving-session-ui.mjs` menampilkan nota untuk cabang penerima. Pada baris barang satuan, **Isi jumlah diterima** membuka kolom jumlah aktual. Setelah disimpan, angka tampil di samping tombol **Ubah jumlah**. Tombol **Selesai** aktif setelah setiap jenis barang satuan memiliki jumlah aktual dan setiap jenis buah memiliki hasil scan.
 `pos/warehouse-ui.mjs` menghubungkan pembukaan nota, pemilihan barang kiriman
 dan pemeriksaan barang di tujuan. Sejak patch 136, toko tujuan memindai setiap label buah dan mencatat jumlah barang satuan per batch. `pos/branch-dispatch-ui.mjs` memuat
 form transfer cabang dengan pengirim dari data karyawan dan pencarian SKU.

@@ -526,6 +526,42 @@
 }
 
 /* Receiving sessions and per-document outbound prices (114). */
+.receipt-quantity-entry {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+.receipt-quantity-entry strong {
+  font-variant-numeric: tabular-nums;
+}
+.receipt-quantity-entry .receipt-quantity-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--control-height);
+  max-width: 100%;
+  padding: 8px 14px;
+  border-radius: var(--radius-control);
+  font-weight: var(--weight-semibold);
+  white-space: normal;
+}
+.receipt-quantity-button .icon {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+@container record-panel (max-width: 48rem) {
+  .receipt-entry-table .record-table td:first-child {
+    grid-column: 1;
+    font-weight: var(--weight-semibold);
+  }
+  .receipt-entry-table .receipt-quantity-button {
+    flex: 1 1 auto;
+  }
+}
+
 .receipt-comparison {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
