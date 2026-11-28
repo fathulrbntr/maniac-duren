@@ -93,7 +93,13 @@ try {
   await page.locator("dialog[open] [type=submit]").click();
   assert.match(await page.locator("[data-method-info=bca]").innerText(), /0012345678/);
   assert.equal(await page.locator("[data-method-info=bca] toko").count(), 0);
-  await page.locator("#payment-settings-form [type=submit]").click();
+  const [saved] = await Promise.all([
+    page.waitForResponse((response) =>
+      response.url().endsWith("/pos_payment_settings_save"),
+    ),
+    page.locator("#payment-settings-form [type=submit]").click(),
+  ]);
+  assert(saved.ok());
   assert.equal(calls.filter((x) => x === "payment_settings_save").length, 1);
   await page.reload();
   await page.locator("#pos-navigation [data-view=payments]").click();
