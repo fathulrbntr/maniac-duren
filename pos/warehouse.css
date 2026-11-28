@@ -248,18 +248,6 @@
   color: var(--muted);
   white-space: nowrap;
 }
-.supply-badge.in_transit {
-  background: var(--warning-bg);
-  color: var(--warning);
-}
-.supply-badge.received {
-  background: var(--success-bg);
-  color: var(--success);
-}
-.supply-badge.cancelled {
-  background: var(--danger-bg);
-  color: var(--danger);
-}
 .supply-filters {
   display: flex;
   gap: 12px;
@@ -501,21 +489,7 @@
   font-weight: 600;
 }
 .note-payment-status {
-  display: block;
-  width: fit-content;
-  padding: 3px 9px;
   margin-top: 6px;
-  border-radius: 20px;
-  border: 1px solid var(--line);
-  font-size: var(--text-xs);
-}
-.note-payment-status.paid,
-.note-payment-status.none {
-  color: var(--action-bg);
-  background: var(--surface-raised);
-}
-.note-payment-status.overpaid {
-  color: var(--danger);
 }
 .note-history-item {
   display: grid;

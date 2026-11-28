@@ -169,7 +169,7 @@ export function homePage(s, store, access, titles, locations, hidden) {
   const queueCards = queues
     .map(
       ([id, text, count]) =>
-        `<button type="button" data-view="${e(id)}" class="home-work-card"><span class="home-work-top">${pageIcon(id)}${arrow}</span><strong>${num(count)}</strong><span>${e(text)}</span></button>`,
+        `<button type="button" data-view="${e(id)}" class="home-work-card"${count > 0 ? ' data-progress="pending"' : ""}><span class="home-work-top">${pageIcon(id)}${arrow}</span><strong>${num(count)}</strong><span>${e(text)}</span></button>`,
     )
     .join("");
   const figures = showCompany

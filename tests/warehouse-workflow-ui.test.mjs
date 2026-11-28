@@ -5,6 +5,8 @@ import assert from "node:assert/strict";
 import { Node, makeModal } from "./variant-dom.mjs";
 import {
   receiptVariance,
+  receiptProgress,
+  shipmentProgress,
   pendingWorkItems,
   receiptTotals,
   saveWorkflow,
@@ -46,6 +48,29 @@ let s = {
   products: [{ id: "fruit", name: "Monthong <script>", stockUnit: "kg_butir" }],
   suppliers: [{ id: "supplier", name: "Supplier <script>" }],
 };
+for (const [receiving, stage] of [
+  [{ status: "open", revision: 4, scans: [], quantities: {} }, "pending"],
+  [{ status: "open", quantities: { item: { qty: 0 } } }, "pending"],
+  [{ status: "open", quantities: { item: { qty: 2 } } }, "active"],
+  [p.receiving, "active"],
+  [{ status: "paused" }, "active"],
+  [{ status: "reopened" }, "active"],
+  [{ status: "completed" }, "done"],
+]) {
+  assert.equal(receiptProgress({ ...p, receiving }), stage);
+}
+assert.equal(receiptProgress({ receivedId: "legacy" }), "done");
+assert.equal(receiptProgress({ cancelled: { reason: "Koreksi" } }), "cancelled");
+assert.equal(shipmentProgress("packing"), "pending");
+assert.equal(shipmentProgress("packing", { hasPacking: true }), "active");
+assert.equal(shipmentProgress("ready"), "active");
+assert.equal(shipmentProgress("dispatched", { wholesale: true }), "done");
+assert.equal(shipmentProgress("dispatched"), "active");
+assert.equal(shipmentProgress("dispatched", { transferStatus: "received" }), "done");
+assert.equal(
+  shipmentProgress("dispatched", { transferStatus: "cancelled" }),
+  "cancelled",
+);
 assert.deepEqual(receiptTotals(p), { kg: 2, pieces: 1 });
 assert.equal(receiptVariance(p, "fruit").percent, null);
 const complete = { ...p, receiving: { ...p.receiving, status: "completed" } };

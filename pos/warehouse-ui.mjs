@@ -17,7 +17,13 @@ import {
   prepareBarcodeInput,
   readyBarcodeInput,
 } from "./barcode-scanner.mjs";
-import { workflowReady, backOffice } from "./warehouse-workflow.mjs";
+import { progressBadge, progressButton } from "./progress-ui.mjs";
+import {
+  workflowReady,
+  backOffice,
+  receiptProgress,
+  shipmentProgress,
+} from "./warehouse-workflow.mjs";
 import { receivingPage, openReceivingSession } from "./receiving-session-ui.mjs";
 import { outboundPage, bindOutboundPage, openOutboundForm } from "./outbound-ui.mjs";
 import { escape as e, id, today, num, money } from "./core.mjs";
@@ -47,8 +53,20 @@ const stat = (label, value, hint = "") =>
   `<article class="supply-stat"><span>${e(label)}</span><strong>${e(value)}</strong><small>${e(hint)}</small></article>`;
 const action = (view, label, description, report = "") =>
   `<button type="button" class="supply-task" data-view="${view}" ${report ? `data-open-report="${report}"` : ""}><span>${e(label)}</span><small>${e(description)}</small><svg class="supply-task-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M7 17 17 7M7 7h10v10"/></svg></button>`;
-const badge = (t) =>
-  `<span class="supply-badge ${e(t.status)}">${e(transferStatus[t.status])}</span>`;
+function transferStage(t, incoming) {
+  if (incoming && t.status === "in_transit" && !t.items.some((i) => i.scannedAt))
+    return "pending";
+  return shipmentProgress(t.status);
+}
+function transferBadge(t, incoming, stage = transferStage(t, incoming)) {
+  const label =
+    incoming && t.status === "in_transit"
+      ? stage === "pending"
+        ? "Menunggu pemeriksaan"
+        : "Sedang diperiksa"
+      : transferStatus[t.status];
+  return progressBadge(stage, label);
+}
 const blocker = (s) =>
   s.stockDemo
     ? '<div class="notice">Mode demo POS belum mendukung pengiriman gudang. Keluar dari demo untuk operasional gudang.</div>'
@@ -376,7 +394,7 @@ export function supplyHome(s, store, space) {
     space === "backoffice" ? locationStockTable(s, store) : ""
   }${operational ? "" : `<section class="panel"><h3>Kiriman yang belum diterima</h3>${transferTable(active.slice(0, 8), !workflowReady(s) || space === "backoffice")}</section>`}</section>`;
 }
-function transferTable(rows, finance = true, showOrigin = false) {
+function transferTable(rows, finance = true, showOrigin = false, incoming = false) {
   return recordTable(
     [
       "Nomor dokumen",
@@ -386,16 +404,22 @@ function transferTable(rows, finance = true, showOrigin = false) {
       ...(finance ? ["Tagihan"] : []),
       "Aksi",
     ],
-    rows.map((t) => [
-      `<b>${e(t.deliveryNo)}</b><small>${e(t.invoiceNo || "")}</small>`,
-      ...(showOrigin ? [e(t.origin?.name || "—")] : []),
-      `${e(t.destination.name)}<small>${t.items.length} buah · ${t.lines.length} baris batch/produk</small>`,
-      `${badge(t)}<small>${t.invoiceNo === null ? "Mutasi antarcabang" : `${t.items.filter((i) => i.scannedAt).length}/${t.items.length} barcode diperiksa`}</small>`,
-      ...(finance
-        ? [`${money(t.total)}<small>Sisa ${money(t.total - t.paid)}</small>`]
-        : []),
-      `<button type="button" data-transfer="${e(t.id)}">Buka</button>`,
-    ]),
+    rows.map((t) => {
+      const progress = transferStage(t, incoming);
+      return {
+        progress,
+        cells: [
+          `<b>${e(t.deliveryNo)}</b><small>${e(t.invoiceNo || "")}</small>`,
+          ...(showOrigin ? [e(t.origin?.name || "—")] : []),
+          `${e(t.destination.name)}<small>${t.items.length} buah · ${t.lines.length} baris batch/produk</small>`,
+          `${transferBadge(t, incoming, progress)}<small>${t.invoiceNo === null ? "Mutasi antarcabang" : `${t.items.filter((i) => i.scannedAt).length}/${t.items.length} barcode diperiksa`}</small>`,
+          ...(finance
+            ? [`${money(t.total)}<small>Sisa ${money(t.total - t.paid)}</small>`]
+            : []),
+          progressButton(progress, "transfer", t.id, `surat jalan ${t.deliveryNo}`),
+        ],
+      };
+    }),
   );
 }
 export function transfersPage(s, store, incoming = false, space) {
@@ -456,10 +480,10 @@ export function supplierNotesPage(s, store, space) {
       "Penerimaan",
       "Aksi",
     ],
-    plans.map(
-      (p) =>
-        `<tr><td><b>${e(p.invoiceNo)}</b><small>${e(name(s, "suppliers", p.supplierId))}</small></td><td>${e(p.date)}</td><td>${notePaymentCell(p, "invoice")}</td><td>${notePaymentCell(p, "shipping")}</td><td>${p.receivedId ? "Sudah diterima" : "Menunggu scan gudang"}</td><td><button type="button" data-note-open="${e(p.id)}">Buka nota</button>${!p.receivedId ? `<button type="button" data-note-receive="${e(p.id)}" ${warehouseEnabled(s) ? "" : "disabled"}>Scan penerimaan</button>` : ""}</td></tr>`,
-    ),
+    plans.map((p) => {
+      const progress = receiptProgress(p);
+      return `<tr data-progress="${progress}"><td><b>${e(p.invoiceNo)}</b><small>${e(name(s, "suppliers", p.supplierId))}</small></td><td>${e(p.date)}</td><td>${notePaymentCell(p, "invoice")}</td><td>${notePaymentCell(p, "shipping")}</td><td>${progressBadge(progress)}</td><td>${progressButton(progress, "note-open", p.id, `nota ${p.invoiceNo}`)}${!p.receivedId ? `<button type="button" data-note-receive="${e(p.id)}" ${warehouseEnabled(s) ? "" : "disabled"}>Scan penerimaan</button>` : ""}</td></tr>`;
+    }),
   )}</section></section>`;
 }
 function savingForm(d, callback) {
@@ -694,7 +718,7 @@ function openTransfer(s, t, ctx, receiving) {
   const scanField = canReceive && expectedPieces > 0;
   const d = ctx.modal(
     t.deliveryNo,
-    `<div class="supply-detail-head"><div><h3>${e(t.origin.name)} → ${e(t.destination.name)}</h3><p>${internal ? "Mutasi antarcabang" : e(t.invoiceNo)} · ${e(t.carrier)}</p></div>${badge(t)}</div><div class="toolbar">${finance ? '<button type="button" data-print-invoice>Cetak invoice</button>' : ""}<button type="button" data-print-delivery>Cetak surat jalan</button></div><div class="supply-stats">${finance ? stat("Total tagihan", money(t.total)) + stat("Sisa tagihan", money(t.total - t.paid)) : ""}${expectedPieces && (t.status === "in_transit" || matched()) ? `<article class="supply-stat"><span>Barcode cocok</span><strong data-receive-progress>${progress()}</strong></article>` : ""}</div>${recordTable(
+    `<div class="supply-detail-head"><div><h3>${e(t.origin.name)} → ${e(t.destination.name)}</h3><p>${internal ? "Mutasi antarcabang" : e(t.invoiceNo)} · ${e(t.carrier)}</p></div><span data-transfer-stage>${transferBadge(t, receiving)}</span></div><div class="toolbar">${finance ? '<button type="button" data-print-invoice>Cetak invoice</button>' : ""}<button type="button" data-print-delivery>Cetak surat jalan</button></div><div class="supply-stats">${finance ? stat("Total tagihan", money(t.total)) + stat("Sisa tagihan", money(t.total - t.paid)) : ""}${expectedPieces && (t.status === "in_transit" || matched()) ? `<article class="supply-stat"><span>Barcode cocok</span><strong data-receive-progress>${progress()}</strong></article>` : ""}</div>${recordTable(
       ["Barang / batch", "Jumlah", ...(finance ? ["Harga transfer", "Total"] : [])],
       t.lines.map((l) => [
         `${e(l.productName)}<small>${e(l.supplierName || "—")} · ${e(l.sourceLotId.slice(0, 8))}</small>`,
@@ -758,6 +782,10 @@ function openTransfer(s, t, ctx, receiving) {
           lastCode = null;
           msg.textContent = progress() + " barcode cocok";
           msg.className = "positive";
+          d.querySelector("[data-transfer-stage]").innerHTML = transferBadge(
+            t,
+            receiving,
+          );
           d.querySelector("[data-receive-list]").innerHTML = receiptItems(t);
           d.querySelector("[data-receive-progress]").textContent = progress();
           d.querySelector("[data-transfer-cancel]")?.remove();
@@ -876,15 +904,30 @@ function openTransfer(s, t, ctx, receiving) {
 function receiptItems(t) {
   return `<details ${t.status === "in_transit" ? "open" : ""}><summary>Daftar barcode (${t.items.length})</summary>${recordTable(
     ["Barcode", "Berat", "Pemeriksaan"],
-    t.items.map((i) => [
-      `<code>${e(i.barcode)}</code>`,
-      `${num(i.grams / 1000)} kg`,
-      i.scannedAt
-        ? "✓ Cocok"
-        : t.status === "received"
-          ? "Diterima · tanpa rekaman scan"
-          : "Belum dipindai",
-    ]),
+    t.items.map((i) => {
+      const progress =
+        t.status === "cancelled"
+          ? "cancelled"
+          : i.scannedAt || t.status === "received"
+            ? "done"
+            : "pending";
+      const label =
+        t.status === "cancelled"
+          ? "Dibatalkan"
+          : i.scannedAt
+            ? "Cocok"
+            : t.status === "received"
+              ? "Diterima · tanpa rekaman scan"
+              : "Belum dipindai";
+      return {
+        progress,
+        cells: [
+          `<code>${e(i.barcode)}</code>`,
+          `${num(i.grams / 1000)} kg`,
+          progressBadge(progress, label),
+        ],
+      };
+    }),
   )}</details>`;
 }
 function noteDialog(s, ctx) {
@@ -998,7 +1041,14 @@ function noteDialog(s, ctx) {
 }
 export function servicePage(s, store) {
   const orders = serviceOrders(s, store);
-  return `<section class="supply-workspace"><div class="supply-hero"><div><span class="supply-eyebrow">TOKO / PELAYANAN</span><h2>Pelayanan meja</h2><p>Pantau pesanan lunas, cek nomor meja, lalu tandai selesai setelah diantar.</p></div><button type="button" data-supply-refresh>Perbarui</button></div><div class="supply-task-grid">${orders.map((o) => `<article class="panel supply-order"><span class="supply-badge">${e({ queued: "Menunggu kitchen", preparing: "Sedang dibuat", ready: "Siap diantar" }[o.status])}</span><h3>Meja ${e(o.table_no || o.tableNo || "—")}</h3><p>${e(o.note || "")}</p><ul>${o.lines.map((l) => `<li>${e(name(s, "products", l.productId))} × ${num(l.qty)}</li>`).join("")}</ul><button type="button" data-service-complete="${e(o.id)}" ${o.status === "ready" ? "" : "disabled"}>Sudah diantar</button></article>`).join("") || '<div class="panel empty">Belum ada pesanan untuk diantar.</div>'}</div></section>`;
+  return `<section class="supply-workspace"><div class="supply-hero"><div><span class="supply-eyebrow">TOKO / PELAYANAN</span><h2>Pelayanan meja</h2><p>Pantau pesanan lunas, cek nomor meja, lalu tandai selesai setelah diantar.</p></div><button type="button" data-supply-refresh>Perbarui</button></div><div class="supply-task-grid">${
+    orders
+      .map((o) => {
+        const progress = o.status === "queued" ? "pending" : "active";
+        return `<article class="panel supply-order" data-progress="${progress}">${progressBadge(progress, { queued: "Menunggu kitchen", preparing: "Sedang dibuat", ready: "Siap diantar" }[o.status])}<h3>Meja ${e(o.table_no || o.tableNo || "—")}</h3><p>${e(o.note || "")}</p><ul>${o.lines.map((l) => `<li>${e(name(s, "products", l.productId))} × ${num(l.qty)}</li>`).join("")}</ul>${o.status === "ready" ? `<button type="button" class="progress-open" data-service-complete="${e(o.id)}" title="Tandai pesanan sudah diantar">Selesai</button>` : ""}</article>`;
+      })
+      .join("") || '<div class="panel empty">Belum ada pesanan untuk diantar.</div>'
+  }</div></section>`;
 }
 export function cuttingPage(s, store) {
   const checks = (s.cutChecks || []).filter((c) => c.storeId === store);
@@ -1075,6 +1125,7 @@ export function bindSupply(s, store, view, ctx) {
         !(s.branchStockVersion >= 132) &&
           (!workflowReady(s) || backOffice(s, ctx.workspace)),
         !incoming && backOffice(s, ctx.workspace),
+        incoming,
       );
     };
     document.querySelector("[data-transfer-search]").oninput = draw;

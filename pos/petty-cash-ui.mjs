@@ -2,6 +2,8 @@ import { companyName } from "./cash-flow.mjs";
 import { escape as e, id, money } from "./core.mjs";
 import { recordTable } from "./supply-session-ui.mjs";
 
+import { progressBadge } from "./progress-ui.mjs";
+
 const status = { pending: "Menunggu", paid: "Dicairkan", rejected: "Ditolak" };
 const date = (value) =>
   new Date(value).toLocaleDateString("id-ID", { timeZone: "Asia/Jakarta" });
@@ -23,13 +25,21 @@ export function pettyPanel(s, store, office = false) {
   const requests = rows.length
     ? recordTable(
         ["Tanggal", ...(office ? ["Toko"] : []), "Keperluan", "Jumlah", "Status"],
-        rows.map((r) => [
-          e(date(r.requested_at)),
-          ...(office ? [e(branch(r.store_id))] : []),
-          e(r.reason),
-          money(r.amount),
-          `${e(status[r.status])}${r.reference ? `<small>${e(r.reference)}</small>` : ""}${office && r.status === "pending" ? `<div class="toolbar"><button data-petty-action="petty_pay" data-request="${e(r.id)}">Catat pencairan</button><button data-petty-action="petty_reject" data-request="${e(r.id)}">Tolak</button></div>` : ""}`,
-        ]),
+        rows.map((r) => {
+          const progress = { pending: "pending", paid: "done", rejected: "cancelled" }[
+            r.status
+          ];
+          return {
+            progress,
+            cells: [
+              e(date(r.requested_at)),
+              ...(office ? [e(branch(r.store_id))] : []),
+              e(r.reason),
+              money(r.amount),
+              `${progressBadge(progress, status[r.status])}${r.reference ? `<small>${e(r.reference)}</small>` : ""}${office && r.status === "pending" ? `<div class="toolbar"><button data-petty-action="petty_pay" data-request="${e(r.id)}" title="Buka formulir pencairan">Buka</button><button data-petty-action="petty_reject" data-request="${e(r.id)}">Tolak</button></div>` : ""}`,
+            ],
+          };
+        }),
       )
     : '<p class="empty">Belum ada pengajuan.</p>';
   return `${header}<section class="panel"><h3>Pengajuan petty cash</h3>${requests}</section>`;

@@ -1,3 +1,4 @@
+import { progressBadge, progressButton } from "./progress-ui.mjs";
 import { confirmAction } from "../shared/confirmation.mjs";
 import { escape as e, id, today, money, num } from "./core.mjs";
 import { transactions, label } from "./reports.mjs";
@@ -178,10 +179,12 @@ export function bindDocuments(s, store, ctx) {
       `<div class="table-wrap"><table><thead><tr><th>Nomor / tanggal</th><th>Dokumen</th><th>Toko</th><th>Status</th><th>Total</th><th>Aksi</th></tr></thead><tbody>${
         rows
           .slice(page * 30, page * 30 + 30)
-          .map(
-            (d) =>
-              `<tr><td><span class="doc-number">${e(d.number || "Draft · " + d.id.slice(0, 8))}</span><small>${e(d.document_date)}</small></td><td>${e(documentKinds[d.kind])}${d.source_id ? `<small>Ref. ${e(d.sourceLabel || d.source_id.slice(0, 8))}</small>` : ""}</td><td>${e(label(s, "stores", d.store_id))}</td><td><span class="doc-status">${statusNames[d.status]}</span></td><td>${d.kind === "DO" ? "—" : d.status === "draft" ? "Belum terbit" : money(d.total)}</td><td><button data-open-document="${e(d.id)}">Detail</button></td></tr>`,
-          )
+          .map((d) => {
+            const progress = { draft: "pending", issued: "done", cancelled: "cancelled" }[
+              d.status
+            ];
+            return `<tr data-progress="${progress}"><td><span class="doc-number">${e(d.number || "Draft · " + d.id.slice(0, 8))}</span><small>${e(d.document_date)}</small></td><td>${e(documentKinds[d.kind])}${d.source_id ? `<small>Ref. ${e(d.sourceLabel || d.source_id.slice(0, 8))}</small>` : ""}</td><td>${e(label(s, "stores", d.store_id))}</td><td>${progressBadge(progress, statusNames[d.status])}</td><td>${d.kind === "DO" ? "—" : d.status === "draft" ? "Belum terbit" : money(d.total)}</td><td>${progressButton(progress, "open-document", d.id, d.number || "draft dokumen")}</td></tr>`;
+          })
           .join("") ||
         '<tr><td colspan="6" class="empty">Belum ada dokumen yang sesuai.</td></tr>'
       }</tbody></table></div><div class="report-pages"><button id="doc-prev" ${page ? "" : "disabled"}>Sebelumnya</button><span>${rows.length} dokumen · ${page + 1}/${max + 1}</span><button id="doc-next" ${page < max ? "" : "disabled"}>Berikutnya</button></div>`;
